@@ -1,11 +1,13 @@
 [package]
 name = "rdkafka"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 repository = "https://github.com/fede1024/rust-rdkafka"
+readme = "README.md"
 license = "MIT"
 description = "Rust wrapper for librdkafka"
+keywords = ["kafka", "rdkafka"]
 
 [dependencies]
 libc = "0.2.0"
-librdkafka-sys = { path = "librdkafka-sys" }
+librdkafka-sys = { path = "librdkafka-sys", version = "0.9.1-0" }

@@ -1,12 +1,13 @@
 [package]
 name = "librdkafka-sys"
-version = "0.1.0"
+version = "0.9.1-0"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 build = "build.rs"
 links = "rdkafka"
 repository = "https://github.com/fede1024/rust-rdkafka"
 license = "MIT"
 description = "Native bindings to the librdkafka library"
+keywords = ["kafka", "rdkafka"]
 
 [dependencies]
 
