@@ -2,6 +2,9 @@
 name = "rdkafka"
 version = "0.1.0"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
+repository = "https://github.com/fede1024/rust-rdkafka"
+license = "MIT"
+description = "Rust wrapper for librdkafka"
 
 [dependencies]
 libc = "0.2.0"
