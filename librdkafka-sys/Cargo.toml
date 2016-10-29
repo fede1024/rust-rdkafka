@@ -1,0 +1,15 @@
+[package]
+name = "librdkafka-sys"
+version = "0.1.0"
+authors = ["Federico Giraud <giraud.federico@gmail.com>"]
+build = "build.rs"
+links = "rdkafka"
+
+[dependencies]
+
+[build-dependencies]
+num_cpus = "0.2"
+
+[lib]
+name = "librdkafka_sys"
+path = "src/lib.rs"

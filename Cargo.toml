@@ -1,0 +1,8 @@
+[package]
+name = "rdkafka"
+version = "0.1.0"
+authors = ["Federico Giraud <giraud.federico@gmail.com>"]
+
+[dependencies]
+libc = "0.2.0"
+librdkafka-sys = { path = "librdkafka-sys" }
