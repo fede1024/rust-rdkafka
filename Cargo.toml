@@ -10,4 +10,4 @@ keywords = ["kafka", "rdkafka"]
 
 [dependencies]
 libc = "0.2.0"
-librdkafka-sys = { path = "librdkafka-sys", version = "0.9.1-0" }
+librdkafka-sys = { path = "librdkafka-sys", version = "0.9.1-1" }

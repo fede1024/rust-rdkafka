@@ -1,6 +1,6 @@
 extern crate num_cpus;
 
-use std::path::Path;
+// use std::path::Path;
 use std::process::Command;
 use std::io::Write;
 use std::env;
@@ -31,10 +31,10 @@ fn run_command_or_fail(dir: &str, cmd: &str, args: &[&str]) {
 }
 
 fn main() {
-    if !Path::new("librdkafka/.git").exists() {
-        println!("Setting up submodules");
-        run_command_or_fail(".", "git", &["submodule", "update", "--init"]);
-    }
+    // if !Path::new("librdkafka/.git").exists() {
+    //     println!("Setting up submodules");
+    //     run_command_or_fail(".", "git", &["submodule", "update", "--init"]);
+    // }
     println!("Configuring librdkafka");
     run_command_or_fail("librdkafka", "./configure", &[]);
     println!("Compiling librdkafka");
