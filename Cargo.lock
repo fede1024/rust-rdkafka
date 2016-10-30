@@ -4,7 +4,7 @@ version = "0.0.1"
 dependencies = [
  "errno 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "librdkafka-sys 0.9.1-1",
+ "librdkafka-sys 0.9.1-2",
 ]
 
 [[package]]
@@ -33,7 +33,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "librdkafka-sys"
-version = "0.9.1-1"
+version = "0.9.1-2"
 dependencies = [
  "num_cpus 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
