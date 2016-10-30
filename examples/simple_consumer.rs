@@ -1,6 +1,8 @@
 extern crate rdkafka;
 
-use rdkafka::consumer::{KafkaConfig, get_rdkafka_version};
+use rdkafka::config::KafkaConfig;
+use rdkafka::util::get_rdkafka_version;
+use rdkafka::consumer::CreateConsumer;
 
 fn consume_and_print(topic: &str) {
     let mut consumer = KafkaConfig::new()
