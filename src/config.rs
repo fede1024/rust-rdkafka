@@ -36,11 +36,18 @@ impl KafkaConfig {
                                            errstr.len())
             };
             if ret.is_error() {
-                let descr = unsafe { cstr_to_owned(&errstr) };
+                let descr = cstr_to_owned(&errstr);
                 return Err(error::KafkaError::ConfigError((ret, descr, key.to_string(), value.to_string())));
             }
         }
         Ok(conf)
     }
+}
 
+pub trait CreateConsumer<T, E> {
+    fn create_consumer(&self) -> Result<T, E>;
+}
+
+pub trait CreateProducer<T, E> {
+    fn create_producer(&self) -> Result<T, E>;
 }

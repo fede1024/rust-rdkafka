@@ -10,30 +10,27 @@ use util::cstr_to_owned;
 
 use config::KafkaConfig;
 
+pub use config::CreateConsumer;
+
 pub struct KafkaConsumer {
     client_n: *mut rdkafka::rd_kafka_t,
-}
-
-pub trait CreateConsumer<T, E> {
-    fn create_consumer(&self) -> Result<T, E>;
 }
 
 impl CreateConsumer<KafkaConsumer, KafkaError> for KafkaConfig {
     fn create_consumer(&self) -> Result<KafkaConsumer, KafkaError> {
         let errstr = [0i8; 1024];
         let rd_config = try!(self.create_kafka_config());
-        unsafe {
-            let ret = rdkafka::rd_kafka_new(rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER,
-                                            rd_config,
-                                            errstr.as_ptr() as *mut i8,
-                                            errstr.len());
-            if ret.is_null() {
-                return Err(KafkaError::ConsumerCreationError(cstr_to_owned(&errstr)));
-            }
-
-            rdkafka::rd_kafka_poll_set_consumer(ret);
-            Ok(KafkaConsumer { client_n: ret })
+        let client_n = unsafe {
+            rdkafka::rd_kafka_new(rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER,
+                                  rd_config,
+                                  errstr.as_ptr() as *mut i8,
+                                  errstr.len())
+        };
+        if client_n.is_null() {
+            return Err(KafkaError::ConsumerCreationError(cstr_to_owned(&errstr)));
         }
+        unsafe { rdkafka::rd_kafka_poll_set_consumer(client_n) };
+        Ok(KafkaConsumer { client_n: client_n })
     }
 }
 
@@ -95,6 +92,7 @@ impl Drop for KafkaConsumer {
     fn drop(&mut self) {
         unsafe { rdkafka::rd_kafka_consumer_close(self.client_n) };
         unsafe { rdkafka::rd_kafka_destroy(self.client_n) };
+        unsafe { rdkafka::rd_kafka_wait_destroyed(1000) };
     }
 }
 

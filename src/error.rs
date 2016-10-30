@@ -31,8 +31,11 @@ impl IsError for ConfRes {
 pub enum KafkaError {
     ConfigError((ConfRes, String, String, String)),
     ConsumerCreationError(String),
+    ProducerCreationError(String),
     MessageConsumptionError(RespError),
+    MessageProductionError(RespError),
     SubscriptionError(String),
+    TopicNameError(String),
     Nul(std::ffi::NulError),
 }
 

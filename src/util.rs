@@ -9,6 +9,6 @@ pub fn get_rdkafka_version() -> (u16, String) {
     (version_number, c_str.to_string_lossy().into_owned())
 }
 
-pub unsafe fn cstr_to_owned(cstr: &[i8]) -> String {
-    CStr::from_ptr(cstr.as_ptr()).to_string_lossy().into_owned()
+pub fn cstr_to_owned(cstr: &[i8]) -> String {
+    unsafe { CStr::from_ptr(cstr.as_ptr()).to_string_lossy().into_owned() }
 }
