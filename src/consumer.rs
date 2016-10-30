@@ -8,6 +8,7 @@ use std::str;
 use std::collections::HashMap;
 
 use error;
+use error::IsError;
 
 pub fn get_rdkafka_version() -> (u16, String) {
     let version_number = unsafe { rdkafka::rd_kafka_version() } as u16;
@@ -43,7 +44,7 @@ impl KafkaConfig {
                                            errstr.as_ptr() as *mut i8,
                                            errstr.len())
             };
-            if error::is_config_error(ret) {
+            if ret.is_error() {
                 let descr = unsafe { cstr_to_owned(&errstr) };
                 return Err(error::KafkaError::ConfigError((ret, descr, key.to_string(), value.to_string())));
             }
@@ -90,7 +91,7 @@ impl KafkaConsumer {
             rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_name_c.as_ptr(), 0);
             rdkafka::rd_kafka_subscribe(self.client_n, tp_list)
         };
-        if error::is_kafka_error(ret_code) {
+        if ret_code.is_error() {
             Err(error::KafkaError::SubscriptionError(topic_name.to_string()))
         } else {
             Ok(())
@@ -103,7 +104,7 @@ impl KafkaConsumer {
             return Ok(None);
         }
         let error = unsafe { (*message_n).err };
-        if error::is_kafka_error(error) {
+        if error.is_error() {
             return Err(error::KafkaError::MessageConsumptionError(error));
         }
         let payload = unsafe {

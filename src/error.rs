@@ -2,19 +2,36 @@ extern crate libc;
 extern crate librdkafka_sys as rdkafka;
 extern crate std;
 
-pub fn is_kafka_error(kafka_error_code: rdkafka::rd_kafka_resp_err_t) -> bool {
-    kafka_error_code as i32 != rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR_NO_ERROR as i32
+/// Response error
+pub type RespError = rdkafka::rd_kafka_resp_err_t;
+
+/// Configuration response
+pub type ConfRes = rdkafka::rd_kafka_conf_res_t;
+
+/// Verify if the return code or return value represents an error condition
+pub trait IsError {
+    /// Return true if the error code or return code represents an error
+    fn is_error(self) -> bool;
 }
 
-pub fn is_config_error(config_error_code: rdkafka::rd_kafka_conf_res_t) -> bool {
-    config_error_code as i32 != rdkafka::rd_kafka_conf_res_t::RD_KAFKA_CONF_OK as i32
+impl IsError for RespError {
+    fn is_error(self) -> bool {
+        self as i32 != rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR_NO_ERROR as i32
+    }
+}
+
+impl IsError for ConfRes {
+    fn is_error(self) -> bool {
+        self as i32 != rdkafka::rd_kafka_conf_res_t::RD_KAFKA_CONF_OK as i32
+    }
 }
 
 #[derive(Debug)]
+/// Represents all Kafka errors
 pub enum KafkaError {
-    ConfigError((rdkafka::rd_kafka_conf_res_t, String, String, String)),
+    ConfigError((ConfRes, String, String, String)),
     ConsumerCreationError(String),
-    MessageConsumptionError(rdkafka::rd_kafka_resp_err_t),
+    MessageConsumptionError(RespError),
     SubscriptionError(String),
     Nul(std::ffi::NulError),
 }
