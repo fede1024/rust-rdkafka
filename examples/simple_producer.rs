@@ -1,19 +1,16 @@
 extern crate rdkafka;
 
-use rdkafka::config::KafkaConfig;
+use rdkafka::config::{CreateProducer, KafkaConfig};
 use rdkafka::util::get_rdkafka_version;
-use rdkafka::producer::CreateProducer;
 
-use std::{thread, time};
+use std::thread;
 
-fn produce(topic: &str) {
-    let mut producer = KafkaConfig::new()
+fn produce(topic_name: &str) {
+    let producer = KafkaConfig::new()
         .set("metadata.request.timeout.ms", "20000")
+        .set("bootstrap.servers", "localhost:9092")
         .create_producer()
         .unwrap();
-
-
-    producer.broker_add("localhost:9092");
 
     let loop_producer = producer.clone();
     let handle = thread::spawn(move || {
@@ -25,7 +22,7 @@ fn produce(topic: &str) {
 
     let key = vec![69, 70, 71, 72];
 
-    let topic = producer.new_topic(topic).expect("Topic creation error");
+    let topic = producer.get_topic(topic_name).expect("Topic creation error");
     let p = producer.send_test(&topic, Some(&"Payload"), Some(&key));
 
     println!(">> {:?}", p);

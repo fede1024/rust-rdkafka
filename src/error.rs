@@ -31,7 +31,7 @@ impl IsError for ConfRes {
 pub enum KafkaError {
     ConfigError((ConfRes, String, String, String)),
     ConsumerCreationError(String),
-    ProducerCreationError(String),
+    ClientCreationError(String),
     MessageConsumptionError(RespError),
     MessageProductionError(RespError),
     SubscriptionError(String),

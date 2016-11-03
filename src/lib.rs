@@ -1,9 +1,10 @@
-pub mod util;
-pub mod error;
+pub mod client;
 pub mod config;
-pub mod message;
 pub mod consumer;
+pub mod error;
+pub mod message;
 pub mod producer;
+pub mod util;
 
 #[cfg(test)]
 mod tests {

@@ -1,17 +1,15 @@
 extern crate rdkafka;
 
-use rdkafka::config::KafkaConfig;
+use rdkafka::config::{CreateConsumer, KafkaConfig};
 use rdkafka::util::get_rdkafka_version;
-use rdkafka::consumer::CreateConsumer;
 
 fn consume_and_print(topic: &str) {
     let mut consumer = KafkaConfig::new()
-        .set("group.id", "marmellata")
+        .set("group.id", "my_group_id")
         .set("metadata.request.timeout.ms", "20000")
+        .set("bootstrap.servers", "localhost:9092")
         .create_consumer()
         .expect("Consumer creation failed");
-
-    consumer.broker_add("localhost:9092");
 
     consumer.subscribe(topic).expect("Can't subscribe to topic");
 

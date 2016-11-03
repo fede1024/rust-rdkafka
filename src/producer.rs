@@ -1,72 +1,35 @@
 extern crate librdkafka_sys as rdkafka;
 extern crate errno;
 
-use error::{KafkaError, IsError};
-use util::cstr_to_owned;
-
-use config::KafkaConfig;
+use std::os::raw::c_void;
 use std::ptr;
-use std::ffi::CString;
-
 use std::sync::Arc;
 
-use std::os::raw::c_void;
-
-use message::KafkaMessage;
+use config::CreateProducer;
+use config::KafkaConfig;
+use error::KafkaError;
 use message::ToBytes;
-
-pub use config::CreateProducer;
-
-
-pub struct KafkaTopic {
-    topic_n: *mut rdkafka::rd_kafka_topic_t
-}
-
-pub struct KafkaNativeClient {
-    ptr: *mut rdkafka::rd_kafka_t
-}
-unsafe impl Sync for KafkaNativeClient {}
-unsafe impl Send for KafkaNativeClient {}
+use client::{KafkaClient, KafkaClientType, KafkaTopic};
 
 #[derive(Clone)]
 pub struct KafkaProducer {
-    client: Arc<KafkaNativeClient>
+    client: Arc<KafkaClient>
 }
 
 impl CreateProducer<KafkaProducer, KafkaError> for KafkaConfig {
     fn create_producer(&self) -> Result<KafkaProducer, KafkaError> {
-        let errstr = [0i8; 1024];
-        let rd_config = try!(self.create_kafka_config());
-        unsafe {
-            let client_n = rdkafka::rd_kafka_new(rdkafka::rd_kafka_type_t::RD_KAFKA_PRODUCER,
-                                            rd_config,
-                                            errstr.as_ptr() as *mut i8,
-                                            errstr.len());
-            if client_n.is_null() {
-                return Err(KafkaError::ProducerCreationError(cstr_to_owned(&errstr)));
-            }
-            let native_client = KafkaNativeClient { ptr: client_n };
-            Ok(KafkaProducer { client: Arc::new(native_client) })
-        }
+        let client = try!(KafkaClient::new(&self, KafkaClientType::Producer));
+        Ok(KafkaProducer { client: Arc::new(client) })
     }
 }
 
 impl KafkaProducer {
-    pub fn new_topic(&self, name: &str) -> Result<KafkaTopic, KafkaError> {
-        let name_n = CString::new(name).unwrap();
-        let topic_n = unsafe {
-            rdkafka::rd_kafka_topic_new(self.client.ptr, name_n.as_ptr(), ptr::null_mut())
-        };
-        if topic_n.is_null() {
-            Err(KafkaError::TopicNameError(name.to_string()))
-        } else {
-            Ok(KafkaTopic { topic_n: topic_n })
-        }
+    pub fn get_topic(&self, topic_name: &str) -> Result<KafkaTopic, KafkaError> {
+        KafkaTopic::new(&self.client, topic_name)
     }
 
     pub fn poll(&self, timeout_ms: i32) -> i32 {
         unsafe { rdkafka::rd_kafka_poll(self.client.ptr, timeout_ms) }
-
     }
 
     pub fn send_copy(&self, topic: &KafkaTopic, payload: Option<&[u8]>, key: Option<&[u8]>) -> Result<(), KafkaError> {
@@ -79,7 +42,7 @@ impl KafkaProducer {
             Some(k) => (k.as_ptr() as *mut c_void, k.len())
         };
         let n = unsafe {
-            rdkafka::rd_kafka_produce(topic.topic_n, -1, rdkafka::RD_KAFKA_MSG_F_COPY as i32, payload_n, plen, key_n, klen, ptr::null_mut())
+            rdkafka::rd_kafka_produce(topic.ptr, -1, rdkafka::RD_KAFKA_MSG_F_COPY as i32, payload_n, plen, key_n, klen, ptr::null_mut())
         };
         if n != 0 {
             let errno = errno::errno().0 as i32;
@@ -95,16 +58,5 @@ impl KafkaProducer {
               P: ToBytes {
         self.send_copy(topic, payload.map(P::to_bytes), key.map(K::to_bytes))
     }
-
-    pub fn broker_add(&mut self, brokers: &str) -> i32 {
-        let brokers = CString::new(brokers).unwrap();
-        unsafe { rdkafka::rd_kafka_brokers_add(self.client.ptr, brokers.as_ptr()) }
-    }
 }
 
-impl Drop for KafkaNativeClient {
-    fn drop(&mut self) {
-        unsafe { rdkafka::rd_kafka_destroy(self.ptr) };
-        unsafe { rdkafka::rd_kafka_wait_destroyed(1000) };
-    }
-}
