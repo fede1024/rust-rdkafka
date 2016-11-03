@@ -1915,7 +1915,6 @@ extern "C" {
      -> rd_kafka_resp_err_t;
 }
 
-
 #[cfg(test)]
 mod tests {
     #[test]

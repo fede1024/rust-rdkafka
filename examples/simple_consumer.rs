@@ -9,7 +9,7 @@ fn consume_and_print(topic: &str) {
         .set("group.id", "marmellata")
         .set("metadata.request.timeout.ms", "20000")
         .create_consumer()
-        .unwrap();
+        .expect("Consumer creation failed");
 
     consumer.broker_add("localhost:9092");
 
@@ -21,8 +21,8 @@ fn consume_and_print(topic: &str) {
         match consumer.poll(1000) {
             Ok(None) => {}
             Ok(Some(m)) => {
-                println!("M: {:?} {:?} {:?} {:?}", m.payload, m.key, m.partition, m.offset);
-                if String::from_utf8_lossy(m.payload.unwrap()) == "QUIT" {
+                println!("M: {:?} {:?} {:?} {:?}", m.get_payload(), m.get_key(), m.get_partition(), m.get_offset());
+                if String::from_utf8_lossy(m.get_payload().unwrap()) == "QUIT" {
                     break;
                 }
             }

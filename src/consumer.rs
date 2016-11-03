@@ -11,6 +11,7 @@ use util::cstr_to_owned;
 use config::KafkaConfig;
 
 pub use config::CreateConsumer;
+use message::KafkaMessage;
 
 pub struct KafkaConsumer {
     client_n: *mut rdkafka::rd_kafka_t,
@@ -30,7 +31,7 @@ impl CreateConsumer<KafkaConsumer, KafkaError> for KafkaConfig {
             return Err(KafkaError::ConsumerCreationError(cstr_to_owned(&errstr)));
         }
         unsafe { rdkafka::rd_kafka_poll_set_consumer(client_n) };
-        Ok(KafkaConsumer { client_n: client_n })
+        Ok(KafkaConsumer{ client_n: client_n })
     }
 }
 
@@ -54,7 +55,7 @@ impl KafkaConsumer {
         }
     }
 
-    pub fn poll(&self, timeout_ms: i32) -> Result<Option<Message>, KafkaError> {
+    pub fn poll(&self, timeout_ms: i32) -> Result<Option<KafkaMessage>, KafkaError> {
         let message_n = unsafe { rdkafka::rd_kafka_consumer_poll(self.client_n, timeout_ms) };
         if message_n.is_null() {
             return Ok(None);
@@ -63,28 +64,8 @@ impl KafkaConsumer {
         if error.is_error() {
             return Err(KafkaError::MessageConsumptionError(error));
         }
-        let payload = unsafe {
-            if (*message_n).payload.is_null() {
-                None
-            } else {
-                Some(std::slice::from_raw_parts::<u8>((*message_n).payload as *const u8, (*message_n).len))
-            }
-        };
-        let key = unsafe {
-            if (*message_n).key.is_null() {
-                None
-            } else {
-                Some(std::slice::from_raw_parts::<u8>((*message_n).key as *const u8, (*message_n).key_len))
-            }
-        };
-        let message = Message {
-            payload: payload,
-            key: key,
-            partition: unsafe { (*message_n).partition },
-            offset: unsafe { (*message_n).offset },
-            message_n: message_n,
-        };
-        Ok(Some(message))
+        let kafka_message = KafkaMessage { message_n: message_n };
+        Ok(Some(kafka_message))
     }
 }
 
@@ -92,21 +73,6 @@ impl Drop for KafkaConsumer {
     fn drop(&mut self) {
         unsafe { rdkafka::rd_kafka_consumer_close(self.client_n) };
         unsafe { rdkafka::rd_kafka_destroy(self.client_n) };
-        unsafe { rdkafka::rd_kafka_wait_destroyed(1000) };
-    }
-}
-
-#[derive(Debug)]
-pub struct Message<'a> {
-    pub payload: Option<&'a [u8]>,
-    pub key: Option<&'a [u8]>,
-    pub partition: i32,
-    pub offset: i64,
-    pub message_n: *mut rdkafka::rd_kafka_message_s,
-}
-
-impl<'a> Drop for Message<'a> {
-    fn drop(&mut self) {
-        unsafe { rdkafka::rd_kafka_message_destroy(self.message_n) };
+        unsafe { rdkafka::rd_kafka_wait_destroyed(1000) };  // fixme
     }
 }

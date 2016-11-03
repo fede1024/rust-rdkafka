@@ -6,25 +6,31 @@ use rdkafka::producer::CreateProducer;
 
 use std::{thread, time};
 
-
 fn produce(topic: &str) {
     let mut producer = KafkaConfig::new()
-        //.set("group.id", "marmellata")
         .set("metadata.request.timeout.ms", "20000")
         .create_producer()
         .unwrap();
 
+
     producer.broker_add("localhost:9092");
 
-    println!("Producer initialized");
+    let loop_producer = producer.clone();
+    let handle = thread::spawn(move || {
+        loop {
+            let n = loop_producer.poll(1000);
+            println!("Receved {} events", n);
+        }
+    });
 
-    let topic = producer.new_topic(topic).expect("Topic??");
-    let v: Vec<u8> = vec![65, 66, 67, 68];
-    let p = producer.produce(&topic, v.as_slice());
+    let key = vec![69, 70, 71, 72];
+
+    let topic = producer.new_topic(topic).expect("Topic creation error");
+    let p = producer.send_test(&topic, Some(&"Payload"), Some(&key));
 
     println!(">> {:?}", p);
 
-    thread::sleep(time::Duration::from_millis(3000));
+    handle.join();
 
     println!("DONE");
 }
