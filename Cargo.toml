@@ -7,8 +7,13 @@ readme = "README.md"
 license = "MIT"
 description = "Rust wrapper for librdkafka"
 keywords = ["kafka", "rdkafka"]
+build = "build.rs"
 
 [dependencies]
 libc = "0.2.0"
 librdkafka-sys = { path = "librdkafka-sys", version = "0.9.1-2" }
 errno = "*"
+tokio-core = { git = "https://github.com/tokio-rs/tokio-core" }
+tokio-proto = { git = "https://github.com/tokio-rs/tokio-proto" }
+tokio-service = { git = "https://github.com/tokio-rs/tokio-service" }
+futures = "*"

@@ -1,0 +1,238 @@
+{
+   Mac OS si_module_static_search
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:strdup
+   fun:__si_module_static_mdns_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_mdns
+   fun:si_module_with_name
+   fun:si_module_config_modules_for_category
+   fun:__si_module_static_search_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_search
+}
+{
+   Mac OS si_module_static_search 2
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:strdup
+   fun:__si_module_static_ds_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_ds
+   fun:si_module_with_name
+   fun:si_module_config_modules_for_category
+   fun:__si_module_static_search_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_search
+}
+{
+   Mac OS si_module_static_search 3
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:strdup
+   fun:__si_module_static_file_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_file
+   fun:si_module_with_name
+   fun:si_module_config_modules_for_category
+   fun:__si_module_static_search_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_search
+}
+{
+   Mac OS si_module_static_search 4
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:strdup
+   fun:__si_module_static_cache_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_cache
+   fun:si_module_with_name
+   fun:si_module_config_modules_for_category
+   fun:__si_module_static_search_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_search
+}
+{
+   Mac OS si_module_with_name
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:__si_module_static_ds_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_ds
+   fun:si_module_with_name
+   fun:si_module_config_modules_for_category
+   fun:__si_module_static_search_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_search
+   fun:si_module_with_name
+}
+{
+   libdispatch_init
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:NXMapGet
+   fun:_ZL22copySwiftV1MangledNamePKcb
+   fun:_read_images
+   fun:map_images_nolock
+   fun:_ZL25batchFinalizeOnTwoThreadsP14_malloc_zone_tPFvP16auto_zone_cursorPFvPvS3_ES3_ES2_m
+   fun:_ZN4dyldL18notifyBatchPartialE17dyld_image_statesbPFPKcS0_jPK15dyld_image_infoE
+   fun:_ZN4dyld36registerImageStateBatchChangeHandlerE17dyld_image_statesPFPKcS0_jPK15dyld_image_infoE
+   fun:dyld_register_image_state_change_handler
+   fun:_objc_init
+   fun:_os_object_init
+   fun:libdispatch_init
+}
+{
+   _dispatch_client_callout
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:objc_destroyWeak
+   fun:lookUpImpOrForward
+   fun:call_load_methods
+   fun:NXMapRemove
+   fun:objc_msgSend
+   fun:xpc_pipe_routine
+   fun:_xpc_interface_routine
+   fun:bootstrap_look_up3
+   fun:bootstrap_look_up2
+   fun:___notify_lib_init_block_invoke
+   fun:_dispatch_client_callout
+}
+{
+   _noify_lib_init
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:objc_destroyWeak
+   fun:lookUpImpOrForward
+   fun:call_load_methods
+   fun:NXMapRemove
+   fun:objc_msgSend
+   fun:bootstrap_look_up3
+   fun:bootstrap_look_up2
+   fun:___notify_lib_init_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:_notify_lib_init
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:objc_destroyWeak
+   fun:lookUpImpOrForward
+   fun:call_load_methods
+   fun:NXMapRemove
+   fun:objc_msgSend
+   fun:_xpc_dictionary_node_free
+   fun:_xpc_dictionary_dispose
+   fun:_xpc_dispose
+   fun:-[OS_xpc_object _xref_dispose]
+   fun:bootstrap_look_up3
+   fun:bootstrap_look_up2
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:strdup
+   fun:__si_module_static_search_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_search
+   fun:si_module_with_name
+   fun:getaddrinfo
+   fun:rd_getaddrinfo
+   fun:rd_kafka_broker_thread_main
+   fun:_thrd_wrapper_function
+   fun:_pthread_body
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:NXMapGet
+   fun:_ZL22copySwiftV1MangledNamePKcb
+   fun:_ZL22copySwiftV1MangledNamePKcb
+   fun:_read_images
+   fun:map_images_nolock
+   fun:_ZL25batchFinalizeOnTwoThreadsP14_malloc_zone_tPFvP16auto_zone_cursorPFvPvS3_ES3_ES2_m
+   fun:_ZN4dyldL18notifyBatchPartialE17dyld_image_statesbPFPKcS0_jPK15dyld_image_infoE
+   fun:_ZN4dyld36registerImageStateBatchChangeHandlerE17dyld_image_statesPFPKcS0_jPK15dyld_image_infoE
+   fun:dyld_register_image_state_change_handler
+   fun:_objc_init
+   fun:_os_object_init
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:__si_module_static_file_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_file
+   fun:si_module_with_name
+   fun:si_module_config_modules_for_category
+   fun:__si_module_static_search_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_search
+   fun:si_module_with_name
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc_zone_malloc
+   fun:_objc_copyClassNamesForImage
+   fun:_ZL9protocolsv
+   fun:_Z9readClassP10objc_classbb
+   fun:gc_init
+   fun:_ZL33objc_initializeClassPair_internalP10objc_classPKcS0_S0_
+   fun:layout_string_create
+   fun:_ZL12realizeClassP10objc_class
+   fun:_ZL22copySwiftV1MangledNamePKcb
+   fun:_ZL22copySwiftV1MangledNamePKcb
+   fun:_ZL22copySwiftV1MangledNamePKcb
+   fun:_ZL22copySwiftV1MangledNamePKcb
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:__si_module_static_cache_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_cache
+   fun:si_module_with_name
+   fun:si_module_config_modules_for_category
+   fun:__si_module_static_search_block_invoke
+   fun:_dispatch_client_callout
+   fun:dispatch_once_f
+   fun:si_module_static_search
+   fun:si_module_with_name
+}

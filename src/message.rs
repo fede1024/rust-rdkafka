@@ -65,3 +65,9 @@ impl<'a> ToBytes for &'a str {
         self.as_bytes()
     }
 }
+
+impl<'a> ToBytes for String {
+    fn to_bytes(&self) -> &[u8] {
+        &self.as_bytes()
+    }
+}

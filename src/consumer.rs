@@ -3,19 +3,19 @@ extern crate librdkafka_sys as rdkafka;
 use std::ffi::CString;
 use std::str;
 
-use client::{KafkaClient, KafkaClientType};
+use client::{Client, ClientType};
 use config::{CreateConsumer, KafkaConfig};
 use error::{KafkaError, IsError};
 use message::KafkaMessage;
 
 
 pub struct KafkaConsumer {
-    client: KafkaClient,
+    client: Client,
 }
 
 impl CreateConsumer<KafkaConsumer, KafkaError> for KafkaConfig {
     fn create_consumer(&self) -> Result<KafkaConsumer, KafkaError> {
-        let client = try!(KafkaClient::new(&self, KafkaClientType::Consumer));
+        let client = try!(Client::new(&self, ClientType::Consumer));
         unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
         Ok(KafkaConsumer{ client: client })
     }

@@ -36,12 +36,15 @@ fn main() {
     //     run_command_or_fail(".", "git", &["submodule", "update", "--init"]);
     // }
     println!("Configuring librdkafka");
-    run_command_or_fail("librdkafka", "./configure", &[]);
+    run_command_or_fail("librdkafka", "./configure", &["--disable-sasl", "--disable-ssl"]);
     println!("Compiling librdkafka");
     run_command_or_fail("librdkafka", "make", &["-j", &num_cpus::get().to_string()]);
     println!("cargo:rustc-link-search=native={}/librdkafka/src", env::current_dir().expect("Can't find current dir").display());
+    println!("cargo:rustc-link-search=/usr/local/opt/openssl/lib");
     println!("cargo:rustc-link-lib=static=rdkafka");
     println!("cargo:rustc-link-lib=dylib=crypto");
     println!("cargo:rustc-link-lib=dylib=ssl");
     println!("cargo:rustc-link-lib=dylib=z");
+    println!("cargo:libdir=/usr/local/opt/openssl/lib");
+    println!("cargo:include=/usr/local/opt/openssl/include");
 }

@@ -1,35 +1,41 @@
+#![feature(alloc_system)]
+extern crate alloc_system;
+
+extern crate futures;
 extern crate rdkafka;
 
 use rdkafka::config::{CreateProducer, KafkaConfig};
 use rdkafka::util::get_rdkafka_version;
 
-use std::thread;
+use futures::*;
+
 
 fn produce(topic_name: &str) {
     let producer = KafkaConfig::new()
-        .set("metadata.request.timeout.ms", "20000")
         .set("bootstrap.servers", "localhost:9092")
         .create_producer()
         .unwrap();
 
-    let loop_producer = producer.clone();
-    let handle = thread::spawn(move || {
-        loop {
-            let n = loop_producer.poll(1000);
-            println!("Receved {} events", n);
-        }
-    });
+    let _producer_thread = producer.start_polling_thread();
 
-    let key = vec![69, 70, 71, 72];
-
+    let mut futures = Vec::new();
     let topic = producer.get_topic(topic_name).expect("Topic creation error");
-    let p = producer.send_test(&topic, Some(&"Payload"), Some(&key));
+    for i in 0..10 {
+        let value = format!("Message {}", i);
+        let p = producer
+           .send_copy(&topic, Some(&value), Some(&"key"))
+           .expect("Production failed")
+           .map(move |m| {
+                println!("Future for message {} done", i);
+                (m, i)
+           });
+        futures.push(p);
+    }
 
-    println!(">> {:?}", p);
-
-    handle.join();
-
-    println!("DONE");
+    for future in futures {
+       let x = future.wait();
+       println!(">> {:?}", x);
+    }
 }
 
 fn main() {

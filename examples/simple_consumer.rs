@@ -6,7 +6,6 @@ use rdkafka::util::get_rdkafka_version;
 fn consume_and_print(topic: &str) {
     let mut consumer = KafkaConfig::new()
         .set("group.id", "my_group_id")
-        .set("metadata.request.timeout.ms", "20000")
         .set("bootstrap.servers", "localhost:9092")
         .create_consumer()
         .expect("Consumer creation failed");
