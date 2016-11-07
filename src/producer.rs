@@ -15,7 +15,7 @@ use config::CreateProducer;
 use config::KafkaConfig;
 use error::KafkaError;
 use message::ToBytes;
-use client::{Client, ClientType, KafkaTopic, DeliveryStatus};
+use client::{Client, ClientType, KafkaTopicBuilder, KafkaTopic, DeliveryStatus};
 
 
 #[derive(Clone)]
@@ -47,8 +47,8 @@ impl Future for ProductionFuture {
 }
 
 impl Producer {
-    pub fn get_topic(&self, topic_name: &str) -> Result<KafkaTopic, KafkaError> {
-        KafkaTopic::new(&self.client, topic_name)
+    pub fn get_topic(&self, topic_name: &str) -> KafkaTopicBuilder {
+        KafkaTopicBuilder::new(&self.client, topic_name)
     }
 
     pub fn poll(&self, timeout_ms: i32) -> i32 {

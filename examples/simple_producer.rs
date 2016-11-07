@@ -23,23 +23,26 @@ fn produce(topic_name: &str) {
 
     let _producer_thread = producer.start_polling_thread();
 
-    let mut futures = Vec::new();
-    let topic = producer.get_topic(topic_name).expect("Topic creation error");
-    for i in 0..10 {
-        let value = format!("Message {}", i);
-        let p = producer
-           .send_copy(&topic, Some(&value), Some(&"key"))
-           .expect("Production failed")
-           .map(move |m| {
-                info!("Delivery status for message {} received", i);
-                m
-           });
-        futures.push(p);
-    }
+    let topic = producer.get_topic(topic_name)
+        .set("produce.offset.report", "true")
+        .create()
+        .expect("Topic creation error");
+
+    let futures = (0..10)
+        .map(|i| {
+            let value = format!("Message {}", i);
+            producer.send_copy(&topic, Some(&value), Some(&"key"))
+                .expect("Production failed")
+                .map(move |m| {
+                    info!("Delivery status for message {} received", i);
+                    m
+                })
+        })
+        .collect::<Vec<_>>();
 
     for future in futures {
-       let result = future.wait();
-       info!("Future completed. Result: {:?}", result);
+        let result = future.wait();
+        info!("Future completed. Result: {:?}", result);
     }
 }
 

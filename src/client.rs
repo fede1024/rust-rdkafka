@@ -3,12 +3,13 @@ extern crate librdkafka_sys as rdkafka;
 
 use std::ffi::CString;
 use std::os::raw::c_void;
-use std::ptr;
+use std::collections::HashMap;
+use std::marker::PhantomData;
 
 use self::futures::Complete;
 
 use config::KafkaConfig;
-use error::KafkaError;
+use error::{IsError, KafkaError};
 use util::cstr_to_owned;
 
 pub enum ClientType {
@@ -72,25 +73,61 @@ impl Drop for Client {
 }
 
 
-pub struct KafkaTopic {  // TODO: link its lifetime to client lifetime
-    pub ptr: *mut rdkafka::rd_kafka_topic_t
+pub struct KafkaTopicBuilder<'a> {
+    name: String,
+    conf: HashMap<String, String>,
+    client: &'a Client,
 }
 
-impl KafkaTopic {
-    pub fn new(client: &Client, name: &str) -> Result<KafkaTopic, KafkaError> {
-        let name_ptr = CString::new(name).unwrap();
+pub struct KafkaTopic<'a> {
+    pub ptr: *mut rdkafka::rd_kafka_topic_t,
+    phantom: PhantomData<&'a u8>  // Refers to client
+}
+
+
+impl<'a> KafkaTopicBuilder<'a> {
+    pub fn new(client: &'a Client, name: &str) -> KafkaTopicBuilder<'a> {
+        KafkaTopicBuilder {
+            name: name.to_string(),
+            client: client,
+            conf: HashMap::new()
+        }
+    }
+
+    pub fn set<'b>(&'b mut self, key: &str, value: &str) -> &'b mut KafkaTopicBuilder<'a> {
+        self.conf.insert(key.to_string(), value.to_string());
+        self
+    }
+
+    pub fn create(&self) -> Result<KafkaTopic<'a>, KafkaError> {
+        let name_ptr = CString::new(self.name.clone()).unwrap();
+        let config_ptr = unsafe { rdkafka::rd_kafka_topic_conf_new() };
+        let errstr = [0; 1024];
+        for (name, value) in &self.conf {
+            let name_c = try!(CString::new(name.to_string()));
+            let value_c = try!(CString::new(value.to_string()));
+            let ret = unsafe {
+                rdkafka::rd_kafka_topic_conf_set(
+                    config_ptr, name_c.as_ptr(), value_c.as_ptr(), errstr.as_ptr() as *mut i8, errstr.len())
+            };
+            if ret.is_error() {
+                let descr = cstr_to_owned(&errstr);
+                return Err(KafkaError::ConfigError((ret, descr, name.to_string(), value.to_string())));
+            }
+        }
         let topic_ptr = unsafe {
-            rdkafka::rd_kafka_topic_new(client.ptr, name_ptr.as_ptr(), ptr::null_mut())
+            rdkafka::rd_kafka_topic_new(self.client.ptr, name_ptr.as_ptr(), config_ptr)
         };
         if topic_ptr.is_null() {
-            Err(KafkaError::TopicNameError(name.to_string()))
+            Err(KafkaError::TopicNameError(self.name.clone())) //TODO: TopicCreationError
         } else {
-            Ok(KafkaTopic { ptr: topic_ptr })
+            let topic = KafkaTopic { ptr: topic_ptr, phantom: PhantomData };
+            Ok(topic)
         }
     }
 }
 
-impl Drop for KafkaTopic {
+impl<'a> Drop for KafkaTopic<'a> {
     fn drop(&mut self) {
         trace!("Destroy rd_kafka_topic");
         unsafe { rdkafka::rd_kafka_topic_destroy(self.ptr); }
