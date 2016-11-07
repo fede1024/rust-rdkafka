@@ -100,7 +100,7 @@ pub struct ProducerPollingThread {
 }
 
 impl ProducerPollingThread {
-    pub fn new(producer: &Producer) -> ProducerPollingThread {
+    fn new(producer: &Producer) -> ProducerPollingThread {
         ProducerPollingThread {
             producer: producer.clone(),
             should_stop: Arc::new(AtomicBool::new(false)),
@@ -108,7 +108,7 @@ impl ProducerPollingThread {
         }
     }
 
-    pub fn start(&mut self) {
+    fn start(&mut self) {
         let producer = self.producer.clone();
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
@@ -126,7 +126,7 @@ impl ProducerPollingThread {
         self.handle = Some(handle);
     }
 
-    pub fn stop(&mut self) {
+    fn stop(&mut self) {
         if self.handle.is_some() {
             trace!("Stopping polling");
             self.should_stop.store(true, Ordering::Relaxed);

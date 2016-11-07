@@ -3,11 +3,13 @@ extern crate librdkafka_sys as rdkafka;
 use std::slice;
 
 #[derive(Debug)]
-pub struct KafkaMessage {  // TODO need creator
+pub struct Message {  // TODO need creator
     pub message_n: *mut rdkafka::rd_kafka_message_s,
 }
 
-impl<'a> KafkaMessage {
+unsafe impl Send for Message {}
+
+impl<'a> Message {
     pub fn get_payload(&'a self) -> Option<&'a [u8]> {
         unsafe {
             if (*self.message_n).payload.is_null() {
@@ -37,7 +39,7 @@ impl<'a> KafkaMessage {
     }
 }
 
-impl Drop for KafkaMessage {
+impl Drop for Message {
     fn drop(&mut self) {
         trace!("Destroying {:?}", self);
         unsafe { rdkafka::rd_kafka_message_destroy(self.message_n) };

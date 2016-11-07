@@ -1,4 +1,14 @@
+#[macro_use] extern crate log;
+extern crate env_logger;
+extern crate futures;
 extern crate rdkafka;
+
+use std::env;
+use log::{LogRecord, LogLevelFilter};
+use env_logger::LogBuilder;
+use std::thread;
+
+use futures::stream::Stream;
 
 use rdkafka::config::{CreateConsumer, KafkaConfig};
 use rdkafka::util::get_rdkafka_version;
@@ -12,26 +22,49 @@ fn consume_and_print(topic: &str) {
 
     consumer.subscribe(topic).expect("Can't subscribe to topic");
 
-    println!("Consumer initialized");
+    let (_consumer_thread, message_stream) = consumer.start_thread();
+    info!("Consumer initialized");
 
-    loop {
-        match consumer.poll(1000) {
-            Ok(None) => {}
-            Ok(Some(m)) => {
-                println!("M: {:?} {:?} {:?} {:?}", m.get_payload(), m.get_key(), m.get_partition(), m.get_offset());
-                if String::from_utf8_lossy(m.get_payload().unwrap()) == "QUIT" {
-                    break;
-                }
-            }
-            Err(e) => println!("E: {:?}", e),
-        }
+    let message_stream = message_stream.map(|m| {
+        info!("Processing message");
+        m
+    });
+
+    for message in message_stream.take(5).wait() {
+        info!("Result: {:?}", message);
     }
-    println!("END LOOP");
+}
+
+fn setup_logger() {
+    let print_thread = env::var("LOG_THREAD").is_ok();
+
+    let format = move |record: &LogRecord| {
+        let thread_name = if print_thread {
+            format!("({}) ", match thread::current().name() {
+                Some(name) => name,
+                None => "unknown"
+            })
+        } else {
+            "".to_string()
+        };
+        format!("{}{} - {} - {}", thread_name, record.level(), record.target(), record.args())
+    };
+
+    let mut builder = LogBuilder::new();
+    builder.format(format).filter(None, LogLevelFilter::Info);
+
+    if env::var("RUST_LOG").is_ok() {
+       builder.parse(&env::var("RUST_LOG").unwrap());
+    }
+
+    builder.init().unwrap();
 }
 
 fn main() {
+    setup_logger();
+
     let (version_n, version_s) = get_rdkafka_version();
-    println!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
+    info!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
 
     consume_and_print("topic1");
 }
