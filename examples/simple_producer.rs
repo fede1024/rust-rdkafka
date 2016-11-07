@@ -9,14 +9,14 @@ use log::{LogRecord, LogLevelFilter};
 use env_logger::LogBuilder;
 use std::thread;
 
-use rdkafka::config::{CreateProducer, KafkaConfig};
+use rdkafka::config::{CreateProducer, Config};
 use rdkafka::util::get_rdkafka_version;
 
 use futures::*;
 
 
 fn produce(topic_name: &str) {
-    let producer = KafkaConfig::new()
+    let producer = Config::new()
         .set("bootstrap.servers", "localhost:9092")
         .create_producer()
         .unwrap();

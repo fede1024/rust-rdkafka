@@ -28,7 +28,7 @@ impl IsError for ConfRes {
 
 #[derive(Debug)]
 /// Represents all Kafka errors
-pub enum KafkaError {
+pub enum Error {
     ConfigError((ConfRes, String, String, String)),
     ConsumerCreationError(String),
     ClientCreationError(String),
@@ -39,8 +39,8 @@ pub enum KafkaError {
     Nul(std::ffi::NulError),
 }
 
-impl From<std::ffi::NulError> for KafkaError {
-    fn from(err: std::ffi::NulError) -> KafkaError {
-        KafkaError::Nul(err)
+impl From<std::ffi::NulError> for Error {
+    fn from(err: std::ffi::NulError) -> Error {
+        Error::Nul(err)
     }
 }

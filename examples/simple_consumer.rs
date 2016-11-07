@@ -10,11 +10,11 @@ use std::thread;
 
 use futures::stream::Stream;
 
-use rdkafka::config::{CreateConsumer, KafkaConfig};
+use rdkafka::config::{CreateConsumer, Config};
 use rdkafka::util::get_rdkafka_version;
 
 fn consume_and_print(topic: &str) {
-    let mut consumer = KafkaConfig::new()
+    let mut consumer = Config::new()
         .set("group.id", "my_group_id")
         .set("bootstrap.servers", "localhost:9092")
         .create_consumer()
@@ -30,7 +30,7 @@ fn consume_and_print(topic: &str) {
         m
     });
 
-    for message in message_stream.take(5).wait() {
+    for message in message_stream.take(50).wait() {
         info!("Result: {:?}", message);
     }
 }
