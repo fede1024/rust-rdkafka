@@ -36,7 +36,7 @@ impl Config {
             };
             if ret.is_error() {
                 let descr = cstr_to_owned(&errstr);
-                return Err(Error::ConfigError((ret, descr, key.to_string(), value.to_string())));
+                return Err(Error::Config((ret, descr, key.to_string(), value.to_string())));
             }
         }
         Ok(conf)

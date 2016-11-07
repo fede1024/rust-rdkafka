@@ -41,8 +41,7 @@ fn produce(topic_name: &str) {
         .collect::<Vec<_>>();
 
     for future in futures {
-        let result = future.wait();
-        info!("Future completed. Result: {:?}", result);
+        info!("Future completed. Result: {:?}", future.wait());
     }
 }
 
@@ -51,10 +50,7 @@ fn setup_logger() {
 
     let format = move |record: &LogRecord| {
         let thread_name = if print_thread {
-            format!("({}) ", match thread::current().name() {
-                Some(name) => name,
-                None => "unknown"
-            })
+            format!("({}) ", thread::current().name().unwrap_or("unknown"))
         } else {
             "".to_string()
         };

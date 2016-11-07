@@ -40,10 +40,7 @@ fn setup_logger() {
 
     let format = move |record: &LogRecord| {
         let thread_name = if print_thread {
-            format!("({}) ", match thread::current().name() {
-                Some(name) => name,
-                None => "unknown"
-            })
+            format!("({}) ", thread::current().name().unwrap_or("unknown"))
         } else {
             "".to_string()
         };

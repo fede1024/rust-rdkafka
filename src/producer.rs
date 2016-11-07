@@ -20,21 +20,19 @@ use client::{Client, ClientType, TopicBuilder, Topic, DeliveryStatus};
 
 #[derive(Clone)]
 pub struct Producer {
-    client: Arc<Client>
+    client: Arc<Client>,
 }
 
 impl CreateProducer<Producer, Error> for Config {
     fn create_producer(&self) -> Result<Producer, Error> {
         let client = try!(Client::new(&self, ClientType::Producer));
-        let producer = Producer {
-            client: Arc::new(client)
-        };
+        let producer = Producer { client: Arc::new(client) };
         Ok(producer)
     }
 }
 
 pub struct ProductionFuture {
-    rx: Oneshot<DeliveryStatus>
+    rx: Oneshot<DeliveryStatus>,
 }
 
 impl Future for ProductionFuture {
@@ -58,23 +56,24 @@ impl Producer {
     fn _send_copy(&self, topic: &Topic, payload: Option<&[u8]>, key: Option<&[u8]>) -> Result<ProductionFuture, Error> {
         let (payload_n, plen) = match payload {
             None => (ptr::null_mut(), 0),
-            Some(p) => (p.as_ptr() as *mut c_void, p.len())
+            Some(p) => (p.as_ptr() as *mut c_void, p.len()),
         };
         let (key_n, klen) = match key {
             None => (ptr::null_mut(), 0),
-            Some(k) => (k.as_ptr() as *mut c_void, k.len())
+            Some(k) => (k.as_ptr() as *mut c_void, k.len()),
         };
         let (tx, rx) = futures::oneshot();
         let boxed_tx = Box::new(tx);
         let n = unsafe {
-            rdkafka::rd_kafka_produce(topic.ptr, -1, rdkafka::RD_KAFKA_MSG_F_COPY as i32, payload_n, plen, key_n, klen, Box::into_raw(boxed_tx) as *mut c_void)
+            rdkafka::rd_kafka_produce(topic.ptr, -1, rdkafka::RD_KAFKA_MSG_F_COPY as i32, payload_n, plen,
+                                      key_n, klen, Box::into_raw(boxed_tx) as *mut c_void)
         };
         if n != 0 {
             let errno = errno::errno().0 as i32;
             let kafka_error = unsafe { rdkafka::rd_kafka_errno2err(errno) };
-            Err(Error::MessageProductionError(kafka_error))
+            Err(Error::MessageProduction(kafka_error))
         } else {
-            Ok(ProductionFuture {rx: rx} )
+            Ok(ProductionFuture { rx: rx })
         }
     }
 
@@ -96,7 +95,7 @@ impl Producer {
 pub struct ProducerPollingThread {
     producer: Producer,
     should_stop: Arc<AtomicBool>,
-    handle: Option<JoinHandle<()>>
+    handle: Option<JoinHandle<()>>,
 }
 
 impl ProducerPollingThread {
@@ -104,7 +103,7 @@ impl ProducerPollingThread {
         ProducerPollingThread {
             producer: producer.clone(),
             should_stop: Arc::new(AtomicBool::new(false)),
-            handle: None
+            handle: None,
         }
     }
 
@@ -122,7 +121,8 @@ impl ProducerPollingThread {
                     }
                 }
                 trace!("Polling thread loop terminated");
-            }).expect("Failed to start polling thread");
+            })
+            .expect("Failed to start polling thread");
         self.handle = Some(handle);
     }
 
@@ -132,8 +132,8 @@ impl ProducerPollingThread {
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
             match self.handle.take().unwrap().join() {
-                Ok(()) => { trace!("Polling stopped"); },
-                Err(e) => { warn!("Failure while terminating thread: {:?}", e) }
+                Ok(()) => trace!("Polling stopped"),
+                Err(e) => warn!("Failure while terminating thread: {:?}", e),
             };
         }
     }

@@ -3,7 +3,8 @@ extern crate librdkafka_sys as rdkafka;
 use std::slice;
 
 #[derive(Debug)]
-pub struct Message {  // TODO need creator
+pub struct Message {
+    // TODO need creator
     pub message_n: *mut rdkafka::rd_kafka_message_s,
 }
 
@@ -50,7 +51,7 @@ pub trait ToBytes {
     fn to_bytes(&self) -> &[u8];
 }
 
-impl<'a> ToBytes for &'a[u8] {
+impl<'a> ToBytes for &'a [u8] {
     fn to_bytes(&self) -> &[u8] {
         self
     }
@@ -70,6 +71,6 @@ impl<'a> ToBytes for &'a str {
 
 impl<'a> ToBytes for String {
     fn to_bytes(&self) -> &[u8] {
-        &self.as_bytes()
+        self.as_bytes()
     }
 }

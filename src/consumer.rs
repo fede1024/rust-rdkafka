@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::thread;
 
-use self::futures::{Future};
+use self::futures::Future;
 use self::futures::stream;
 use self::futures::stream::{Receiver, Sender};
 
@@ -27,7 +27,7 @@ impl CreateConsumer<Consumer, Error> for Config {
     fn create_consumer(&self) -> Result<Consumer, Error> {
         let client = try!(Client::new(&self, ClientType::Consumer));
         unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
-        Ok(Consumer{ client: Arc::new(client) })
+        Ok(Consumer { client: Arc::new(client) })
     }
 }
 
@@ -40,7 +40,7 @@ impl Consumer {
             rdkafka::rd_kafka_subscribe(self.client.ptr, tp_list)
         };
         if ret_code.is_error() {
-            Err(Error::SubscriptionError(topic_name.to_string()))
+            Err(Error::Subscription(topic_name.to_string()))
         } else {
             Ok(())
         }
@@ -53,7 +53,7 @@ impl Consumer {
         }
         let error = unsafe { (*message_n).err };
         if error.is_error() {
-            return Err(Error::MessageConsumptionError(error));
+            return Err(Error::MessageConsumption(error));
         }
         let kafka_message = Message { message_n: message_n };
         Ok(Some(kafka_message))
@@ -79,7 +79,7 @@ pub struct ConsumerPollingThread {
     consumer: Consumer,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
-    sender: Option<Sender<Message, Error>>
+    sender: Option<Sender<Message, Error>>,
 }
 
 impl ConsumerPollingThread {
@@ -88,7 +88,7 @@ impl ConsumerPollingThread {
             consumer: consumer.clone(),
             should_stop: Arc::new(AtomicBool::new(false)),
             handle: None,
-            sender: Some(sender)
+            sender: Some(sender),
         }
     }
 
@@ -100,7 +100,8 @@ impl ConsumerPollingThread {
             .name("polling thread".to_string())
             .spawn(move || {
                 trace!("Polling thread loop started");
-                while !should_stop.load(Ordering::Relaxed) { // TODO: while stream alive?
+                while !should_stop.load(Ordering::Relaxed) {
+                    // TODO: while stream alive?
                     match consumer.poll(100) {
                         Ok(None) => {}
                         Ok(Some(m)) => {
@@ -117,7 +118,8 @@ impl ConsumerPollingThread {
                     }
                 }
                 trace!("Polling thread loop terminated");
-            }).expect("Failed to start polling thread");
+            })
+            .expect("Failed to start polling thread");
         self.handle = Some(handle);
     }
 
@@ -127,8 +129,8 @@ impl ConsumerPollingThread {
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
             match self.handle.take().unwrap().join() {
-                Ok(()) => { trace!("Polling stopped"); },
-                Err(e) => { warn!("Failure while terminating thread: {:?}", e) }
+                Ok(()) => trace!("Polling stopped"),
+                Err(e) => warn!("Failure while terminating thread: {:?}", e),
             };
         }
     }

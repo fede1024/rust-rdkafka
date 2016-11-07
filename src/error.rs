@@ -29,13 +29,13 @@ impl IsError for ConfRes {
 #[derive(Debug)]
 /// Represents all Kafka errors
 pub enum Error {
-    ConfigError((ConfRes, String, String, String)),
-    ConsumerCreationError(String),
-    ClientCreationError(String),
-    MessageConsumptionError(RespError),
-    MessageProductionError(RespError),
-    SubscriptionError(String),
-    TopicNameError(String),
+    Config((ConfRes, String, String, String)),
+    ConsumerCreation(String),
+    ClientCreation(String),
+    MessageConsumption(RespError),
+    MessageProduction(RespError),
+    Subscription(String),
+    TopicName(String),
     Nul(std::ffi::NulError),
 }
 

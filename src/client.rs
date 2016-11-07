@@ -14,11 +14,11 @@ use util::cstr_to_owned;
 
 pub enum ClientType {
     Consumer,
-    Producer
+    Producer,
 }
 
 pub struct Client {
-    pub ptr: *mut rdkafka::rd_kafka_t
+    pub ptr: *mut rdkafka::rd_kafka_t,
 }
 
 unsafe impl Sync for Client {}
@@ -28,15 +28,17 @@ unsafe impl Send for Client {}
 pub struct DeliveryStatus {
     error: rdkafka::rd_kafka_resp_err_t,
     partition: i32,
-    offset: i64
+    offset: i64,
 }
 
-unsafe extern fn prod_callback(_client: *mut rdkafka::rd_kafka_t, msg: *const rdkafka::rd_kafka_message_t, _opaque: *mut c_void) {
+unsafe extern "C" fn prod_callback(_client: *mut rdkafka::rd_kafka_t,
+                                   msg: *const rdkafka::rd_kafka_message_t,
+                                   _opaque: *mut c_void) {
     let tx = Box::from_raw((*msg)._private as *mut Complete<DeliveryStatus>);
     let delivery_status = DeliveryStatus {
         error: (*msg).err,
         partition: (*msg).partition,
-        offset: (*msg).offset
+        offset: (*msg).offset,
     };
     // TODO: add topic name?
     trace!("Delivery event received: {:?}", delivery_status);
@@ -48,17 +50,16 @@ impl Client {
         let errstr = [0i8; 1024];
         let config_ptr = try!(config.create_kafka_config());
         let rd_kafka_type = match client_type {
-            ClientType::Consumer => { rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER }
+            ClientType::Consumer => rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER,
             ClientType::Producer => {
                 unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(config_ptr, Some(prod_callback)) };
                 rdkafka::rd_kafka_type_t::RD_KAFKA_PRODUCER
             }
         };
-        let client_ptr = unsafe {
-            rdkafka::rd_kafka_new(rd_kafka_type, config_ptr, errstr.as_ptr() as *mut i8, errstr.len())
-        };
+        let client_ptr =
+            unsafe { rdkafka::rd_kafka_new(rd_kafka_type, config_ptr, errstr.as_ptr() as *mut i8, errstr.len()) };
         if client_ptr.is_null() {
-            return Err(Error::ClientCreationError(cstr_to_owned(&errstr)));
+            return Err(Error::ClientCreation(cstr_to_owned(&errstr)));
         }
         Ok(Client { ptr: client_ptr })
     }
@@ -81,7 +82,7 @@ pub struct TopicBuilder<'a> {
 
 pub struct Topic<'a> {
     pub ptr: *mut rdkafka::rd_kafka_topic_t,
-    phantom: PhantomData<&'a u8>  // Refers to client
+    phantom: PhantomData<&'a u8>, // Refers to client
 }
 
 
@@ -90,7 +91,7 @@ impl<'a> TopicBuilder<'a> {
         TopicBuilder {
             name: name.to_string(),
             client: client,
-            conf: HashMap::new()
+            conf: HashMap::new(),
         }
     }
 
@@ -107,21 +108,25 @@ impl<'a> TopicBuilder<'a> {
             let name_c = try!(CString::new(name.to_string()));
             let value_c = try!(CString::new(value.to_string()));
             let ret = unsafe {
-                rdkafka::rd_kafka_topic_conf_set(
-                    config_ptr, name_c.as_ptr(), value_c.as_ptr(), errstr.as_ptr() as *mut i8, errstr.len())
+                rdkafka::rd_kafka_topic_conf_set(config_ptr,
+                                                 name_c.as_ptr(),
+                                                 value_c.as_ptr(),
+                                                 errstr.as_ptr() as *mut i8,
+                                                 errstr.len())
             };
             if ret.is_error() {
                 let descr = cstr_to_owned(&errstr);
-                return Err(Error::ConfigError((ret, descr, name.to_string(), value.to_string())));
+                return Err(Error::Config((ret, descr, name.to_string(), value.to_string())));
             }
         }
-        let topic_ptr = unsafe {
-            rdkafka::rd_kafka_topic_new(self.client.ptr, name_ptr.as_ptr(), config_ptr)
-        };
+        let topic_ptr = unsafe { rdkafka::rd_kafka_topic_new(self.client.ptr, name_ptr.as_ptr(), config_ptr) };
         if topic_ptr.is_null() {
-            Err(Error::TopicNameError(self.name.clone())) //TODO: TopicCreationError
+            Err(Error::TopicName(self.name.clone())) //TODO: TopicCreationError
         } else {
-            let topic = Topic { ptr: topic_ptr, phantom: PhantomData };
+            let topic = Topic {
+                ptr: topic_ptr,
+                phantom: PhantomData,
+            };
             Ok(topic)
         }
     }
@@ -130,6 +135,8 @@ impl<'a> TopicBuilder<'a> {
 impl<'a> Drop for Topic<'a> {
     fn drop(&mut self) {
         trace!("Destroy rd_kafka_topic");
-        unsafe { rdkafka::rd_kafka_topic_destroy(self.ptr); }
+        unsafe {
+            rdkafka::rd_kafka_topic_destroy(self.ptr);
+        }
     }
 }
