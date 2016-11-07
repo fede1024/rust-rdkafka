@@ -1,8 +1,13 @@
-#![feature(alloc_system)]
-extern crate alloc_system;
+#[macro_use] extern crate log;
+extern crate env_logger;
 
 extern crate futures;
 extern crate rdkafka;
+
+use std::env;
+use log::{LogRecord, LogLevelFilter};
+use env_logger::LogBuilder;
+use std::thread;
 
 use rdkafka::config::{CreateProducer, KafkaConfig};
 use rdkafka::util::get_rdkafka_version;
@@ -26,21 +31,48 @@ fn produce(topic_name: &str) {
            .send_copy(&topic, Some(&value), Some(&"key"))
            .expect("Production failed")
            .map(move |m| {
-                println!("Future for message {} done", i);
-                (m, i)
+                info!("Delivery status for message {} received", i);
+                m
            });
         futures.push(p);
     }
 
     for future in futures {
-       let x = future.wait();
-       println!(">> {:?}", x);
+       let result = future.wait();
+       info!("Future completed. Result: {:?}", result);
     }
 }
 
+fn setup_logger() {
+    let print_thread = env::var("LOG_THREAD").is_ok();
+
+    let format = move |record: &LogRecord| {
+        let thread_name = if print_thread {
+            format!("({}) ", match thread::current().name() {
+                Some(name) => name,
+                None => "unknown"
+            })
+        } else {
+            "".to_string()
+        };
+        format!("{}{} - {} - {}", thread_name, record.level(), record.target(), record.args())
+    };
+
+    let mut builder = LogBuilder::new();
+    builder.format(format).filter(None, LogLevelFilter::Info);
+
+    if env::var("RUST_LOG").is_ok() {
+       builder.parse(&env::var("RUST_LOG").unwrap());
+    }
+
+    builder.init().unwrap();
+}
+
 fn main() {
+    setup_logger();
+
     let (version_n, version_s) = get_rdkafka_version();
-    println!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
+    info!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
 
     produce("topic1");
 }

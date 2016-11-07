@@ -2,9 +2,8 @@ extern crate futures;
 extern crate librdkafka_sys as rdkafka;
 
 use std::ffi::CString;
-use std::ptr;
 use std::os::raw::c_void;
-use std::mem;
+use std::ptr;
 
 use self::futures::Complete;
 
@@ -31,13 +30,15 @@ pub struct DeliveryStatus {
     offset: i64
 }
 
-unsafe extern fn prod_callback(client: *mut rdkafka::rd_kafka_t, msg: *const rdkafka::rd_kafka_message_t, opaque: *mut c_void) {
+unsafe extern fn prod_callback(_client: *mut rdkafka::rd_kafka_t, msg: *const rdkafka::rd_kafka_message_t, _opaque: *mut c_void) {
     let tx = Box::from_raw((*msg)._private as *mut Complete<DeliveryStatus>);
     let delivery_status = DeliveryStatus {
         error: (*msg).err,
         partition: (*msg).partition,
         offset: (*msg).offset
     };
+    // TODO: add topic name?
+    trace!("Delivery event received: {:?}", delivery_status);
     tx.complete(delivery_status);
 }
 
@@ -64,7 +65,7 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        println!("Destroy rd_kafka");
+        trace!("Destroy rd_kafka");
         unsafe { rdkafka::rd_kafka_destroy(self.ptr) };
         unsafe { rdkafka::rd_kafka_wait_destroyed(1000) };
     }
@@ -91,7 +92,7 @@ impl KafkaTopic {
 
 impl Drop for KafkaTopic {
     fn drop(&mut self) {
-        println!("Destroy rd_kafka_topic");
+        trace!("Destroy rd_kafka_topic");
         unsafe { rdkafka::rd_kafka_topic_destroy(self.ptr); }
     }
 }

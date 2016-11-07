@@ -39,7 +39,7 @@ impl<'a> KafkaMessage {
 
 impl Drop for KafkaMessage {
     fn drop(&mut self) {
-        println!("Destrying {:?}", self);
+        trace!("Destroying {:?}", self);
         unsafe { rdkafka::rd_kafka_message_destroy(self.message_n) };
     }
 }

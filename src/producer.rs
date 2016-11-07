@@ -6,7 +6,7 @@ use self::futures::{Canceled, Future, Poll, Oneshot};
 
 use std::os::raw::c_void;
 use std::ptr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::thread;
@@ -111,29 +111,37 @@ impl ProducerPollingThread {
     pub fn start(&mut self) {
         let producer = self.producer.clone();
         let should_stop = self.should_stop.clone();
-        let handle = thread::spawn(move || {
-            while !should_stop.load(Ordering::Relaxed) {
-                let n = producer.poll(100);
-                println!("Receved {} events", n);
-            }
-            println!("Polling thread loop terminated");
-        });
+        let handle = thread::Builder::new()
+            .name("polling thread".to_string())
+            .spawn(move || {
+                trace!("Polling thread loop started");
+                while !should_stop.load(Ordering::Relaxed) {
+                    let n = producer.poll(100);
+                    if n != 0 {
+                        trace!("Receved {} events", n);
+                    }
+                }
+                trace!("Polling thread loop terminated");
+            }).expect("Failed to start polling thread");
         self.handle = Some(handle);
     }
 
     pub fn stop(&mut self) {
-        println!("Stopping polling");
-        self.should_stop.store(true, Ordering::Relaxed);
         if self.handle.is_some() {
-            println!("Waiting for polling thread termination");
-            self.handle.take().unwrap().join();
+            trace!("Stopping polling");
+            self.should_stop.store(true, Ordering::Relaxed);
+            trace!("Waiting for polling thread termination");
+            match self.handle.take().unwrap().join() {
+                Ok(()) => { trace!("Polling stopped"); },
+                Err(e) => { warn!("Failure while terminating thread: {:?}", e) }
+            };
         }
-        println!("Polling stopped");
     }
 }
 
 impl Drop for ProducerPollingThread {
     fn drop(&mut self) {
+        trace!("Destroy ProducerPollingThread");
         self.stop();
     }
 }
