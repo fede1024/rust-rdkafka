@@ -1,3 +1,4 @@
+//! Consumer implementations.
 extern crate librdkafka_sys as rdkafka;
 extern crate futures;
 
@@ -18,11 +19,13 @@ use error::{Error, IsError};
 use message::Message;
 
 
+/// A Consumer client.
 #[derive(Clone)]
 pub struct Consumer {
     client: Arc<Client>,
 }
 
+/// Creates a new Consumer starting from a Config.
 impl CreateConsumer<Consumer, Error> for Config {
     fn create_consumer(&self) -> Result<Consumer, Error> {
         let client = try!(Client::new(&self, ClientType::Consumer));
@@ -74,6 +77,8 @@ impl Drop for Consumer {
     }
 }
 
+/// A Consumer with an associated polling thread. This consumer doesn't need to
+/// be polled and it will return all consumed messages as a `Stream`.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct ConsumerPollingThread {
     consumer: Consumer,

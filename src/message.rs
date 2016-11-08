@@ -1,7 +1,9 @@
+//! Store and manipulate Kafka messages.
 extern crate librdkafka_sys as rdkafka;
 
 use std::slice;
 
+/// Represent a native `librdkafka` message.
 #[derive(Debug)]
 pub struct Message {
     // TODO need creator
@@ -47,6 +49,7 @@ impl Drop for Message {
     }
 }
 
+/// Serializes a data structure to bytes.
 pub trait ToBytes {
     fn to_bytes(&self) -> &[u8];
 }

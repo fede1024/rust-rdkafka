@@ -1,3 +1,4 @@
+//! Common client funcionalities.
 extern crate futures;
 extern crate librdkafka_sys as rdkafka;
 
@@ -12,11 +13,15 @@ use config::Config;
 use error::{IsError, Error};
 use util::cstr_to_owned;
 
+/// Specifies the type of client.
 pub enum ClientType {
+    /// A librdkafka consumer
     Consumer,
+    /// A librdkafka producer
     Producer,
 }
 
+/// A librdkafka client.
 pub struct Client {
     pub ptr: *mut rdkafka::rd_kafka_t,
 }
@@ -25,6 +30,8 @@ unsafe impl Sync for Client {}
 unsafe impl Send for Client {}
 
 #[derive(Debug)]
+/// Information returned by the producer after a message has been delivered
+/// or failed to be delivered.
 pub struct DeliveryStatus {
     error: rdkafka::rd_kafka_resp_err_t,
     partition: i32,
@@ -73,13 +80,14 @@ impl Drop for Client {
     }
 }
 
-
+/// Builder for a Topic.
 pub struct TopicBuilder<'a> {
     name: String,
     conf: HashMap<String, String>,
     client: &'a Client,
 }
 
+/// Represents a Kafka topic, associated to a producer.
 pub struct Topic<'a> {
     pub ptr: *mut rdkafka::rd_kafka_topic_t,
     phantom: PhantomData<&'a u8>, // Refers to client

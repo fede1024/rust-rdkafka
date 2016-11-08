@@ -1,3 +1,4 @@
+//! Error manipulations.
 extern crate libc;
 extern crate librdkafka_sys as rdkafka;
 extern crate std;
@@ -8,9 +9,9 @@ pub type RespError = rdkafka::rd_kafka_resp_err_t;
 /// Configuration response
 pub type ConfRes = rdkafka::rd_kafka_conf_res_t;
 
-/// Verify if the return code or return value represents an error condition
+/// Verify if the return code or return value represents an error condition.
 pub trait IsError {
-    /// Return true if the error code or return code represents an error
+    /// Return true if the error code or return code represents an error.
     fn is_error(self) -> bool;
 }
 
@@ -27,7 +28,7 @@ impl IsError for ConfRes {
 }
 
 #[derive(Debug)]
-/// Represents all Kafka errors
+/// Represents all Kafka errors.
 pub enum Error {
     Config((ConfRes, String, String, String)),
     ConsumerCreation(String),
