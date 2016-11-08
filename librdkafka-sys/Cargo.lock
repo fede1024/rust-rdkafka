@@ -1,6 +1,6 @@
 [root]
 name = "librdkafka-sys"
-version = "0.1.0"
+version = "0.9.1-2"
 dependencies = [
  "num_cpus 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -18,3 +18,6 @@ dependencies = [
  "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
+[metadata]
+"checksum libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)" = "044d1360593a78f5c8e5e710beccdc24ab71d1f01bc19a29bcacdba22e8475d8"
+"checksum num_cpus 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)" = "cee7e88156f3f9e19bdd598f8d6c9db7bf4078f99f8381f43a55b09648d1a6e3"

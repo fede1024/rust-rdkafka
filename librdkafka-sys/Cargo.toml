@@ -1,6 +1,6 @@
 [package]
 name = "librdkafka-sys"
-version = "0.9.1-2"
+version = "0.9.1-3"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 build = "build.rs"
 links = "rdkafka"
@@ -17,3 +17,10 @@ num_cpus = "0.2"
 [lib]
 name = "librdkafka_sys"
 path = "src/lib.rs"
+
+[features]
+default = ["zlib"]
+
+zlib = []
+ssl = []
+sasl = ["ssl"]
