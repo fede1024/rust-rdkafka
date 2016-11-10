@@ -1,10 +1,10 @@
 # rust-rdkafka
 
-Kafka client library for Rust based on `librdkafka`.
-
 [![docs.rs](https://docs.rs/rdkafka/badge.svg)](https://docs.rs/rdkafka/)
 [![Join the chat at https://gitter.im/rust-rdkafka/Lobby](https://badges.gitter.im/rust-rdkafka/Lobby.svg)](https://gitter.im/rust-rdkafka/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![crates.io](https://img.shields.io/crates/v/rdkafka.svg)](https://crates.io/crates/rdkafka)
+
+Kafka client library for Rust based on `librdkafka`.
 
 ## The library
 This library aims to provide a safe interface to [`librdkafka`].
