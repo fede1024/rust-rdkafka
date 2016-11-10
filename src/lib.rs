@@ -1,8 +1,23 @@
-//! Rust wrapper for `librdkafka`.
-//! 
-//! This crate is a wrapper for the `librdkafka` library. It provides a safe Rust API
-//! to asynchronously produce and consume Kafka messages.
-//! 
+//! # rust-rdkafka
+//! Kafka client library for Rust based on `librdkafka`.
+//!
+//! ## The library
+//! This library aims to provide a safe interface to [`librdkafka`].
+//! It currently exports some of the funcionalities provided by the producer and consumer
+//! of `librdkafka` 0.9.1.
+//!
+//! Producers and consumers can be accessed and polled directly, or alternatively
+//! a [`futures`]-based interface can be used:
+//!
+//! * A consumer will return a [`stream`] of messages, as they are received from Kafka.
+//! * A producer will return a [`future`] that will eventually contain the delivery
+//! status of the message.
+//!
+//! [`librdkafka`]: https://github.com/edenhill/librdkafka
+//! [`futures`]: https://github.com/alexcrichton/futures-rs
+//! [`future`]: https://docs.rs/futures/0.1.3/futures/trait.Future.html
+//! [`stream`]: https://docs.rs/futures/0.1.3/futures/stream/trait.Stream.html
+//!
 //! *Warning*: this library is still at an early development stage, the API is very likely
 //! to change and it shouldn't be considered production ready.
 //!
@@ -25,8 +40,7 @@
 //! * `libssl-dev`: optional, *not* included by default (feature: `ssl`).
 //! * `libsasl2-dev`: optional, *not* included by default (feature: `sasl`).
 //!
-//! All libraries excluding `librdkafka` will be linked dynamically. To enable ssl and sasl, use the
-//! `features` field in `Cargo.toml`. Example:
+//! To enable ssl and sasl, use the `features` field in `Cargo.toml`. Example:
 //!
 //! ```
 //! [dependencies.rdkafka]

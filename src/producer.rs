@@ -26,6 +26,7 @@ pub struct Producer {
     client: Arc<Client>,
 }
 
+/// Creates a new Producer starting from a Config.
 impl CreateProducer<Producer, Error> for Config {
     fn create_producer(&self) -> Result<Producer, Error> {
         let client = try!(Client::new(&self, ClientType::Producer));
@@ -50,12 +51,12 @@ impl Future for DeliveryFuture {
 }
 
 impl Producer {
-    /// Return a topic builder associated to the producer.
+    /// Returns a topic builder associated to the producer.
     pub fn get_topic(&self, topic_name: &str) -> TopicBuilder {
         TopicBuilder::new(&self.client, topic_name)
     }
 
-    /// Poll the producer. Regular calls to `poll` are required to process the evens
+    /// Polls the producer. Regular calls to `poll` are required to process the evens
     /// and execute the message delivery callbacks.
     pub fn poll(&self, timeout_ms: i32) -> i32 {
         unsafe { rdkafka::rd_kafka_poll(self.client.ptr, timeout_ms) }
@@ -85,14 +86,14 @@ impl Producer {
         }
     }
 
-    /// Send a copy of the message and key provided. Return a `DeliveryFuture` or an `Error`.
+    /// Sends a copy of the message and key provided. Returns a `DeliveryFuture` or an `Error`.
     pub fn send_copy<P, K>(&self, topic: &Topic, payload: Option<&P>, key: Option<&K>) -> Result<DeliveryFuture, Error>
         where K: ToBytes,
               P: ToBytes {
         self._send_copy(topic, payload.map(P::to_bytes), key.map(K::to_bytes))
     }
 
-    /// Start the polling thread for the producer. It returns a `ProducerPollingThread` that will
+    /// Starts the polling thread for the producer. It returns a `ProducerPollingThread` that will
     /// process al the events. Calling `poll` is not required if the `ProducerPollingThread`
     /// thread is running.
     pub fn start_polling_thread(&self) -> ProducerPollingThread {
@@ -123,7 +124,7 @@ impl ProducerPollingThread {
         }
     }
 
-    /// Start the internal polling thread.
+    /// Starts the internal polling thread.
     pub fn start(&mut self) {
         let producer = self.producer.clone();
         let should_stop = self.should_stop.clone();
@@ -143,7 +144,7 @@ impl ProducerPollingThread {
         self.handle = Some(handle);
     }
 
-    /// Stop the internal polling thread. The thread can also be stopped by moving
+    /// Stops the internal polling thread. The thread can also be stopped by moving
     /// the ProducerPollingThread out of scope.
     pub fn stop(&mut self) {
         if self.handle.is_some() {

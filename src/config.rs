@@ -19,7 +19,7 @@ impl Config {
         Config { conf: HashMap::new() }
     }
 
-    /// Set a new parameter in the configuration.
+    /// Sets a new parameter in the configuration.
     pub fn set<'a>(&'a mut self, key: &str, value: &str) -> &'a mut Config {
         self.conf.insert(key.to_string(), value.to_string());
         self
@@ -48,12 +48,12 @@ impl Config {
     }
 }
 
-/// Create a new consumer.
+/// Creates a new consumer.
 pub trait CreateConsumer<T, E> {
     fn create_consumer(&self) -> Result<T, E>;
 }
 
-/// Create a new producer.
+/// Creates a new producer.
 pub trait CreateProducer<T, E> {
     fn create_producer(&self) -> Result<T, E>;
 }

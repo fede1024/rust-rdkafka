@@ -53,6 +53,7 @@ unsafe extern "C" fn prod_callback(_client: *mut rdkafka::rd_kafka_t,
 }
 
 impl Client {
+    /// Creates a new Client given a configuration and a client type.
     pub fn new(config: &Config, client_type: ClientType) -> Result<Client, Error> {
         let errstr = [0i8; 1024];
         let config_ptr = try!(config.create_kafka_config());
@@ -87,14 +88,15 @@ pub struct TopicBuilder<'a> {
     client: &'a Client,
 }
 
-/// Represents a Kafka topic, associated to a producer.
+/// Represents a Kafka topic with an associated producer.
 pub struct Topic<'a> {
     pub ptr: *mut rdkafka::rd_kafka_topic_t,
-    phantom: PhantomData<&'a u8>, // Refers to client
+    phantom: PhantomData<&'a u8>, // Refers to client, should we use the client instead?
 }
 
 
 impl<'a> TopicBuilder<'a> {
+    /// Returns a new TopicBuilder for the specified topic name and client.
     pub fn new(client: &'a Client, name: &str) -> TopicBuilder<'a> {
         TopicBuilder {
             name: name.to_string(),
@@ -103,11 +105,13 @@ impl<'a> TopicBuilder<'a> {
         }
     }
 
+    /// Adds a new key-value pair in the topic configution.
     pub fn set<'b>(&'b mut self, key: &str, value: &str) -> &'b mut TopicBuilder<'a> {
         self.conf.insert(key.to_string(), value.to_string());
         self
     }
 
+    /// Creates the Topic.
     pub fn create(&self) -> Result<Topic<'a>, Error> {
         let name_ptr = CString::new(self.name.clone()).unwrap();
         let config_ptr = unsafe { rdkafka::rd_kafka_topic_conf_new() };
