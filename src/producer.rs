@@ -12,8 +12,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::thread;
 
-use config::CreateProducer;
-use config::Config;
+use config::{Config, FromConfig};
 use error::Error;
 use message::ToBytes;
 use client::{Client, ClientType, TopicBuilder, Topic, DeliveryStatus};
@@ -27,9 +26,9 @@ pub struct Producer {
 }
 
 /// Creates a new Producer starting from a Config.
-impl CreateProducer<Producer, Error> for Config {
-    fn create_producer(&self) -> Result<Producer, Error> {
-        let client = try!(Client::new(&self, ClientType::Producer));
+impl FromConfig for Producer {
+    fn from_config(config: &Config) -> Result<Producer, Error> {
+        let client = try!(Client::new(config, ClientType::Producer));
         let producer = Producer { client: Arc::new(client) };
         Ok(producer)
     }

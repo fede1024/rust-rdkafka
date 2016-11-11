@@ -46,14 +46,13 @@ impl Config {
         }
         Ok(conf)
     }
+
+    pub fn create<T: FromConfig>(&self) -> Result<T, Error> {
+        T::from_config(self)
+    }
 }
 
-/// Creates a new consumer.
-pub trait CreateConsumer<T, E> {
-    fn create_consumer(&self) -> Result<T, E>;
-}
-
-/// Creates a new producer.
-pub trait CreateProducer<T, E> {
-    fn create_producer(&self) -> Result<T, E>;
+/// Create a new client based on the provided configuration.
+pub trait FromConfig: Sized {
+    fn from_config(&Config) -> Result<Self, Error>;
 }

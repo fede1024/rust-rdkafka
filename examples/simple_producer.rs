@@ -9,7 +9,8 @@ use log::{LogRecord, LogLevelFilter};
 use env_logger::LogBuilder;
 use std::thread;
 
-use rdkafka::config::{CreateProducer, Config};
+use rdkafka::config::Config;
+use rdkafka::producer::Producer;
 use rdkafka::util::get_rdkafka_version;
 
 use futures::*;
@@ -18,7 +19,7 @@ use futures::*;
 fn produce(topic_name: &str) {
     let producer = Config::new()
         .set("bootstrap.servers", "localhost:9092")
-        .create_producer()
+        .create::<Producer>()
         .unwrap();
 
     let _producer_thread = producer.start_polling_thread();
