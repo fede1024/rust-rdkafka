@@ -81,3 +81,9 @@ and `LOG_THREAD` will add the name of the thread to log messages.
 ## Documentation
 
 Documentation is available on [docs.rs](https://docs.rs/rdkafka/).
+
+## Alternatives
+
+* [`kafka-rust`] a pure Rust implementation of the Kafka client.
+
+[`kafka-rust`]: https://github.com/spicavigo/kafka-rust
