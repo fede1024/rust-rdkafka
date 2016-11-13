@@ -2,19 +2,19 @@
 //! Kafka client library for Rust based on `librdkafka`.
 //!
 //! ## The library
-//! This library aims to provide a safe interface to [`librdkafka`].
+//! This library aims to provide a safe interface to [librdkafka].
 //! It currently exports some of the funcionalities provided by the producer and consumer
-//! of `librdkafka` 0.9.1.
+//! of librdkafka 0.9.1.
 //!
 //! Producers and consumers can be accessed and polled directly, or alternatively
-//! a [`futures`]-based interface can be used:
+//! a [futures]-based interface can be used:
 //!
 //! * A consumer will return a [`stream`] of messages, as they are received from Kafka.
 //! * A producer will return a [`future`] that will eventually contain the delivery
 //! status of the message.
 //!
-//! [`librdkafka`]: https://github.com/edenhill/librdkafka
-//! [`futures`]: https://github.com/alexcrichton/futures-rs
+//! [librdkafka]: https://github.com/edenhill/librdkafka
+//! [futures]: https://github.com/alexcrichton/futures-rs
 //! [`future`]: https://docs.rs/futures/0.1.3/futures/trait.Future.html
 //! [`stream`]: https://docs.rs/futures/0.1.3/futures/stream/trait.Stream.html
 //!
@@ -30,8 +30,8 @@
 //! rdkafka = "^0.1.0"
 //! ```
 //!
-//! This crate will compile `librdkafka` from sources and link it statically in your
-//! executable. To compile `librdkafka` you'll need:
+//! This crate will compile librdkafka from sources and link it statically in your
+//! executable. To compile librdkafka you'll need:
 //!
 //! * the GNU toolchain
 //! * GNU `make`
@@ -50,7 +50,7 @@
 //!
 //! ## Compiling from sources
 //!
-//! To compile from sources, you'll have to update the submodule containing `librdkafka`:
+//! To compile from sources, you'll have to update the submodule containing librdkafka:
 //!
 //! ```bash
 //! git submodule update --init
