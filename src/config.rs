@@ -3,7 +3,7 @@ extern crate librdkafka_sys as rdkafka;
 
 use std::collections::HashMap;
 use std::ffi::CString;
-use util::cstr_to_owned;
+use util::bytes_cstr_to_owned;
 
 use error::{Error, IsError};
 
@@ -40,7 +40,7 @@ impl Config {
                                            errstr.len())
             };
             if ret.is_error() {
-                let descr = cstr_to_owned(&errstr);
+                let descr = unsafe { bytes_cstr_to_owned(&errstr) };
                 return Err(Error::Config((ret, descr, key.to_string(), value.to_string())));
             }
         }

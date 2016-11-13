@@ -72,11 +72,8 @@ cargo build --features "ssl sasl"
 You can find examples in the `examples` folder. To run them:
 
 ```bash
-RUST_LOG="rdkafka=trace" LOG_THREAD=1 cargo run --example simple_consumer
+cargo run --example <example_name> -- <example_args>
 ```
-
-The `RUST_LOG` environemnt variable will configure tracing level logging for `rdkafka`,
-and `LOG_THREAD` will add the name of the thread to log messages.
 
 ## Documentation
 

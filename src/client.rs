@@ -11,7 +11,7 @@ use self::futures::Complete;
 
 use config::Config;
 use error::{IsError, Error};
-use util::cstr_to_owned;
+use util::bytes_cstr_to_owned;
 
 /// Specifies the type of client.
 pub enum ClientType {
@@ -67,7 +67,8 @@ impl Client {
         let client_ptr =
             unsafe { rdkafka::rd_kafka_new(rd_kafka_type, config_ptr, errstr.as_ptr() as *mut i8, errstr.len()) };
         if client_ptr.is_null() {
-            return Err(Error::ClientCreation(cstr_to_owned(&errstr)));
+            let descr = unsafe { bytes_cstr_to_owned(&errstr) };
+            return Err(Error::ClientCreation(descr));
         }
         Ok(Client { ptr: client_ptr })
     }
@@ -127,7 +128,7 @@ impl<'a> TopicBuilder<'a> {
                                                  errstr.len())
             };
             if ret.is_error() {
-                let descr = cstr_to_owned(&errstr);
+                let descr = unsafe { bytes_cstr_to_owned(&errstr) };
                 return Err(Error::Config((ret, descr, name.to_string(), value.to_string())));
             }
         }

@@ -1,30 +1,28 @@
 #[macro_use] extern crate log;
-extern crate env_logger;
-
+extern crate clap;
 extern crate futures;
 extern crate rdkafka;
 
-use std::env;
-use log::{LogRecord, LogLevelFilter};
-use env_logger::LogBuilder;
-use std::thread;
+use clap::{App, Arg};
+use futures::*;
 
 use rdkafka::config::Config;
 use rdkafka::producer::Producer;
 use rdkafka::util::get_rdkafka_version;
 
-use futures::*;
+mod example_utils;
+use example_utils::setup_logger;
 
 
-fn produce(topic_name: &str) {
+fn produce(brokers: &str, topic: &str) {
     let producer = Config::new()
-        .set("bootstrap.servers", "localhost:9092")
+        .set("bootstrap.servers", brokers)
         .create::<Producer>()
         .unwrap();
 
     let _producer_thread = producer.start_polling_thread();
 
-    let topic = producer.get_topic(topic_name)
+    let topic = producer.get_topic(topic)
         .set("produce.offset.report", "true")
         .create()
         .expect("Topic creation error");
@@ -46,33 +44,37 @@ fn produce(topic_name: &str) {
     }
 }
 
-fn setup_logger() {
-    let print_thread = env::var("LOG_THREAD").is_ok();
-
-    let format = move |record: &LogRecord| {
-        let thread_name = if print_thread {
-            format!("({}) ", thread::current().name().unwrap_or("unknown"))
-        } else {
-            "".to_string()
-        };
-        format!("{}{} - {} - {}", thread_name, record.level(), record.target(), record.args())
-    };
-
-    let mut builder = LogBuilder::new();
-    builder.format(format).filter(None, LogLevelFilter::Info);
-
-    if env::var("RUST_LOG").is_ok() {
-       builder.parse(&env::var("RUST_LOG").unwrap());
-    }
-
-    builder.init().unwrap();
-}
-
 fn main() {
-    setup_logger();
+    let matches = App::new("producer example")
+        .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
+        .about("Simple command line producer")
+        .arg(Arg::with_name("brokers")
+             .short("b")
+             .long("brokers")
+             .help("Broker list in kafka format")
+             .takes_value(true)
+             .default_value("localhost:9092"))
+        .arg(Arg::with_name("log-conf")
+             .long("log-conf")
+             .help("Configure the logging format")
+             .default_value("rdkafka=trace"))
+        .arg(Arg::with_name("topic")
+             .short("t")
+             .long("topic")
+             .help("Destination topic")
+             .takes_value(true)
+             .required(true))
+        .get_matches();
+
+    setup_logger(true, matches.value_of("log-conf"));
 
     let (version_n, version_s) = get_rdkafka_version();
     info!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
 
-    produce("topic1");
+    let topic = matches.value_of("topic").unwrap();
+    let brokers = matches.value_of("brokers").unwrap();
+
+    produce(brokers, topic);
 }
+
+

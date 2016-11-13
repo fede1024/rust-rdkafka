@@ -17,6 +17,7 @@ use client::{Client, ClientType};
 use config::{FromConfig, Config};
 use error::{Error, IsError};
 use message::Message;
+use util::cstr_to_owned;
 
 
 /// A Consumer client.
@@ -35,18 +36,38 @@ impl FromConfig for Consumer {
 }
 
 impl Consumer {
-    pub fn subscribe(&mut self, topic_name: &str) -> Result<(), Error> {
-        let topic_name_c = CString::new(topic_name).unwrap();
-        let ret_code = unsafe {
-            let tp_list = rdkafka::rd_kafka_topic_partition_list_new(1);
-            rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_name_c.as_ptr(), 0);
-            rdkafka::rd_kafka_subscribe(self.client.ptr, tp_list)
-        };
-        if ret_code.is_error() {
-            Err(Error::Subscription(topic_name.to_string()))
-        } else {
-            Ok(())
+    /// Subscribes the consumer to a list of topics and/or topic sets (using regex).
+    /// Strings starting with `^` will be regex-matched to the full list of topics in
+    /// the cluster and matching topics will be added to the subscription list.
+    pub fn subscribe(&mut self, topics: &Vec<&str>) -> Result<(), Error> {
+        let tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(topics.len() as i32) };
+        for &topic in topics {
+            let topic_c = CString::new(topic).unwrap();
+            let ret_code = unsafe {
+                rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_c.as_ptr(), 0);
+                rdkafka::rd_kafka_subscribe(self.client.ptr, tp_list)
+            };
+            if ret_code.is_error() {
+                return Err(Error::Subscription(topic.to_string()))
+            };
         }
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        Ok(())
+    }
+
+    /// Returns a vector of topics or topic patterns the consumer is subscribed to.
+    pub fn get_subscriptions(&self) -> Vec<String> {
+        let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
+        unsafe { rdkafka::rd_kafka_subscription(self.client.ptr, &mut tp_list as *mut *mut rdkafka::rd_kafka_topic_partition_list_t) };
+
+        let mut tp_res = Vec::new();
+        for i in 0..unsafe { (*tp_list).cnt } {
+            let elem = unsafe { (*tp_list).elems.offset(i as isize) };
+            let topic_name = unsafe { cstr_to_owned((*elem).topic) };
+            tp_res.push(topic_name);
+        }
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        tp_res
     }
 
     pub fn poll(&self, timeout_ms: i32) -> Result<Option<Message>, Error> {
@@ -72,7 +93,7 @@ impl Consumer {
 
 impl Drop for Consumer {
     fn drop(&mut self) {
-        trace!("Destroying consumer");
+        trace!("Destroying consumer");  // TODO: fix me (multiple executions)
         unsafe { rdkafka::rd_kafka_consumer_close(self.client.ptr) };
     }
 }
