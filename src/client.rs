@@ -9,6 +9,7 @@ use std::marker::PhantomData;
 
 use self::futures::Complete;
 
+use events::EventQueue;
 use config::Config;
 use error::{IsError, Error};
 use util::cstr_to_owned;
@@ -70,6 +71,35 @@ impl Client {
             return Err(Error::ClientCreation(cstr_to_owned(&errstr)));
         }
         Ok(Client { ptr: client_ptr })
+    }
+
+    /// Creates a new Client given a configuration and a client type.
+    pub fn new2(config: *mut rdkafka::rd_kafka_conf_t, client_type: ClientType) -> Result<Client, Error> {
+        let errstr = [0i8; 1024];
+        let config_ptr = config;
+        let rd_kafka_type = match client_type {
+            ClientType::Consumer => rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER,
+            ClientType::Producer => {
+                unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(config_ptr, Some(prod_callback)) };
+                rdkafka::rd_kafka_type_t::RD_KAFKA_PRODUCER
+            }
+        };
+        let client_ptr =
+            unsafe { rdkafka::rd_kafka_new(rd_kafka_type, config_ptr, errstr.as_ptr() as *mut i8, errstr.len()) };
+        if client_ptr.is_null() {
+            return Err(Error::ClientCreation(cstr_to_owned(&errstr)));
+        }
+        Ok(Client { ptr: client_ptr })
+    }
+
+    pub fn get_main_queue(&self) -> EventQueue {
+        let ptr = unsafe { rdkafka::rd_kafka_queue_get_main(self.ptr) };
+        EventQueue { ptr: ptr }
+    }
+
+    pub fn get_consumer_queue(&self) -> EventQueue {
+        let ptr = unsafe { rdkafka::rd_kafka_queue_get_consumer(self.ptr) };
+        EventQueue { ptr: ptr }
     }
 }
 

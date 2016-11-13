@@ -107,7 +107,7 @@ impl ConsumerPollingThread {
                 trace!("Polling thread loop started");
                 while !should_stop.load(Ordering::Relaxed) {
                     // TODO: while stream alive?
-                    match consumer.poll(100) {
+                    match consumer.poll(1000) {
                         Ok(None) => {}
                         Ok(Some(m)) => {
                             let future_sender = sender.send(Ok(m));

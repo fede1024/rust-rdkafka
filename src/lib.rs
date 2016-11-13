@@ -80,6 +80,8 @@ pub mod client;
 pub mod config;
 pub mod consumer;
 pub mod error;
+mod events;
+pub mod event_consumer;
 pub mod message;
 pub mod producer;
 pub mod util;
