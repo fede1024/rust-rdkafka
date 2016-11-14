@@ -41,15 +41,16 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                         &[]
                     },
                 };
-                let value = match message.get_value_view::<str>() {
+                let payload = match message.get_payload_view::<str>() {
                     None => "",
                     Some(Ok(s)) => s,
                     Some(Err(e)) => {
-                        warn!("Error while deserializing message value: {:?}", e);
+                        warn!("Error while deserializing message payload: {:?}", e);
                         ""
                     },
                 };
-                info!("key: '{:?}', value: '{}', partition: {}, offset: {}", key, value, message.get_partition(), message.get_offset());
+                info!("key: '{:?}', payload: '{}', partition: {}, offset: {}",
+                      key, payload, message.get_partition(), message.get_offset());
             },
         };
     }

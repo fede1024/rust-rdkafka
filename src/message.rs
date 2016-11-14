@@ -13,20 +13,12 @@ pub struct Message {
 unsafe impl Send for Message {}
 
 impl<'a> Message {
+    /// Creates a new Message that wraps the native Kafka message pointer.
     pub fn new(ptr: *mut rdkafka::rd_kafka_message_t) -> Message {
         Message { ptr: ptr }
     }
 
-    pub fn get_payload(&'a self) -> Option<&'a [u8]> {
-        unsafe {
-            if (*self.ptr).payload.is_null() {
-                None
-            } else {
-                Some(slice::from_raw_parts::<u8>((*self.ptr).payload as *const u8, (*self.ptr).len))
-            }
-        }
-    }
-
+    /// Returns the key of the message, or None if there is no key.
     pub fn get_key(&'a self) -> Option<&'a [u8]> {
         unsafe {
             if (*self.ptr).key.is_null() {
@@ -37,7 +29,18 @@ impl<'a> Message {
         }
     }
 
-    pub fn get_value_view<V: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a V, V::Error>> {
+    /// Returns the payload of the message, or None if there is no payload.
+    pub fn get_payload(&'a self) -> Option<&'a [u8]> {
+        unsafe {
+            if (*self.ptr).payload.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts::<u8>((*self.ptr).payload as *const u8, (*self.ptr).len))
+            }
+        }
+    }
+
+    pub fn get_payload_view<V: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a V, V::Error>> {
         self.get_payload().map(V::from_bytes)
     }
 
@@ -62,6 +65,7 @@ impl Drop for Message {
 }
 
 /// Given a reference to a byte array, returns a different view of the same data.
+/// No copy of the data should be performed.
 pub trait FromBytes {
     type Error;
     fn from_bytes(&[u8]) -> Result<&Self, Self::Error>;
@@ -82,6 +86,7 @@ impl FromBytes for str {
 }
 
 /// Given some data, returns the byte representation of that data.
+/// No copy of the data should be performed.
 pub trait ToBytes {
     fn to_bytes(&self) -> &[u8];
 }
