@@ -44,7 +44,7 @@ impl Consumer {
         for &topic in topics {
             let topic_c = CString::new(topic).unwrap();
             let ret_code = unsafe {
-                rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_c.as_ptr(), 0);
+                rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_c.as_ptr(), -1);
                 rdkafka::rd_kafka_subscribe(self.client.ptr, tp_list)
             };
             if ret_code.is_error() {
@@ -53,6 +53,11 @@ impl Consumer {
         }
         unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
         Ok(())
+    }
+
+    /// Unsubscribe from previous subscription list.
+    pub fn unsubscribe(&mut self) {
+        unsafe { rdkafka::rd_kafka_unsubscribe(self.client.ptr) };
     }
 
     /// Returns a vector of topics or topic patterns the consumer is subscribed to.
@@ -71,15 +76,15 @@ impl Consumer {
     }
 
     pub fn poll(&self, timeout_ms: i32) -> Result<Option<Message>, Error> {
-        let message_n = unsafe { rdkafka::rd_kafka_consumer_poll(self.client.ptr, timeout_ms) };
-        if message_n.is_null() {
+        let message_ptr = unsafe { rdkafka::rd_kafka_consumer_poll(self.client.ptr, timeout_ms) };
+        if message_ptr.is_null() {
             return Ok(None);
         }
-        let error = unsafe { (*message_n).err };
+        let error = unsafe { (*message_ptr).err };
         if error.is_error() {
             return Err(Error::MessageConsumption(error));
         }
-        let kafka_message = Message { message_n: message_n };
+        let kafka_message = Message::new(message_ptr);
         Ok(Some(kafka_message))
     }
 

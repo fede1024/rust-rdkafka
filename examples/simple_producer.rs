@@ -27,10 +27,10 @@ fn produce(brokers: &str, topic: &str) {
         .create()
         .expect("Topic creation error");
 
-    let futures = (0..10)
+    let futures = (0..5)
         .map(|i| {
             let value = format!("Message {}", i);
-            producer.send_copy(&topic, Some(&value), Some(&"key"))
+            producer.send_copy(&topic, Some(&value), Some(&vec![0, 1, 2, 3]))
                 .expect("Production failed")
                 .map(move |m| {
                     info!("Delivery status for message {} received", i);

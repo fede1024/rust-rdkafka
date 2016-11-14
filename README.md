@@ -5,10 +5,10 @@
 [![Build Status](https://travis-ci.org/fede1024/rust-rdkafka.svg?branch=master)](https://travis-ci.org/fede1024/rust-rdkafka)
 [![Join the chat at https://gitter.im/rust-rdkafka/Lobby](https://badges.gitter.im/rust-rdkafka/Lobby.svg)](https://gitter.im/rust-rdkafka/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Kafka client library for Rust based on `librdkafka`.
+Kafka client library for Rust based on [librdkafka].
 
 ## The library
-This library aims to provide a safe interface to [librdkafka].
+This library aims to provide a safe interface to librdkafka.
 It currently exports some of the funcionalities provided by the producer and consumer
 of librdkafka 0.9.1.
 

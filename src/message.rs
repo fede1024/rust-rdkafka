@@ -2,54 +2,86 @@
 extern crate librdkafka_sys as rdkafka;
 
 use std::slice;
+use std::str;
 
-/// Represent a native `librdkafka` message.
+/// Represents a native librdkafka message.
 #[derive(Debug)]
 pub struct Message {
-    // TODO need creator
-    pub message_n: *mut rdkafka::rd_kafka_message_s,
+    ptr: *mut rdkafka::rd_kafka_message_t,
 }
 
 unsafe impl Send for Message {}
 
 impl<'a> Message {
+    pub fn new(ptr: *mut rdkafka::rd_kafka_message_t) -> Message {
+        Message { ptr: ptr }
+    }
+
     pub fn get_payload(&'a self) -> Option<&'a [u8]> {
         unsafe {
-            if (*self.message_n).payload.is_null() {
+            if (*self.ptr).payload.is_null() {
                 None
             } else {
-                Some(slice::from_raw_parts::<u8>((*self.message_n).payload as *const u8, (*self.message_n).len))
+                Some(slice::from_raw_parts::<u8>((*self.ptr).payload as *const u8, (*self.ptr).len))
             }
         }
     }
 
     pub fn get_key(&'a self) -> Option<&'a [u8]> {
         unsafe {
-            if (*self.message_n).key.is_null() {
+            if (*self.ptr).key.is_null() {
                 None
             } else {
-                Some(slice::from_raw_parts::<u8>((*self.message_n).key as *const u8, (*self.message_n).key_len))
+                Some(slice::from_raw_parts::<u8>((*self.ptr).key as *const u8, (*self.ptr).key_len))
             }
         }
     }
 
+    pub fn get_value_view<V: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a V, V::Error>> {
+        self.get_payload().map(V::from_bytes)
+    }
+
+    pub fn get_key_view<K: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a K, K::Error>> {
+        self.get_key().map(K::from_bytes)
+    }
+
     pub fn get_partition(&self) -> i32 {
-        unsafe { (*self.message_n).partition }
+        unsafe { (*self.ptr).partition }
     }
 
     pub fn get_offset(&self) -> i64 {
-        unsafe { (*self.message_n).offset }
+        unsafe { (*self.ptr).offset }
     }
 }
 
 impl Drop for Message {
     fn drop(&mut self) {
-        trace!("Destroying {:?}", self);
-        unsafe { rdkafka::rd_kafka_message_destroy(self.message_n) };
+        trace!("Destroying message {:?}", self);
+        unsafe { rdkafka::rd_kafka_message_destroy(self.ptr) };
     }
 }
 
-/// Serializes a data structure to bytes.
+/// Given a reference to a byte array, returns a different view of the same data.
+pub trait FromBytes {
+    type Error;
+    fn from_bytes(&[u8]) -> Result<&Self, Self::Error>;
+}
+
+impl FromBytes for [u8] {
+    type Error = ();
+    fn from_bytes(bytes: &[u8]) -> Result<&Self, Self::Error> {
+        Ok(bytes)
+    }
+}
+
+impl FromBytes for str {
+    type Error = str::Utf8Error;
+    fn from_bytes(bytes: &[u8]) -> Result<&Self, Self::Error> {
+        str::from_utf8(bytes)
+    }
+}
+
+/// Given some data, returns the byte representation of that data.
 pub trait ToBytes {
     fn to_bytes(&self) -> &[u8];
 }
@@ -75,5 +107,11 @@ impl<'a> ToBytes for &'a str {
 impl<'a> ToBytes for String {
     fn to_bytes(&self) -> &[u8] {
         self.as_bytes()
+    }
+}
+
+impl<'a> ToBytes for () {
+    fn to_bytes(&self) -> &[u8] {
+        &[]
     }
 }

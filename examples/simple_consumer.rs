@@ -27,13 +27,31 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
     let (_consumer_thread, message_stream) = consumer.start_thread();
     info!("Consumer initialized: {:?}", topics);
 
-    let message_stream = message_stream.map(|m| {
-        info!("Processing message");
-        m
-    });
-
     for message in message_stream.take(5).wait() {
-        info!("Result: {:?}", message);
+        match message {
+            Err(e) => {
+                warn!("Can't receive message: {:?}", e);
+            },
+            Ok(message) => {
+                let key = match message.get_key_view::<[u8]>() {
+                    None => &[],
+                    Some(Ok(s)) => s,
+                    Some(Err(e)) => {
+                        warn!("Error while deserializing message key: {:?}", e);
+                        &[]
+                    },
+                };
+                let value = match message.get_value_view::<str>() {
+                    None => "",
+                    Some(Ok(s)) => s,
+                    Some(Err(e)) => {
+                        warn!("Error while deserializing message value: {:?}", e);
+                        ""
+                    },
+                };
+                info!("key: '{:?}', value: '{}', partition: {}, offset: {}", key, value, message.get_partition(), message.get_offset());
+            },
+        };
     }
 }
 

@@ -1,8 +1,8 @@
 //! # rust-rdkafka
-//! Kafka client library for Rust based on `librdkafka`.
+//! Kafka client library for Rust based on [librdkafka].
 //!
 //! ## The library
-//! This library aims to provide a safe interface to [librdkafka].
+//! This library aims to provide a safe interface to librdkafka.
 //! It currently exports some of the funcionalities provided by the producer and consumer
 //! of librdkafka 0.9.1.
 //!
