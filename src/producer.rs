@@ -3,8 +3,6 @@ extern crate librdkafka_sys as rdkafka;
 extern crate errno;
 extern crate futures;
 
-use self::futures::{Canceled, Future, Poll, Oneshot};
-
 use std::os::raw::c_void;
 use std::ptr;
 use std::sync::Arc;
@@ -12,10 +10,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::thread;
 
+use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
+
 use config::{Config, FromConfig};
 use error::Error;
 use message::ToBytes;
-use client::{Client, ClientType, TopicBuilder, Topic, DeliveryStatus};
+use client::{Client, ClientType, TopicBuilder, Topic};
 
 
 /// Contains a reference counted producer client. It can be safely cloned to
@@ -25,10 +25,38 @@ pub struct Producer {
     client: Arc<Client>,
 }
 
+#[derive(Debug)]
+/// Information returned by the producer after a message has been delivered
+/// or failed to be delivered.
+pub struct DeliveryStatus {
+    error: rdkafka::rd_kafka_resp_err_t,
+    partition: i32,
+    offset: i64,
+}
+
+
+/// Callback that gets called from librdkafka every time a message succeeds
+/// or fails to be delivered.
+unsafe extern "C" fn delivery_cb(_client: *mut rdkafka::rd_kafka_t,
+                                 msg: *const rdkafka::rd_kafka_message_t,
+                                 _opaque: *mut c_void) {
+    let tx = Box::from_raw((*msg)._private as *mut Complete<DeliveryStatus>);
+    let delivery_status = DeliveryStatus {
+        error: (*msg).err,
+        partition: (*msg).partition,
+        offset: (*msg).offset,
+    };
+    // TODO: add topic name?
+    trace!("Delivery event received: {:?}", delivery_status);
+    tx.complete(delivery_status);
+}
+
 /// Creates a new Producer starting from a Config.
 impl FromConfig for Producer {
     fn from_config(config: &Config) -> Result<Producer, Error> {
-        let client = try!(Client::new(config, ClientType::Producer));
+        let mut producer_config = config.config_clone();
+        producer_config.set_delivery_cb(delivery_cb);
+        let client = try!(Client::new(&producer_config, ClientType::Producer));
         let producer = Producer { client: Arc::new(client) };
         Ok(producer)
     }

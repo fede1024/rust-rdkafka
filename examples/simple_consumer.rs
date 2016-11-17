@@ -18,6 +18,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
     let mut consumer = Config::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
+        .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .create::<Consumer>()
         .expect("Consumer creation failed");

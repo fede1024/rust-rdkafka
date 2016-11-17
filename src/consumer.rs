@@ -132,21 +132,18 @@ impl ConsumerPollingThread {
             .spawn(move || {
                 trace!("Polling thread loop started");
                 while !should_stop.load(Ordering::Relaxed) {
-                    // TODO: while stream alive?
-                    match consumer.poll(100) {
-                        Ok(None) => {}
-                        Ok(Some(m)) => {
-                            let future_sender = sender.send(Ok(m));
-                            match future_sender.wait() {
-                                Ok(new_sender) => sender = new_sender,
-                                Err(e) => {
-                                    debug!("Sender not available: {:?}", e);
-                                    break;
-                                }
-                            };
+                    let future_sender = match consumer.poll(100) {
+                        Ok(None) => continue,
+                        Ok(Some(m)) => sender.send(Ok(m)),
+                        Err(e) => sender.send(Err(e)),
+                    };
+                    match future_sender.wait() {
+                        Ok(new_sender) => sender = new_sender,
+                        Err(e) => {
+                            debug!("Sender not available: {:?}", e);
+                            break;
                         }
-                        Err(e) => warn!("E: {:?}", e),
-                    }
+                    };
                 }
                 trace!("Polling thread loop terminated");
             })

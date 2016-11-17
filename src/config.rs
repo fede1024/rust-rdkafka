@@ -6,30 +6,48 @@ use std::ffi::CString;
 use util::bytes_cstr_to_owned;
 
 use error::{Error, IsError};
+use client::{DeliveryCallback};
 
 /// Client configuration.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
-    conf: HashMap<String, String>,
+    conf_map: HashMap<String, String>,
+    delivery_cb: Option<DeliveryCallback>,
 }
 
 impl Config {
     /// Creates a new empty configuration.
     pub fn new() -> Config {
-        Config { conf: HashMap::new() }
+        Config {
+            conf_map: HashMap::new(),
+            delivery_cb: None,
+        }
     }
 
     /// Sets a new parameter in the configuration.
     pub fn set<'a>(&'a mut self, key: &str, value: &str) -> &'a mut Config {
-        self.conf.insert(key.to_string(), value.to_string());
+        self.conf_map.insert(key.to_string(), value.to_string());
         self
+    }
+
+    pub fn set_delivery_cb<'a>(&'a mut self, cb: DeliveryCallback) -> &'a mut Config {
+        self.delivery_cb = Some(cb);
+        self
+    }
+
+    pub fn get_delivery_cb(&self) -> Option<DeliveryCallback> {
+        self.delivery_cb
+    }
+
+    pub fn config_clone(&self) -> Config {
+        (*self).clone()
     }
 
     /// Creates the native rdkafka configuration.
     pub fn create_kafka_config(&self) -> Result<*mut rdkafka::rd_kafka_conf_t, Error> {
         let conf = unsafe { rdkafka::rd_kafka_conf_new() };
         let errstr = [0; 1024];
-        for (key, value) in &self.conf {
+        for (key, value) in &self.conf_map {
             let key_c = try!(CString::new(key.to_string()));
             let value_c = try!(CString::new(value.to_string()));
             let ret = unsafe {

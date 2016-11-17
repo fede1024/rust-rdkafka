@@ -7,8 +7,6 @@ use std::os::raw::c_void;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use self::futures::Complete;
-
 use config::Config;
 use error::{IsError, Error};
 use util::bytes_cstr_to_owned;
@@ -29,28 +27,11 @@ pub struct Client {
 unsafe impl Sync for Client {}
 unsafe impl Send for Client {}
 
-#[derive(Debug)]
-/// Information returned by the producer after a message has been delivered
-/// or failed to be delivered.
-pub struct DeliveryStatus {
-    error: rdkafka::rd_kafka_resp_err_t,
-    partition: i32,
-    offset: i64,
-}
-
-unsafe extern "C" fn prod_callback(_client: *mut rdkafka::rd_kafka_t,
-                                   msg: *const rdkafka::rd_kafka_message_t,
-                                   _opaque: *mut c_void) {
-    let tx = Box::from_raw((*msg)._private as *mut Complete<DeliveryStatus>);
-    let delivery_status = DeliveryStatus {
-        error: (*msg).err,
-        partition: (*msg).partition,
-        offset: (*msg).offset,
-    };
-    // TODO: add topic name?
-    trace!("Delivery event received: {:?}", delivery_status);
-    tx.complete(delivery_status);
-}
+/// Delivery callback function type.
+pub type DeliveryCallback =
+    unsafe extern "C" fn(*mut rdkafka::rd_kafka_t,
+                         *const rdkafka::rd_kafka_message_t,
+                         *mut c_void);
 
 impl Client {
     /// Creates a new Client given a configuration and a client type.
@@ -60,7 +41,9 @@ impl Client {
         let rd_kafka_type = match client_type {
             ClientType::Consumer => rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER,
             ClientType::Producer => {
-                unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(config_ptr, Some(prod_callback)) };
+                if config.get_delivery_cb().is_some() {
+                    unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(config_ptr, config.get_delivery_cb()) };
+                }
                 rdkafka::rd_kafka_type_t::RD_KAFKA_PRODUCER
             }
         };
