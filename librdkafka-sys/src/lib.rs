@@ -355,7 +355,7 @@ pub const __SIZEOF_PTHREAD_BARRIERATTR_T: ::std::os::raw::c_uchar = 4;
 pub const __have_pthread_attr_t: ::std::os::raw::c_uchar = 1;
 pub const __PTHREAD_MUTEX_HAVE_PREV: ::std::os::raw::c_uchar = 1;
 pub const __PTHREAD_RWLOCK_INT_FLAGS_SHARED: ::std::os::raw::c_uchar = 1;
-pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 590335;
+pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 590591;
 pub const RD_KAFKA_OFFSET_BEGINNING: ::std::os::raw::c_char = -2;
 pub const RD_KAFKA_OFFSET_END: ::std::os::raw::c_char = -1;
 pub const RD_KAFKA_OFFSET_STORED: ::std::os::raw::c_short = -1000;
@@ -363,6 +363,14 @@ pub const RD_KAFKA_OFFSET_INVALID: ::std::os::raw::c_short = -1001;
 pub const RD_KAFKA_OFFSET_TAIL_BASE: ::std::os::raw::c_short = -2000;
 pub const RD_KAFKA_MSG_F_FREE: ::std::os::raw::c_uchar = 1;
 pub const RD_KAFKA_MSG_F_COPY: ::std::os::raw::c_uchar = 2;
+pub const RD_KAFKA_MSG_F_BLOCK: ::std::os::raw::c_uchar = 4;
+pub const RD_KAFKA_EVENT_NONE: ::std::os::raw::c_uchar = 0;
+pub const RD_KAFKA_EVENT_DR: ::std::os::raw::c_uchar = 1;
+pub const RD_KAFKA_EVENT_FETCH: ::std::os::raw::c_uchar = 2;
+pub const RD_KAFKA_EVENT_LOG: ::std::os::raw::c_uchar = 4;
+pub const RD_KAFKA_EVENT_ERROR: ::std::os::raw::c_uchar = 8;
+pub const RD_KAFKA_EVENT_REBALANCE: ::std::os::raw::c_uchar = 16;
+pub const RD_KAFKA_EVENT_OFFSET_COMMIT: ::std::os::raw::c_uchar = 32;
 pub type size_t = usize;
 pub type __u_char = ::std::os::raw::c_uchar;
 pub type __u_short = ::std::os::raw::c_ushort;
@@ -1004,6 +1012,7 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__AUTHENTICATION = -169,
     RD_KAFKA_RESP_ERR__NO_OFFSET = -168,
     RD_KAFKA_RESP_ERR__OUTDATED = -167,
+    RD_KAFKA_RESP_ERR__TIMED_OUT_QUEUE = -166,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,
@@ -1212,6 +1221,9 @@ pub struct rd_kafka_group_list {
 impl ::std::default::Default for rd_kafka_group_list {
     fn default() -> Self { unsafe { ::std::mem::zeroed() } }
 }
+pub type rd_kafka_event_type_t = ::std::os::raw::c_int;
+pub enum rd_kafka_op_s { }
+pub type rd_kafka_event_t = rd_kafka_op_s;
 pub type __builtin_va_list = [__va_list_tag; 1usize];
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1225,7 +1237,6 @@ pub struct __va_list_tag {
 impl ::std::default::Default for __va_list_tag {
     fn default() -> Self { unsafe { ::std::mem::zeroed() } }
 }
-//#[link(name = "rdkafka", kind = "dylib")]
 extern "C" {
     pub static mut _IO_2_1_stdin_: _IO_FILE_plus;
     pub static mut _IO_2_1_stdout_: _IO_FILE_plus;
@@ -1236,7 +1247,6 @@ extern "C" {
     pub static mut sys_nerr: ::std::os::raw::c_int;
     pub static mut sys_errlist: [*const ::std::os::raw::c_char; 0usize];
 }
-//#[link(name = "rdkafka", kind = "dylib")]
 extern "C" {
     pub fn __underflow(arg1: *mut _IO_FILE) -> ::std::os::raw::c_int;
     pub fn __uflow(arg1: *mut _IO_FILE) -> ::std::os::raw::c_int;
@@ -1462,6 +1472,8 @@ extern "C" {
     pub fn rd_kafka_errno2err(errnox: ::std::os::raw::c_int)
      -> rd_kafka_resp_err_t;
     pub fn rd_kafka_errno() -> ::std::os::raw::c_int;
+    pub fn rd_kafka_topic_partition_destroy(rktpar:
+                                                *mut rd_kafka_topic_partition_t);
     pub fn rd_kafka_topic_partition_list_new(size: ::std::os::raw::c_int)
      -> *mut rd_kafka_topic_partition_list_t;
     pub fn rd_kafka_topic_partition_list_destroy(rkparlist:
@@ -1518,6 +1530,8 @@ extern "C" {
                              value: *const ::std::os::raw::c_char,
                              errstr: *mut ::std::os::raw::c_char,
                              errstr_size: size_t) -> rd_kafka_conf_res_t;
+    pub fn rd_kafka_conf_set_events(conf: *mut rd_kafka_conf_t,
+                                    events: ::std::os::raw::c_int);
     pub fn rd_kafka_conf_set_dr_cb(conf: *mut rd_kafka_conf_t,
                                    dr_cb:
                                        ::std::option::Option<unsafe extern "C" fn(rk:
@@ -1770,6 +1784,18 @@ extern "C" {
                              ptr: *mut ::std::os::raw::c_void);
     pub fn rd_kafka_queue_new(rk: *mut rd_kafka_t) -> *mut rd_kafka_queue_t;
     pub fn rd_kafka_queue_destroy(rkqu: *mut rd_kafka_queue_t);
+    pub fn rd_kafka_queue_get_main(rk: *mut rd_kafka_t)
+     -> *mut rd_kafka_queue_t;
+    pub fn rd_kafka_queue_get_consumer(rk: *mut rd_kafka_t)
+     -> *mut rd_kafka_queue_t;
+    pub fn rd_kafka_queue_forward(src: *mut rd_kafka_queue_t,
+                                  dst: *mut rd_kafka_queue_t);
+    pub fn rd_kafka_queue_length(rkqu: *mut rd_kafka_queue_t) -> size_t;
+    pub fn rd_kafka_queue_io_event_enable(rkqu: *mut rd_kafka_queue_t,
+                                          fd: ::std::os::raw::c_int,
+                                          payload:
+                                              *const ::std::os::raw::c_void,
+                                          size: size_t);
     pub fn rd_kafka_consume_start(rkt: *mut rd_kafka_topic_t,
                                   partition: int32_t, offset: int64_t)
      -> ::std::os::raw::c_int;
@@ -1849,6 +1875,21 @@ extern "C" {
                                    rkmessage: *const rd_kafka_message_t,
                                    async: ::std::os::raw::c_int)
      -> rd_kafka_resp_err_t;
+    pub fn rd_kafka_commit_queue(rk: *mut rd_kafka_t,
+                                 offsets:
+                                     *const rd_kafka_topic_partition_list_t,
+                                 rkqu: *mut rd_kafka_queue_t,
+                                 cb:
+                                     ::std::option::Option<unsafe extern "C" fn(rk:
+                                                                                    *mut rd_kafka_t,
+                                                                                err:
+                                                                                    rd_kafka_resp_err_t,
+                                                                                offsets:
+                                                                                    *mut rd_kafka_topic_partition_list_t,
+                                                                                opaque:
+                                                                                    *mut ::std::os::raw::c_void)>,
+                                 opaque: *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
     pub fn rd_kafka_committed(rk: *mut rd_kafka_t,
                               partitions:
                                   *mut rd_kafka_topic_partition_list_t,
@@ -1870,6 +1911,9 @@ extern "C" {
                                   rkmessages: *mut rd_kafka_message_t,
                                   message_cnt: ::std::os::raw::c_int)
      -> ::std::os::raw::c_int;
+    pub fn rd_kafka_flush(rk: *mut rd_kafka_t,
+                          timeout_ms: ::std::os::raw::c_int)
+     -> rd_kafka_resp_err_t;
     pub fn rd_kafka_metadata(rk: *mut rd_kafka_t,
                              all_topics: ::std::os::raw::c_int,
                              only_rkt: *mut rd_kafka_topic_t,
@@ -1913,11 +1957,35 @@ extern "C" {
      -> ::std::os::raw::c_int;
     pub fn rd_kafka_poll_set_consumer(rk: *mut rd_kafka_t)
      -> rd_kafka_resp_err_t;
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-    }
+    pub fn rd_kafka_event_type(rkev: *const rd_kafka_event_t)
+     -> rd_kafka_event_type_t;
+    pub fn rd_kafka_event_name(rkev: *const rd_kafka_event_t)
+     -> *const ::std::os::raw::c_char;
+    pub fn rd_kafka_event_destroy(rkev: *mut rd_kafka_event_t);
+    pub fn rd_kafka_event_message_next(rkev: *mut rd_kafka_event_t)
+     -> *const rd_kafka_message_t;
+    pub fn rd_kafka_event_message_array(rkev: *mut rd_kafka_event_t,
+                                        rkmessages:
+                                            *mut *const rd_kafka_message_t,
+                                        size: size_t) -> size_t;
+    pub fn rd_kafka_event_message_count(rkev: *mut rd_kafka_event_t)
+     -> size_t;
+    pub fn rd_kafka_event_error(rkev: *mut rd_kafka_event_t)
+     -> rd_kafka_resp_err_t;
+    pub fn rd_kafka_event_error_string(rkev: *mut rd_kafka_event_t)
+     -> *const ::std::os::raw::c_char;
+    pub fn rd_kafka_event_opaque(rkev: *mut rd_kafka_event_t)
+     -> *mut ::std::os::raw::c_void;
+    pub fn rd_kafka_event_log(rkev: *mut rd_kafka_event_t,
+                              fac: *mut *const ::std::os::raw::c_char,
+                              str: *mut *const ::std::os::raw::c_char,
+                              level: *mut ::std::os::raw::c_int)
+     -> ::std::os::raw::c_int;
+    pub fn rd_kafka_event_topic_partition_list(rkev: *mut rd_kafka_event_t)
+     -> *mut rd_kafka_topic_partition_list_t;
+    pub fn rd_kafka_event_topic_partition(rkev: *mut rd_kafka_event_t)
+     -> *mut rd_kafka_topic_partition_t;
+    pub fn rd_kafka_queue_poll(rkqu: *mut rd_kafka_queue_t,
+                               timeout_ms: ::std::os::raw::c_int)
+     -> *mut rd_kafka_event_t;
 }
