@@ -4,7 +4,7 @@
 //! ## The library
 //! This library aims to provide a safe interface to librdkafka.
 //! It currently exports some of the funcionalities provided by the producer and consumer
-//! of librdkafka 0.9.1.
+//! of librdkafka 0.9.2.
 //!
 //! Producers and consumers can be accessed and polled directly, or alternatively
 //! a [futures]-based interface can be used:
@@ -27,7 +27,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rdkafka = "^0.1.0"
+//! rdkafka = "^0.2.0"
 //! ```
 //!
 //! This crate will compile librdkafka from sources and link it statically in your
@@ -44,7 +44,7 @@
 //!
 //! ```toml
 //! [dependencies.rdkafka]
-//! version = "0.1.0"
+//! version = "^0.2.0"
 //! features = ["ssl", "sasl"]
 //! ```
 //!
