@@ -7,7 +7,7 @@ use clap::{App, Arg};
 use futures::stream::Stream;
 
 use rdkafka::consumer::Consumer;
-use rdkafka::config::Config;
+use rdkafka::config::{Config, DefaultTopicConfig};
 use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
@@ -20,6 +20,9 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
+        .set("enable.auto.commit", "false")
+        .set_default_topic_config(
+            DefaultTopicConfig::new().set("auto.offset.reset", "smallest"))
         .create::<Consumer>()
         .expect("Consumer creation failed");
 

@@ -12,10 +12,10 @@ use std::thread;
 
 use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
 
-use config::{Config, FromConfig};
+use config::{Config, FromConfig, TopicConfig};
 use error::Error;
 use message::ToBytes;
-use client::{Client, ClientType, TopicBuilder, Topic};
+use client::{Client, ClientType, Topic};
 
 
 /// Contains a reference counted producer client. It can be safely cloned to
@@ -78,9 +78,8 @@ impl Future for DeliveryFuture {
 }
 
 impl Producer {
-    /// Returns a topic builder associated to the producer.
-    pub fn get_topic(&self, topic_name: &str) -> TopicBuilder {
-        TopicBuilder::new(&self.client, topic_name)
+    pub fn get_topic<'a>(&'a self, name: &str, config: &TopicConfig) -> Result<Topic<'a>, Error> {
+        Topic::new(&self.client, name, config)
     }
 
     /// Polls the producer. Regular calls to `poll` are required to process the evens
@@ -121,7 +120,7 @@ impl Producer {
     }
 
     /// Starts the polling thread for the producer. It returns a `ProducerPollingThread` that will
-    /// process al the events. Calling `poll` is not required if the `ProducerPollingThread`
+    /// process all the events. Calling `poll` is not required if the `ProducerPollingThread`
     /// thread is running.
     pub fn start_polling_thread(&self) -> ProducerPollingThread {
         let mut threaded_producer = ProducerPollingThread::new(self);
