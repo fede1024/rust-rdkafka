@@ -12,7 +12,7 @@ use std::thread;
 
 use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
 
-use config::{Config, FromConfig, TopicConfig};
+use config::{ClientConfig, FromClientConfig, TopicConfig};
 use error::Error;
 use message::ToBytes;
 use client::{Client, ClientType, Topic};
@@ -51,9 +51,9 @@ unsafe extern "C" fn delivery_cb(_client: *mut rdkafka::rd_kafka_t,
     tx.complete(delivery_status);
 }
 
-/// Creates a new Producer starting from a Config.
-impl FromConfig for Producer {
-    fn from_config(config: &Config) -> Result<Producer, Error> {
+/// Creates a new Producer starting from a ClientConfig.
+impl FromClientConfig for Producer {
+    fn from_config(config: &ClientConfig) -> Result<Producer, Error> {
         let mut producer_config = config.config_clone();
         producer_config.set_delivery_cb(delivery_cb);
         let client = try!(Client::new(&producer_config, ClientType::Producer));

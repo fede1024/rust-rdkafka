@@ -7,7 +7,7 @@ use std::os::raw::c_void;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use config::{Config, TopicConfig};
+use config::{ClientConfig, TopicConfig};
 use error::{IsError, Error};
 use util::bytes_cstr_to_owned;
 
@@ -35,7 +35,7 @@ pub type DeliveryCallback =
 
 impl Client {
     /// Creates a new Client given a configuration and a client type.
-    pub fn new(config: &Config, client_type: ClientType) -> Result<Client, Error> {
+    pub fn new(config: &ClientConfig, client_type: ClientType) -> Result<Client, Error> {
         let errstr = [0i8; 1024];
         let config_ptr = try!(config.create_native_config());
         let rd_kafka_type = match client_type {

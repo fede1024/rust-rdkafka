@@ -14,7 +14,7 @@ use self::futures::stream;
 use self::futures::stream::{Receiver, Sender};
 
 use client::{Client, ClientType};
-use config::{FromConfig, Config};
+use config::{FromClientConfig, ClientConfig};
 use error::{Error, IsError};
 use message::Message;
 use util::cstr_to_owned;
@@ -26,9 +26,9 @@ pub struct Consumer {
     client: Arc<Client>,
 }
 
-/// Creates a new Consumer starting from a Config.
-impl FromConfig for Consumer {
-    fn from_config(config: &Config) -> Result<Consumer, Error> {
+/// Creates a new Consumer starting from a ClientConfig.
+impl FromClientConfig for Consumer {
+    fn from_config(config: &ClientConfig) -> Result<Consumer, Error> {
         let client = try!(Client::new(config, ClientType::Consumer));
         unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
         Ok(Consumer { client: Arc::new(client) })

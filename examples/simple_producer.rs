@@ -6,7 +6,7 @@ extern crate rdkafka;
 use clap::{App, Arg};
 use futures::*;
 
-use rdkafka::config::{Config, TopicConfig};
+use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::client::{Topic};
 use rdkafka::producer::{Producer};
 use rdkafka::util::get_rdkafka_version;
@@ -16,20 +16,19 @@ use example_utils::setup_logger;
 
 
 fn produce(brokers: &str, topic_name: &str) {
-    let producer = Config::new()
+    let producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create::<Producer>()
-        .unwrap();
-
-    let mut boh = Config::new();
-    boh.set("Ciao", "holll");
-
-    let _producer_thread = producer.start_polling_thread();
+        .expect("Producer creation error");
 
     let topic_config = TopicConfig::new()
-        .seta("produce.offset.report", "true");
+        .set("produce.offset.report", "true")
+        .finalize();
+
     let topic = producer.get_topic(topic_name, &topic_config)
         .expect("Topic creation error");
+
+    let _producer_thread = producer.start_polling_thread();
 
     let futures = (0..5)
         .map(|i| {
