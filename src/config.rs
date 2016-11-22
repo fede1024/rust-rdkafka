@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::ffi::CString;
 use util::bytes_cstr_to_owned;
 
-use error::{Error, IsError};
+use error::{KafkaError, KafkaResult, IsError};
 use client::{DeliveryCallback};
 
 const ERR_LEN: usize = 256;
@@ -48,7 +48,7 @@ impl ClientConfig {
         self
     }
 
-    pub fn create_native_config(&self) -> Result<*mut rdkafka::rd_kafka_conf_t, Error> {
+    pub fn create_native_config(&self) -> KafkaResult<*mut rdkafka::rd_kafka_conf_t> {
         let conf = unsafe { rdkafka::rd_kafka_conf_new() };
         let errstr = [0; ERR_LEN];
         for (key, value) in &self.conf_map {
@@ -60,14 +60,21 @@ impl ClientConfig {
             };
             if ret.is_error() {
                 let descr = unsafe { bytes_cstr_to_owned(&errstr) };
-                return Err(Error::ClientConfig((ret, descr, key.to_string(), value.to_string())));
+                return Err(KafkaError::ClientConfig((ret, descr, key.to_string(), value.to_string())));
+            }
+        }
+        if let Some(topic_config) = self.create_native_default_topic_config() {
+            if let Err(e) = topic_config {
+                return Err(e);
+            } else {
+                unsafe { rdkafka::rd_kafka_conf_set_default_topic_conf(conf, topic_config.unwrap()) };
             }
         }
         Ok(conf)
     }
 
-    pub fn create_native_default_topic_config(&self)
-            -> Option<Result<*mut rdkafka::rd_kafka_topic_conf_t, Error>> {
+    fn create_native_default_topic_config(&self)
+            -> Option<KafkaResult<*mut rdkafka::rd_kafka_topic_conf_t>> {
         self.default_topic_config.as_ref().map(|c| c.create_native_config())
     }
 
@@ -75,14 +82,14 @@ impl ClientConfig {
         (*self).clone()
     }
 
-    pub fn create<T: FromClientConfig>(&self) -> Result<T, Error> {
+    pub fn create<T: FromClientConfig>(&self) -> KafkaResult<T> {
         T::from_config(self)
     }
 }
 
 /// Create a new client based on the provided configuration.
 pub trait FromClientConfig: Sized {
-    fn from_config(&ClientConfig) -> Result<Self, Error>;
+    fn from_config(&ClientConfig) -> KafkaResult<Self>;
 }
 
 /// Topic configuration
@@ -111,7 +118,7 @@ impl TopicConfig {
         TopicConfig { conf_map: self.conf_map.clone() }
     }
 
-    pub fn create_native_config(&self) -> Result<*mut rdkafka::rd_kafka_topic_conf_t, Error> {
+    pub fn create_native_config(&self) -> KafkaResult<*mut rdkafka::rd_kafka_topic_conf_t> {
         let config_ptr = unsafe { rdkafka::rd_kafka_topic_conf_new() };
         let errstr = [0; ERR_LEN];
         for (name, value) in &self.conf_map {
@@ -123,7 +130,7 @@ impl TopicConfig {
             };
             if ret.is_error() {
                 let descr = unsafe { bytes_cstr_to_owned(&errstr) };
-                return Err(Error::TopicConfig((ret, descr, name.to_string(), value.to_string())));
+                return Err(KafkaError::TopicConfig((ret, descr, name.to_string(), value.to_string())));
             }
         }
         Ok(config_ptr)

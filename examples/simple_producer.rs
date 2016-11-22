@@ -7,7 +7,6 @@ use clap::{App, Arg};
 use futures::*;
 
 use rdkafka::config::{ClientConfig, TopicConfig};
-use rdkafka::client::{Topic};
 use rdkafka::producer::{Producer};
 use rdkafka::util::get_rdkafka_version;
 

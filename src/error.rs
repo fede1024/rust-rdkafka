@@ -3,6 +3,9 @@ extern crate libc;
 extern crate librdkafka_sys as rdkafka;
 extern crate std;
 
+/// Kafka result
+pub type KafkaResult<T> = Result<T, KafkaError>;
+
 /// Response error
 pub type RespError = rdkafka::rd_kafka_resp_err_t;
 
@@ -29,19 +32,20 @@ impl IsError for ConfRes {
 
 #[derive(Debug)]
 /// Represents all Kafka errors.
-pub enum Error {
-    Config((ConfRes, String, String, String)),
-    ConsumerCreation(String),
+pub enum KafkaError {
+    ClientConfig((ConfRes, String, String, String)),
     ClientCreation(String),
+    ConsumerCreation(String),
     MessageConsumption(RespError),
     MessageProduction(RespError),
-    Subscription(String),
-    TopicName(String),
     Nul(std::ffi::NulError),
+    Subscription(String),
+    TopicConfig((ConfRes, String, String, String)),
+    TopicCreation(String),
 }
 
-impl From<std::ffi::NulError> for Error {
-    fn from(err: std::ffi::NulError) -> Error {
-        Error::Nul(err)
+impl From<std::ffi::NulError> for KafkaError {
+    fn from(err: std::ffi::NulError) -> KafkaError {
+        KafkaError::Nul(err)
     }
 }

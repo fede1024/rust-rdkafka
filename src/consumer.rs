@@ -15,7 +15,7 @@ use self::futures::stream::{Receiver, Sender};
 
 use client::{Client, ClientType};
 use config::{FromClientConfig, ClientConfig};
-use error::{Error, IsError};
+use error::{KafkaError, KafkaResult, IsError};
 use message::Message;
 use util::cstr_to_owned;
 
@@ -28,7 +28,7 @@ pub struct Consumer {
 
 /// Creates a new Consumer starting from a ClientConfig.
 impl FromClientConfig for Consumer {
-    fn from_config(config: &ClientConfig) -> Result<Consumer, Error> {
+    fn from_config(config: &ClientConfig) -> KafkaResult<Consumer> {
         let client = try!(Client::new(config, ClientType::Consumer));
         unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
         Ok(Consumer { client: Arc::new(client) })
@@ -39,7 +39,7 @@ impl Consumer {
     /// Subscribes the consumer to a list of topics and/or topic sets (using regex).
     /// Strings starting with `^` will be regex-matched to the full list of topics in
     /// the cluster and matching topics will be added to the subscription list.
-    pub fn subscribe(&mut self, topics: &Vec<&str>) -> Result<(), Error> {
+    pub fn subscribe(&mut self, topics: &Vec<&str>) -> KafkaResult<()> {
         let tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(topics.len() as i32) };
         for &topic in topics {
             let topic_c = CString::new(topic).unwrap();
@@ -48,7 +48,7 @@ impl Consumer {
                 rdkafka::rd_kafka_subscribe(self.client.ptr, tp_list)
             };
             if ret_code.is_error() {
-                return Err(Error::Subscription(topic.to_string()))
+                return Err(KafkaError::Subscription(topic.to_string()))
             };
         }
         unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
@@ -75,20 +75,20 @@ impl Consumer {
         tp_res
     }
 
-    pub fn poll(&self, timeout_ms: i32) -> Result<Option<Message>, Error> {
+    pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<Message>> {
         let message_ptr = unsafe { rdkafka::rd_kafka_consumer_poll(self.client.ptr, timeout_ms) };
         if message_ptr.is_null() {
             return Ok(None);
         }
         let error = unsafe { (*message_ptr).err };
         if error.is_error() {
-            return Err(Error::MessageConsumption(error));
+            return Err(KafkaError::MessageConsumption(error));
         }
         let kafka_message = Message::new(message_ptr);
         Ok(Some(kafka_message))
     }
 
-    pub fn start_thread(&self) -> (ConsumerPollingThread, Receiver<Message, Error>) {
+    pub fn start_thread(&self) -> (ConsumerPollingThread, Receiver<Message, KafkaError>) {
         let (sender, receiver) = stream::channel();
         let mut consumer_thread = ConsumerPollingThread::new(self, sender);
         consumer_thread.start();
@@ -110,11 +110,11 @@ pub struct ConsumerPollingThread {
     consumer: Consumer,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
-    sender: Option<Sender<Message, Error>>,
+    sender: Option<Sender<Message, KafkaError>>,
 }
 
 impl ConsumerPollingThread {
-    fn new(consumer: &Consumer, sender: Sender<Message, Error>) -> ConsumerPollingThread {
+    fn new(consumer: &Consumer, sender: Sender<Message, KafkaError>) -> ConsumerPollingThread {
         ConsumerPollingThread {
             consumer: consumer.clone(),
             should_stop: Arc::new(AtomicBool::new(false)),

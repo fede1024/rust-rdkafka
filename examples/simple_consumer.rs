@@ -20,9 +20,11 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
-        .set("enable.auto.commit", "false")
+        //.set("enable.auto.commit", "false")
         .set_default_topic_config(
-            TopicConfig::new().set("auto.offset.reset", "smallest"))
+            TopicConfig::new()
+            .set("auto.offset.reset", "smallest")
+            .finalize())
         .create::<Consumer>()
         .expect("Consumer creation failed");
 
@@ -31,7 +33,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
     let (_consumer_thread, message_stream) = consumer.start_thread();
     info!("Consumer initialized: {:?}", topics);
 
-    for message in message_stream.take(5).wait() {
+    for message in message_stream.wait() {
         match message {
             Err(e) => {
                 warn!("Can't receive message: {:?}", e);

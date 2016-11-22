@@ -13,7 +13,7 @@ use std::thread;
 use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
 
 use config::{ClientConfig, FromClientConfig, TopicConfig};
-use error::Error;
+use error::{KafkaError, KafkaResult};
 use message::ToBytes;
 use client::{Client, ClientType, Topic};
 
@@ -53,7 +53,7 @@ unsafe extern "C" fn delivery_cb(_client: *mut rdkafka::rd_kafka_t,
 
 /// Creates a new Producer starting from a ClientConfig.
 impl FromClientConfig for Producer {
-    fn from_config(config: &ClientConfig) -> Result<Producer, Error> {
+    fn from_config(config: &ClientConfig) -> KafkaResult<Producer> {
         let mut producer_config = config.config_clone();
         producer_config.set_delivery_cb(delivery_cb);
         let client = try!(Client::new(&producer_config, ClientType::Producer));
@@ -78,7 +78,7 @@ impl Future for DeliveryFuture {
 }
 
 impl Producer {
-    pub fn get_topic<'a>(&'a self, name: &str, config: &TopicConfig) -> Result<Topic<'a>, Error> {
+    pub fn get_topic<'a>(&'a self, name: &str, config: &TopicConfig) -> KafkaResult<Topic<'a>> {
         Topic::new(&self.client, name, config)
     }
 
@@ -88,7 +88,7 @@ impl Producer {
         unsafe { rdkafka::rd_kafka_poll(self.client.ptr, timeout_ms) }
     }
 
-    fn _send_copy(&self, topic: &Topic, payload: Option<&[u8]>, key: Option<&[u8]>) -> Result<DeliveryFuture, Error> {
+    fn _send_copy(&self, topic: &Topic, payload: Option<&[u8]>, key: Option<&[u8]>) -> KafkaResult<DeliveryFuture> {
         let (payload_n, plen) = match payload {
             None => (ptr::null_mut(), 0),
             Some(p) => (p.as_ptr() as *mut c_void, p.len()),
@@ -106,14 +106,14 @@ impl Producer {
         if n != 0 {
             let errno = errno::errno().0 as i32;
             let kafka_error = unsafe { rdkafka::rd_kafka_errno2err(errno) };
-            Err(Error::MessageProduction(kafka_error))
+            Err(KafkaError::MessageProduction(kafka_error))
         } else {
             Ok(DeliveryFuture { rx: rx })
         }
     }
 
-    /// Sends a copy of the message and key provided. Returns a `DeliveryFuture` or an `Error`.
-    pub fn send_copy<P, K>(&self, topic: &Topic, payload: Option<&P>, key: Option<&K>) -> Result<DeliveryFuture, Error>
+    /// Sends a copy of the message and key provided. Returns a `DeliveryFuture` or an error.
+    pub fn send_copy<P, K>(&self, topic: &Topic, payload: Option<&P>, key: Option<&K>) -> KafkaResult<DeliveryFuture>
         where K: ToBytes,
               P: ToBytes {
         self._send_copy(topic, payload.map(P::to_bytes), key.map(K::to_bytes))
