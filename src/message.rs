@@ -7,7 +7,7 @@ use std::str;
 /// Represents a native librdkafka message.
 #[derive(Debug)]
 pub struct Message {
-    ptr: *mut rdkafka::rd_kafka_message_t,
+    pub ptr: *mut rdkafka::rd_kafka_message_t,
 }
 
 unsafe impl Send for Message {}

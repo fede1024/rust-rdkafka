@@ -20,6 +20,11 @@ use message::Message;
 use util::cstr_to_owned;
 
 
+pub enum Mode {
+    Sync,
+    Async,
+}
+
 /// A Consumer client.
 #[derive(Clone)]
 pub struct Consumer {
@@ -86,6 +91,16 @@ impl Consumer {
         }
         let kafka_message = Message::new(message_ptr);
         Ok(Some(kafka_message))
+    }
+
+    pub fn commit_message(&self, message: &Message, mode: Mode) -> () {
+        let async = match mode {
+            Mode::Sync => 0,
+            Mode::Async => 1,
+        };
+
+        unsafe { rdkafka::rd_kafka_commit_message(self.client.ptr, message.ptr, async) };
+
     }
 
     pub fn start_thread(&self) -> (ConsumerPollingThread, Receiver<Message, KafkaError>) {

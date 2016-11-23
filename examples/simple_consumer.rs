@@ -6,7 +6,7 @@ extern crate rdkafka;
 use clap::{App, Arg};
 use futures::stream::Stream;
 
-use rdkafka::consumer::Consumer;
+use rdkafka::consumer::{Consumer, Mode};
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::util::get_rdkafka_version;
 
@@ -20,11 +20,11 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
-        //.set("enable.auto.commit", "false")
+        .set("enable.auto.commit", "false")
         .set_default_topic_config(
-            TopicConfig::new()
-            .set("auto.offset.reset", "smallest")
-            .finalize())
+             TopicConfig::new()
+             .set("auto.offset.reset", "smallest")
+             .finalize())
         .create::<Consumer>()
         .expect("Consumer creation failed");
 
@@ -33,13 +33,13 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
     let (_consumer_thread, message_stream) = consumer.start_thread();
     info!("Consumer initialized: {:?}", topics);
 
-    for message in message_stream.wait() {
+    for message in message_stream.take(5).wait() {
         match message {
             Err(e) => {
                 warn!("Can't receive message: {:?}", e);
             },
-            Ok(message) => {
-                let key = match message.get_key_view::<[u8]>() {
+            Ok(m) => {
+                let key = match m.get_key_view::<[u8]>() {
                     None => &[],
                     Some(Ok(s)) => s,
                     Some(Err(e)) => {
@@ -47,7 +47,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                         &[]
                     },
                 };
-                let payload = match message.get_payload_view::<str>() {
+                let payload = match m.get_payload_view::<str>() {
                     None => "",
                     Some(Ok(s)) => s,
                     Some(Err(e)) => {
@@ -56,7 +56,8 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                     },
                 };
                 info!("key: '{:?}', payload: '{}', partition: {}, offset: {}",
-                      key, payload, message.get_partition(), message.get_offset());
+                      key, payload, m.get_partition(), m.get_offset());
+                consumer.commit_message(&m, Mode::Async);
             },
         };
     }
@@ -102,5 +103,3 @@ fn main() {
 
     consume_and_print(brokers, group_id, &topics);
 }
-
-
