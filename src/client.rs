@@ -4,11 +4,10 @@ extern crate rdkafka_sys as rdkafka;
 
 use std::ffi::CString;
 use std::os::raw::c_void;
-use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use config::{ClientConfig, TopicConfig};
-use error::{IsError, KafkaError, KafkaResult};
+use error::{KafkaError, KafkaResult};
 use util::bytes_cstr_to_owned;
 
 /// Specifies the type of client.

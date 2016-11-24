@@ -6,7 +6,7 @@ extern crate rdkafka;
 use clap::{App, Arg};
 use futures::stream::Stream;
 
-use rdkafka::consumer::{Consumer, Mode};
+use rdkafka::stream_consumer::{Consumer, StreamConsumer, Mode};
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::util::get_rdkafka_version;
 
@@ -25,12 +25,13 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
              TopicConfig::new()
              .set("auto.offset.reset", "smallest")
              .finalize())
-        .create::<Consumer>()
+        .create::<StreamConsumer>()
         .expect("Consumer creation failed");
 
     consumer.subscribe(topics).expect("Can't subscribe to specified topics");
 
-    let (_consumer_thread, message_stream) = consumer.start_thread();
+    let message_stream = consumer.start();
+
     info!("Consumer initialized: {:?}", topics);
 
     for message in message_stream.take(5).wait() {

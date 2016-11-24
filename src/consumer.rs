@@ -1,17 +1,8 @@
-//! Consumer implementations.
 extern crate rdkafka_sys as rdkafka;
 extern crate futures;
 
 use std::ffi::CString;
 use std::str;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::JoinHandle;
-use std::thread;
-
-use self::futures::Future;
-use self::futures::stream;
-use self::futures::stream::{Receiver, Sender};
 
 use client::{Client, ClientType};
 use config::{FromClientConfig, ClientConfig};
@@ -20,27 +11,41 @@ use message::Message;
 use util::cstr_to_owned;
 
 
+pub trait Consumer {
+    fn get_consumer(&self) -> &ConsumerClient;
+    fn get_consumer_mut(&mut self) -> &mut ConsumerClient;
+
+    // Default implementations
+    fn subscribe(&mut self, topics: &Vec<&str>) -> KafkaResult<()> {
+        self.get_consumer_mut().subscribe(topics)
+    }
+
+    // TODO: return future
+    fn commit_message(&self, message: &Message, mode: Mode) {
+        self.get_consumer().commit_message(message, mode);
+    }
+}
+
 pub enum Mode {
     Sync,
     Async,
 }
 
-/// A Consumer client.
-#[derive(Clone)]
-pub struct Consumer {
-    client: Arc<Client>,
+/// A ConsumerClient client.
+pub struct ConsumerClient {
+    client: Client,
 }
 
-/// Creates a new Consumer starting from a ClientConfig.
-impl FromClientConfig for Consumer {
-    fn from_config(config: &ClientConfig) -> KafkaResult<Consumer> {
+/// Creates a new ConsumerClient starting from a ClientConfig.
+impl FromClientConfig for ConsumerClient {
+    fn from_config(config: &ClientConfig) -> KafkaResult<ConsumerClient> {
         let client = try!(Client::new(config, ClientType::Consumer));
         unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
-        Ok(Consumer { client: Arc::new(client) })
+        Ok(ConsumerClient { client: client })
     }
 }
 
-impl Consumer {
+impl ConsumerClient {
     /// Subscribes the consumer to a list of topics and/or topic sets (using regex).
     /// Strings starting with `^` will be regex-matched to the full list of topics in
     /// the cluster and matching topics will be added to the subscription list.
@@ -100,88 +105,12 @@ impl Consumer {
         };
 
         unsafe { rdkafka::rd_kafka_commit_message(self.client.ptr, message.ptr, async) };
-
-    }
-
-    pub fn start_thread(&self) -> (ConsumerPollingThread, Receiver<Message, KafkaError>) {
-        let (sender, receiver) = stream::channel();
-        let mut consumer_thread = ConsumerPollingThread::new(self, sender);
-        consumer_thread.start();
-        (consumer_thread, receiver)
     }
 }
 
-impl Drop for Consumer {
+impl Drop for ConsumerClient {
     fn drop(&mut self) {
         trace!("Destroying consumer");  // TODO: fix me (multiple executions)
         unsafe { rdkafka::rd_kafka_consumer_close(self.client.ptr) };
-    }
-}
-
-/// A Consumer with an associated polling thread. This consumer doesn't need to
-/// be polled and it will return all consumed messages as a `Stream`.
-#[must_use = "Consumer polling thread will stop immediately if unused"]
-pub struct ConsumerPollingThread {
-    consumer: Consumer,
-    should_stop: Arc<AtomicBool>,
-    handle: Option<JoinHandle<()>>,
-    sender: Option<Sender<Message, KafkaError>>,
-}
-
-impl ConsumerPollingThread {
-    fn new(consumer: &Consumer, sender: Sender<Message, KafkaError>) -> ConsumerPollingThread {
-        ConsumerPollingThread {
-            consumer: consumer.clone(),
-            should_stop: Arc::new(AtomicBool::new(false)),
-            handle: None,
-            sender: Some(sender),
-        }
-    }
-
-    fn start(&mut self) {
-        let consumer = self.consumer.clone();
-        let should_stop = self.should_stop.clone();
-        let mut sender = self.sender.take().expect("Sender is missing");
-        let handle = thread::Builder::new()
-            .name("polling thread".to_string())
-            .spawn(move || {
-                trace!("Polling thread loop started");
-                while !should_stop.load(Ordering::Relaxed) {
-                    let future_sender = match consumer.poll(100) {
-                        Ok(None) => continue,
-                        Ok(Some(m)) => sender.send(Ok(m)),
-                        Err(e) => sender.send(Err(e)),
-                    };
-                    match future_sender.wait() {
-                        Ok(new_sender) => sender = new_sender,
-                        Err(e) => {
-                            debug!("Sender not available: {:?}", e);
-                            break;
-                        }
-                    };
-                }
-                trace!("Polling thread loop terminated");
-            })
-            .expect("Failed to start polling thread");
-        self.handle = Some(handle);
-    }
-
-    pub fn stop(&mut self) {
-        if self.handle.is_some() {
-            trace!("Stopping polling");
-            self.should_stop.store(true, Ordering::Relaxed);
-            trace!("Waiting for polling thread termination");
-            match self.handle.take().unwrap().join() {
-                Ok(()) => trace!("Polling stopped"),
-                Err(e) => warn!("Failure while terminating thread: {:?}", e),
-            };
-        }
-    }
-}
-
-impl Drop for ConsumerPollingThread {
-    fn drop(&mut self) {
-        trace!("Destroy ConsumerPollingThread");
-        self.stop();
     }
 }
