@@ -1,5 +1,5 @@
 //! Store and manipulate Kafka messages.
-extern crate librdkafka_sys as rdkafka;
+extern crate rdkafka_sys as rdkafka;
 
 use std::slice;
 use std::str;

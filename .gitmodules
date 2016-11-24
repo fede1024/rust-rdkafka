@@ -1,3 +1,3 @@
-[submodule "librdkafka-sys/librdkafka"]
-	path = librdkafka-sys/librdkafka
+[submodule "librdkafka"]
+	path = rdkafka-sys/librdkafka
 	url = https://github.com/edenhill/librdkafka.git
