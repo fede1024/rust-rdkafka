@@ -88,22 +88,31 @@ impl Producer {
         unsafe { rdkafka::rd_kafka_poll(self.client.ptr, timeout_ms) }
     }
 
-    fn _send_copy(&self, topic: &Topic, payload: Option<&[u8]>, key: Option<&[u8]>) -> KafkaResult<DeliveryFuture> {
-        let (payload_n, plen) = match payload {
+    fn _send_copy(&self, topic: &Topic, partition: Option<i32>, payload: Option<&[u8]>, key: Option<&[u8]>) -> KafkaResult<DeliveryFuture> {
+        let (payload_ptr, payload_len) = match payload {
             None => (ptr::null_mut(), 0),
             Some(p) => (p.as_ptr() as *mut c_void, p.len()),
         };
-        let (key_n, klen) = match key {
+        let (key_ptr, key_len) = match key {
             None => (ptr::null_mut(), 0),
             Some(k) => (k.as_ptr() as *mut c_void, k.len()),
         };
         let (tx, rx) = futures::oneshot();
         let boxed_tx = Box::new(tx);
-        let n = unsafe {
-            rdkafka::rd_kafka_produce(topic.ptr, -1, rdkafka::RD_KAFKA_MSG_F_COPY as i32, payload_n, plen,
-                                      key_n, klen, Box::into_raw(boxed_tx) as *mut c_void)
+        let partition_arg = partition.unwrap_or(-1);
+        let produce_response = unsafe {
+            rdkafka::rd_kafka_produce(
+                topic.ptr,
+                partition_arg,
+                rdkafka::RD_KAFKA_MSG_F_COPY as i32,
+                payload_ptr,
+                payload_len,
+                key_ptr,
+                key_len,
+                Box::into_raw(boxed_tx) as *mut c_void
+            )
         };
-        if n != 0 {
+        if produce_response != 0 {
             let errno = errno::errno().0 as i32;
             let kafka_error = unsafe { rdkafka::rd_kafka_errno2err(errno) };
             Err(KafkaError::MessageProduction(kafka_error))
@@ -112,11 +121,13 @@ impl Producer {
         }
     }
 
-    /// Sends a copy of the message and key provided. Returns a `DeliveryFuture` or an error.
-    pub fn send_copy<P, K>(&self, topic: &Topic, payload: Option<&P>, key: Option<&K>) -> KafkaResult<DeliveryFuture>
+    /// Sends a copy of the payload and key provided to the specified topic. When no partition is
+    /// specified the underlying Kafka library picks a partition based on the key.
+    /// Returns a `DeliveryFuture` or an error.
+    pub fn send_copy<P, K>(&self, topic: &Topic, partition: Option<i32>, payload: Option<&P>, key: Option<&K>) -> KafkaResult<DeliveryFuture>
         where K: ToBytes,
               P: ToBytes {
-        self._send_copy(topic, payload.map(P::to_bytes), key.map(K::to_bytes))
+        self._send_copy(topic, partition, payload.map(P::to_bytes), key.map(K::to_bytes))
     }
 
     /// Starts the polling thread for the producer. It returns a `ProducerPollingThread` that will
