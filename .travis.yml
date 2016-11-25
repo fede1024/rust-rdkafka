@@ -1,1 +1,9 @@
 language: rust
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/2826b9d85e25802b3907  # gitter
+    on_success: change
+    on_failure: always
+    on_start: never
