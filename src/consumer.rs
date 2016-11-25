@@ -2,6 +2,7 @@ extern crate rdkafka_sys as rdkafka;
 extern crate futures;
 
 use std::ffi::CString;
+use std::ops::Range;
 use std::str;
 
 use client::{Client, ClientType};
@@ -50,18 +51,38 @@ impl ConsumerClient {
     /// Strings starting with `^` will be regex-matched to the full list of topics in
     /// the cluster and matching topics will be added to the subscription list.
     pub fn subscribe(&mut self, topics: &Vec<&str>) -> KafkaResult<()> {
-        let tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(topics.len() as i32) };
+        let topic_partition_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(topics.len() as i32) };
         for &topic in topics {
-            let topic_c = CString::new(topic).unwrap();
+            let topic_cstring = CString::new(topic).unwrap();
             let ret_code = unsafe {
-                rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_c.as_ptr(), -1);
-                rdkafka::rd_kafka_subscribe(self.client.ptr, tp_list)
+                rdkafka::rd_kafka_topic_partition_list_add(topic_partition_list, topic_cstring.as_ptr(), -1);
+                rdkafka::rd_kafka_subscribe(self.client.ptr, topic_partition_list)
             };
             if ret_code.is_error() {
                 return Err(KafkaError::Subscription(topic.to_string()))
             };
         }
-        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(topic_partition_list) };
+        Ok(())
+    }
+
+    /// Subscribes the consumer to a topic with the specified partitions
+    pub fn subscribe_to_topic_with_partitions(&mut self, topic: &str, partitions: Range<i32>) -> KafkaResult<()> {
+        let topic_partition_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(1) };
+        let topic_cstring = CString::new(topic).unwrap();
+        let ret_code = unsafe {
+            rdkafka::rd_kafka_topic_partition_list_add_range(
+                topic_partition_list,
+                topic_cstring.as_ptr(),
+                partitions.start,
+                partitions.end
+            );
+            rdkafka::rd_kafka_subscribe(self.client.ptr, topic_partition_list)
+        };
+        if ret_code.is_error() {
+            return Err(KafkaError::Subscription(topic.to_string()))
+        };
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(topic_partition_list) };
         Ok(())
     }
 

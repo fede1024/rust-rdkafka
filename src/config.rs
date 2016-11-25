@@ -6,7 +6,7 @@ use std::ffi::CString;
 use util::bytes_cstr_to_owned;
 
 use error::{KafkaError, KafkaResult, IsError};
-use client::{DeliveryCallback};
+use client::{DeliveryCallback,RebalanceCallback};
 
 const ERR_LEN: usize = 256;
 
@@ -15,6 +15,7 @@ const ERR_LEN: usize = 256;
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
     delivery_cb: Option<DeliveryCallback>,
+    rebalance_cb: Option<RebalanceCallback>,
     default_topic_config: Option<TopicConfig>,
 }
 
@@ -24,6 +25,7 @@ impl ClientConfig {
         ClientConfig {
             conf_map: HashMap::new(),
             delivery_cb: None,
+            rebalance_cb: None,
             default_topic_config: None,
         }
     }
@@ -41,6 +43,15 @@ impl ClientConfig {
 
     pub fn get_delivery_cb(&self) -> Option<DeliveryCallback> {
         self.delivery_cb
+    }
+
+    pub fn set_rebalance_cb<'a>(&'a mut self, cb: RebalanceCallback) -> &'a mut ClientConfig {
+        self.rebalance_cb = Some(cb);
+        self
+    }
+
+    pub fn get_rebalance_cb(&self) -> Option<RebalanceCallback> {
+        self.rebalance_cb
     }
 
     pub fn set_default_topic_config<'a>(&'a mut self, default_topic_config: TopicConfig) -> &'a mut ClientConfig {

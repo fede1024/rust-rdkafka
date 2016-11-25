@@ -32,13 +32,25 @@ pub type DeliveryCallback =
                          *const rdkafka::rd_kafka_message_t,
                          *mut c_void);
 
+/// Rebalance callback function type.
+pub type RebalanceCallback =
+    unsafe extern "C" fn (*mut rdkafka::rd_kafka_t,
+                          rdkafka::rd_kafka_resp_err_t,
+                          *mut rdkafka::rd_kafka_topic_partition_list_t,
+                          *mut c_void);
+
 impl Client {
     /// Creates a new Client given a configuration and a client type.
     pub fn new(config: &ClientConfig, client_type: ClientType) -> KafkaResult<Client> {
         let errstr = [0i8; 1024];
         let config_ptr = try!(config.create_native_config());
         let rd_kafka_type = match client_type {
-            ClientType::Consumer => rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER,
+            ClientType::Consumer => {
+                if config.get_rebalance_cb().is_some() {
+                    unsafe { rdkafka::rd_kafka_conf_set_rebalance_cb(config_ptr, config.get_rebalance_cb()) };
+                }
+                rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER
+            },
             ClientType::Producer => {
                 if config.get_delivery_cb().is_some() {
                     unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(config_ptr, config.get_delivery_cb()) };
