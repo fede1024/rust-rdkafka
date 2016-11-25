@@ -1,6 +1,6 @@
 //! Error manipulations.
 extern crate libc;
-extern crate librdkafka_sys as rdkafka;
+extern crate rdkafka_sys as rdkafka;
 extern crate std;
 
 /// Kafka result

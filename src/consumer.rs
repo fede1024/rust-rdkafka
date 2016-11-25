@@ -1,5 +1,5 @@
 //! Consumer implementations.
-extern crate librdkafka_sys as rdkafka;
+extern crate rdkafka_sys as rdkafka;
 extern crate futures;
 
 use std::ffi::CString;

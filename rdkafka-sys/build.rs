@@ -1,6 +1,6 @@
 extern crate num_cpus;
 
-// use std::path::Path;
+use std::path::Path;
 use std::process::Command;
 use std::io::Write;
 use std::env;
@@ -24,24 +24,26 @@ fn run_command_or_fail(dir: &str, cmd: &str, args: &[&str]) {
 }
 
 fn main() {
-    // if !Path::new("librdkafka/.git").exists() {
-    //     println!("Setting up submodules");
-    //     run_command_or_fail(".", "git", &["submodule", "update", "--init"]);
-    // }
-
-    let feature_sasl = env::var("CARGO_FEATURE_SASL").is_ok();
-    let feature_ssl = env::var("CARGO_FEATURE_SSL").is_ok();
-    let feature_zlib = env::var("CARGO_FEATURE_ZLIB").is_ok();
+    if !Path::new("librdkafka/LICENCE").exists() {
+        println!("Setting up submodules");
+        run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
+    }
 
     let mut configure_flags = Vec::new();
 
-    if !feature_sasl {
+    if env::var("CARGO_FEATURE_SASL").is_ok() {
+        configure_flags.push("--enable-sasl");
+    } else {
         configure_flags.push("--disable-sasl");
     }
 
-    if !feature_ssl {
+    if env::var("CARGO_FEATURE_SSL").is_ok() {
+        configure_flags.push("--enable-ssl");
+    } else {
         configure_flags.push("--disable-ssl");
     }
+
+    configure_flags.push("--enable-static");
 
     println!("Configuring librdkafka");
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
@@ -51,17 +53,4 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}/librdkafka/src", env::current_dir().expect("Can't find current dir").display());
     println!("cargo:rustc-link-lib=static=rdkafka");
-
-    if feature_ssl {
-        println!("cargo:rustc-link-lib=dylib=crypto");
-        println!("cargo:rustc-link-lib=dylib=ssl");
-    }
-
-    if feature_zlib {
-        println!("cargo:rustc-link-lib=dylib=z");
-    }
-
-    // println!("cargo:rustc-link-search=/usr/local/opt/openssl/lib");
-    // println!("cargo:libdir=/usr/local/opt/openssl/lib");
-    // println!("cargo:include=/usr/local/opt/openssl/include");
 }

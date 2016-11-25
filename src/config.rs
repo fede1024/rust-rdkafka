@@ -1,5 +1,5 @@
 //! Configuration to create a Consumer or Producer.
-extern crate librdkafka_sys as rdkafka;
+extern crate rdkafka_sys as rdkafka;
 
 use std::collections::HashMap;
 use std::ffi::CString;

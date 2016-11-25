@@ -1,6 +1,6 @@
 //! Common client funcionalities.
 extern crate futures;
-extern crate librdkafka_sys as rdkafka;
+extern crate rdkafka_sys as rdkafka;
 
 use std::ffi::CString;
 use std::os::raw::c_void;

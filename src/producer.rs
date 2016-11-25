@@ -1,5 +1,5 @@
 //! Producer implementations.
-extern crate librdkafka_sys as rdkafka;
+extern crate rdkafka_sys as rdkafka;
 extern crate errno;
 extern crate futures;
 

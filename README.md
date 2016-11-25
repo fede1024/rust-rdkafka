@@ -42,7 +42,7 @@ executable. To compile librdkafka you'll need:
 * the GNU toolchain
 * GNU `make`
 * `pthreads`
-* `zlib`: optional, included by default (feature: `zlib`).
+* `zlib`
 * `libssl-dev`: optional, *not* included by default (feature: `ssl`).
 * `libsasl2-dev`: optional, *not* included by default (feature: `sasl`).
 

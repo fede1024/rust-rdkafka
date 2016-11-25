@@ -1,5 +1,5 @@
 //! Utility functions.
-extern crate librdkafka_sys as rdkafka;
+extern crate rdkafka_sys as rdkafka;
 extern crate std;
 
 use std::ffi::CStr;

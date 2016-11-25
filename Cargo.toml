@@ -9,7 +9,7 @@ description = "Rust wrapper for librdkafka"
 keywords = ["kafka", "rdkafka"]
 
 [dependencies]
-librdkafka-sys = { path = "librdkafka-sys", version = "0.9.2-0" }
+rdkafka-sys = { path = "rdkafka-sys", version = "0.9.2-0" }
 clap = "2.18.0"
 env_logger = "^0.3.0"
 errno = "^0.1.8"
@@ -18,8 +18,7 @@ libc = "^0.2.0"
 log = "^0.3.0"
 
 [features]
-default = ["zlib"]
+default = []
 
-zlib = ["librdkafka-sys/zlib"]
-ssl = ["librdkafka-sys/ssl"]
-sasl = ["librdkafka-sys/sasl", "ssl"]
+ssl = ["rdkafka-sys/ssl"]
+sasl = ["rdkafka-sys/sasl", "ssl"]
