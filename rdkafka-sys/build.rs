@@ -24,7 +24,7 @@ fn run_command_or_fail(dir: &str, cmd: &str, args: &[&str]) {
 }
 
 fn main() {
-    if !Path::new("librdkafka/LICENCE").exists() {
+    if !Path::new("librdkafka/LICENSE").exists() {
         println!("Setting up submodules");
         run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
     }
