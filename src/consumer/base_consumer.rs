@@ -4,7 +4,7 @@ extern crate futures;
 use std::ffi::CString;
 use std::str;
 
-use client::{Client, ClientType};
+use client::{Client, ClientType, Rebalance};
 use config::{FromClientConfig, ClientConfig};
 use consumer::{Consumer, CommitMode};
 use error::{KafkaError, KafkaResult, IsError};
@@ -97,6 +97,12 @@ impl BaseConsumer {
         };
 
         unsafe { rdkafka::rd_kafka_commit_message(self.client.ptr, message.ptr, async) };
+    }
+
+    /// Take rebalance events that were recorded. This only returns results if
+    /// `track_rebalances` is on in the config for this client.
+    pub fn take_rebalances(&mut self) -> Vec<Rebalance> {
+        self.client.take_rebalances()
     }
 }
 
