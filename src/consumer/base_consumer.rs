@@ -76,6 +76,7 @@ impl BaseConsumer {
         tp_res
     }
 
+    /// Polls the consumer for events. It won't block more than the specified timeout.
     pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<Message>> {
         let message_ptr = unsafe { rdkafka::rd_kafka_consumer_poll(self.client.ptr, timeout_ms) };
         if message_ptr.is_null() {

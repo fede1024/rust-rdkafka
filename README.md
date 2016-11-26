@@ -50,7 +50,7 @@ To enable ssl and sasl, use the `features` field in `Cargo.toml`. Example:
 
 ```toml
 [dependencies.rdkafka]
-version = "^0.2.0"
+version = "^0.3.0"
 features = ["ssl", "sasl"]
 ```
 
@@ -79,6 +79,11 @@ cargo run --example <example_name> -- <example_args>
 ## Documentation
 
 Documentation is available on [docs.rs](https://docs.rs/rdkafka/).
+
+## Contributors
+
+Thanks to:
+* Thijs Cadier - [thijsc](https://github.com/thijsc)
 
 ## Alternatives
 

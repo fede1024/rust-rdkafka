@@ -28,6 +28,16 @@ pub struct StreamConsumer {
     handle: Option<JoinHandle<()>>,
 }
 
+impl Consumer for StreamConsumer {
+    fn get_base_consumer(&self) -> &BaseConsumer {
+        Arc::as_ref(&self.consumer)
+    }
+
+    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer {
+        Arc::get_mut(&mut self.consumer).unwrap()  // TODO add check?
+    }
+}
+
 /// Creates a new Consumer starting from a ClientConfig.
 impl FromClientConfig for StreamConsumer {
     fn from_config(config: &ClientConfig) -> KafkaResult<StreamConsumer> {
@@ -40,17 +50,8 @@ impl FromClientConfig for StreamConsumer {
     }
 }
 
-impl Consumer for StreamConsumer {
-    fn get_base_consumer(&self) -> &BaseConsumer {
-        Arc::as_ref(&self.consumer)
-    }
-
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer {
-        Arc::get_mut(&mut self.consumer).unwrap()  // TODO add check?
-    }
-}
-
 impl StreamConsumer {
+    /// Starts the StreamConsumer, returning a Stream.
     pub fn start(&mut self) -> Receiver<Message, KafkaError> {
         let (sender, receiver) = stream::channel();
         let consumer = self.consumer.clone();
@@ -65,6 +66,8 @@ impl StreamConsumer {
         receiver
     }
 
+    /// Stops the StreamConsumer. It blocks until the internal consumer
+    /// has been stopped.
     pub fn stop(&mut self) {
         if self.handle.is_some() {
             trace!("Stopping polling");
@@ -90,17 +93,15 @@ fn poll_loop(consumer: Arc<BaseConsumer>, sender: Sender<Message, KafkaError>, s
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
     while !should_stop.load(Ordering::Relaxed) {
-        trace!("Poll {:?}", should_stop.load(Ordering::Relaxed));
         let future_sender = match consumer.poll(100) {
             Ok(None) => continue,
             Ok(Some(m)) => curr_sender.send(Ok(m)),
             Err(e) => curr_sender.send(Err(e)),
         };
-        trace!("here {:?}", should_stop.load(Ordering::Relaxed));
-        if should_stop.load(Ordering::Relaxed) {
-            // Consumer was stopped while in poll
-            break;
-        }
+        // if should_stop.load(Ordering::Relaxed) {
+        //     // Consumer was stopped while in poll
+        //     break;
+        // }
         trace!("There");
         match future_sender.wait() {
             Ok(new_sender) => curr_sender = new_sender,

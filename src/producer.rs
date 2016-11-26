@@ -78,6 +78,7 @@ impl Future for DeliveryFuture {
 }
 
 impl Producer {
+    /// Returns a topic associated to the producer
     pub fn get_topic<'a>(&'a self, name: &str, config: &TopicConfig) -> KafkaResult<Topic<'a>> {
         Topic::new(&self.client, name, config)
     }
@@ -102,7 +103,7 @@ impl Producer {
         let partition_arg = partition.unwrap_or(-1);
         let produce_response = unsafe {
             rdkafka::rd_kafka_produce(
-                topic.ptr,
+                topic.get_ptr(),
                 partition_arg,
                 rdkafka::RD_KAFKA_MSG_F_COPY as i32,
                 payload_ptr,

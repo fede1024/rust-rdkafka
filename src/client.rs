@@ -66,8 +66,8 @@ impl Drop for Client {
 
 /// Represents a Kafka topic with an associated producer.
 pub struct Topic<'a> {
-    pub ptr: *mut rdkafka::rd_kafka_topic_t,
-    phantom: PhantomData<&'a u8>, // Refers to client, should we use the client instead?
+    ptr: *mut rdkafka::rd_kafka_topic_t,
+    client: &'a Client,
 }
 
 impl<'a> Topic<'a> {
@@ -81,10 +81,15 @@ impl<'a> Topic<'a> {
         } else {
             let topic = Topic {
                 ptr: topic_ptr,
-                phantom: PhantomData,
+                client: client,
             };
             Ok(topic)
         }
+    }
+
+    /// Returns a pointer to the correspondent rdkafka `rd_kafka_topic_t` stuct.
+    pub fn get_ptr(&self) -> *mut rdkafka::rd_kafka_topic_t {
+        self.ptr
     }
 }
 
