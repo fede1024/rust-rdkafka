@@ -6,46 +6,37 @@ use std::str;
 
 use client::{Client, ClientType};
 use config::{FromClientConfig, ClientConfig};
+use consumer::{Consumer, CommitMode};
 use error::{KafkaError, KafkaResult, IsError};
 use message::Message;
 use util::cstr_to_owned;
 
 
-pub trait Consumer {
-    fn get_consumer(&self) -> &ConsumerClient;
-    fn get_consumer_mut(&mut self) -> &mut ConsumerClient;
-
-    // Default implementations
-    fn subscribe(&mut self, topics: &Vec<&str>) -> KafkaResult<()> {
-        self.get_consumer_mut().subscribe(topics)
-    }
-
-    // TODO: return future
-    fn commit_message(&self, message: &Message, mode: Mode) {
-        self.get_consumer().commit_message(message, mode);
-    }
-}
-
-pub enum Mode {
-    Sync,
-    Async,
-}
-
-/// A ConsumerClient client.
-pub struct ConsumerClient {
+/// A BaseConsumer client.
+pub struct BaseConsumer {
     client: Client,
 }
 
-/// Creates a new ConsumerClient starting from a ClientConfig.
-impl FromClientConfig for ConsumerClient {
-    fn from_config(config: &ClientConfig) -> KafkaResult<ConsumerClient> {
-        let client = try!(Client::new(config, ClientType::Consumer));
-        unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
-        Ok(ConsumerClient { client: client })
+impl Consumer for BaseConsumer {
+    fn get_base_consumer(&self) -> &BaseConsumer {
+        self
+    }
+
+    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer {
+        self
     }
 }
 
-impl ConsumerClient {
+/// Creates a new BaseConsumer starting from a ClientConfig.
+impl FromClientConfig for BaseConsumer {
+    fn from_config(config: &ClientConfig) -> KafkaResult<BaseConsumer> {
+        let client = try!(Client::new(config, ClientType::Consumer));
+        unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
+        Ok(BaseConsumer { client: client })
+    }
+}
+
+impl BaseConsumer {
     /// Subscribes the consumer to a list of topics and/or topic sets (using regex).
     /// Strings starting with `^` will be regex-matched to the full list of topics in
     /// the cluster and matching topics will be added to the subscription list.
@@ -98,17 +89,17 @@ impl ConsumerClient {
         Ok(Some(kafka_message))
     }
 
-    pub fn commit_message(&self, message: &Message, mode: Mode) -> () {
+    pub fn commit_message(&self, message: &Message, mode: CommitMode) -> () {
         let async = match mode {
-            Mode::Sync => 0,
-            Mode::Async => 1,
+            CommitMode::Sync => 0,
+            CommitMode::Async => 1,
         };
 
         unsafe { rdkafka::rd_kafka_commit_message(self.client.ptr, message.ptr, async) };
     }
 }
 
-impl Drop for ConsumerClient {
+impl Drop for BaseConsumer {
     fn drop(&mut self) {
         trace!("Destroying consumer");  // TODO: fix me (multiple executions)
         unsafe { rdkafka::rd_kafka_consumer_close(self.client.ptr) };

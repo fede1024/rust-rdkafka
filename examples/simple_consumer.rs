@@ -6,7 +6,8 @@ extern crate rdkafka;
 use clap::{App, Arg};
 use futures::stream::Stream;
 
-use rdkafka::stream_consumer::{Consumer, StreamConsumer, Mode};
+use rdkafka::consumer::{Consumer, CommitMode};
+use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::util::get_rdkafka_version;
 
@@ -58,7 +59,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                 };
                 info!("key: '{:?}', payload: '{}', partition: {}, offset: {}",
                       key, payload, m.get_partition(), m.get_offset());
-                consumer.commit_message(&m, Mode::Async);
+                consumer.commit_message(&m, CommitMode::Async);
             },
         };
     }

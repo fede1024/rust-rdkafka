@@ -15,13 +15,15 @@ use config::{FromClientConfig, ClientConfig};
 use error::{KafkaError, KafkaResult};
 use message::Message;
 
-pub use consumer::{ConsumerClient, Consumer, Mode};
+use consumer::Consumer;
+use consumer::base_consumer::BaseConsumer;
+
 
 /// A Consumer with an associated polling thread. This consumer doesn't need to
 /// be polled and it will return all consumed messages as a `Stream`.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct StreamConsumer {
-    consumer: Arc<ConsumerClient>,
+    consumer: Arc<BaseConsumer>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
@@ -30,7 +32,7 @@ pub struct StreamConsumer {
 impl FromClientConfig for StreamConsumer {
     fn from_config(config: &ClientConfig) -> KafkaResult<StreamConsumer> {
         let stream_consumer = StreamConsumer {
-            consumer: Arc::new(try!(ConsumerClient::from_config(config))),
+            consumer: Arc::new(try!(BaseConsumer::from_config(config))),
             should_stop: Arc::new(AtomicBool::new(false)),
             handle: None,
         };
@@ -39,11 +41,11 @@ impl FromClientConfig for StreamConsumer {
 }
 
 impl Consumer for StreamConsumer {
-    fn get_consumer(&self) -> &ConsumerClient {
+    fn get_base_consumer(&self) -> &BaseConsumer {
         Arc::as_ref(&self.consumer)
     }
 
-    fn get_consumer_mut(&mut self) -> &mut ConsumerClient {
+    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer {
         Arc::get_mut(&mut self.consumer).unwrap()  // TODO add check?
     }
 }
@@ -53,9 +55,8 @@ impl StreamConsumer {
         let (sender, receiver) = stream::channel();
         let consumer = self.consumer.clone();
         let should_stop = self.should_stop.clone();
-        // let mut sender = self.sender.take().expect("Sender is missing");
         let handle = thread::Builder::new()
-            .name("polling thread".to_string())
+            .name("poll".to_string())
             .spawn(move || {
                 poll_loop(consumer, sender, should_stop);
             })
@@ -67,6 +68,7 @@ impl StreamConsumer {
     pub fn stop(&mut self) {
         if self.handle.is_some() {
             trace!("Stopping polling");
+            let test = self.should_stop.clone();
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
             match self.handle.take().unwrap().join() {
@@ -84,15 +86,22 @@ impl Drop for StreamConsumer {
     }
 }
 
-fn poll_loop(consumer: Arc<ConsumerClient>, sender: Sender<Message, KafkaError>, should_stop: Arc<AtomicBool>) {
+fn poll_loop(consumer: Arc<BaseConsumer>, sender: Sender<Message, KafkaError>, should_stop: Arc<AtomicBool>) {
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
     while !should_stop.load(Ordering::Relaxed) {
+        trace!("Poll {:?}", should_stop.load(Ordering::Relaxed));
         let future_sender = match consumer.poll(100) {
             Ok(None) => continue,
             Ok(Some(m)) => curr_sender.send(Ok(m)),
             Err(e) => curr_sender.send(Err(e)),
         };
+        trace!("here {:?}", should_stop.load(Ordering::Relaxed));
+        if should_stop.load(Ordering::Relaxed) {
+            // Consumer was stopped while in poll
+            break;
+        }
+        trace!("There");
         match future_sender.wait() {
             Ok(new_sender) => curr_sender = new_sender,
             Err(e) => {
