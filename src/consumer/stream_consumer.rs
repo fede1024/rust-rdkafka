@@ -71,7 +71,6 @@ impl StreamConsumer {
     pub fn stop(&mut self) {
         if self.handle.is_some() {
             trace!("Stopping polling");
-            let test = self.should_stop.clone();
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
             match self.handle.take().unwrap().join() {
@@ -98,11 +97,6 @@ fn poll_loop(consumer: Arc<BaseConsumer>, sender: Sender<Message, KafkaError>, s
             Ok(Some(m)) => curr_sender.send(Ok(m)),
             Err(e) => curr_sender.send(Err(e)),
         };
-        // if should_stop.load(Ordering::Relaxed) {
-        //     // Consumer was stopped while in poll
-        //     break;
-        // }
-        trace!("There");
         match future_sender.wait() {
             Ok(new_sender) => curr_sender = new_sender,
             Err(e) => {

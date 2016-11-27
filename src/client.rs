@@ -4,7 +4,6 @@ extern crate rdkafka_sys as rdkafka;
 
 use std::ffi::CString;
 use std::os::raw::c_void;
-use std::marker::PhantomData;
 
 use config::{ClientConfig, TopicConfig};
 use error::{KafkaError, KafkaResult};
@@ -67,7 +66,7 @@ impl Drop for Client {
 /// Represents a Kafka topic with an associated producer.
 pub struct Topic<'a> {
     ptr: *mut rdkafka::rd_kafka_topic_t,
-    client: &'a Client,
+    _client: &'a Client,
 }
 
 impl<'a> Topic<'a> {
@@ -81,7 +80,7 @@ impl<'a> Topic<'a> {
         } else {
             let topic = Topic {
                 ptr: topic_ptr,
-                client: client,
+                _client: client,
             };
             Ok(topic)
         }
