@@ -86,7 +86,8 @@ impl FromBytes for str {
 }
 
 /// Given some data, returns the byte representation of that data.
-/// No copy of the data should be performed.
+/// No copy of the data should be performed in the implementations of
+/// this trait.
 pub trait ToBytes {
     fn to_bytes(&self) -> &[u8];
 }
@@ -120,3 +121,21 @@ impl<'a> ToBytes for () {
         &[]
     }
 }
+
+
+pub trait ToBytesBox {
+    fn to_bytes(self) -> Box<[u8]>;
+}
+
+impl ToBytesBox for Vec<u8> {
+    fn to_bytes(self) -> Box<[u8]> {
+        self.into_boxed_slice()
+    }
+}
+
+impl ToBytesBox for String {
+    fn to_bytes(self) -> Box<[u8]> {
+        self.into_bytes().into_boxed_slice()
+    }
+}
+

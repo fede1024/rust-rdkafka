@@ -14,7 +14,7 @@ mod example_utils;
 use example_utils::setup_logger;
 
 
-fn produce(brokers: &str, topic_name: &str) {
+fn produce(brokers: &str, topic_name: &str, copy: bool) {
     let producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create::<Producer>()
@@ -29,11 +29,15 @@ fn produce(brokers: &str, topic_name: &str) {
 
     let _producer_thread = producer.start_polling_thread();
 
-    let futures = (0..5)
+    let futures = (0..1)
         .map(|i| {
             let value = format!("Message {}", i);
-            producer.send_copy(&topic, None, Some(&value), Some(&vec![0, 1, 2, 3]))
-                .expect("Production failed")
+            let future = if copy {
+                producer.send_copy(&topic, None, Some(&value), Some(&vec![0, 1, 2, 3]))
+            } else {
+                producer.send(&topic, None, Some(value), Some(vec![0, 1, 2, 3]))
+            };
+            future.expect("Production failed")
                 .map(move |m| {
                     info!("Delivery status for message {} received", i);
                     m
@@ -56,6 +60,9 @@ fn main() {
              .help("Broker list in kafka format")
              .takes_value(true)
              .default_value("localhost:9092"))
+        .arg(Arg::with_name("copy")
+             .long("copy")
+             .help("If set, the C library will create a copy of the message internally"))
         .arg(Arg::with_name("log-conf")
              .long("log-conf")
              .help("Configure the logging format (example: 'rdkafka=trace')")
@@ -75,8 +82,9 @@ fn main() {
 
     let topic = matches.value_of("topic").unwrap();
     let brokers = matches.value_of("brokers").unwrap();
+    let copy = matches.is_present("copy");
 
-    produce(brokers, topic);
+    produce(brokers, topic, copy);
 }
 
 
