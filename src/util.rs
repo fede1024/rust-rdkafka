@@ -18,6 +18,6 @@ pub unsafe fn bytes_cstr_to_owned(bytes_cstr: &[i8]) -> String {
 }
 
 /// Converts a C string into a String.
-pub unsafe fn cstr_to_owned(cstr: *mut i8) -> String {
+pub unsafe fn cstr_to_owned(cstr: *const i8) -> String {
     CStr::from_ptr(cstr).to_string_lossy().into_owned()
 }

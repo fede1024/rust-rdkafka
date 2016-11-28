@@ -5,6 +5,7 @@ use message::Message;
 use error::KafkaResult;
 
 use consumer::base_consumer::BaseConsumer;
+use topic_partition_list::TopicPartitionList;
 
 /// Specifies if the commit should be performed synchronously
 /// or asynchronously.
@@ -25,7 +26,7 @@ pub trait Consumer {
     // Default implementations
 
     /// Subscribe the consumer to a list of topics.
-    fn subscribe(&mut self, topics: &Vec<&str>) -> KafkaResult<()> {
+    fn subscribe(&mut self, topics: &TopicPartitionList) -> KafkaResult<()> {
         self.get_base_consumer_mut().subscribe(topics)
     }
 
