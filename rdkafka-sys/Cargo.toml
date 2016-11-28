@@ -10,9 +10,9 @@ description = "Native bindings to the librdkafka library"
 keywords = ["kafka", "rdkafka"]
 
 [dependencies]
-# lz4-sys = { git = "https://github.com/thijsc/lz4-rs.git" }
-libz-sys = ">= 1.0.7"
-openssl-sys = "> 0.7.0"
+lz4-sys = "^ 1.0"
+libz-sys = "^ 1.0"
+openssl-sys = "~ 0.9.0"
 
 [build-dependencies]
 num_cpus = "~ 0.2.0"
