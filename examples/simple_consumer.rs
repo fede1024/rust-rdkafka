@@ -10,12 +10,13 @@ use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::util::get_rdkafka_version;
+use rdkafka::topic_partition_list::TopicPartitionList;
 
 mod example_utils;
 use example_utils::setup_logger;
 
 
-fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
+fn consume_and_print(brokers: &str, group_id: &str, topics: &TopicPartitionList) {
     let mut consumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
@@ -99,7 +100,7 @@ fn main() {
     let (version_n, version_s) = get_rdkafka_version();
     info!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
 
-    let topics = matches.values_of("topics").unwrap().collect::<Vec<&str>>();
+    let topics = TopicPartitionList::with_topics(&matches.values_of("topics").unwrap().collect::<Vec<&str>>());
     let brokers = matches.value_of("brokers").unwrap();
     let group_id = matches.value_of("group-id").unwrap();
 
