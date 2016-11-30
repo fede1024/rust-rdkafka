@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::ffi::CString;
 use util::bytes_cstr_to_owned;
 
+use client::{Context, DeliveryCallback};
 use error::{KafkaError, KafkaResult, IsError};
-use client::{DeliveryCallback};
 
 const ERR_LEN: usize = 256;
 
@@ -93,14 +93,14 @@ impl ClientConfig {
         (*self).clone()
     }
 
-    pub fn create<T: FromClientConfig>(&self) -> KafkaResult<T> {
-        T::from_config(self)
+    pub fn create<'a, C: Context + 'a, T: FromClientConfig<'a, C>>(&self, context: &'a C) -> KafkaResult<T> {
+        T::from_config(self, context)
     }
 }
 
 /// Create a new client based on the provided configuration.
-pub trait FromClientConfig: Sized {
-    fn from_config(&ClientConfig) -> KafkaResult<Self>;
+pub trait FromClientConfig<'a, C: Context + 'a>: Sized {
+    fn from_config(&ClientConfig, &'a C) -> KafkaResult<Self>;
 }
 
 /// Topic configuration

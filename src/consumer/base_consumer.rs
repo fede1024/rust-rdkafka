@@ -3,7 +3,7 @@ extern crate futures;
 
 use std::str;
 
-use client::{Client, ClientType, Rebalance};
+use client::{Client, ClientType, Context, Rebalance};
 use config::{FromClientConfig, ClientConfig};
 use consumer::{Consumer, CommitMode};
 use error::{KafkaError, KafkaResult, IsError};
@@ -12,30 +12,30 @@ use util::cstr_to_owned;
 use topic_partition_list::TopicPartitionList;
 
 /// A BaseConsumer client.
-pub struct BaseConsumer {
-    client: Client,
+pub struct BaseConsumer<'a, C: Context + 'a> {
+    client: Client<'a, C>,
 }
 
-impl Consumer for BaseConsumer {
-    fn get_base_consumer(&self) -> &BaseConsumer {
+impl<'a, C: Context + 'a> Consumer<'a, C> for BaseConsumer<'a, C> {
+    fn get_base_consumer(&self) -> &BaseConsumer<'a, C> {
         self
     }
 
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer {
+    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<'a, C> {
         self
     }
 }
 
 /// Creates a new BaseConsumer starting from a ClientConfig.
-impl FromClientConfig for BaseConsumer {
-    fn from_config(config: &ClientConfig) -> KafkaResult<BaseConsumer> {
-        let client = try!(Client::new(config, ClientType::Consumer));
+impl<'a, C: Context + 'a> FromClientConfig<'a, C> for BaseConsumer<'a, C> {
+    fn from_config(config: &ClientConfig, context: &'a C) -> KafkaResult<BaseConsumer<'a, C>> {
+        let client = try!(Client::new(config, ClientType::Consumer, context));
         unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
         Ok(BaseConsumer { client: client })
     }
 }
 
-impl BaseConsumer {
+impl<'a, C: Context + 'a> BaseConsumer<'a, C> {
     /// Subscribes the consumer to a list of topics and/or topic sets (using regex).
     /// Strings starting with `^` will be regex-matched to the full list of topics in
     /// the cluster and matching topics will be added to the subscription list.
@@ -92,7 +92,7 @@ impl BaseConsumer {
     }
 }
 
-impl Drop for BaseConsumer {
+impl<'a, C: Context + 'a> Drop for BaseConsumer<'a, C> {
     fn drop(&mut self) {
         trace!("Destroying consumer");  // TODO: fix me (multiple executions)
         unsafe { rdkafka::rd_kafka_consumer_close(self.client.ptr) };

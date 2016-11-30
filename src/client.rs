@@ -20,6 +20,8 @@ pub enum ClientType {
     Producer,
 }
 
+pub trait Context: Send + Sync + Sized { }
+
 pub struct Opaque {
     pub rebalances: Vec<Rebalance>
 }
@@ -72,14 +74,18 @@ unsafe extern "C" fn rebalance_cb(rk: *mut rdkafka::rd_kafka_t,
     mem::forget(opaque);
 }
 
+//fn my_rb_callback
+
 /// A librdkafka client.
-pub struct Client {
+pub struct Client<'a, C: Context + 'a> {
     pub ptr: *mut rdkafka::rd_kafka_t,
-    pub opaque_ptr: *mut Opaque
+    pub opaque_ptr: *mut Opaque,
+    pub context: &'a C,
 }
 
-unsafe impl Sync for Client {}
-unsafe impl Send for Client {}
+// The library is completely thread safe, according to the documentation.
+unsafe impl<'a, C: Context + 'a> Sync for Client<'a, C> {}
+unsafe impl<'a, C: Context + 'a> Send for Client<'a, C> {}
 
 /// Delivery callback function type.
 pub type DeliveryCallback =
@@ -87,9 +93,9 @@ pub type DeliveryCallback =
                          *const rdkafka::rd_kafka_message_t,
                          *mut c_void);
 
-impl Client {
+impl<'a, C: Context + 'a> Client<'a, C> {
     /// Creates a new Client given a configuration and a client type.
-    pub fn new(config: &ClientConfig, client_type: ClientType) -> KafkaResult<Client> {
+    pub fn new(config: &ClientConfig, client_type: ClientType, context: &'a C) -> KafkaResult<Client<'a, C>> {
         let errstr = [0i8; 1024];
         let config_ptr = try!(config.create_native_config());
         let rd_kafka_type = match client_type {
@@ -120,7 +126,8 @@ impl Client {
 
         Ok(Client {
             ptr: client_ptr,
-            opaque_ptr: opaque_ptr
+            opaque_ptr: opaque_ptr,
+            context: context,
         })
     }
 
@@ -138,7 +145,7 @@ impl Client {
     }
 }
 
-impl Drop for Client {
+impl<'a, C: Context> Drop for Client<'a, C> {
     fn drop(&mut self) {
         trace!("Destroy rd_kafka");
         unsafe {
@@ -150,14 +157,14 @@ impl Drop for Client {
 }
 
 /// Represents a Kafka topic with an associated producer.
-pub struct Topic<'a> {
+pub struct Topic<'a, C: Context + 'a> {
     ptr: *mut rdkafka::rd_kafka_topic_t,
-    _client: &'a Client,
+    _client: &'a Client<'a, C>,
 }
 
-impl<'a> Topic<'a> {
+impl<'a, C: Context> Topic<'a, C> {
     /// Creates the Topic.
-    pub fn new(client: &'a Client, name: &str, topic_config: &TopicConfig) -> KafkaResult<Topic<'a>> {
+    pub fn new(client: &'a Client<C>, name: &str, topic_config: &TopicConfig) -> KafkaResult<Topic<'a, C>> {
         let name_ptr = CString::new(name.to_string()).unwrap();
         let config_ptr = try!(topic_config.create_native_config());
         let topic_ptr = unsafe { rdkafka::rd_kafka_topic_new(client.ptr, name_ptr.as_ptr(), config_ptr) };
@@ -178,7 +185,7 @@ impl<'a> Topic<'a> {
     }
 }
 
-impl<'a> Drop for Topic<'a> {
+impl<'a, C: Context> Drop for Topic<'a, C> {
     fn drop(&mut self) {
         trace!("Destroy rd_kafka_topic");
         unsafe {

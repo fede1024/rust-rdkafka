@@ -1,6 +1,7 @@
 pub mod base_consumer;
 pub mod stream_consumer;
 
+use client::Context;
 use message::Message;
 use error::KafkaResult;
 
@@ -17,11 +18,11 @@ pub enum CommitMode {
 }
 
 /// Common trait for all consumers
-pub trait Consumer {
+pub trait Consumer<'a, C: Context + 'a> {
     /// Returns a reference to the BaseConsumer.
-    fn get_base_consumer(&self) -> &BaseConsumer;
+    fn get_base_consumer(&self) -> &BaseConsumer<'a, C>;
     /// Returns a mutable reference to the BaseConsumer.
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer;
+    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<'a, C>;
 
     // Default implementations
 

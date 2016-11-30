@@ -12,6 +12,7 @@ use std::thread;
 
 use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
 
+use client::{Context};
 use config::{ClientConfig, FromClientConfig, TopicConfig};
 use error::{KafkaError, KafkaResult};
 use message::ToBytes;
@@ -21,8 +22,8 @@ use client::{Client, ClientType, Topic};
 /// Contains a reference counted producer client. It can be safely cloned to
 /// create another reference to the same producer.
 #[derive(Clone)]
-pub struct Producer {
-    client: Arc<Client>,
+pub struct Producer<'a, C: Context + 'a> {
+    client: Arc<Client<'a, C>>,
 }
 
 #[derive(Debug)]
@@ -52,11 +53,11 @@ unsafe extern "C" fn delivery_cb(_client: *mut rdkafka::rd_kafka_t,
 }
 
 /// Creates a new Producer starting from a ClientConfig.
-impl FromClientConfig for Producer {
-    fn from_config(config: &ClientConfig) -> KafkaResult<Producer> {
+impl<'a, C: Context + 'a> FromClientConfig<'a, C> for Producer<'a, C> {
+    fn from_config(config: &ClientConfig, context: &'a C) -> KafkaResult<Producer<'a, C>> {
         let mut producer_config = config.config_clone();
         producer_config.set_delivery_cb(delivery_cb);
-        let client = try!(Client::new(&producer_config, ClientType::Producer));
+        let client = try!(Client::new(&producer_config, ClientType::Producer, context));
         let producer = Producer { client: Arc::new(client) };
         Ok(producer)
     }
@@ -77,9 +78,9 @@ impl Future for DeliveryFuture {
     }
 }
 
-impl Producer {
+impl<'a, C: Context + 'a> Producer<'a, C> {
     /// Returns a topic associated to the producer
-    pub fn get_topic<'a>(&'a self, name: &str, config: &TopicConfig) -> KafkaResult<Topic<'a>> {
+    pub fn get_topic<'b>(&'b self, name: &str, config: &TopicConfig) -> KafkaResult<Topic<'b, C>> {
         Topic::new(&self.client, name, config)
     }
 
@@ -89,7 +90,7 @@ impl Producer {
         unsafe { rdkafka::rd_kafka_poll(self.client.ptr, timeout_ms) }
     }
 
-    fn _send_copy(&self, topic: &Topic, partition: Option<i32>, payload: Option<&[u8]>, key: Option<&[u8]>) -> KafkaResult<DeliveryFuture> {
+    fn _send_copy(&self, topic: &Topic<C>, partition: Option<i32>, payload: Option<&[u8]>, key: Option<&[u8]>) -> KafkaResult<DeliveryFuture> {
         let (payload_ptr, payload_len) = match payload {
             None => (ptr::null_mut(), 0),
             Some(p) => (p.as_ptr() as *mut c_void, p.len()),
@@ -125,7 +126,7 @@ impl Producer {
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key.
     /// Returns a `DeliveryFuture` or an error.
-    pub fn send_copy<P, K>(&self, topic: &Topic, partition: Option<i32>, payload: Option<&P>, key: Option<&K>) -> KafkaResult<DeliveryFuture>
+    pub fn send_copy<P, K>(&self, topic: &Topic<C>, partition: Option<i32>, payload: Option<&P>, key: Option<&K>) -> KafkaResult<DeliveryFuture>
         where K: ToBytes,
               P: ToBytes {
         self._send_copy(topic, partition, payload.map(P::to_bytes), key.map(K::to_bytes))
@@ -134,7 +135,7 @@ impl Producer {
     /// Starts the polling thread for the producer. It returns a `ProducerPollingThread` that will
     /// process all the events. Calling `poll` is not required if the `ProducerPollingThread`
     /// thread is running.
-    pub fn start_polling_thread(&self) -> ProducerPollingThread {
+    pub fn start_polling_thread(&self) -> ProducerPollingThread<'a, C> {
         let mut threaded_producer = ProducerPollingThread::new(self);
         threaded_producer.start();
         threaded_producer
@@ -146,15 +147,15 @@ impl Producer {
 /// The internal thread can be terminated with the `stop` method or moving the
 /// `ProducerPollingThread` out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-pub struct ProducerPollingThread {
-    producer: Producer,
+pub struct ProducerPollingThread<'a, C: Context + 'a> {
+    producer: Producer<'a, C>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
 
-impl ProducerPollingThread {
+impl<'a, C: Context + 'a> ProducerPollingThread<'a, C> {
     /// Creates a new producer. The internal thread will not be running yet.
-    pub fn new(producer: &Producer) -> ProducerPollingThread {
+    pub fn new(producer: &Producer<'a, C>) -> ProducerPollingThread<'a, C> {
         ProducerPollingThread {
             producer: producer.clone(),
             should_stop: Arc::new(AtomicBool::new(false)),
@@ -197,7 +198,7 @@ impl ProducerPollingThread {
     }
 }
 
-impl Drop for ProducerPollingThread {
+impl<'a, C: Context + 'a> Drop for ProducerPollingThread<'a, C> {
     fn drop(&mut self) {
         trace!("Destroy ProducerPollingThread");
         self.stop();

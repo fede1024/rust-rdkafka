@@ -6,6 +6,7 @@ extern crate rdkafka;
 use clap::{App, Arg};
 use futures::stream::Stream;
 
+use rdkafka::client::Context;
 use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, TopicConfig};
@@ -16,7 +17,15 @@ mod example_utils;
 use example_utils::setup_logger;
 
 
+struct MyContext {
+    a: i32,
+}
+
+impl Context for MyContext { };
+
 fn consume_and_print(brokers: &str, group_id: &str, topics: &TopicPartitionList) {
+    let mut context = MyContext{a: 12};
+
     let mut consumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
@@ -27,7 +36,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &TopicPartitionList)
              TopicConfig::new()
              .set("auto.offset.reset", "smallest")
              .finalize())
-        .create::<StreamConsumer>()
+        .create::<StreamConsumer>(&context)
         .expect("Consumer creation failed");
 
     consumer.subscribe(topics).expect("Can't subscribe to specified topics");

@@ -11,6 +11,7 @@ use self::futures::Future;
 use self::futures::stream;
 use self::futures::stream::{Receiver, Sender};
 
+use client::{Context};
 use config::{FromClientConfig, ClientConfig};
 use error::{KafkaError, KafkaResult};
 use message::Message;
@@ -22,27 +23,27 @@ use consumer::base_consumer::BaseConsumer;
 /// A Consumer with an associated polling thread. This consumer doesn't need to
 /// be polled and it will return all consumed messages as a `Stream`.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
-pub struct StreamConsumer {
-    consumer: Arc<BaseConsumer>,
+pub struct StreamConsumer<'a, C: Context + 'a> {
+    consumer: Arc<BaseConsumer<'a, C>>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
 
-impl Consumer for StreamConsumer {
-    fn get_base_consumer(&self) -> &BaseConsumer {
+impl<'a, C: Context + 'a> Consumer<'a, C> for StreamConsumer<'a, C> {
+    fn get_base_consumer(&self) -> &BaseConsumer<'a, C> {
         Arc::as_ref(&self.consumer)
     }
 
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer {
+    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<'a, C> {
         Arc::get_mut(&mut self.consumer).unwrap()  // TODO add check?
     }
 }
 
 /// Creates a new Consumer starting from a ClientConfig.
-impl FromClientConfig for StreamConsumer {
-    fn from_config(config: &ClientConfig) -> KafkaResult<StreamConsumer> {
+impl<'a, C: Context + 'a> FromClientConfig<'a, C> for StreamConsumer<'a, C> {
+    fn from_config(config: &ClientConfig, context: &'a C) -> KafkaResult<StreamConsumer<'a, C>> {
         let stream_consumer = StreamConsumer {
-            consumer: Arc::new(try!(BaseConsumer::from_config(config))),
+            consumer: Arc::new(try!(BaseConsumer::from_config(config, context))),
             should_stop: Arc::new(AtomicBool::new(false)),
             handle: None,
         };
@@ -50,7 +51,7 @@ impl FromClientConfig for StreamConsumer {
     }
 }
 
-impl StreamConsumer {
+impl<'a, C: Context + 'a> StreamConsumer<'a, C> {
     /// Starts the StreamConsumer, returning a Stream.
     pub fn start(&mut self) -> Receiver<Message, KafkaError> {
         let (sender, receiver) = stream::channel();
@@ -58,7 +59,7 @@ impl StreamConsumer {
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
             .name("poll".to_string())
-            .spawn(move || {
+            .spawn( || {
                 poll_loop(consumer, sender, should_stop);
             })
             .expect("Failed to start polling thread");
@@ -81,14 +82,14 @@ impl StreamConsumer {
     }
 }
 
-impl Drop for StreamConsumer {
+impl<'a, C: Context + 'a> Drop for StreamConsumer<'a, C> {
     fn drop(&mut self) {
         trace!("Destroy ConsumerPollingThread");
         self.stop();
     }
 }
 
-fn poll_loop(consumer: Arc<BaseConsumer>, sender: Sender<Message, KafkaError>, should_stop: Arc<AtomicBool>) {
+fn poll_loop<C: Context>(consumer: Arc<BaseConsumer<C>>, sender: Sender<Message, KafkaError>, should_stop: Arc<AtomicBool>) {
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
     while !should_stop.load(Ordering::Relaxed) {

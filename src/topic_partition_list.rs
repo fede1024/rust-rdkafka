@@ -27,26 +27,24 @@ impl TopicPartitionList {
     pub fn from_rdkafka(tp_list: *const rdkafka::rd_kafka_topic_partition_list_t) -> TopicPartitionList {
         let mut topics: Topics = HashMap::new();
 
-        unsafe {
-            let elements = slice::from_raw_parts((*tp_list).elems, (*tp_list).cnt as usize);
-            for tp in elements {
-                let topic_name = cstr_to_owned(tp.topic);
-                if tp.partition >= 0 || tp.offset >= 0 {
-                    let topic = topics.entry(topic_name).or_insert(Some(vec![]));
-                    match *topic {
-                        Some(ref mut p) => {
-                            p.push(Partition {
-                                partition: tp.partition,
-                                offset: tp.offset
-                            });
-                        },
-                        None => ()
-                    }
-                } else {
-                    // No configuration
-                    topics.insert(topic_name, None);
-                };
-            }
+        let elements = unsafe { slice::from_raw_parts((*tp_list).elems, (*tp_list).cnt as usize) };
+        for tp in elements {
+            let topic_name = unsafe { cstr_to_owned(tp.topic) };
+            if tp.partition >= 0 || tp.offset >= 0 {
+                let topic = topics.entry(topic_name).or_insert(Some(vec![]));
+                match *topic {
+                    Some(ref mut p) => {
+                        p.push(Partition {
+                            partition: tp.partition,
+                            offset: tp.offset
+                        });
+                    },
+                    None => ()
+                }
+            } else {
+                // No configuration
+                topics.insert(topic_name, None);
+            };
         }
 
         TopicPartitionList {
