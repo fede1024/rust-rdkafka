@@ -23,25 +23,25 @@ use consumer::base_consumer::BaseConsumer;
 /// A Consumer with an associated polling thread. This consumer doesn't need to
 /// be polled and it will return all consumed messages as a `Stream`.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
-pub struct StreamConsumer<'a, C: Context + 'a> {
-    consumer: Arc<BaseConsumer<'a, C>>,
+pub struct StreamConsumer<C: Context + 'static> {
+    consumer: Arc<BaseConsumer<C>>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
 
-impl<'a, C: Context + 'a> Consumer<'a, C> for StreamConsumer<'a, C> {
-    fn get_base_consumer(&self) -> &BaseConsumer<'a, C> {
+impl<C: Context> Consumer<C> for StreamConsumer<C> {
+    fn get_base_consumer(&self) -> &BaseConsumer<C> {
         Arc::as_ref(&self.consumer)
     }
 
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<'a, C> {
+    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<C> {
         Arc::get_mut(&mut self.consumer).unwrap()  // TODO add check?
     }
 }
 
 /// Creates a new Consumer starting from a ClientConfig.
-impl<'a, C: Context + 'a> FromClientConfig<'a, C> for StreamConsumer<'a, C> {
-    fn from_config(config: &ClientConfig, context: &'a C) -> KafkaResult<StreamConsumer<'a, C>> {
+impl<C: Context> FromClientConfig<C> for StreamConsumer<C> {
+    fn from_config(config: &ClientConfig, context: C) -> KafkaResult<StreamConsumer<C>> {
         let stream_consumer = StreamConsumer {
             consumer: Arc::new(try!(BaseConsumer::from_config(config, context))),
             should_stop: Arc::new(AtomicBool::new(false)),
@@ -51,7 +51,7 @@ impl<'a, C: Context + 'a> FromClientConfig<'a, C> for StreamConsumer<'a, C> {
     }
 }
 
-impl<'a, C: Context + 'a> StreamConsumer<'a, C> {
+impl<C: Context> StreamConsumer<C> {
     /// Starts the StreamConsumer, returning a Stream.
     pub fn start(&mut self) -> Receiver<Message, KafkaError> {
         let (sender, receiver) = stream::channel();
@@ -59,7 +59,7 @@ impl<'a, C: Context + 'a> StreamConsumer<'a, C> {
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
             .name("poll".to_string())
-            .spawn( || {
+            .spawn(move || {
                 poll_loop(consumer, sender, should_stop);
             })
             .expect("Failed to start polling thread");
@@ -82,7 +82,7 @@ impl<'a, C: Context + 'a> StreamConsumer<'a, C> {
     }
 }
 
-impl<'a, C: Context + 'a> Drop for StreamConsumer<'a, C> {
+impl<C: Context> Drop for StreamConsumer<C> {
     fn drop(&mut self) {
         trace!("Destroy ConsumerPollingThread");
         self.stop();

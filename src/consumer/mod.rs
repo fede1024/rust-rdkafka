@@ -18,11 +18,11 @@ pub enum CommitMode {
 }
 
 /// Common trait for all consumers
-pub trait Consumer<'a, C: Context + 'a> {
+pub trait Consumer<C: Context> {
     /// Returns a reference to the BaseConsumer.
-    fn get_base_consumer(&self) -> &BaseConsumer<'a, C>;
+    fn get_base_consumer(&self) -> &BaseConsumer<C>;
     /// Returns a mutable reference to the BaseConsumer.
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<'a, C>;
+    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<C>;
 
     // Default implementations
 

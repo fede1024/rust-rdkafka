@@ -21,7 +21,7 @@ struct MyContext {
     a: i32,
 }
 
-impl Context for MyContext { };
+impl Context for MyContext { }
 
 fn consume_and_print(brokers: &str, group_id: &str, topics: &TopicPartitionList) {
     let mut context = MyContext{a: 12};
@@ -36,7 +36,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &TopicPartitionList)
              TopicConfig::new()
              .set("auto.offset.reset", "smallest")
              .finalize())
-        .create::<StreamConsumer>(&context)
+        .create::<MyContext, StreamConsumer<MyContext>>(context)
         .expect("Consumer creation failed");
 
     consumer.subscribe(topics).expect("Can't subscribe to specified topics");

@@ -12,30 +12,30 @@ use util::cstr_to_owned;
 use topic_partition_list::TopicPartitionList;
 
 /// A BaseConsumer client.
-pub struct BaseConsumer<'a, C: Context + 'a> {
-    client: Client<'a, C>,
+pub struct BaseConsumer<C: Context> {
+    client: Client<C>,
 }
 
-impl<'a, C: Context + 'a> Consumer<'a, C> for BaseConsumer<'a, C> {
-    fn get_base_consumer(&self) -> &BaseConsumer<'a, C> {
+impl<C: Context> Consumer<C> for BaseConsumer<C> {
+    fn get_base_consumer(&self) -> &BaseConsumer<C> {
         self
     }
 
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<'a, C> {
+    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<C> {
         self
     }
 }
 
 /// Creates a new BaseConsumer starting from a ClientConfig.
-impl<'a, C: Context + 'a> FromClientConfig<'a, C> for BaseConsumer<'a, C> {
-    fn from_config(config: &ClientConfig, context: &'a C) -> KafkaResult<BaseConsumer<'a, C>> {
+impl<C: Context> FromClientConfig<C> for BaseConsumer<C> {
+    fn from_config(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
         let client = try!(Client::new(config, ClientType::Consumer, context));
         unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
         Ok(BaseConsumer { client: client })
     }
 }
 
-impl<'a, C: Context + 'a> BaseConsumer<'a, C> {
+impl<C: Context> BaseConsumer<C> {
     /// Subscribes the consumer to a list of topics and/or topic sets (using regex).
     /// Strings starting with `^` will be regex-matched to the full list of topics in
     /// the cluster and matching topics will be added to the subscription list.
@@ -92,7 +92,7 @@ impl<'a, C: Context + 'a> BaseConsumer<'a, C> {
     }
 }
 
-impl<'a, C: Context + 'a> Drop for BaseConsumer<'a, C> {
+impl<C: Context> Drop for BaseConsumer<C> {
     fn drop(&mut self) {
         trace!("Destroying consumer");  // TODO: fix me (multiple executions)
         unsafe { rdkafka::rd_kafka_consumer_close(self.client.ptr) };

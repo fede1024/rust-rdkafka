@@ -5,6 +5,7 @@ extern crate futures;
 
 use std::os::raw::c_void;
 use std::ptr;
+//use std::clone::Clone;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
@@ -21,9 +22,8 @@ use client::{Client, ClientType, Topic};
 
 /// Contains a reference counted producer client. It can be safely cloned to
 /// create another reference to the same producer.
-#[derive(Clone)]
-pub struct Producer<'a, C: Context + 'a> {
-    client: Arc<Client<'a, C>>,
+pub struct Producer<C: Context> {
+    client: Client<C>,
 }
 
 #[derive(Debug)]
@@ -53,12 +53,12 @@ unsafe extern "C" fn delivery_cb(_client: *mut rdkafka::rd_kafka_t,
 }
 
 /// Creates a new Producer starting from a ClientConfig.
-impl<'a, C: Context + 'a> FromClientConfig<'a, C> for Producer<'a, C> {
-    fn from_config(config: &ClientConfig, context: &'a C) -> KafkaResult<Producer<'a, C>> {
+impl<C: Context> FromClientConfig<C> for Producer<C> {
+    fn from_config(config: &ClientConfig, context: C) -> KafkaResult<Producer<C>> {
         let mut producer_config = config.config_clone();
         producer_config.set_delivery_cb(delivery_cb);
         let client = try!(Client::new(&producer_config, ClientType::Producer, context));
-        let producer = Producer { client: Arc::new(client) };
+        let producer = Producer { client: client };
         Ok(producer)
     }
 }
@@ -78,7 +78,7 @@ impl Future for DeliveryFuture {
     }
 }
 
-impl<'a, C: Context + 'a> Producer<'a, C> {
+impl<C: Context> Producer<C> {
     /// Returns a topic associated to the producer
     pub fn get_topic<'b>(&'b self, name: &str, config: &TopicConfig) -> KafkaResult<Topic<'b, C>> {
         Topic::new(&self.client, name, config)
@@ -90,6 +90,7 @@ impl<'a, C: Context + 'a> Producer<'a, C> {
         unsafe { rdkafka::rd_kafka_poll(self.client.ptr, timeout_ms) }
     }
 
+    // TODO make generic, give message context as parameter
     fn _send_copy(&self, topic: &Topic<C>, partition: Option<i32>, payload: Option<&[u8]>, key: Option<&[u8]>) -> KafkaResult<DeliveryFuture> {
         let (payload_ptr, payload_len) = match payload {
             None => (ptr::null_mut(), 0),
@@ -131,53 +132,49 @@ impl<'a, C: Context + 'a> Producer<'a, C> {
               P: ToBytes {
         self._send_copy(topic, partition, payload.map(P::to_bytes), key.map(K::to_bytes))
     }
-
-    /// Starts the polling thread for the producer. It returns a `ProducerPollingThread` that will
-    /// process all the events. Calling `poll` is not required if the `ProducerPollingThread`
-    /// thread is running.
-    pub fn start_polling_thread(&self) -> ProducerPollingThread<'a, C> {
-        let mut threaded_producer = ProducerPollingThread::new(self);
-        threaded_producer.start();
-        threaded_producer
-    }
 }
+
 
 
 /// A producer with an internal running thread. This producer doesn't neeed to be polled.
 /// The internal thread can be terminated with the `stop` method or moving the
 /// `ProducerPollingThread` out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-pub struct ProducerPollingThread<'a, C: Context + 'a> {
-    producer: Producer<'a, C>,
+pub struct FutureProducer<C: Context + 'static> {
+    producer: Arc<Producer<C>>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
 
-impl<'a, C: Context + 'a> ProducerPollingThread<'a, C> {
-    /// Creates a new producer. The internal thread will not be running yet.
-    pub fn new(producer: &Producer<'a, C>) -> ProducerPollingThread<'a, C> {
-        ProducerPollingThread {
-            producer: producer.clone(),
+// TODO docs
+impl<C: Context> FromClientConfig<C> for FutureProducer<C> {
+    fn from_config(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
+        let producer = try!(Producer::from_config(config, context));
+        let future_producer = FutureProducer {
+            producer: Arc::new(producer),
             should_stop: Arc::new(AtomicBool::new(false)),
             handle: None,
-        }
+        };
+        Ok(future_producer)
     }
+}
 
+impl<C: Context> FutureProducer<C> {
     /// Starts the internal polling thread.
     pub fn start(&mut self) {
-        let producer = self.producer.clone();
+        let producer_clone = self.producer.clone();
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
             .name("polling thread".to_string())
             .spawn(move || {
-                trace!("Polling thread loop started");
-                while !should_stop.load(Ordering::Relaxed) {
-                    let n = producer.poll(100);
-                    if n != 0 {
-                        trace!("Receved {} events", n);
-                    }
-                }
-                trace!("Polling thread loop terminated");
+                 trace!("Polling thread loop started");
+                 while !should_stop.load(Ordering::Relaxed) {
+                     let n = producer_clone.poll(100);
+                     if n != 0 {
+                         trace!("Receved {} events", n);
+                     }
+                 }
+                 trace!("Polling thread loop terminated");
             })
             .expect("Failed to start polling thread");
         self.handle = Some(handle);
@@ -196,9 +193,19 @@ impl<'a, C: Context + 'a> ProducerPollingThread<'a, C> {
             };
         }
     }
+
+    pub fn get_topic<'a>(&'a self, name: &str, config: &TopicConfig) -> KafkaResult<Topic<'a, C>> {
+        self.producer.get_topic(name, config)
+    }
+
+    pub fn send_copy<P, K>(&self, topic: &Topic<C>, partition: Option<i32>, payload: Option<&P>, key: Option<&K>) -> KafkaResult<DeliveryFuture>
+        where K: ToBytes,
+              P: ToBytes {
+        self.producer.send_copy(topic, partition, payload, key)
+    }
 }
 
-impl<'a, C: Context + 'a> Drop for ProducerPollingThread<'a, C> {
+impl<C: Context> Drop for FutureProducer<C> {
     fn drop(&mut self) {
         trace!("Destroy ProducerPollingThread");
         self.stop();

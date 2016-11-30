@@ -20,7 +20,7 @@ pub enum ClientType {
     Producer,
 }
 
-pub trait Context: Send + Sync + Sized { }
+pub trait Context: Send + Sync { }
 
 pub struct Opaque {
     pub rebalances: Vec<Rebalance>
@@ -77,15 +77,15 @@ unsafe extern "C" fn rebalance_cb(rk: *mut rdkafka::rd_kafka_t,
 //fn my_rb_callback
 
 /// A librdkafka client.
-pub struct Client<'a, C: Context + 'a> {
+pub struct Client<C: Context> {
     pub ptr: *mut rdkafka::rd_kafka_t,
     pub opaque_ptr: *mut Opaque,
-    pub context: &'a C,
+    pub context: C,
 }
 
 // The library is completely thread safe, according to the documentation.
-unsafe impl<'a, C: Context + 'a> Sync for Client<'a, C> {}
-unsafe impl<'a, C: Context + 'a> Send for Client<'a, C> {}
+unsafe impl<C: Context> Sync for Client<C> {}
+unsafe impl<C: Context> Send for Client<C> {}
 
 /// Delivery callback function type.
 pub type DeliveryCallback =
@@ -93,9 +93,9 @@ pub type DeliveryCallback =
                          *const rdkafka::rd_kafka_message_t,
                          *mut c_void);
 
-impl<'a, C: Context + 'a> Client<'a, C> {
+impl<C: Context> Client<C> {
     /// Creates a new Client given a configuration and a client type.
-    pub fn new(config: &ClientConfig, client_type: ClientType, context: &'a C) -> KafkaResult<Client<'a, C>> {
+    pub fn new(config: &ClientConfig, client_type: ClientType, context: C) -> KafkaResult<Client<C>> {
         let errstr = [0i8; 1024];
         let config_ptr = try!(config.create_native_config());
         let rd_kafka_type = match client_type {
@@ -145,7 +145,7 @@ impl<'a, C: Context + 'a> Client<'a, C> {
     }
 }
 
-impl<'a, C: Context> Drop for Client<'a, C> {
+impl<C: Context> Drop for Client<C> {
     fn drop(&mut self) {
         trace!("Destroy rd_kafka");
         unsafe {
@@ -159,7 +159,7 @@ impl<'a, C: Context> Drop for Client<'a, C> {
 /// Represents a Kafka topic with an associated producer.
 pub struct Topic<'a, C: Context + 'a> {
     ptr: *mut rdkafka::rd_kafka_topic_t,
-    _client: &'a Client<'a, C>,
+    _client: &'a Client<C>,
 }
 
 impl<'a, C: Context> Topic<'a, C> {
