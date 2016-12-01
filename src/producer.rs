@@ -3,6 +3,8 @@ extern crate rdkafka_sys as rdkafka;
 extern crate errno;
 extern crate futures;
 
+use self::rdkafka::types::*;
+
 use std::os::raw::c_void;
 use std::ptr;
 //use std::clone::Clone;
@@ -30,7 +32,7 @@ pub struct Producer<C: Context> {
 /// Information returned by the producer after a message has been delivered
 /// or failed to be delivered.
 pub struct DeliveryStatus {
-    error: rdkafka::rd_kafka_resp_err_t,
+    error: RDKafkaRespErr,
     partition: i32,
     offset: i64,
 }
@@ -38,9 +40,7 @@ pub struct DeliveryStatus {
 
 /// Callback that gets called from librdkafka every time a message succeeds
 /// or fails to be delivered.
-unsafe extern "C" fn delivery_cb(_client: *mut rdkafka::rd_kafka_t,
-                                 msg: *const rdkafka::rd_kafka_message_t,
-                                 _opaque: *mut c_void) {
+unsafe extern "C" fn delivery_cb(_client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
     let tx = Box::from_raw((*msg)._private as *mut Complete<DeliveryStatus>);
     let delivery_status = DeliveryStatus {
         error: (*msg).err,

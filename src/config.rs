@@ -1,6 +1,8 @@
 //! Configuration to create a Consumer or Producer.
 extern crate rdkafka_sys as rdkafka;
 
+use self::rdkafka::types::*;
+
 use std::collections::HashMap;
 use std::ffi::CString;
 use util::bytes_cstr_to_owned;
@@ -59,7 +61,7 @@ impl ClientConfig {
         self.rebalance_tracking_enabled
     }
 
-    pub fn create_native_config(&self) -> KafkaResult<*mut rdkafka::rd_kafka_conf_t> {
+    pub fn create_native_config(&self) -> KafkaResult<*mut RDKafkaConf> {
         let conf = unsafe { rdkafka::rd_kafka_conf_new() };
         let errstr = [0; ERR_LEN];
         for (key, value) in &self.conf_map {
@@ -84,7 +86,7 @@ impl ClientConfig {
         Ok(conf)
     }
 
-    fn create_native_default_topic_config(&self) -> Option<KafkaResult<*mut rdkafka::rd_kafka_topic_conf_t>> {
+    fn create_native_default_topic_config(&self) -> Option<KafkaResult<*mut RDKafkaTopicConf>> {
         self.default_topic_config.as_ref().map(|c| c.create_native_config())
     }
 
@@ -132,7 +134,7 @@ impl TopicConfig {
         TopicConfig { conf_map: self.conf_map.clone() }
     }
 
-    pub fn create_native_config(&self) -> KafkaResult<*mut rdkafka::rd_kafka_topic_conf_t> {
+    pub fn create_native_config(&self) -> KafkaResult<*mut RDKafkaTopicConf> {
         let config_ptr = unsafe { rdkafka::rd_kafka_topic_conf_new() };
         let errstr = [0; ERR_LEN];
         for (name, value) in &self.conf_map {

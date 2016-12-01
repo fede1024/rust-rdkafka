@@ -1,10 +1,11 @@
 //! Common client funcionalities.
-extern crate futures;
 extern crate rdkafka_sys as rdkafka;
 
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::ptr;
+
+use self::rdkafka::types::*;
 
 use config::{ClientConfig, TopicConfig};
 use error::{KafkaError, KafkaResult};
@@ -22,16 +23,16 @@ pub enum ClientType {
 pub trait Context: Send + Sync {
     fn rebalance(&self,
                  native_client: &NativeClient,
-                 err: rdkafka::rd_kafka_resp_err_t,
-                 partitions_ptr: *mut rdkafka::rd_kafka_topic_partition_list_t) {
+                 err: RDKafkaRespErr,
+                 partitions_ptr: *mut RDKafkaTopicPartitionList) {
 
         let rebalance = match err {
-            rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
+            RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
                 // TODO: this might be expensive
                 let topic_partition_list = TopicPartitionList::from_rdkafka(partitions_ptr);
                 Rebalance::Assign(topic_partition_list)
             },
-            rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
+            RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
                 Rebalance::Revoke
             },
             _ => {
@@ -46,10 +47,10 @@ pub trait Context: Send + Sync {
         // Execute rebalance
         unsafe {
             match err {
-                rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
+                RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
                     rdkafka::rd_kafka_assign(native_client.ptr, partitions_ptr);
                 },
-                rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
+                RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
                     rdkafka::rd_kafka_assign(native_client.ptr, ptr::null());
                 },
                 _ => {
@@ -82,9 +83,9 @@ pub enum Rebalance {
     Error(String)
 }
 
-unsafe extern "C" fn rebalance_cb<C: Context>(rk: *mut rdkafka::rd_kafka_t,
-                                              err: rdkafka::rd_kafka_resp_err_t,
-                                              partitions: *mut rdkafka::rd_kafka_topic_partition_list_t,
+unsafe extern "C" fn rebalance_cb<C: Context>(rk: *mut RDKafka,
+                                              err: RDKafkaRespErr,
+                                              partitions: *mut RDKafkaTopicPartitionList,
                                               opaque_ptr: *mut c_void) {
     let context: &C = &*(opaque_ptr as *const C);
     let native_client = NativeClient{ptr: rk};
@@ -93,7 +94,7 @@ unsafe extern "C" fn rebalance_cb<C: Context>(rk: *mut rdkafka::rd_kafka_t,
 }
 
 pub struct NativeClient {
-    ptr: *mut rdkafka::rd_kafka_t,
+    ptr: *mut RDKafka,
 }
 
 // The library is completely thread safe, according to the documentation.
@@ -107,10 +108,7 @@ pub struct Client<C: Context> {
 }
 
 /// Delivery callback function type.
-pub type DeliveryCallback =
-    unsafe extern "C" fn(*mut rdkafka::rd_kafka_t,
-                         *const rdkafka::rd_kafka_message_t,
-                         *mut c_void);
+pub type DeliveryCallback = unsafe extern "C" fn(*mut RDKafka, *const RDKafkaMessage, *mut c_void);
 
 impl<C: Context> Client<C> {
     /// Creates a new Client given a configuration and a client type.
@@ -122,13 +120,13 @@ impl<C: Context> Client<C> {
                 if config.is_rebalance_tracking_enabled() {
                     unsafe { rdkafka::rd_kafka_conf_set_rebalance_cb(config_ptr, Some(rebalance_cb::<C>)) };
                 }
-                rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER
+                RDKafkaType::RD_KAFKA_CONSUMER
             },
             ClientType::Producer => {
                 if config.get_delivery_cb().is_some() {
                     unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(config_ptr, config.get_delivery_cb()) };
                 }
-                rdkafka::rd_kafka_type_t::RD_KAFKA_PRODUCER
+                RDKafkaType::RD_KAFKA_PRODUCER
             }
         };
 
@@ -149,7 +147,7 @@ impl<C: Context> Client<C> {
     }
 
     // TODO DOC
-    pub fn get_ptr(&self) -> *mut rdkafka::rd_kafka_t {
+    pub fn get_ptr(&self) -> *mut RDKafka {
         self.native.ptr
     }
 
@@ -170,7 +168,7 @@ impl<C: Context> Drop for Client<C> {
 
 /// Represents a Kafka topic with an associated producer.
 pub struct Topic<'a, C: Context + 'a> {
-    ptr: *mut rdkafka::rd_kafka_topic_t,
+    ptr: *mut RDKafkaTopic,
     _client: &'a Client<C>,
 }
 
@@ -191,8 +189,8 @@ impl<'a, C: Context> Topic<'a, C> {
         }
     }
 
-    /// Returns a pointer to the correspondent rdkafka `rd_kafka_topic_t` stuct.
-    pub fn get_ptr(&self) -> *mut rdkafka::rd_kafka_topic_t {
+    /// Returns a pointer to the correspondent rdkafka `RDKafkaTopic` stuct.
+    pub fn get_ptr(&self) -> *mut RDKafkaTopic {
         self.ptr
     }
 }

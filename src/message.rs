@@ -1,20 +1,22 @@
 //! Store and manipulate Kafka messages.
 extern crate rdkafka_sys as rdkafka;
 
+use self::rdkafka::types::*;
+
 use std::slice;
 use std::str;
 
 /// Represents a native librdkafka message.
 #[derive(Debug)]
 pub struct Message {
-    pub ptr: *mut rdkafka::rd_kafka_message_t,
+    pub ptr: *mut RDKafkaMessage,
 }
 
 unsafe impl Send for Message {}
 
 impl<'a> Message {
     /// Creates a new Message that wraps the native Kafka message pointer.
-    pub fn new(ptr: *mut rdkafka::rd_kafka_message_t) -> Message {
+    pub fn new(ptr: *mut RDKafkaMessage) -> Message {
         Message { ptr: ptr }
     }
 

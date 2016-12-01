@@ -1,6 +1,8 @@
 extern crate rdkafka_sys as rdkafka;
 extern crate futures;
 
+use self::rdkafka::types::*;
+
 use std::str;
 
 use client::{Client, ClientType, Context};
@@ -58,7 +60,7 @@ impl<C: Context> BaseConsumer<C> {
     /// Returns a list of topics or topic patterns the consumer is subscribed to.
     pub fn get_subscriptions(&self) -> TopicPartitionList {
         let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
-        unsafe { rdkafka::rd_kafka_subscription(self.client.get_ptr(), &mut tp_list as *mut *mut rdkafka::rd_kafka_topic_partition_list_t) };
+        unsafe { rdkafka::rd_kafka_subscription(self.client.get_ptr(), &mut tp_list as *mut *mut RDKafkaTopicPartitionList) };
         TopicPartitionList::from_rdkafka(tp_list)
     }
 

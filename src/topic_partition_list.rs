@@ -7,6 +7,8 @@ use std::slice;
 
 use util::cstr_to_owned;
 
+use self::rdkafka::types::*;
+
 /// Configuration of a partition
 #[derive(Debug,PartialEq)]
 pub struct Partition {
@@ -24,7 +26,7 @@ pub struct TopicPartitionList {
 
 impl TopicPartitionList {
     /// Create list based on a list from the rdkafka side.
-    pub fn from_rdkafka(tp_list: *const rdkafka::rd_kafka_topic_partition_list_t) -> TopicPartitionList {
+    pub fn from_rdkafka(tp_list: *const RDKafkaTopicPartitionList) -> TopicPartitionList {
         let mut topics: Topics = HashMap::new();
 
         let elements = unsafe { slice::from_raw_parts((*tp_list).elems, (*tp_list).cnt as usize) };
@@ -78,7 +80,7 @@ impl TopicPartitionList {
         self.topics.insert(topic.to_string(), Some(partitions_configs));
     }
 
-    pub fn create_native_topic_partition_list(&self) -> *mut rdkafka::rd_kafka_topic_partition_list_t {
+    pub fn create_native_topic_partition_list(&self) -> *mut RDKafkaTopicPartitionList {
         let tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(self.topics.len() as i32) };
 
         for (topic, partitions) in self.topics.iter() {
