@@ -28,8 +28,13 @@ pub trait Consumer<C: Context> {
     // Default implementations
 
     /// Subscribe the consumer to a list of topics.
-    fn subscribe(&mut self, topics: &TopicPartitionList) -> KafkaResult<()> {
+    fn subscribe(&mut self, topics: &Vec<&str>) -> KafkaResult<()> {
         self.get_base_consumer_mut().subscribe(topics)
+    }
+
+    /// Manually assign topics and partitions to the consumer.
+    fn assign(&mut self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+        self.get_base_consumer_mut().assign(assignment)
     }
 
     /// Commit a specific message. If mode is set to CommitMode::Sync,
