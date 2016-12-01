@@ -6,7 +6,7 @@ use std::ffi::CString;
 use util::bytes_cstr_to_owned;
 
 use error::{KafkaError, KafkaResult, IsError};
-use client::{Context, DeliveryCallback};
+use client::{Context, DeliveryCallback, EmptyContext};
 
 const ERR_LEN: usize = 256;
 
@@ -148,15 +148,5 @@ impl TopicConfig {
             }
         }
         Ok(config_ptr)
-    }
-}
-
-struct EmptyContext;
-
-impl Context for EmptyContext {}
-
-impl EmptyContext {
-    fn new() -> EmptyContext {
-        EmptyContext {}
     }
 }

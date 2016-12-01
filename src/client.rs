@@ -4,7 +4,6 @@ extern crate rdkafka_sys as rdkafka;
 
 use std::ffi::CString;
 use std::os::raw::c_void;
-use std::mem;
 use std::ptr;
 
 use config::{ClientConfig, TopicConfig};
@@ -54,7 +53,6 @@ pub trait Context: Send + Sync {
                     rdkafka::rd_kafka_assign(native_client.ptr, ptr::null());
                 },
                 _ => {
-                    let error = cstr_to_owned(rdkafka::rd_kafka_err2str(err));
                     rdkafka::rd_kafka_assign(native_client.ptr, ptr::null());
                 }
             }
@@ -62,9 +60,19 @@ pub trait Context: Send + Sync {
         self.post_rebalance(&rebalance);
     }
 
-    fn pre_rebalance(&self, rebalance: &Rebalance) { }
+    fn pre_rebalance(&self, _rebalance: &Rebalance) { }
 
-    fn post_rebalance(&self, rebalance: &Rebalance) { }
+    fn post_rebalance(&self, _rebalance: &Rebalance) { }
+}
+
+pub struct EmptyContext;
+
+impl Context for EmptyContext {}
+
+impl EmptyContext {
+    pub fn new() -> EmptyContext {
+        EmptyContext {}
+    }
 }
 
 #[derive(Debug)]

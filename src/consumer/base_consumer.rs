@@ -3,7 +3,7 @@ extern crate futures;
 
 use std::str;
 
-use client::{Client, ClientType, Context, Rebalance};
+use client::{Client, ClientType, Context};
 use config::{FromClientConfig, ClientConfig};
 use consumer::{Consumer, CommitMode};
 use error::{KafkaError, KafkaResult, IsError};
