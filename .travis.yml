@@ -1,4 +1,7 @@
 language: rust
+script:
+  - cargo build --verbose
+  - cargo test --lib --verbose
 
 notifications:
   webhooks:

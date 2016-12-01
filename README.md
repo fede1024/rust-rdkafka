@@ -81,6 +81,23 @@ You can find examples in the `examples` folder. To run them:
 cargo run --example <example_name> -- <example_args>
 ```
 
+## Tests
+
+The unit tests can run without a Kafka broker present:
+
+```
+cargo test --lib
+```
+
+To run the full suite:
+
+```
+cargo test
+```
+
+In this case there is a broker expected to be running on
+`localhost:9292`. Travis currently only runs the unit tests.
+
 ## Documentation
 
 Documentation is available on [docs.rs](https://docs.rs/rdkafka/).
