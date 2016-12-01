@@ -87,7 +87,7 @@ impl<C: Context> Producer<C> {
     /// Polls the producer. Regular calls to `poll` are required to process the evens
     /// and execute the message delivery callbacks.
     pub fn poll(&self, timeout_ms: i32) -> i32 {
-        unsafe { rdkafka::rd_kafka_poll(self.client.ptr, timeout_ms) }
+        unsafe { rdkafka::rd_kafka_poll(self.client.get_ptr(), timeout_ms) }
     }
 
     // TODO make generic, give message context as parameter

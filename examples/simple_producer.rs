@@ -6,7 +6,6 @@ extern crate rdkafka;
 use clap::{App, Arg};
 use futures::*;
 
-use rdkafka::client::Context;
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::producer::{FutureProducer};
 use rdkafka::util::get_rdkafka_version;
@@ -14,23 +13,10 @@ use rdkafka::util::get_rdkafka_version;
 mod example_utils;
 use example_utils::setup_logger;
 
-use std::sync::Arc;
-
-struct MyContext {
-    a: i32,
-    b: Arc<i32>,
-}
-
-impl Context for MyContext { }
-
-
 fn produce(brokers: &str, topic_name: &str) {
-    let p = 34;
-    let mut context = MyContext{a: 12, b: Arc::new(p)};
-
     let mut producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
-        .create::<MyContext, FutureProducer<MyContext>>(context)
+        .create::<FutureProducer<_>>()
         .expect("Producer creation error");
 
     producer.start();

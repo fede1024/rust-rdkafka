@@ -30,7 +30,7 @@ impl<C: Context> Consumer<C> for BaseConsumer<C> {
 impl<C: Context> FromClientConfig<C> for BaseConsumer<C> {
     fn from_config(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
         let client = try!(Client::new(config, ClientType::Consumer, context));
-        unsafe { rdkafka::rd_kafka_poll_set_consumer(client.ptr) };
+        unsafe { rdkafka::rd_kafka_poll_set_consumer(client.get_ptr()) };
         Ok(BaseConsumer { client: client })
     }
 }
@@ -41,7 +41,7 @@ impl<C: Context> BaseConsumer<C> {
     /// the cluster and matching topics will be added to the subscription list.
     pub fn subscribe(&mut self, topics: &TopicPartitionList) -> KafkaResult<()> {
         let tp_list = topics.create_native_topic_partition_list();
-        let ret_code = unsafe { rdkafka::rd_kafka_subscribe(self.client.ptr, tp_list) };
+        let ret_code = unsafe { rdkafka::rd_kafka_subscribe(self.client.get_ptr(), tp_list) };
         if ret_code.is_error() {
             let error = unsafe { cstr_to_owned(rdkafka::rd_kafka_err2str(ret_code)) };
             return Err(KafkaError::Subscription(error))
@@ -52,19 +52,19 @@ impl<C: Context> BaseConsumer<C> {
 
     /// Unsubscribe from previous subscription list.
     pub fn unsubscribe(&mut self) {
-        unsafe { rdkafka::rd_kafka_unsubscribe(self.client.ptr) };
+        unsafe { rdkafka::rd_kafka_unsubscribe(self.client.get_ptr()) };
     }
 
     /// Returns a list of topics or topic patterns the consumer is subscribed to.
     pub fn get_subscriptions(&self) -> TopicPartitionList {
         let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
-        unsafe { rdkafka::rd_kafka_subscription(self.client.ptr, &mut tp_list as *mut *mut rdkafka::rd_kafka_topic_partition_list_t) };
+        unsafe { rdkafka::rd_kafka_subscription(self.client.get_ptr(), &mut tp_list as *mut *mut rdkafka::rd_kafka_topic_partition_list_t) };
         TopicPartitionList::from_rdkafka(tp_list)
     }
 
     /// Polls the consumer for events. It won't block more than the specified timeout.
     pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<Message>> {
-        let message_ptr = unsafe { rdkafka::rd_kafka_consumer_poll(self.client.ptr, timeout_ms) };
+        let message_ptr = unsafe { rdkafka::rd_kafka_consumer_poll(self.client.get_ptr(), timeout_ms) };
         if message_ptr.is_null() {
             return Ok(None);
         }
@@ -82,19 +82,13 @@ impl<C: Context> BaseConsumer<C> {
             CommitMode::Async => 1,
         };
 
-        unsafe { rdkafka::rd_kafka_commit_message(self.client.ptr, message.ptr, async) };
-    }
-
-    /// Take rebalance events that were recorded. This only returns results if
-    /// `track_rebalances` is on in the config for this client.
-    pub fn take_rebalances(&mut self) -> Vec<Rebalance> {
-        self.client.take_rebalances()
+        unsafe { rdkafka::rd_kafka_commit_message(self.client.get_ptr(), message.ptr, async) };
     }
 }
 
 impl<C: Context> Drop for BaseConsumer<C> {
     fn drop(&mut self) {
         trace!("Destroying consumer");  // TODO: fix me (multiple executions)
-        unsafe { rdkafka::rd_kafka_consumer_close(self.client.ptr) };
+        unsafe { rdkafka::rd_kafka_consumer_close(self.client.get_ptr()) };
     }
 }

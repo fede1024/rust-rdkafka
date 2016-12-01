@@ -6,7 +6,7 @@ extern crate rdkafka;
 use clap::{App, Arg};
 use futures::stream::Stream;
 
-use rdkafka::client::Context;
+use rdkafka::client::{Context, Rebalance};
 use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, TopicConfig};
@@ -17,14 +17,20 @@ mod example_utils;
 use example_utils::setup_logger;
 
 
-struct MyContext {
-    a: i32,
+struct LoggingContext { }
+
+impl Context for LoggingContext {
+    fn pre_rebalance(&self, rebalance: &Rebalance) {
+        info!("Pre rebalance {:?}", rebalance);
+    }
+
+    fn post_rebalance(&self, rebalance: &Rebalance) {
+        info!("Post rebalance {:?}", rebalance);
+    }
 }
 
-impl Context for MyContext { }
-
 fn consume_and_print(brokers: &str, group_id: &str, topics: &TopicPartitionList) {
-    let mut context = MyContext{a: 12};
+    let context = LoggingContext{};
 
     let mut consumer = ClientConfig::new()
         .set("group.id", group_id)
@@ -32,11 +38,12 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &TopicPartitionList)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
+        .enable_rebalance_tracking()
         .set_default_topic_config(
              TopicConfig::new()
              .set("auto.offset.reset", "smallest")
              .finalize())
-        .create::<MyContext, StreamConsumer<MyContext>>(context)
+        .create_with_context::<_, StreamConsumer<LoggingContext>>(context)
         .expect("Consumer creation failed");
 
     consumer.subscribe(topics).expect("Can't subscribe to specified topics");

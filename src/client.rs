@@ -20,72 +20,83 @@ pub enum ClientType {
     Producer,
 }
 
-pub trait Context: Send + Sync { }
+pub trait Context: Send + Sync {
+    fn rebalance(&self,
+                 native_client: &NativeClient,
+                 err: rdkafka::rd_kafka_resp_err_t,
+                 partitions_ptr: *mut rdkafka::rd_kafka_topic_partition_list_t) {
 
-pub struct Opaque {
-    pub rebalances: Vec<Rebalance>
-}
+        let rebalance = match err {
+            rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
+                // TODO: this might be expensive
+                let topic_partition_list = TopicPartitionList::from_rdkafka(partitions_ptr);
+                Rebalance::Assign(topic_partition_list)
+            },
+            rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
+                Rebalance::Revoke
+            },
+            _ => {
+                let error = unsafe { cstr_to_owned(rdkafka::rd_kafka_err2str(err)) };
+                error!("Error rebalancing: {}", error);
+                Rebalance::Error(error)
+            }
+        };
 
-impl Opaque {
-    pub fn new() -> Opaque {
-        Opaque {
-            rebalances: Vec::new()
+        self.pre_rebalance(&rebalance);
+
+        // Execute rebalance
+        unsafe {
+            match err {
+                rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
+                    rdkafka::rd_kafka_assign(native_client.ptr, partitions_ptr);
+                },
+                rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
+                    rdkafka::rd_kafka_assign(native_client.ptr, ptr::null());
+                },
+                _ => {
+                    let error = cstr_to_owned(rdkafka::rd_kafka_err2str(err));
+                    rdkafka::rd_kafka_assign(native_client.ptr, ptr::null());
+                }
+            }
         }
+        self.post_rebalance(&rebalance);
     }
 
-    pub fn rebalance_callback(&mut self, rebalance: Rebalance) {
-        self.rebalances.push(rebalance);
-    }
+    fn pre_rebalance(&self, rebalance: &Rebalance) { }
+
+    fn post_rebalance(&self, rebalance: &Rebalance) { }
 }
 
+#[derive(Debug)]
 pub enum Rebalance {
     Assign(TopicPartitionList),
     Revoke,
     Error(String)
 }
 
-unsafe extern "C" fn rebalance_cb(rk: *mut rdkafka::rd_kafka_t,
-                                  err: rdkafka::rd_kafka_resp_err_t,
-                                  partitions: *mut rdkafka::rd_kafka_topic_partition_list_t,
-                                  opaque_ptr: *mut c_void) {
-    // Get our opaque for callbacks
-    let mut opaque = Box::from_raw(opaque_ptr as *mut Opaque);
+unsafe extern "C" fn rebalance_cb<C: Context>(rk: *mut rdkafka::rd_kafka_t,
+                                              err: rdkafka::rd_kafka_resp_err_t,
+                                              partitions: *mut rdkafka::rd_kafka_topic_partition_list_t,
+                                              opaque_ptr: *mut c_void) {
+    let context: &C = &*(opaque_ptr as *const C);
+    let native_client = NativeClient{ptr: rk};
 
-    // Handle callback
-    match err {
-        rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-            rdkafka::rd_kafka_assign(rk, partitions);
-            let topic_partition_list = TopicPartitionList::from_rdkafka(partitions);
-            opaque.rebalance_callback(Rebalance::Assign(topic_partition_list));
-        },
-        rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
-            rdkafka::rd_kafka_assign(rk, ptr::null());
-            opaque.rebalance_callback(Rebalance::Revoke);
-        },
-        _ => {
-            let error = cstr_to_owned(rdkafka::rd_kafka_err2str(err));
-            error!("Error rebalancing: {}", error);
-            rdkafka::rd_kafka_assign(rk, ptr::null());
-            opaque.rebalance_callback(Rebalance::Error(error));
-        }
-    }
-
-    // This will only be cleaned up in the client's drop
-    mem::forget(opaque);
+    context.rebalance(&native_client, err, partitions);
 }
 
-//fn my_rb_callback
-
-/// A librdkafka client.
-pub struct Client<C: Context> {
-    pub ptr: *mut rdkafka::rd_kafka_t,
-    pub opaque_ptr: *mut Opaque,
-    pub context: C,
+pub struct NativeClient {
+    ptr: *mut rdkafka::rd_kafka_t,
 }
 
 // The library is completely thread safe, according to the documentation.
-unsafe impl<C: Context> Sync for Client<C> {}
-unsafe impl<C: Context> Send for Client<C> {}
+unsafe impl Sync for NativeClient {}
+unsafe impl Send for NativeClient {}
+
+/// A librdkafka client.
+pub struct Client<C: Context> {
+    native: NativeClient,
+    context: Box<C>,  // TODO: should be arc?
+}
 
 /// Delivery callback function type.
 pub type DeliveryCallback =
@@ -101,7 +112,7 @@ impl<C: Context> Client<C> {
         let rd_kafka_type = match client_type {
             ClientType::Consumer => {
                 if config.is_rebalance_tracking_enabled() {
-                    unsafe { rdkafka::rd_kafka_conf_set_rebalance_cb(config_ptr, Some(rebalance_cb)) };
+                    unsafe { rdkafka::rd_kafka_conf_set_rebalance_cb(config_ptr, Some(rebalance_cb::<C>)) };
                 }
                 rdkafka::rd_kafka_type_t::RD_KAFKA_CONSUMER
             },
@@ -112,6 +123,10 @@ impl<C: Context> Client<C> {
                 rdkafka::rd_kafka_type_t::RD_KAFKA_PRODUCER
             }
         };
+
+        let mut boxed_context = Box::new(context);
+        unsafe { rdkafka::rd_kafka_conf_set_opaque(config_ptr, (&mut *boxed_context) as *mut C as *mut c_void) };
+
         let client_ptr =
             unsafe { rdkafka::rd_kafka_new(rd_kafka_type, config_ptr, errstr.as_ptr() as *mut i8, errstr.len()) };
         if client_ptr.is_null() {
@@ -119,29 +134,19 @@ impl<C: Context> Client<C> {
             return Err(KafkaError::ClientCreation(descr));
         }
 
-        // Set opaque to handle callbacks
-        let opaque = Box::new(Opaque::new());
-        let opaque_ptr = Box::into_raw(opaque);
-        unsafe { rdkafka::rd_kafka_conf_set_opaque(config_ptr, opaque_ptr as *mut c_void) };
-
         Ok(Client {
-            ptr: client_ptr,
-            opaque_ptr: opaque_ptr,
-            context: context,
+            native: NativeClient { ptr: client_ptr },
+            context: boxed_context,
         })
     }
 
-    /// Take rebalance events that were recorded. This only returns results if
-    /// rebalance tracking has been enabled in the config for this client.
-    pub fn take_rebalances(&mut self) -> Vec<Rebalance> {
-        let mut opaque = unsafe { Box::from_raw(self.opaque_ptr as *mut Opaque) };
+    // TODO DOC
+    pub fn get_ptr(&self) -> *mut rdkafka::rd_kafka_t {
+        self.native.ptr
+    }
 
-        let rebalances = opaque.rebalances.drain(0..).collect();
-
-        // This will only be cleaned up in the client's drop
-        mem::forget(opaque);
-
-        rebalances
+    pub fn get_context(&self) -> &C {
+        self.context.as_ref()
     }
 }
 
@@ -149,9 +154,8 @@ impl<C: Context> Drop for Client<C> {
     fn drop(&mut self) {
         trace!("Destroy rd_kafka");
         unsafe {
-            rdkafka::rd_kafka_destroy(self.ptr);
+            rdkafka::rd_kafka_destroy(self.native.ptr);
             rdkafka::rd_kafka_wait_destroyed(1000);
-            Box::from_raw(self.opaque_ptr);
         }
     }
 }
@@ -167,7 +171,7 @@ impl<'a, C: Context> Topic<'a, C> {
     pub fn new(client: &'a Client<C>, name: &str, topic_config: &TopicConfig) -> KafkaResult<Topic<'a, C>> {
         let name_ptr = CString::new(name.to_string()).unwrap();
         let config_ptr = try!(topic_config.create_native_config());
-        let topic_ptr = unsafe { rdkafka::rd_kafka_topic_new(client.ptr, name_ptr.as_ptr(), config_ptr) };
+        let topic_ptr = unsafe { rdkafka::rd_kafka_topic_new(client.native.ptr, name_ptr.as_ptr(), config_ptr) };
         if topic_ptr.is_null() {
             Err(KafkaError::TopicCreation(name.to_string()))
         } else {

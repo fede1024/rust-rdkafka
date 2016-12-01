@@ -84,8 +84,7 @@ impl ClientConfig {
         Ok(conf)
     }
 
-    fn create_native_default_topic_config(&self)
-            -> Option<KafkaResult<*mut rdkafka::rd_kafka_topic_conf_t>> {
+    fn create_native_default_topic_config(&self) -> Option<KafkaResult<*mut rdkafka::rd_kafka_topic_conf_t>> {
         self.default_topic_config.as_ref().map(|c| c.create_native_config())
     }
 
@@ -93,7 +92,11 @@ impl ClientConfig {
         (*self).clone()
     }
 
-    pub fn create<C: Context, T: FromClientConfig<C>>(&self, context: C) -> KafkaResult<T> {
+    pub fn create<T: FromClientConfig<EmptyContext>>(&self) -> KafkaResult<T> {
+        T::from_config(self, EmptyContext::new())
+    }
+
+    pub fn create_with_context<C: Context, T: FromClientConfig<C>>(&self, context: C) -> KafkaResult<T> {
         T::from_config(self, context)
     }
 }
@@ -145,5 +148,15 @@ impl TopicConfig {
             }
         }
         Ok(config_ptr)
+    }
+}
+
+struct EmptyContext;
+
+impl Context for EmptyContext {}
+
+impl EmptyContext {
+    fn new() -> EmptyContext {
+        EmptyContext {}
     }
 }
