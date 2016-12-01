@@ -2,24 +2,29 @@
 //! Kafka client library for Rust based on [librdkafka].
 //!
 //! ## The library
-//! This library aims to provide a safe interface to librdkafka.
-//! It currently exports some of the funcionalities provided by the producer and consumer
-//! of librdkafka 0.9.2.
+//! `rust-rdkafka` provides a safe Rust interface to librdkafka.
+//! It currently exports a subset of the funcionalities provided by librdkafka 0.9.2.
 //!
-//! Producers and consumers can be accessed and polled directly, or alternatively
-//! a [futures]-based interface can be used:
+//! `rust-rdkafka` provides low level and high level consumers and producers. Low level:
 //!
-//! * A consumer will return a [`stream`] of messages, as they are received from Kafka.
-//! * A producer will return a [`future`] that will eventually contain the delivery
-//! status of the message.
+//! * `BaseConsumer`: simple wrapper around the librdkafka consumer. It requires to be
+//!   periodically `poll()`ed in order to execute callbacks, rebalance and receive messages.
+//! * `BaseProducer`: simple wrapper around the librdkafka producer. As in the consumer case,
+//!   the user must call `poll()` periodically to execute delivery callbacks.
+//!
+//! High level:
+//!
+//!  * `StreamConsumer`: it returns a [`stream`] of messages and takes care of polling the consumer
+//!  internally.
+//!  * `FutureProducer`: it returns a [`future`] that will be completed once the message is
+//!  delivered to Kafka (or fails).
 //!
 //! [librdkafka]: https://github.com/edenhill/librdkafka
 //! [futures]: https://github.com/alexcrichton/futures-rs
 //! [`future`]: https://docs.rs/futures/0.1.3/futures/trait.Future.html
 //! [`stream`]: https://docs.rs/futures/0.1.3/futures/stream/trait.Stream.html
 //!
-//! *Warning*: this library is still at an early development stage, the API is very likely
-//! to change and it shouldn't be considered production ready.
+//! *Warning*: the library is under active development and the APIs are likely to change.
 //!
 //! ## Installation
 //!
@@ -30,7 +35,7 @@
 //! rdkafka = "^0.2.0"
 //! ```
 //!
-//! This crate will compile librdkafka from sources and link it statically in your
+//! This crate will compile librdkafka from sources and link it statically to your
 //! executable. To compile librdkafka you'll need:
 //!
 //! * the GNU toolchain
