@@ -72,7 +72,12 @@ impl<C: Context> BaseConsumer<C> {
         }
         let error = unsafe { (*message_ptr).err };
         if error.is_error() {
-            return Err(KafkaError::MessageConsumption(error));
+            return Err(match error {
+                rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
+                    KafkaError::PartitionEof
+                },
+                e => KafkaError::MessageConsumption(e)
+            })
         }
         let kafka_message = Message::new(message_ptr);
         Ok(Some(kafka_message))
