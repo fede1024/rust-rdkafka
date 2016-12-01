@@ -1,7 +1,3 @@
-// This is only required for testing with valgrind.
-#![feature(alloc_system)]
-extern crate alloc_system;
-
 #[macro_use] extern crate log;
 extern crate clap;
 extern crate futures;
