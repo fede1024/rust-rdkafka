@@ -21,6 +21,7 @@ mod example_utils;
 use example_utils::setup_logger;
 
 
+// Use a Context to set up custom callbacks for rebalancing.
 struct LoggingContext { }
 
 impl Context for LoggingContext {
@@ -42,7 +43,6 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &TopicPartitionList)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
-        .enable_rebalance_tracking()
         .set_default_topic_config(
              TopicConfig::new()
              .set("auto.offset.reset", "smallest")
@@ -51,10 +51,9 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &TopicPartitionList)
         .expect("Consumer creation failed");
 
     consumer.subscribe(topics).expect("Can't subscribe to specified topics");
-
     let message_stream = consumer.start();
 
-    info!("Consumer initialized: {:?}", topics);
+    info!("Consumer started: {:?}", topics);
 
     for message in message_stream.take(5).wait() {
         match message {

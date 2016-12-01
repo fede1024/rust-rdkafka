@@ -1,3 +1,4 @@
+//! Base trait and common functionalities for all consumers.
 pub mod base_consumer;
 pub mod stream_consumer;
 

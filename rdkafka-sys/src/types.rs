@@ -1,3 +1,4 @@
+//! This module contains type aliases for types defined in the auto-generated bindings.
 use bindings;
 
 // TYPES

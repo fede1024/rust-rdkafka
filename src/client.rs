@@ -20,7 +20,13 @@ pub enum ClientType {
     Producer,
 }
 
+/// A Context is an object that can store user-defined data and on which callbacks can be
+/// defined. Refer to the list of methods to see which callbacks can currently be overridden.
+/// The context must be thread safe. The context might be cloned and passed to other threads.
 pub trait Context: Send + Sync {
+    /// Implements the default rebalancing strategy, also calling the pre_rebalance and
+    /// post_rebalance methods. If this method is overridden, it will be responsibility
+    /// of the user to call them if needed.
     fn rebalance(&self,
                  native_client: &NativeClient,
                  err: RDKafkaRespErr,
@@ -61,11 +67,18 @@ pub trait Context: Send + Sync {
         self.post_rebalance(&rebalance);
     }
 
+    /// Pre-rebalance callback. This method will run before the rebalance, and it will receive the
+    /// relabance information. This method is executed as part of the rebalance callback and should
+    /// terminate its execution quickly.
     fn pre_rebalance(&self, _rebalance: &Rebalance) { }
 
+    /// Post-rebalance callback. This method will run before the rebalance, and it will receive the
+    /// relabance information. This method is executed as part of the rebalance callback and should
+    /// terminate its execution quickly.
     fn post_rebalance(&self, _rebalance: &Rebalance) { }
 }
 
+/// An empty context that can be used when no context is needed.
 pub struct EmptyContext;
 
 impl Context for EmptyContext {}
@@ -76,6 +89,7 @@ impl EmptyContext {
     }
 }
 
+/// Contains rebalance information.
 #[derive(Debug)]
 pub enum Rebalance {
     Assign(TopicPartitionList),
@@ -83,6 +97,8 @@ pub enum Rebalance {
     Error(String)
 }
 
+/// Native rebalance callback. This callback will run on every rebalance, and it will call the
+/// rebalance method defined in the current `Context`.
 unsafe extern "C" fn rebalance_cb<C: Context>(rk: *mut RDKafka,
                                               err: RDKafkaRespErr,
                                               partitions: *mut RDKafkaTopicPartitionList,
@@ -93,6 +109,7 @@ unsafe extern "C" fn rebalance_cb<C: Context>(rk: *mut RDKafka,
     context.rebalance(&native_client, err, partitions);
 }
 
+/// A native rdkafka-sys client.
 pub struct NativeClient {
     ptr: *mut RDKafka,
 }
@@ -101,25 +118,23 @@ pub struct NativeClient {
 unsafe impl Sync for NativeClient {}
 unsafe impl Send for NativeClient {}
 
-/// A librdkafka client.
+/// An rdkafka client.
 pub struct Client<C: Context> {
     native: NativeClient,
-    context: Box<C>,  // TODO: should be arc?
+    context: Box<C>,
 }
 
 /// Delivery callback function type.
 pub type DeliveryCallback = unsafe extern "C" fn(*mut RDKafka, *const RDKafkaMessage, *mut c_void);
 
 impl<C: Context> Client<C> {
-    /// Creates a new Client given a configuration and a client type.
+    /// Creates a new Client given a configuration, a client type and a context.
     pub fn new(config: &ClientConfig, client_type: ClientType, context: C) -> KafkaResult<Client<C>> {
         let errstr = [0i8; 1024];
         let config_ptr = try!(config.create_native_config());
         let rd_kafka_type = match client_type {
             ClientType::Consumer => {
-                if config.is_rebalance_tracking_enabled() {
-                    unsafe { rdkafka::rd_kafka_conf_set_rebalance_cb(config_ptr, Some(rebalance_cb::<C>)) };
-                }
+                unsafe { rdkafka::rd_kafka_conf_set_rebalance_cb(config_ptr, Some(rebalance_cb::<C>)) };
                 RDKafkaType::RD_KAFKA_CONSUMER
             },
             ClientType::Producer => {
@@ -146,11 +161,12 @@ impl<C: Context> Client<C> {
         })
     }
 
-    // TODO DOC
+    /// Returns a pointer to the native rdkafka-sys client.
     pub fn get_ptr(&self) -> *mut RDKafka {
         self.native.ptr
     }
 
+    /// Returns a reference to the context.
     pub fn get_context(&self) -> &C {
         self.context.as_ref()
     }

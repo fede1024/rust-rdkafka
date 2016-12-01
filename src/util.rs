@@ -12,6 +12,7 @@ pub fn get_rdkafka_version() -> (u16, String) {
     (version_number, c_str.to_string_lossy().into_owned())
 }
 
+// TODO: check if the implementation returns a copy of the data and update the documentation
 /// Converts a byte array representing a C string into a String.
 pub unsafe fn bytes_cstr_to_owned(bytes_cstr: &[i8]) -> String {
     CStr::from_ptr(bytes_cstr.as_ptr()).to_string_lossy().into_owned()

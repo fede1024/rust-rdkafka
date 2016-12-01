@@ -89,6 +89,7 @@ impl<C: Context> Drop for StreamConsumer<C> {
     }
 }
 
+/// Internal consumer loop.
 fn poll_loop<C: Context>(consumer: Arc<BaseConsumer<C>>, sender: Sender<Message, KafkaError>, should_stop: Arc<AtomicBool>) {
     trace!("Polling thread loop started");
     let mut curr_sender = sender;

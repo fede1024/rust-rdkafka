@@ -18,7 +18,6 @@ pub struct ClientConfig {
     conf_map: HashMap<String, String>,
     delivery_cb: Option<DeliveryCallback>,
     default_topic_config: Option<TopicConfig>,
-    rebalance_tracking_enabled: bool,
 }
 
 impl ClientConfig {
@@ -28,7 +27,6 @@ impl ClientConfig {
             conf_map: HashMap::new(),
             delivery_cb: None,
             default_topic_config: None,
-            rebalance_tracking_enabled: false
         }
     }
 
@@ -50,15 +48,6 @@ impl ClientConfig {
     pub fn set_default_topic_config<'a>(&'a mut self, default_topic_config: TopicConfig) -> &'a mut ClientConfig {
         self.default_topic_config = Some(default_topic_config);
         self
-    }
-
-    pub fn enable_rebalance_tracking<'a>(&'a mut self) -> &'a mut ClientConfig {
-        self.rebalance_tracking_enabled = true;
-        self
-    }
-
-    pub fn is_rebalance_tracking_enabled(&self) -> bool {
-        self.rebalance_tracking_enabled
     }
 
     pub fn create_native_config(&self) -> KafkaResult<*mut RDKafkaConf> {

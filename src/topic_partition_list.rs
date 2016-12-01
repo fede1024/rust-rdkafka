@@ -1,3 +1,5 @@
+//! A data structure representing topic, partitions and offsets, compatible with the
+//! `RDKafkaTopicPartitionList` exported by `rdkafka-sys`.
 extern crate rdkafka_sys as rdkafka;
 
 use std::collections::HashMap;
@@ -16,6 +18,7 @@ pub struct Partition {
     pub offset: i64
 }
 
+/// A map of topic names to partitions.
 pub type Topics = HashMap<String, Option<Vec<Partition>>>;
 
 /// Map of of topics with optionally partition configuration.
@@ -31,6 +34,8 @@ impl TopicPartitionList {
 
         let elements = unsafe { slice::from_raw_parts((*tp_list).elems, (*tp_list).cnt as usize) };
         for tp in elements {
+            // TODO: check if the topic_name is a copy or a view in the C data. The C data is not
+            // guaranteed to be immutable.
             let topic_name = unsafe { cstr_to_owned(tp.topic) };
             if tp.partition >= 0 || tp.offset >= 0 {
                 let topic = topics.entry(topic_name).or_insert(Some(vec![]));

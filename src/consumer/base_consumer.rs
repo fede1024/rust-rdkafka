@@ -78,6 +78,7 @@ impl<C: Context> BaseConsumer<C> {
         Ok(Some(kafka_message))
     }
 
+    /// Commits the current message. The commit can be synk (blocking), or asynk.
     pub fn commit_message(&self, message: &Message, mode: CommitMode) -> () {
         let async = match mode {
             CommitMode::Sync => 0,
