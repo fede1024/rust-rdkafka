@@ -7,7 +7,7 @@ use clap::{App, Arg};
 use futures::*;
 
 use rdkafka::config::{ClientConfig, TopicConfig};
-use rdkafka::producer::{FutureProducer};
+use rdkafka::producer::FutureProducer;
 use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
@@ -77,5 +77,3 @@ fn main() {
 
     produce(brokers, topic);
 }
-
-

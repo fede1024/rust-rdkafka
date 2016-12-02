@@ -16,7 +16,6 @@ use rdkafka::topic_partition_list::TopicPartitionList;
 mod example_utils;
 use example_utils::setup_logger;
 
-
 // Use a Context to set up custom callbacks for rebalancing.
 struct LoggingContext { }
 

@@ -38,6 +38,7 @@ pub enum KafkaError {
     Subscription(String),
     TopicConfig((RDKafkaConfRes, String, String, String)),
     TopicCreation(String),
+    PartitionEof
 }
 
 impl From<std::ffi::NulError> for KafkaError {
