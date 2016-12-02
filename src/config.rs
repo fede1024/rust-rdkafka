@@ -8,7 +8,7 @@ use std::ffi::CString;
 use util::bytes_cstr_to_owned;
 
 use error::{KafkaError, KafkaResult, IsError};
-use client::{Context, DeliveryCallback, EmptyContext};
+use client::Context;
 
 const ERR_LEN: usize = 256;
 
@@ -16,7 +16,6 @@ const ERR_LEN: usize = 256;
 #[derive(Clone)]
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
-    delivery_cb: Option<DeliveryCallback>,
     default_topic_config: Option<TopicConfig>,
 }
 
@@ -25,7 +24,6 @@ impl ClientConfig {
     pub fn new() -> ClientConfig {
         ClientConfig {
             conf_map: HashMap::new(),
-            delivery_cb: None,
             default_topic_config: None,
         }
     }
@@ -34,15 +32,6 @@ impl ClientConfig {
     pub fn set<'a>(&'a mut self, key: &str, value: &str) -> &'a mut ClientConfig {
         self.conf_map.insert(key.to_string(), value.to_string());
         self
-    }
-
-    pub fn set_delivery_cb<'a>(&'a mut self, cb: DeliveryCallback) -> &'a mut ClientConfig {
-        self.delivery_cb = Some(cb);
-        self
-    }
-
-    pub fn get_delivery_cb(&self) -> Option<DeliveryCallback> {
-        self.delivery_cb
     }
 
     pub fn set_default_topic_config<'a>(&'a mut self, default_topic_config: TopicConfig) -> &'a mut ClientConfig {
@@ -83,18 +72,23 @@ impl ClientConfig {
         (*self).clone()
     }
 
-    pub fn create<T: FromClientConfig<EmptyContext>>(&self) -> KafkaResult<T> {
-        T::from_config(self, EmptyContext::new())
+    pub fn create<T: FromClientConfig>(&self) -> KafkaResult<T> {
+        T::from_config(self)
     }
 
-    pub fn create_with_context<C: Context, T: FromClientConfig<C>>(&self, context: C) -> KafkaResult<T> {
-        T::from_config(self, context)
+    pub fn create_with_context<C: Context, T: FromClientConfigAndContext<C>>(&self, context: C) -> KafkaResult<T> {
+        T::from_config_and_context(self, context)
     }
 }
 
 /// Create a new client based on the provided configuration.
-pub trait FromClientConfig<C: Context>: Sized {
-    fn from_config(&ClientConfig, C) -> KafkaResult<Self>;
+pub trait FromClientConfig: Sized {
+    fn from_config(&ClientConfig) -> KafkaResult<Self>;
+}
+
+/// Create a new client based on the provided configuration.
+pub trait FromClientConfigAndContext<C: Context>: Sized {
+    fn from_config_and_context(&ClientConfig, C) -> KafkaResult<Self>;
 }
 
 /// Topic configuration
