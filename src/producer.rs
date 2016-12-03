@@ -21,11 +21,12 @@ use message::ToBytes;
 
 
 pub trait ProducerContext: Context {
-    type DeliveryContext: Send + Sync; // TODO: static??
+    type DeliveryContext: Send + Sync;
 
     fn delivery(&self, DeliveryStatus, Self::DeliveryContext);
 }
 
+#[derive(Clone)]
 struct EmptyProducerContext;
 
 impl Context for EmptyProducerContext { }
@@ -134,6 +135,7 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 }
 
+#[derive(Clone)]
 pub struct FutureProducerContext<C: ProducerContext> {
     _inner_context: C
 }

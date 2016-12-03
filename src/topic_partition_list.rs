@@ -12,7 +12,7 @@ use util::cstr_to_owned;
 use self::rdkafka::types::*;
 
 /// Configuration of a partition
-#[derive(Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Partition {
     pub partition: i32,
     pub offset: i64
@@ -22,7 +22,7 @@ pub struct Partition {
 pub type Topics = HashMap<String, Option<Vec<Partition>>>;
 
 /// Map of of topics with optionally partition configuration.
-#[derive(Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TopicPartitionList {
     pub topics: Topics
 }

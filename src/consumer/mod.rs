@@ -17,13 +17,14 @@ use error::KafkaResult;
 use consumer::base_consumer::BaseConsumer;
 use topic_partition_list::TopicPartitionList;
 
+#[derive(Clone)]
 struct EmptyConsumerContext;
 
 impl Context for EmptyConsumerContext { }
 impl ConsumerContext for EmptyConsumerContext { }
 
 /// Contains rebalance information.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Rebalance {
     Assign(TopicPartitionList),
     Revoke,

@@ -21,6 +21,7 @@ pub trait DeliveryContext: Send + Sync + 'static {
 pub trait Context: Send + Sync { }
 
 /// An empty context that can be used when no context is needed.
+#[derive(Clone)]
 pub struct EmptyDeliveryContext;
 
 impl DeliveryContext for EmptyDeliveryContext {
@@ -28,6 +29,7 @@ impl DeliveryContext for EmptyDeliveryContext {
 }
 
 /// An empty context that can be used when no context is needed.
+#[derive(Clone)]
 pub struct EmptyContext;
 
 impl Context for EmptyContext { }
