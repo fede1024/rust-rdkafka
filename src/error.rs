@@ -8,9 +8,9 @@ use self::rdkafka::types::*;
 /// Kafka result
 pub type KafkaResult<T> = Result<T, KafkaError>;
 
-/// Verify if the return code or return value represents an error condition.
+/// Verify if the value represents an error condition.
 pub trait IsError {
-    /// Return true if the error code or return code represents an error.
+    /// Return true if the value represents an error.
     fn is_error(self) -> bool;
 }
 

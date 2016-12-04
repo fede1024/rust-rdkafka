@@ -20,8 +20,16 @@ impl<'a> Message {
         Message { ptr: ptr }
     }
 
+    pub fn key_len(&self) -> usize {
+        unsafe { (*self.ptr).key_len }
+    }
+
+    pub fn payload_len(&self) -> usize {
+        unsafe { (*self.ptr).len }
+    }
+
     /// Returns the key of the message, or None if there is no key.
-    pub fn get_key(&'a self) -> Option<&'a [u8]> {
+    pub fn key(&'a self) -> Option<&'a [u8]> {
         unsafe {
             if (*self.ptr).key.is_null() {
                 None
@@ -32,7 +40,7 @@ impl<'a> Message {
     }
 
     /// Returns the payload of the message, or None if there is no payload.
-    pub fn get_payload(&'a self) -> Option<&'a [u8]> {
+    pub fn payload(&'a self) -> Option<&'a [u8]> {
         unsafe {
             if (*self.ptr).payload.is_null() {
                 None
@@ -42,19 +50,19 @@ impl<'a> Message {
         }
     }
 
-    pub fn get_payload_view<V: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a V, V::Error>> {
-        self.get_payload().map(V::from_bytes)
+    pub fn payload_view<V: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a V, V::Error>> {
+        self.payload().map(V::from_bytes)
     }
 
-    pub fn get_key_view<K: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a K, K::Error>> {
-        self.get_key().map(K::from_bytes)
+    pub fn key_view<K: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a K, K::Error>> {
+        self.key().map(K::from_bytes)
     }
 
-    pub fn get_partition(&self) -> i32 {
+    pub fn partition(&self) -> i32 {
         unsafe { (*self.ptr).partition }
     }
 
-    pub fn get_offset(&self) -> i64 {
+    pub fn offset(&self) -> i64 {
         unsafe { (*self.ptr).offset }
     }
 }

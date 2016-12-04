@@ -1,4 +1,4 @@
-//! Consumer implementations.
+//! Stream-based consumer implementation.
 extern crate rdkafka_sys as rdkafka;
 extern crate futures;
 

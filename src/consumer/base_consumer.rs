@@ -1,3 +1,4 @@
+//! Low level consumer wrapper.
 extern crate rdkafka_sys as rdkafka;
 extern crate futures;
 
@@ -14,7 +15,8 @@ use message::Message;
 use util::cstr_to_owned;
 use topic_partition_list::TopicPartitionList;
 
-/// A BaseConsumer client.
+/// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
+/// to make progress on rebalance, callbacks and to receive messages.
 pub struct BaseConsumer<C: ConsumerContext> {
     client: Client<C>,
 }
@@ -41,7 +43,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
         let config_ptr = try!(config.create_native_config());
         unsafe { rdkafka::rd_kafka_conf_set_rebalance_cb(config_ptr, Some(rebalance_cb::<C>)) };
         let client = try!(Client::new(config_ptr, RDKafkaType::RD_KAFKA_CONSUMER, context));
-        unsafe { rdkafka::rd_kafka_poll_set_consumer(client.get_ptr()) };
+        unsafe { rdkafka::rd_kafka_poll_set_consumer(client.native_ptr()) };
         Ok(BaseConsumer { client: client })
     }
 }
@@ -52,7 +54,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// the cluster and matching topics will be added to the subscription list.
     pub fn subscribe(&mut self, topics: &Vec<&str>) -> KafkaResult<()> {
         let tp_list = TopicPartitionList::with_topics(topics).create_native_topic_partition_list();
-        let ret_code = unsafe { rdkafka::rd_kafka_subscribe(self.client.get_ptr(), tp_list) };
+        let ret_code = unsafe { rdkafka::rd_kafka_subscribe(self.client.native_ptr(), tp_list) };
         if ret_code.is_error() {
             let error = unsafe { cstr_to_owned(rdkafka::rd_kafka_err2str(ret_code)) };
             return Err(KafkaError::Subscription(error))
@@ -63,13 +65,13 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Unsubscribe from previous subscription list.
     pub fn unsubscribe(&mut self) {
-        unsafe { rdkafka::rd_kafka_unsubscribe(self.client.get_ptr()) };
+        unsafe { rdkafka::rd_kafka_unsubscribe(self.client.native_ptr()) };
     }
 
     /// Manually assign topics and partitions to consume.
     pub fn assign(&mut self, assignment: &TopicPartitionList) -> KafkaResult<()> {
         let tp_list = assignment.create_native_topic_partition_list();
-        let ret_code = unsafe { rdkafka::rd_kafka_assign(self.client.get_ptr(), tp_list) };
+        let ret_code = unsafe { rdkafka::rd_kafka_assign(self.client.native_ptr(), tp_list) };
         if ret_code.is_error() {
             let error = unsafe { cstr_to_owned(rdkafka::rd_kafka_err2str(ret_code)) };
             return Err(KafkaError::Subscription(error))
@@ -81,13 +83,13 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// Returns a list of topics or topic patterns the consumer is subscribed to.
     pub fn get_subscriptions(&self) -> TopicPartitionList {
         let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
-        unsafe { rdkafka::rd_kafka_subscription(self.client.get_ptr(), &mut tp_list as *mut *mut RDKafkaTopicPartitionList) };
+        unsafe { rdkafka::rd_kafka_subscription(self.client.native_ptr(), &mut tp_list as *mut *mut RDKafkaTopicPartitionList) };
         TopicPartitionList::from_rdkafka(tp_list)
     }
 
     /// Polls the consumer for events. It won't block more than the specified timeout.
     pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<Message>> {
-        let message_ptr = unsafe { rdkafka::rd_kafka_consumer_poll(self.client.get_ptr(), timeout_ms) };
+        let message_ptr = unsafe { rdkafka::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
         if message_ptr.is_null() {
             return Ok(None);
         }
@@ -111,13 +113,13 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             CommitMode::Async => 1,
         };
 
-        unsafe { rdkafka::rd_kafka_commit_message(self.client.get_ptr(), message.ptr, async) };
+        unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr, async) };
     }
 }
 
 impl<C: ConsumerContext> Drop for BaseConsumer<C> {
     fn drop(&mut self) {
         trace!("Destroying consumer");  // TODO: fix me (multiple executions)
-        unsafe { rdkafka::rd_kafka_consumer_close(self.client.get_ptr()) };
+        unsafe { rdkafka::rd_kafka_consumer_close(self.client.native_ptr()) };
     }
 }

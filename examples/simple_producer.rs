@@ -19,27 +19,32 @@ fn produce(brokers: &str, topic_name: &str) {
         .create::<FutureProducer<_>>()
         .expect("Producer creation error");
 
-    producer.start();
-
     let topic_config = TopicConfig::new()
         .set("produce.offset.report", "true")
         .finalize();
 
+    producer.start();
+
     let topic = producer.get_topic(topic_name, &topic_config)
         .expect("Topic creation error");
 
+    // This loop is non blocking: all messages will be sent one after the other, without waiting
+    // for the results.
     let futures = (0..5)
         .map(|i| {
             let value = format!("Message {}", i);
+            // The send operation on the producer returns a future, that will be completed once the
+            // result or failure from Kafka will be received.
             producer.send_copy(&topic, None, Some(&value), Some(&vec![0, 1, 2, 3]))
                 .expect("Production failed")
-                .map(move |m| {
+                .map(move |delivery_status| {   // This will be executed onw the result is received
                     info!("Delivery status for message {} received", i);
-                    m
+                    delivery_status
                 })
         })
         .collect::<Vec<_>>();
 
+    // This loop will wait until all delivery statuses have been received received.
     for future in futures {
         info!("Future completed. Result: {:?}", future.wait());
     }

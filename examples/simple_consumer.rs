@@ -15,7 +15,9 @@ use rdkafka::util::get_rdkafka_version;
 mod example_utils;
 use example_utils::setup_logger;
 
-// Use a Context to set up custom callbacks for rebalancing.
+// The Context can be used to change the behavior of producers and consumers by adding callbacks
+// that will be executed by librdkafka.
+// This particular ConsumerContext sets up custom callbacks to log rebalancing events.
 struct ConsumerLoggingContext;
 
 impl Context for ConsumerLoggingContext {}
@@ -31,7 +33,6 @@ impl ConsumerContext for ConsumerLoggingContext {
 }
 
 fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
-    let context = LoggingContext{};
     let context = ConsumerLoggingContext{};
 
     let mut consumer = ClientConfig::new()
@@ -48,9 +49,10 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
         .expect("Consumer creation failed");
 
     consumer.subscribe(topics).expect("Can't subscribe to specified topics");
-    let message_stream = consumer.start();
 
-    info!("Consumer started: {:?}", topics);
+    // consumer.start() returns a stream. The stream can be used ot chain together expensive steps,
+    // such as complext computations on a thread pool or asynchronous IO.
+    let message_stream = consumer.start();
 
     for message in message_stream.take(5).wait() {
         match message {
@@ -58,7 +60,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                 warn!("Can't receive message: {:?}", e);
             },
             Ok(m) => {
-                let key = match m.get_key_view::<[u8]>() {
+                let key = match m.key_view::<[u8]>() {
                     None => &[],
                     Some(Ok(s)) => s,
                     Some(Err(e)) => {
@@ -66,7 +68,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                         &[]
                     },
                 };
-                let payload = match m.get_payload_view::<str>() {
+                let payload = match m.payload_view::<str>() {
                     None => "",
                     Some(Ok(s)) => s,
                     Some(Err(e)) => {
@@ -75,7 +77,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                     },
                 };
                 info!("key: '{:?}', payload: '{}', partition: {}, offset: {}",
-                      key, payload, m.get_partition(), m.get_offset());
+                      key, payload, m.partition(), m.offset());
                 consumer.commit_message(&m, CommitMode::Async);
             },
         };

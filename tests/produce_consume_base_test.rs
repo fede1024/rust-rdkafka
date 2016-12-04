@@ -4,7 +4,6 @@ extern crate rdkafka;
 use futures::*;
 use futures::stream::Stream;
 
-use rdkafka::client::EmptyContext;
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -13,8 +12,6 @@ use rdkafka::producer::FutureProducer;
 
 #[test]
 fn test_produce_consume_base() {
-    let context = EmptyContext::new();
-
     // Create consumer
     let mut consumer = ClientConfig::new()
         .set("group.id", "produce_consume_base")
@@ -27,7 +24,7 @@ fn test_produce_consume_base() {
                  .set("auto.offset.reset", "earliest")
                  .finalize()
         )
-        .create_with_context::<_, StreamConsumer<EmptyContext>>(context)
+        .create::<StreamConsumer<_>>()
         .expect("Consumer creation failed");
     consumer.subscribe(&vec!["produce_consume_base"]).expect("Can't subscribe to specified topics");
     let message_stream = consumer.start();
@@ -44,7 +41,7 @@ fn test_produce_consume_base() {
         .set("produce.offset.report", "true")
         .finalize();
 
-    let topic = producer.get_topic("produce_consume_base", &topic_config)
+    let topic = producer.get_topic("produce_consume_base", &topic_config)  // TODO: randomize topic name
         .expect("Topic creation error");
 
     let futures = (0..5)
@@ -73,8 +70,8 @@ fn test_produce_consume_base() {
     for i in 0..5 {
         match messages.get(i) {
             Some(ref message) => {
-                assert_eq!(message.get_key_view::<[u8]>().unwrap().unwrap(), [0, 1, 2, 3]);
-                assert_eq!(message.get_payload_view::<str>().unwrap().unwrap(), format!("Message {}", i));
+                assert_eq!(message.key_view::<[u8]>().unwrap().unwrap(), [0, 1, 2, 3]);
+                assert_eq!(message.payload_view::<str>().unwrap().unwrap(), format!("Message {}", i));
             }
             None => panic!("Message expected")
         }

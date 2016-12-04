@@ -86,12 +86,12 @@ pub trait FromClientConfig: Sized {
     fn from_config(&ClientConfig) -> KafkaResult<Self>;
 }
 
-/// Create a new client based on the provided configuration.
+/// Create a new client based on the provided configuration and context.
 pub trait FromClientConfigAndContext<C: Context>: Sized {
     fn from_config_and_context(&ClientConfig, C) -> KafkaResult<Self>;
 }
 
-/// Topic configuration
+/// Topic configuration.
 #[derive(Clone)]
 pub struct TopicConfig {
     conf_map: HashMap<String, String>,

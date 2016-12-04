@@ -21,8 +21,13 @@ use message::ToBytes;
 
 
 pub trait ProducerContext: Context {
+    /// A DeliveryContext is a user-defined structure that will be passed to the base producer when
+    /// producing a message. The base producer will call the `received` method on this data once the
+    /// associated message has been processed correctly.
     type DeliveryContext: Send + Sync;
 
+    /// This method will be called once the message has beed delivered (or failed to). The
+    /// DeliveryContext will be the one provided by the user when calling send.
     fn delivery(&self, DeliveryStatus, Self::DeliveryContext);
 }
 
@@ -91,7 +96,7 @@ impl<C: ProducerContext> BaseProducer<C> {
     /// Polls the producer. Regular calls to `poll` are required to process the evens
     /// and execute the message delivery callbacks.
     pub fn poll(&self, timeout_ms: i32) -> i32 {
-        unsafe { rdkafka::rd_kafka_poll(self.client.get_ptr(), timeout_ms) }
+        unsafe { rdkafka::rd_kafka_poll(self.client.native_ptr(), timeout_ms) }
     }
 
     fn _send_copy(&self, topic: &Topic<C>, partition: Option<i32>, payload: Option<&[u8]>, key: Option<&[u8]>,   delivery_context: Option<Box<C::DeliveryContext>>) -> KafkaResult<()> {
@@ -109,7 +114,7 @@ impl<C: ProducerContext> BaseProducer<C> {
         };
         let produce_response = unsafe {
             rdkafka::rd_kafka_produce(
-                topic.get_ptr(),
+                topic.ptr(),
                 partition.unwrap_or(-1),
                 rdkafka::RD_KAFKA_MSG_F_COPY as i32,
                 payload_ptr,
@@ -135,6 +140,9 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 }
 
+/// The ProducerContext used by the FutureProducer. This context will use a Future as its
+/// DeliveryContext and will complete the future when the message is delivered (or failed to). All
+/// other callbacks will be delegated to the wrapped ProducerContext.
 #[derive(Clone)]
 pub struct FutureProducerContext<C: ProducerContext> {
     _inner_context: C

@@ -8,25 +8,13 @@ use self::rdkafka::types::*;
 
 use config::TopicConfig;
 use error::{KafkaError, KafkaResult};
-use util::bytes_cstr_to_owned;
+use util::{bytes_cstr_to_owned, cstr_to_owned};
 
-
-pub trait DeliveryContext: Send + Sync + 'static {
-    fn received();
-}
 
 /// A Context is an object that can store user-defined data and on which callbacks can be
 /// defined. Refer to the list of methods to see which callbacks can currently be overridden.
-/// The context must be thread safe. The context might be cloned and passed to other threads.
+/// The context must be thread safe, and might be owned by multiple threads.
 pub trait Context: Send + Sync { }
-
-/// An empty context that can be used when no context is needed.
-#[derive(Clone)]
-pub struct EmptyDeliveryContext;
-
-impl DeliveryContext for EmptyDeliveryContext {
-    fn received() {}
-}
 
 /// An empty context that can be used when no context is needed.
 #[derive(Clone)]
@@ -50,16 +38,20 @@ unsafe impl Sync for NativeClient {}
 unsafe impl Send for NativeClient {}
 
 impl NativeClient {
+    /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
     pub fn new(ptr: *mut RDKafka) -> NativeClient {
         NativeClient{ptr: ptr}
     }
 
+    /// Returns the wrapped pointer to RDKafka.
     pub fn ptr(&self) -> *mut RDKafka {
         self.ptr
     }
 }
 
-/// An rdkafka client.
+/// A low level rdkafka client. This client shouldn't be used directly. The producer and consumer modules
+/// provide different producer and consumer implementations based on top of `Client` that can be
+/// used instead.
 pub struct Client<C: Context> {
     native: NativeClient,
     context: Box<C>,
@@ -86,12 +78,12 @@ impl<C: Context> Client<C> {
     }
 
     /// Returns a pointer to the native rdkafka-sys client.
-    pub fn get_ptr(&self) -> *mut RDKafka {
+    pub fn native_ptr(&self) -> *mut RDKafka {
         self.native.ptr
     }
 
     /// Returns a reference to the context.
-    pub fn get_context(&self) -> &C {
+    pub fn context(&self) -> &C {
         self.context.as_ref()
     }
 }
@@ -136,8 +128,8 @@ impl<'a, C: Context> Topic<'a, C> {
         }
     }
 
-    /// Returns a pointer to the correspondent rdkafka `rd_kafka_topic_t` stuct.
-    pub fn get_ptr(&self) -> *mut RDKafkaTopic {
+    /// Returns a pointer to the correspondent rdkafka `RDKafkaTopic` stuct.
+    pub fn ptr(&self) -> *mut RDKafkaTopic {
         self.ptr
     }
 }
@@ -161,15 +153,17 @@ mod tests {
 
     #[test]
     fn test_client() {
-        let client = Client::new(&ClientConfig::new(), ClientType::Consumer, EmptyContext::new()).unwrap();
-        assert!(!client.get_ptr().is_null());
+        let config_ptr = ClientConfig::new().create_native_config().unwrap();
+        let client = Client::new(config_ptr, RDKafkaType::RD_KAFKA_PRODUCER, EmptyContext::new()).unwrap();
+        assert!(!client.native_ptr().is_null());
     }
 
     #[test]
     fn test_topic() {
-        let client = Client::new(&ClientConfig::new(), ClientType::Consumer, EmptyContext::new()).unwrap();
+        let config_ptr = ClientConfig::new().create_native_config().unwrap();
+        let client = Client::new(config_ptr, RDKafkaType::RD_KAFKA_CONSUMER, EmptyContext::new()).unwrap();
         let topic = Topic::new(&client, "topic_name", &TopicConfig::new()).unwrap();
         assert_eq!(topic.get_name(), "topic_name");
-        assert!(!topic.get_ptr().is_null());
+        assert!(!topic.ptr().is_null());
     }
 }

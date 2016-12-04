@@ -14,37 +14,13 @@ use client::{Context, NativeClient};
 use message::Message;
 use error::KafkaResult;
 
-use consumer::base_consumer::BaseConsumer;
-use topic_partition_list::TopicPartitionList;
+pub use consumer::base_consumer::BaseConsumer;
+pub use topic_partition_list::TopicPartitionList;
 
-#[derive(Clone)]
-struct EmptyConsumerContext;
-
-impl Context for EmptyConsumerContext { }
-impl ConsumerContext for EmptyConsumerContext { }
-
-/// Contains rebalance information.
-#[derive(Clone, Debug)]
-pub enum Rebalance {
-    Assign(TopicPartitionList),
-    Revoke,
-    Error(String)
-}
-
-/// Native rebalance callback. This callback will run on every rebalance, and it will call the
-/// rebalance method defined in the current `Context`.
-pub unsafe extern "C" fn rebalance_cb<C: ConsumerContext>(rk: *mut RDKafka,
-                                                          err: RDKafkaRespErr,
-                                                          partitions: *mut RDKafkaTopicPartitionList,
-                                                          opaque_ptr: *mut c_void) {
-    let context: &C = &*(opaque_ptr as *const C);
-    let native_client = NativeClient::new(rk);
-
-    context.rebalance(&native_client, err, partitions);
-}
-
+/// Consumer specific Context. This user-defined object can be used to provide custom callbacks to
+/// consumer events. Refer to the list of methods to check which callbacks can be specified.
 pub trait ConsumerContext: Context {
-    /// Implements the default rebalancing strategy, also calling the pre_rebalance and
+    /// Implements the default rebalancing strategy and calls the pre_rebalance and
     /// post_rebalance methods. If this method is overridden, it will be responsibility
     /// of the user to call them if needed.
     fn rebalance(&self,
@@ -97,6 +73,33 @@ pub trait ConsumerContext: Context {
     /// terminate its execution quickly.
     fn post_rebalance(&self, _rebalance: &Rebalance) { }
 }
+
+#[derive(Clone)]
+struct EmptyConsumerContext;
+
+impl Context for EmptyConsumerContext { }
+impl ConsumerContext for EmptyConsumerContext { }
+
+/// Contains rebalance information.
+#[derive(Clone, Debug)]
+pub enum Rebalance {
+    Assign(TopicPartitionList),
+    Revoke,
+    Error(String)
+}
+
+/// Native rebalance callback. This callback will run on every rebalance, and it will call the
+/// rebalance method defined in the current `Context`.
+unsafe extern "C" fn rebalance_cb<C: ConsumerContext>(rk: *mut RDKafka,
+                                                          err: RDKafkaRespErr,
+                                                          partitions: *mut RDKafkaTopicPartitionList,
+                                                          opaque_ptr: *mut c_void) {
+    let context: &C = &*(opaque_ptr as *const C);
+    let native_client = NativeClient::new(rk);
+
+    context.rebalance(&native_client, err, partitions);
+}
+
 
 /// Specifies if the commit should be performed synchronously
 /// or asynchronously.
