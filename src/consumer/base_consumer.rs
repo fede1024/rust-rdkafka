@@ -5,20 +5,21 @@ use self::rdkafka::types::*;
 
 use std::str;
 
-use client::{Client, ClientType, Context};
-use config::{FromClientConfig, ClientConfig};
-use consumer::{Consumer, CommitMode};
+use client::Client;
+use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
+use consumer::{Consumer, ConsumerContext, CommitMode, EmptyConsumerContext};
+use consumer::rebalance_cb;  // TODO: reorganize module
 use error::{KafkaError, KafkaResult, IsError};
 use message::Message;
 use util::cstr_to_owned;
 use topic_partition_list::TopicPartitionList;
 
 /// A BaseConsumer client.
-pub struct BaseConsumer<C: Context> {
+pub struct BaseConsumer<C: ConsumerContext> {
     client: Client<C>,
 }
 
-impl<C: Context> Consumer<C> for BaseConsumer<C> {
+impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     fn get_base_consumer(&self) -> &BaseConsumer<C> {
         self
     }
@@ -28,16 +29,24 @@ impl<C: Context> Consumer<C> for BaseConsumer<C> {
     }
 }
 
+impl FromClientConfig for BaseConsumer<EmptyConsumerContext> {
+    fn from_config(config: &ClientConfig) -> KafkaResult<BaseConsumer<EmptyConsumerContext>> {
+        BaseConsumer::from_config_and_context(config, EmptyConsumerContext)
+    }
+}
+
 /// Creates a new BaseConsumer starting from a ClientConfig.
-impl<C: Context> FromClientConfig<C> for BaseConsumer<C> {
-    fn from_config(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
-        let client = try!(Client::new(config, ClientType::Consumer, context));
+impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
+    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
+        let config_ptr = try!(config.create_native_config());
+        unsafe { rdkafka::rd_kafka_conf_set_rebalance_cb(config_ptr, Some(rebalance_cb::<C>)) };
+        let client = try!(Client::new(config_ptr, RDKafkaType::RD_KAFKA_CONSUMER, context));
         unsafe { rdkafka::rd_kafka_poll_set_consumer(client.get_ptr()) };
         Ok(BaseConsumer { client: client })
     }
 }
 
-impl<C: Context> BaseConsumer<C> {
+impl<C: ConsumerContext> BaseConsumer<C> {
     /// Subscribes the consumer to a list of topics and/or topic sets (using regex).
     /// Strings starting with `^` will be regex-matched to the full list of topics in
     /// the cluster and matching topics will be added to the subscription list.
@@ -106,7 +115,7 @@ impl<C: Context> BaseConsumer<C> {
     }
 }
 
-impl<C: Context> Drop for BaseConsumer<C> {
+impl<C: ConsumerContext> Drop for BaseConsumer<C> {
     fn drop(&mut self) {
         trace!("Destroying consumer");  // TODO: fix me (multiple executions)
         unsafe { rdkafka::rd_kafka_consumer_close(self.client.get_ptr()) };
