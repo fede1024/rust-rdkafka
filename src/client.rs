@@ -4,6 +4,8 @@ extern crate rdkafka_sys as rdkafka;
 use std::ffi::CString;
 use std::os::raw::c_void;
 
+use log::LogLevel;
+
 use self::rdkafka::types::*;
 
 use config::TopicConfig;
@@ -70,6 +72,18 @@ impl<C: Context> Client<C> {
             let descr = unsafe { bytes_cstr_to_owned(&errstr) };
             return Err(KafkaError::ClientCreation(descr));
         }
+
+        // Set log level based on log crate's settings
+        let log_level = if log_enabled!(LogLevel::Debug) {
+            7
+        } else if log_enabled!(LogLevel::Info) {
+            5
+        } else if log_enabled!(LogLevel::Warn) {
+            4
+        } else {
+            3
+        };
+        unsafe { rdkafka::rd_kafka_set_log_level(client_ptr, log_level) };
 
         Ok(Client {
             native: NativeClient { ptr: client_ptr },

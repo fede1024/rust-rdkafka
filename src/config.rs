@@ -4,13 +4,33 @@ extern crate rdkafka_sys as rdkafka;
 use self::rdkafka::types::*;
 
 use std::collections::HashMap;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use util::bytes_cstr_to_owned;
 
 use error::{KafkaError, KafkaResult, IsError};
 use client::Context;
 
 const ERR_LEN: usize = 256;
+
+unsafe extern "C" fn log_cb(
+    _: *const rdkafka::rd_kafka_s,
+    level: i32,
+    fac: *const i8,
+    buf: *const i8
+) {
+    let fac_str = CStr::from_ptr(fac).to_string_lossy();
+    let buf_str = CStr::from_ptr(buf).to_string_lossy();
+    match level {
+        0 => error!("rdkafka {}: {}", fac_str, buf_str),
+        1 => error!("rdkafka {}: {}", fac_str, buf_str),
+        2 => error!("rdkafka {}: {}", fac_str, buf_str),
+        3 => error!("rdkafka {}: {}", fac_str, buf_str),
+        4 => warn!("rdkafka {}: {}", fac_str, buf_str),
+        5 => info!("rdkafka {}: {}", fac_str, buf_str),
+        6 => info!("rdkafka {}: {}", fac_str, buf_str),
+        _ => debug!("rdkafka {}: {}", fac_str, buf_str),
+    }
+}
 
 /// Client configuration.
 #[derive(Clone)]
@@ -61,6 +81,7 @@ impl ClientConfig {
                 unsafe { rdkafka::rd_kafka_conf_set_default_topic_conf(conf, topic_config.unwrap()) };
             }
         }
+        unsafe { rdkafka::rd_kafka_conf_set_log_cb(conf, Some(log_cb)) };
         Ok(conf)
     }
 
