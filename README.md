@@ -23,7 +23,7 @@ High level:
  * `StreamConsumer`: it returns a [`stream`] of messages and takes care of polling the consumer
  internally.
  * `FutureProducer`: it returns a [`future`] that will be completed once the message is
- delivered to Kafka (or fails).
+ delivered to Kafka (or failed).
 
 [librdkafka]: https://github.com/edenhill/librdkafka
 [futures]: https://github.com/alexcrichton/futures-rs
@@ -38,7 +38,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdkafka = "^0.2.0"
+rdkafka = "^0.4.0"
 ```
 
 This crate will compile librdkafka from sources and link it statically to your
@@ -55,7 +55,7 @@ To enable ssl and sasl, use the `features` field in `Cargo.toml`. Example:
 
 ```toml
 [dependencies.rdkafka]
-version = "^0.3.0"
+version = "^0.4.0"
 features = ["ssl", "sasl"]
 ```
 

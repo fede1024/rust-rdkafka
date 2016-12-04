@@ -75,6 +75,23 @@
 //! cargo run --example <example_name> -- <example_args>
 //! ```
 //!
+//! ## Tests
+//!
+//! The unit tests can run without a Kafka broker present:
+//!
+//! ```bash
+//! cargo test --lib
+//! ```
+//!
+//! To run the full suite:
+//!
+//! ```bash
+//! cargo test
+//! ```
+//!
+//! In this case there is a broker expected to be running on
+//! `localhost:9292`. Travis currently only runs the unit tests.
+//!
 
 #[macro_use]
 extern crate log;
