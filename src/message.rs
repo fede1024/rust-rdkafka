@@ -6,10 +6,10 @@ use self::rdkafka::types::*;
 use std::slice;
 use std::str;
 
-/// Represents a native librdkafka message.
+/// A native librdkafka message.
 #[derive(Debug)]
 pub struct Message {
-    pub ptr: *mut RDKafkaMessage,
+    ptr: *mut RDKafkaMessage,
 }
 
 unsafe impl Send for Message {}
@@ -20,10 +20,17 @@ impl<'a> Message {
         Message { ptr: ptr }
     }
 
+    /// Returns a pointer to the RDKafkaMessage.
+    pub fn ptr(&self) -> *mut RDKafkaMessage {
+        self.ptr
+    }
+
+    /// Returns the length of the key field of the message.
     pub fn key_len(&self) -> usize {
         unsafe { (*self.ptr).key_len }
     }
 
+    /// Returns the length of the payload field of the message.
     pub fn payload_len(&self) -> usize {
         unsafe { (*self.ptr).len }
     }
@@ -50,18 +57,24 @@ impl<'a> Message {
         }
     }
 
-    pub fn payload_view<V: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a V, V::Error>> {
-        self.payload().map(V::from_bytes)
+    /// Converts the raw bytes of the payload to a reference of type &P, pointing to the same data inside
+    /// the message. The returned reference cannot outlive the message.
+    pub fn payload_view<P: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a P, P::Error>> {
+        self.payload().map(P::from_bytes)
     }
 
+    /// Converts the raw bytes of the key to a reference of type &K, pointing to the same data inside
+    /// the message. The returned reference cannot outlive the message.
     pub fn key_view<K: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a K, K::Error>> {
         self.key().map(K::from_bytes)
     }
 
+    /// Returns the partition number where the message is stored.
     pub fn partition(&self) -> i32 {
         unsafe { (*self.ptr).partition }
     }
 
+    /// Returns the offset of the message.
     pub fn offset(&self) -> i64 {
         unsafe { (*self.ptr).offset }
     }
@@ -119,13 +132,13 @@ impl<'a> ToBytes for &'a str {
     }
 }
 
-impl<'a> ToBytes for String {
+impl ToBytes for String {
     fn to_bytes(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
-impl<'a> ToBytes for () {
+impl ToBytes for () {
     fn to_bytes(&self) -> &[u8] {
         &[]
     }

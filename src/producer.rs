@@ -20,6 +20,8 @@ use error::{KafkaError, KafkaResult};
 use message::ToBytes;
 
 
+/// A ProducerContext is a Context specific for producers. It can be used to store user-specified
+/// callbacks, such as `delivery`.
 pub trait ProducerContext: Context {
     /// A DeliveryContext is a user-defined structure that will be passed to the base producer when
     /// producing a message. The base producer will call the `received` method on this data once the
@@ -56,16 +58,38 @@ pub struct DeliveryStatus {
     offset: i64,
 }
 
+impl DeliveryStatus {
+    /// Creates a new DeliveryStatus. This should only be used in the delivery_cb.
+    fn new(err: RDKafkaRespErr, partition: i32, offset: i64) -> DeliveryStatus {
+        DeliveryStatus {
+            error: err,
+            partition: partition,
+            offset: offset,
+        }
+    }
+
+    /// Returns the error associated with the production of the message.
+    pub fn error(&self) -> RDKafkaRespErr {
+        self.error
+    }
+
+    /// Returns the partition of the message.
+    pub fn partition(&self) -> i32 {
+        self.partition
+    }
+
+    /// Returns the offset of the message.
+    pub fn offset(&self) -> i64 {
+        self.offset
+    }
+}
+
 /// Callback that gets called from librdkafka every time a message succeeds
 /// or fails to be delivered.
 unsafe extern "C" fn delivery_cb<C: ProducerContext>(_client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
     let context = Box::from_raw(_opaque as *mut C);
     let delivery_context = Box::from_raw((*msg)._private as *mut C::DeliveryContext);
-    let delivery_status = DeliveryStatus {
-        error: (*msg).err,
-        partition: (*msg).partition,
-        offset: (*msg).offset,
-    };
+    let delivery_status = DeliveryStatus::new((*msg).err, (*msg).partition, (*msg).offset);
     trace!("Delivery event received: {:?}", delivery_status);
     (*context).delivery(delivery_status, (*delivery_context))
 }

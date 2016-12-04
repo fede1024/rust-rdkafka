@@ -113,7 +113,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             CommitMode::Async => 1,
         };
 
-        unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr, async) };
+        unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), async) };
     }
 }
 
