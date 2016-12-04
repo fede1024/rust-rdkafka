@@ -162,7 +162,9 @@ mod tests {
     // Just call everything to test there no panics by default, behavior
     // is tested in the integrations tests.
 
+    extern crate rdkafka_sys as rdkafka;
     use config::{ClientConfig,TopicConfig};
+    use self::rdkafka::types::*;
     use super::*;
 
     #[test]
