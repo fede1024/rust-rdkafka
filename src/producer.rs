@@ -34,7 +34,7 @@ pub trait ProducerContext: Context {
 }
 
 #[derive(Clone)]
-struct EmptyProducerContext;
+pub struct EmptyProducerContext;
 
 impl Context for EmptyProducerContext { }
 impl ProducerContext for EmptyProducerContext {
