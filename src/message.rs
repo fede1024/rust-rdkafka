@@ -3,6 +3,8 @@ extern crate rdkafka_sys as rdkafka;
 
 use self::rdkafka::types::*;
 
+use std::os::raw::c_void;
+use std::ptr;
 use std::slice;
 use std::str;
 
@@ -10,14 +12,60 @@ use std::str;
 #[derive(Debug)]
 pub struct Message {
     ptr: *mut RDKafkaMessage,
+    from_rdkafka: bool,
+    // Key and payload can be added so we can make sure it's
+    // contents don't get dropped during the lifetime of this
+    // message.
+    _payload: Option<Vec<u8>>,
+    _key: Option<Vec<u8>>
 }
 
 unsafe impl Send for Message {}
 
 impl<'a> Message {
     /// Creates a new Message that wraps the native Kafka message pointer.
-    pub fn new(ptr: *mut RDKafkaMessage) -> Message {
-        Message { ptr: ptr }
+    pub fn from_ptr(ptr: *mut RDKafkaMessage) -> Message {
+        Message {
+            ptr: ptr,
+            from_rdkafka: true,
+            _payload: None,
+            _key: None
+        }
+    }
+
+    /// Create a new message
+    pub fn new(
+        partition: Option<i32>,
+        payload: Option<Vec<u8>>,
+        key: Option<Vec<u8>>,
+        offset: i64
+    ) -> Message {
+        let (payload_ptr, payload_len) = match payload {
+            None => (ptr::null_mut(), 0),
+            Some(ref p) => (p.as_ptr() as *mut c_void, p.len())
+        };
+        let (key_ptr, key_len) = match key {
+            None => (ptr::null_mut(), 0),
+            Some(ref k) => (k.as_ptr() as *mut c_void, k.len()),
+        };
+        let mut rdkafka_message = RDKafkaMessage {
+            err: RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR,
+            rkt: ptr::null_mut(),
+            partition: partition.unwrap_or(-1),
+            payload: payload_ptr,
+            len: payload_len,
+            key: key_ptr,
+            key_len: key_len,
+            offset: offset,
+            _private: ptr::null_mut()
+        };
+
+        Message {
+            ptr: &mut rdkafka_message,
+            from_rdkafka: false,
+            _payload: payload,
+            _key: key
+        }
     }
 
     /// Returns a pointer to the RDKafkaMessage.
@@ -83,7 +131,9 @@ impl<'a> Message {
 impl Drop for Message {
     fn drop(&mut self) {
         trace!("Destroying message {:?}", self);
-        unsafe { rdkafka::rd_kafka_message_destroy(self.ptr) };
+        if self.from_rdkafka {
+            unsafe { rdkafka::rd_kafka_message_destroy(self.ptr) };
+        }
     }
 }
 
@@ -141,5 +191,26 @@ impl ToBytes for String {
 impl ToBytes for () {
     fn to_bytes(&self) -> &[u8] {
         &[]
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use super::*;
+    #[test]
+    fn test_message() {
+        let message = Message::new(
+            Some(1),
+            Some(vec![1, 2, 3]),
+            Some(vec![1, 2, 3]),
+            1
+        );
+
+        assert!(!message.ptr().is_null());
+        assert_eq!(1, message.partition());
+        assert_eq!(&[1, 2, 3], message.payload().unwrap());
+        assert_eq!(&[1, 2, 3], message.key().unwrap());
+        assert!( message.offset() > 0);
     }
 }
