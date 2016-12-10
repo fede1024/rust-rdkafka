@@ -34,6 +34,7 @@ pub enum KafkaError {
     ConsumerCreation(String),
     MessageConsumption(RDKafkaRespErr),
     MessageProduction(RDKafkaRespErr),
+    MetadataFetch(RDKafkaRespErr),
     Nul(std::ffi::NulError),
     Subscription(String),
     TopicConfig((RDKafkaConfRes, String, String, String)),

@@ -12,6 +12,7 @@ use util::cstr_to_owned;
 
 use client::{Context, NativeClient};
 use message::Message;
+use metadata::Metadata;
 use error::KafkaResult;
 
 pub use consumer::base_consumer::BaseConsumer;
@@ -135,4 +136,9 @@ pub trait Consumer<C: ConsumerContext> {
     fn commit_message(&self, message: &Message, mode: CommitMode) {
         self.get_base_consumer().commit_message(message, mode);
     }
+
+    fn fetch_metadata(&mut self, timeout_ms: i32) -> KafkaResult<Metadata> {
+        self.get_base_consumer().fetch_metadata(timeout_ms)
+    }
+
 }

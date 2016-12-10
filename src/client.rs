@@ -3,13 +3,15 @@ extern crate rdkafka_sys as rdkafka;
 
 use std::ffi::CString;
 use std::os::raw::c_void;
+use std::ptr;
 
 use log::LogLevel;
 
 use self::rdkafka::types::*;
 
 use config::TopicConfig;
-use error::{KafkaError, KafkaResult};
+use metadata::Metadata;
+use error::{IsError, KafkaError, KafkaResult};
 use util::{bytes_cstr_to_owned, cstr_to_owned};
 
 
@@ -99,6 +101,23 @@ impl<C: Context> Client<C> {
     /// Returns a reference to the context.
     pub fn context(&self) -> &C {
         self.context.as_ref()
+    }
+
+    pub fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
+        let mut metadata_ptr: *const RDKafkaMetadata = ptr::null_mut();
+        let ret = unsafe {
+            rdkafka::rd_kafka_metadata(
+                self.native_ptr(),
+                1,
+                ptr::null::<u8>() as *mut RDKafkaTopic,
+                &mut metadata_ptr as *mut *const RDKafkaMetadata,
+                timeout_ms)
+        };
+        if ret.is_error() {
+            return Err(KafkaError::MetadataFetch(ret));
+        }
+
+        Ok(Metadata::from_ptr(metadata_ptr))
     }
 }
 

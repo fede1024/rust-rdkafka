@@ -101,6 +101,7 @@ pub mod config;
 pub mod consumer;
 pub mod error;
 pub mod message;
+pub mod metadata;
 pub mod producer;
 pub mod topic_partition_list;
 pub mod util;

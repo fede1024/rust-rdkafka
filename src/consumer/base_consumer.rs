@@ -11,6 +11,7 @@ use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
 use consumer::{Consumer, ConsumerContext, CommitMode, EmptyConsumerContext};
 use consumer::rebalance_cb;  // TODO: reorganize module
 use error::{KafkaError, KafkaResult, IsError};
+use metadata::Metadata;
 use message::Message;
 use util::cstr_to_owned;
 use topic_partition_list::TopicPartitionList;
@@ -106,14 +107,18 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         Ok(Some(kafka_message))
     }
 
-    /// Commits the current message. The commit can be synk (blocking), or asynk.
-    pub fn commit_message(&self, message: &Message, mode: CommitMode) -> () {
+    /// Commits the current message. The commit can be synk (blocking), or async.
+    pub fn commit_message(&self, message: &Message, mode: CommitMode) {
         let async = match mode {
             CommitMode::Sync => 0,
             CommitMode::Async => 1,
         };
 
         unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), async) };
+    }
+
+    pub fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
+        self.client.fetch_metadata(timeout_ms)
     }
 }
 
