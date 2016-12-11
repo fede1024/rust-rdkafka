@@ -76,7 +76,7 @@ pub trait ConsumerContext: Context {
 }
 
 #[derive(Clone)]
-struct EmptyConsumerContext;
+pub struct EmptyConsumerContext;
 
 impl Context for EmptyConsumerContext { }
 impl ConsumerContext for EmptyConsumerContext { }
