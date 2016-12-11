@@ -13,18 +13,22 @@ It currently exports a subset of the funcionalities provided by librdkafka 0.9.2
 
 `rust-rdkafka` provides low level and high level consumers and producers. Low level:
 
-* `BaseConsumer`: simple wrapper around the librdkafka consumer. It requires to be
+* [`BaseConsumer`]: simple wrapper around the librdkafka consumer. It requires to be
   periodically `poll()`ed in order to execute callbacks, rebalance and receive messages.
-* `BaseProducer`: simple wrapper around the librdkafka producer. As in the consumer case,
+* [`BaseProducer`]: simple wrapper around the librdkafka producer. As in the consumer case,
   the user must call `poll()` periodically to execute delivery callbacks.
 
 High level:
 
- * `StreamConsumer`: it returns a [`stream`] of messages and takes care of polling the consumer
+ * [`StreamConsumer`]: it returns a [`stream`] of messages and takes care of polling the consumer
  internally.
- * `FutureProducer`: it returns a [`future`] that will be completed once the message is
+ * [`FutureProducer`]: it returns a [`future`] that will be completed once the message is
  delivered to Kafka (or failed).
 
+[`BaseConsumer`]: https://docs.rs/rdkafka/0.5.0/rdkafka/consumer/base_consumer/struct.BaseConsumer.html
+[`BaseProducer`]: https://docs.rs/rdkafka/0.5.0/rdkafka/producer/struct.BaseProducer.html
+[`StreamConsumer`]: https://docs.rs/rdkafka/0.5.0/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html
+[`FutureProducer`]: https://docs.rs/rdkafka/0.5.0/rdkafka/producer/struct.FutureProducer.html
 [librdkafka]: https://github.com/edenhill/librdkafka
 [futures]: https://github.com/alexcrichton/futures-rs
 [`future`]: https://docs.rs/futures/0.1.3/futures/trait.Future.html
@@ -96,7 +100,7 @@ cargo test
 ```
 
 In this case there is a broker expected to be running on
-`localhost:9292`. Travis currently only runs the unit tests.
+`localhost:9092`. Travis currently only runs the unit tests.
 
 ## Documentation
 
