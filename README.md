@@ -38,7 +38,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdkafka = "^0.4.0"
+rdkafka = "^0.5.0"
 ```
 
 This crate will compile librdkafka from sources and link it statically to your
@@ -55,7 +55,7 @@ To enable ssl and sasl, use the `features` field in `Cargo.toml`. Example:
 
 ```toml
 [dependencies.rdkafka]
-version = "^0.4.0"
+version = "^0.5.0"
 features = ["ssl", "sasl"]
 ```
 
@@ -85,13 +85,13 @@ cargo run --example <example_name> -- <example_args>
 
 The unit tests can run without a Kafka broker present:
 
-```
+```bash
 cargo test --lib
 ```
 
 To run the full suite:
 
-```
+```bash
 cargo test
 ```
 

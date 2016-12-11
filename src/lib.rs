@@ -32,7 +32,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rdkafka = "^0.4.0"
+//! rdkafka = "^0.5.0"
 //! ```
 //!
 //! This crate will compile librdkafka from sources and link it statically to your
@@ -49,7 +49,7 @@
 //!
 //! ```toml
 //! [dependencies.rdkafka]
-//! version = "^0.4.0"
+//! version = "^0.5.0"
 //! features = ["ssl", "sasl"]
 //! ```
 //!
