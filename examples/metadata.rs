@@ -1,6 +1,3 @@
-#![feature(alloc_system)]
-extern crate alloc_system;
-
 #[macro_use] extern crate log;
 extern crate clap;
 extern crate rdkafka;
@@ -19,7 +16,9 @@ fn print_metadata(brokers: &str) {
         .create::<BaseConsumer<_>>()
         .expect("Consumer creation failed");
 
-    let metadata = consumer.fetch_metadata(5000)
+    trace!("Consumer created");
+
+    let metadata = consumer.fetch_metadata(10000)
         .expect("Failed to fetch metadata");
 
     println!("Cluster information:");
@@ -48,7 +47,7 @@ fn print_metadata(brokers: &str) {
 }
 
 fn main() {
-    let matches = App::new("consumer example")
+    let matches = App::new("metadata fetch example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Fetch and print the cluster metadata")
         .arg(Arg::with_name("brokers")

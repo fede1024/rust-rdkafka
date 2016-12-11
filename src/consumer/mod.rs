@@ -137,8 +137,8 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().commit_message(message, mode);
     }
 
+    /// Returns the metadata information of the entire cluster for all the topics in the cluster.
     fn fetch_metadata(&mut self, timeout_ms: i32) -> KafkaResult<Metadata> {
         self.get_base_consumer().fetch_metadata(timeout_ms)
     }
-
 }

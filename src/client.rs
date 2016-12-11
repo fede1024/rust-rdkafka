@@ -103,16 +103,19 @@ impl<C: Context> Client<C> {
         self.context.as_ref()
     }
 
+    /// Returns the metadata information of the entire cluster for all the topics in the cluster.
     pub fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
         let mut metadata_ptr: *const RDKafkaMetadata = ptr::null_mut();
+        trace!("Starting metadata fetch");
         let ret = unsafe {
             rdkafka::rd_kafka_metadata(
                 self.native_ptr(),
-                1,
+                1,   // All topics
                 ptr::null::<u8>() as *mut RDKafkaTopic,
                 &mut metadata_ptr as *mut *const RDKafkaMetadata,
                 timeout_ms)
         };
+        trace!("Metadata fetch completed");
         if ret.is_error() {
             return Err(KafkaError::MetadataFetch(ret));
         }
