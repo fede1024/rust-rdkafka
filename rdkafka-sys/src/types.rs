@@ -33,6 +33,8 @@ pub type RDKafkaMetadataPartition = bindings::rd_kafka_metadata_partition_t;
 /// Native rdkafka broker information
 pub type RDKafkaMetadataBroker = bindings::rd_kafka_metadata_broker_t;
 
+/// Native rdkafka state
+pub type RDKafkaState = bindings::rd_kafka_s;
 
 // ENUMS
 
