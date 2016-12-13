@@ -13,22 +13,21 @@ use client::Context;
 const ERR_LEN: usize = 256;
 
 unsafe extern "C" fn log_cb(
-    _: *const rdkafka::rd_kafka_s,
+    _client: *const RDKafkaState,
     level: i32,
-    fac: *const i8,
+    _fac: *const i8,
     buf: *const i8
 ) {
-    let fac_str = CStr::from_ptr(fac).to_string_lossy();
     let buf_str = CStr::from_ptr(buf).to_string_lossy();
     match level {
-        0 => error!("rdkafka {}: {}", fac_str, buf_str),
-        1 => error!("rdkafka {}: {}", fac_str, buf_str),
-        2 => error!("rdkafka {}: {}", fac_str, buf_str),
-        3 => error!("rdkafka {}: {}", fac_str, buf_str),
-        4 => warn!("rdkafka {}: {}", fac_str, buf_str),
-        5 => info!("rdkafka {}: {}", fac_str, buf_str),
-        6 => info!("rdkafka {}: {}", fac_str, buf_str),
-        _ => debug!("rdkafka {}: {}", fac_str, buf_str),
+        0 => error!("rdkafka: {}", buf_str),
+        1 => error!("rdkafka: {}", buf_str),
+        2 => error!("rdkafka: {}", buf_str),
+        3 => error!("rdkafka: {}", buf_str),
+        4 => warn!("rdkafka: {}", buf_str),
+        5 => info!("rdkafka: {}", buf_str),
+        6 => info!("rdkafka: {}", buf_str),
+        _ => debug!("rdkafka: {}", buf_str),
     }
 }
 
