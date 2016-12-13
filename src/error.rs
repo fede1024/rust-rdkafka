@@ -5,6 +5,8 @@ extern crate std;
 
 use self::rdkafka::types::*;
 
+use util::cstr_to_owned;
+
 /// Kafka result
 pub type KafkaResult<T> = Result<T, KafkaError>;
 
@@ -26,7 +28,6 @@ impl IsError for RDKafkaConfRes {
     }
 }
 
-#[derive(Debug)]
 /// Represents all Kafka errors.
 pub enum KafkaError {
     ClientConfig((RDKafkaConfRes, String, String, String)),
@@ -42,8 +43,75 @@ pub enum KafkaError {
     PartitionEof
 }
 
+impl std::fmt::Debug for KafkaError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            KafkaError::ClientConfig(ref err) => write!(f, "KafkaError (Client config error: {} {} {})", err.1, err.2, err.3),
+            KafkaError::ClientCreation(ref err) => write!(f, "KafkaError (Client creation error: {})", err),
+            KafkaError::ConsumerCreation(ref err) => write!(f, "KafkaError (Consumer creation error: {})", err),
+            KafkaError::MessageConsumption(err) => write!(f, "KafkaError (Message consumption error: {})", resp_err_description(err)),
+            KafkaError::MessageProduction(err) => write!(f, "KafkaError (Message production error: {})", resp_err_description(err)),
+            KafkaError::MetadataFetch(err) => write!(f, "KafkaError (Metadata fetch error: {})", resp_err_description(err)),
+            KafkaError::Nul(_) => write!(f, "KafkaError (FFI nul error)"),
+            KafkaError::Subscription(ref err) => write!(f, "KafkaError (Subscription error: {})", err),
+            KafkaError::TopicConfig(ref err) => write!(f, "KafkaError (Topic config error: {} {} {})", err.1, err.2, err.3),
+            KafkaError::TopicCreation(ref err) => write!(f, "KafkaError (Topic creation error: {})", err),
+            KafkaError::PartitionEof => write!(f, "KafkaError (Partition Eof error)")
+        }
+    }
+}
+
+impl std::fmt::Display for KafkaError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            KafkaError::ClientConfig(ref err) => write!(f, "Client config error: {} {} {}", err.1, err.2, err.3),
+            KafkaError::ClientCreation(ref err) => write!(f, "Client creation error: {}", err),
+            KafkaError::ConsumerCreation(ref err) => write!(f, "Consumer creation error: {}", err),
+            KafkaError::MessageConsumption(err) => write!(f, "Message consumption error: {}", resp_err_description(err)),
+            KafkaError::MessageProduction(err) => write!(f, "Message production error: {}", resp_err_description(err)),
+            KafkaError::MetadataFetch(err) => write!(f, "Meta data fetch error: {}", resp_err_description(err)),
+            KafkaError::Nul(_) => write!(f, "FFI nul error"),
+            KafkaError::Subscription(ref err) => write!(f, "Subscription error: {}", err),
+            KafkaError::TopicConfig(ref err) => write!(f, "Topic config error: {} {} {}", err.1, err.2, err.3),
+            KafkaError::TopicCreation(ref err) => write!(f, "Topic creation error: {}", err),
+            KafkaError::PartitionEof => write!(f, "Partition Eof error")
+        }
+    }
+}
+
+impl std::error::Error for KafkaError {
+    fn description(&self) -> &str {
+        match *self {
+            KafkaError::ClientConfig(_) => "Client config error",
+            KafkaError::ClientCreation(_) => "Client creation error",
+            KafkaError::ConsumerCreation(_) => "Consumer creation error",
+            KafkaError::MessageConsumption(_) => "Message consumption error",
+            KafkaError::MessageProduction(_) => "Message production error",
+            KafkaError::MetadataFetch(_) => "Meta data fetch error",
+            KafkaError::Nul(_) => "FFI nul error",
+            KafkaError::Subscription(_) => "Subscription error",
+            KafkaError::TopicConfig(_) => "Topic config error",
+            KafkaError::TopicCreation(_) => "Topic creation error",
+            KafkaError::PartitionEof => "Partition Eof error"
+        }
+    }
+
+    fn cause(&self) -> Option<&std::error::Error> {
+        match *self {
+            KafkaError::Nul(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
 impl From<std::ffi::NulError> for KafkaError {
     fn from(err: std::ffi::NulError) -> KafkaError {
         KafkaError::Nul(err)
+    }
+}
+
+fn resp_err_description(err: RDKafkaRespErr) -> String {
+    unsafe {
+        cstr_to_owned(rdkafka::rd_kafka_err2str(err))
     }
 }
