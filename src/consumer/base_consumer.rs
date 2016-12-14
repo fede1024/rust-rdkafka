@@ -109,12 +109,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Commits the current message. The commit can be synk (blocking), or async.
     pub fn commit_message(&self, message: &Message, mode: CommitMode) {
-        let async = match mode {
-            CommitMode::Sync => 0,
-            CommitMode::Async => 1,
-        };
-
-        unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), async) };
+        unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
     }
 
     /// Returns the metadata information of the entire cluster for all the topics in the cluster.

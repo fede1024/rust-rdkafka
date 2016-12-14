@@ -106,9 +106,9 @@ unsafe extern "C" fn rebalance_cb<C: ConsumerContext>(rk: *mut RDKafka,
 /// or asynchronously.
 pub enum CommitMode {
     /// Synchronous commit.
-    Sync,
+    Sync = 0,
     /// Asynchronous commit.
-    Async,
+    Async = 1,
 }
 
 /// Common trait for all consumers
