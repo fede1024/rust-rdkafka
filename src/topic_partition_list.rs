@@ -7,6 +7,7 @@ use std::ffi::CString;
 use std::ops::Deref;
 use std::slice;
 
+use error::IsError;
 use util::cstr_to_owned;
 
 use self::rdkafka::types::*;
@@ -15,7 +16,8 @@ use self::rdkafka::types::*;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Partition {
     pub partition: i32,
-    pub offset: i64
+    pub offset: i64,
+    pub error: Option<RDKafkaRespErr>
 }
 
 /// A map of topic names to partitions.
@@ -43,7 +45,12 @@ impl TopicPartitionList {
                     Some(ref mut p) => {
                         p.push(Partition {
                             partition: tp.partition,
-                            offset: tp.offset
+                            offset: tp.offset,
+                            error: if tp.err.is_error() {
+                                Some(tp.err)
+                            } else {
+                                None
+                            }
                         });
                     },
                     None => ()
@@ -81,7 +88,7 @@ impl TopicPartitionList {
 
     /// Add topic with partitions configured
     pub fn add_topic_with_partitions(&mut self, topic: &str, partitions: &Vec<i32>) {
-        let partitions_configs: Vec<Partition> = partitions.iter().map(|p| Partition { partition: *p, offset: -1001 } ).collect();
+        let partitions_configs: Vec<Partition> = partitions.iter().map(|p| Partition { partition: *p, offset: -1001, error: None } ).collect();
         self.topics.insert(topic.to_string(), Some(partitions_configs));
     }
 

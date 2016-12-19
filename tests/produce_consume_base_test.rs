@@ -67,6 +67,11 @@ fn test_produce_consume_base() {
         }
     }).collect();
 
+    // Pause and resume
+    consumer.pause(&vec!["produce_consume_base"]);
+    consumer.resume(&vec!["produce_consume_base"]);
+
+    // See if we have valid messages
     for i in 0..5 {
         match messages.get(i) {
             Some(ref message) => {

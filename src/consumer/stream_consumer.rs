@@ -17,7 +17,7 @@ use message::Message;
 
 use consumer::{Consumer, ConsumerContext, EmptyConsumerContext};
 use consumer::base_consumer::BaseConsumer;
-
+use topic_partition_list::TopicPartitionList;
 
 /// A Consumer with an associated polling thread. This consumer doesn't need to
 /// be polled and it will return all consumed messages as a `Stream`.
@@ -84,6 +84,18 @@ impl<C: ConsumerContext> StreamConsumer<C> {
                 Err(e) => warn!("Failure while terminating thread: {:?}", e),
             };
         }
+    }
+
+    /// Pause consuming of this consumer for given topics. Success or error is returned per-partition in the partitions list.
+    pub fn pause(&self, topics: &Vec<&str>) -> TopicPartitionList {
+        trace!("Pausing consumer");
+        self.consumer.pause(topics)
+    }
+
+    /// Resume consuming of this consumer for given topics. Success or error is returned per-partition in the partitions list.
+    pub fn resume(&self, topics: &Vec<&str>) -> TopicPartitionList {
+        trace!("Resuming consumer");
+        self.consumer.resume(topics)
     }
 }
 

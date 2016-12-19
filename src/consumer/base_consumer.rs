@@ -81,6 +81,24 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         Ok(())
     }
 
+    /// Pause consuming of this consumer for given topics. Success or error is returned per-partition in the partitions list.
+    pub fn pause(&self, topics: &Vec<&str>) -> TopicPartitionList {
+        let tp_list = TopicPartitionList::with_topics(topics).create_native_topic_partition_list();
+        unsafe { rdkafka::rd_kafka_pause_partitions(self.client.native_ptr(), tp_list) };
+        let out_list = TopicPartitionList::from_rdkafka(tp_list);
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        out_list
+    }
+
+    /// Resume consuming of this consumer for given topics. Success or error is returned per-partition in the partitions list.
+    pub fn resume(&self, topics: &Vec<&str>) -> TopicPartitionList {
+        let tp_list = TopicPartitionList::with_topics(topics).create_native_topic_partition_list();
+        unsafe { rdkafka::rd_kafka_resume_partitions(self.client.native_ptr(), tp_list) };
+        let out_list = TopicPartitionList::from_rdkafka(tp_list);
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        out_list
+    }
+
     /// Returns a list of topics or topic patterns the consumer is subscribed to.
     pub fn get_subscriptions(&self) -> TopicPartitionList {
         let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };

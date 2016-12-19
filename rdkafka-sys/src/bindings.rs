@@ -976,7 +976,7 @@ pub enum rd_kafka_queue_s { }
 pub type rd_kafka_queue_t = rd_kafka_queue_s;
 #[derive(Copy, Clone)]
 #[repr(i32)]
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__BEGIN = -200,
     RD_KAFKA_RESP_ERR__BAD_MSG = -199,
