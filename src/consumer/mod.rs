@@ -130,14 +130,14 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer_mut().assign(assignment)
     }
 
-    /// Pause consuming of this consumer for given topics. Success or error is returned per-partition in the partitions list.
-    fn pause(&self, topics: &Vec<&str>) -> TopicPartitionList {
-        self.get_base_consumer().pause(topics)
+    /// Pause consuming of this consumer.
+    fn pause(&self) {
+        self.get_base_consumer().pause()
     }
 
-    /// Resume consuming of this consumer for given topics. Success or error is returned per-partition in the partitions list.
-    fn resume(&self, topics: &Vec<&str>) -> TopicPartitionList {
-        self.get_base_consumer().resume(topics)
+    /// Resume consuming of this consumer.
+    fn resume(&self) {
+        self.get_base_consumer().resume()
     }
 
     /// Commit a specific message. If mode is set to CommitMode::Sync,

@@ -61,15 +61,14 @@ fn test_produce_consume_base() {
         match message {
             Ok(m) => {
                 consumer.commit_message(&m, CommitMode::Async);
+                // Pause and resume
+                consumer.pause();
+                consumer.resume();
                 m
             },
             Err(e) => panic!("Error receiving message: {:?}", e)
         }
     }).collect();
-
-    // Pause and resume
-    consumer.pause(&vec!["produce_consume_base"]);
-    consumer.resume(&vec!["produce_consume_base"]);
 
     // See if we have valid messages
     for i in 0..5 {
