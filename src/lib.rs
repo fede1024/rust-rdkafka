@@ -100,6 +100,10 @@
 #[macro_use]
 extern crate log;
 
+extern crate rdkafka_sys;
+
+pub use rdkafka_sys::types as types;
+
 pub mod client;
 pub mod config;
 pub mod consumer;
