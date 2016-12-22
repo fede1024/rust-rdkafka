@@ -47,7 +47,7 @@ fn test_produce_consume_base() {
     let futures = (0..5)
         .map(|i| {
             let value = format!("Message {}", i);
-            producer.send_copy(&topic, None, Some(&value), Some(&vec![0, 1, 2, 3]))
+            topic.send_copy(None, Some(&value), Some(&vec![0, 1, 2, 3]))
                 .expect("Production failed")
         })
         .collect::<Vec<_>>();

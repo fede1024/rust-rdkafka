@@ -1,7 +1,6 @@
 //! Common client funcionalities.
 extern crate rdkafka_sys as rdkafka;
 
-use std::ffi::CString;
 use std::os::raw::c_void;
 use std::ptr;
 
@@ -9,10 +8,9 @@ use log::LogLevel;
 
 use self::rdkafka::types::*;
 
-use config::TopicConfig;
 use metadata::Metadata;
 use error::{IsError, KafkaError, KafkaResult};
-use util::{bytes_cstr_to_owned, cstr_to_owned};
+use util::bytes_cstr_to_owned;
 
 
 /// A Context is an object that can store user-defined data and on which callbacks can be
@@ -141,7 +139,7 @@ mod tests {
     // is tested in the integrations tests.
 
     extern crate rdkafka_sys as rdkafka;
-    use config::{ClientConfig,TopicConfig};
+    use config::ClientConfig;
     use self::rdkafka::types::*;
     use super::*;
 
@@ -150,14 +148,5 @@ mod tests {
         let config_ptr = ClientConfig::new().create_native_config().unwrap();
         let client = Client::new(config_ptr, RDKafkaType::RD_KAFKA_PRODUCER, EmptyContext::new()).unwrap();
         assert!(!client.native_ptr().is_null());
-    }
-
-    #[test]
-    fn test_topic() {
-        let config_ptr = ClientConfig::new().create_native_config().unwrap();
-        let client = Client::new(config_ptr, RDKafkaType::RD_KAFKA_CONSUMER, EmptyContext::new()).unwrap();
-        let topic = Topic::new(&client, "topic_name", &TopicConfig::new()).unwrap();
-        assert_eq!(topic.get_name(), "topic_name");
-        assert!(!topic.ptr().is_null());
     }
 }

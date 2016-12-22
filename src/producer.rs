@@ -7,7 +7,7 @@ use self::rdkafka::types::*;
 
 use std::os::raw::c_void;
 use std::ptr;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::thread;
@@ -44,16 +44,9 @@ impl ProducerContext for EmptyProducerContext {
     fn delivery(&self, _: DeliveryStatus, _: Self::DeliveryContext) { }
 }
 
-/// Contains a reference counted producer client. It can be safely cloned to
-/// create another reference to the same producer.
+/// Contains a reference counted producer client.
 pub struct BaseProducer<C: ProducerContext> {
     client: Arc<Client<C>>,
-}
-
-impl<C: ProducerContext> Clone for BaseProducer<C> {
-    fn clone(&self) -> BaseProducer<C> {
-        BaseProducer { client: self.client.clone() }
-    }
 }
 
 #[derive(Debug)]
@@ -130,15 +123,17 @@ impl<C: ProducerContext> BaseProducer<C> {
         unsafe { rdkafka::rd_kafka_poll(self.client.native_ptr(), timeout_ms) }
     }
 
-    pub fn client(&self) -> &Client<C> {
-        self.client.as_ref()
+    fn client(&self) -> &Arc<Client<C>> {
+        &self.client
     }
 }
 
 /// Represents a Kafka topic with an associated BaseProducer.
 pub struct ProducerTopic<C: ProducerContext> {
     ptr: *mut RDKafkaTopic,
-    producer: BaseProducer<C>,
+    // A producer client cannot outlive the client it was created from.
+    #[allow(dead_code)]
+    client: Arc<Client<C>>,
 }
 
 impl<C: ProducerContext> ProducerTopic<C> {
@@ -152,7 +147,7 @@ impl<C: ProducerContext> ProducerTopic<C> {
         } else {
             let topic = ProducerTopic {
                 ptr: topic_ptr,
-                producer: producer.clone(),
+                client: producer.client().clone(),
             };
             Ok(topic)
         }
@@ -242,14 +237,12 @@ impl<C: ProducerContext> ProducerContext for FutureProducerContext<C> {
 
 /// A producer with an internal running thread. This producer doesn't neeed to be polled.
 /// The internal thread can be terminated with the `stop` method or moving the
-/// `ProducerPollingThread` out of scope. The FutureProducer can be cheaply cloned
-/// to create a new reference to the same producer.
+/// `ProducerPollingThread` out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-#[derive(Clone)]
 pub struct FutureProducer<C: ProducerContext + 'static> {
-    producer: BaseProducer<FutureProducerContext<C>>,
+    producer: Arc<BaseProducer<FutureProducerContext<C>>>,
     should_stop: Arc<AtomicBool>,
-    handle: Arc<RwLock<Option<JoinHandle<()>>>>,
+    handle: Option<JoinHandle<()>>,
 }
 
 impl FromClientConfig for FutureProducer<EmptyProducerContext> {
@@ -261,10 +254,11 @@ impl FromClientConfig for FutureProducer<EmptyProducerContext> {
 impl<C: ProducerContext> FromClientConfigAndContext<C> for FutureProducer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
         let future_producer_context = FutureProducerContext{_inner_context: context} ;
+        let base_producer = try!(BaseProducer::from_config_and_context(config, future_producer_context));
         let future_producer = FutureProducer {
-            producer: try!(BaseProducer::from_config_and_context(config, future_producer_context)),
+            producer: Arc::new(base_producer),
             should_stop: Arc::new(AtomicBool::new(false)),
-            handle: Arc::new(RwLock::new(None)),
+            handle: None,
         };
         Ok(future_producer)
     }
@@ -313,29 +307,21 @@ impl<C: ProducerContext> FutureProducer<C> {
                  trace!("Polling thread loop terminated");
             })
             .expect("Failed to start polling thread");
-        match self.handle.write() {
-            Ok(mut handle_ref) => *handle_ref = Some(handle),
-            Err(_) => panic!("Poison error"),
-        };
+        self.handle = Some(handle);
     }
 
     /// Stops the internal polling thread. The thread can also be stopped by moving
     /// the ProducerPollingThread out of scope.
     pub fn stop(&mut self) {
-        match self.handle.write() {
-            Ok(mut handle) => {
-                if handle.is_some() {
-                    trace!("Stopping polling");
-                    self.should_stop.store(true, Ordering::Relaxed);
-                    trace!("Waiting for polling thread termination");
-                    match handle.take().unwrap().join() {
-                        Ok(()) => trace!("Polling stopped"),
-                        Err(e) => warn!("Failure while terminating thread: {:?}", e),
-                    };
-                }
-            },
-            Err(_) => {},
-        };
+        if self.handle.is_some() {
+            trace!("Stopping polling");
+            self.should_stop.store(true, Ordering::Relaxed);
+            trace!("Waiting for polling thread termination");
+            match self.handle.take().unwrap().join() {
+                Ok(()) => trace!("Polling stopped"),
+                Err(e) => warn!("Failure while terminating thread: {:?}", e),
+            };
+        }
     }
 }
 
@@ -369,5 +355,20 @@ impl<C: ProducerContext> Drop for FutureProducer<C> {
     fn drop(&mut self) {
         trace!("Destroy ProducerPollingThread");
         self.stop();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // Just call everything to test there no panics by default, behavior
+    // is tested in the integrations tests.
+    use super::*;
+
+    #[test]
+    fn test_topic() {
+        let producer = ClientConfig::new().create::<BaseProducer<_>>().unwrap();
+        let producer_topic = producer.get_topic("topic_name", &TopicConfig::new()).unwrap();
+        assert_eq!(producer_topic.get_name(), "topic_name");
+        assert!(!producer_topic.ptr().is_null());
     }
 }
