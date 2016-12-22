@@ -14,7 +14,7 @@ mod example_utils;
 use example_utils::setup_logger;
 
 fn produce(brokers: &str, topic_name: &str) {
-    let mut producer = ClientConfig::new()
+    let producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create::<FutureProducer<_>>()
         .expect("Producer creation error");
