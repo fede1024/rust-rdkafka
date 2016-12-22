@@ -135,7 +135,7 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 }
 
-/// Represents a Kafka topic with an associated producer.
+/// Represents a Kafka topic with an associated BaseProducer.
 pub struct ProducerTopic<C: ProducerContext> {
     ptr: *mut RDKafkaTopic,
     producer: BaseProducer<C>,
@@ -204,6 +204,9 @@ impl<C: ProducerContext> ProducerTopic<C> {
         }
     }
 
+    /// Sends a copy of the payload and key provided to the specified topic. When no partition is
+    /// specified the underlying Kafka library picks a partition based on the key. If no key is
+    /// specified, a random partition will be used.
     pub fn send_copy<P, K>(&self, partition: Option<i32>, payload: Option<&P>, key: Option<&K>, delivery_context: Option<Box<C::DeliveryContext>>) -> KafkaResult<()>
         where K: ToBytes,
               P: ToBytes {
@@ -240,7 +243,7 @@ impl<C: ProducerContext> ProducerContext for FutureProducerContext<C> {
 /// A producer with an internal running thread. This producer doesn't neeed to be polled.
 /// The internal thread can be terminated with the `stop` method or moving the
 /// `ProducerPollingThread` out of scope. The FutureProducer can be cheaply cloned
-/// to create a reference to the same producer.
+/// to create a new reference to the same producer.
 #[must_use = "Producer polling thread will stop immediately if unused"]
 #[derive(Clone)]
 pub struct FutureProducer<C: ProducerContext + 'static> {
@@ -336,6 +339,7 @@ impl<C: ProducerContext> FutureProducer<C> {
     }
 }
 
+/// A topic with associated FutureProducer.
 pub struct FutureProducerTopic<C: ProducerContext> {
     inner: ProducerTopic<FutureProducerContext<C>>
 }
