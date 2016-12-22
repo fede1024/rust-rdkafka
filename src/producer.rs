@@ -25,8 +25,8 @@ use util::cstr_to_owned;
 /// A ProducerContext is a Context specific for producers. It can be used to store user-specified
 /// callbacks, such as `delivery`.
 pub trait ProducerContext: Context {
-    /// A DeliveryContext is a user-defined structure that will be passed to the base producer when
-    /// producing a message. The base producer will call the `received` method on this data once the
+    /// A DeliveryContext is a user-defined structure that will be passed to the producer when
+    /// producing a message. The producer will call the `received` method on this data once the
     /// associated message has been processed correctly.
     type DeliveryContext: Send + Sync;
 
@@ -35,6 +35,7 @@ pub trait ProducerContext: Context {
     fn delivery(&self, DeliveryStatus, Self::DeliveryContext);
 }
 
+/// Simple empty producer context that can be use when the producer context is not required.
 pub struct EmptyProducerContext;
 
 impl Context for EmptyProducerContext { }
@@ -89,10 +90,9 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(_client: *mut RDKafka, msg:
     (*context).delivery(delivery_status, (*delivery_context))
 }
 
-// pub trait Producer {
-//     type Context: ProducerContext;
-//     fn native_ptr(&self) -> *mut RDKafka;
-// }
+//
+// ********** BASE PRODUCER **********
+//
 
 /// The BaseProducer implementation.
 struct _BaseProducer<C: ProducerContext> {
@@ -108,7 +108,10 @@ impl<C: ProducerContext> _BaseProducer<C> {
     }
 }
 
-/// Contains a reference counted producer client.
+/// Simple Kafka producer. This producer needs to be `poll`ed at regular intervals in order to
+/// make progress with the processing of Kafka events. This producer can be cheaply cloned to
+/// create a new reference to the same underlying producer. Data production should be done using the
+/// `BaseProducerTopic`, that can be created from this producer.
 pub struct BaseProducer<C: ProducerContext> {
     inner: Arc<_BaseProducer<C>>,
 }
@@ -120,13 +123,14 @@ impl<C: ProducerContext> Clone for BaseProducer<C> {
 }
 
 impl FromClientConfig for BaseProducer<EmptyProducerContext> {
+    /// Creates a new `BaseProducer` starting from a configuration.
     fn from_config(config: &ClientConfig) -> KafkaResult<BaseProducer<EmptyProducerContext>> {
         BaseProducer::from_config_and_context(config, EmptyProducerContext)
     }
 }
 
-/// Creates a new `BaseProducer` starting from a ClientConfig.
 impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
+    /// Creates a new `BaseProducer` starting from a configuration and a context.
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseProducer<C>> {
         let inner = try!(_BaseProducer::new(config, context));
         let producer = BaseProducer {
@@ -135,14 +139,6 @@ impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
         Ok(producer)
     }
 }
-
-// impl<C: ProducerContext> Producer for BaseProducer<C> {
-//     type Context = C;
-// 
-//     fn native_ptr(&self) -> *mut RDKafka {
-//         self.inner.client.native_ptr()
-//     }
-// }
 
 impl<C: ProducerContext> BaseProducer<C> {
     /// Returns a topic associated to the producer
@@ -162,8 +158,11 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 }
 
+/// Given a pointer to a Kafka client, a topic name and a topic configuration, returns a new
+/// RDKafkaTopic created by the given client. The returned RDKafkaTopic should not outlive
+/// the client it was created from.
 unsafe fn create_native_topic(client: *mut RDKafka, name: &str, topic_config_ptr: *mut RDKafkaTopicConf)
-    -> KafkaResult<*mut RDKafkaTopic> {
+        -> KafkaResult<*mut RDKafkaTopic> {
     let name_ptr = CString::new(name.to_string()).unwrap(); // TODO: remove unwrap
     let topic_ptr = rdkafka::rd_kafka_topic_new(client, name_ptr.as_ptr(), topic_config_ptr);
     if topic_ptr.is_null() {
@@ -173,12 +172,13 @@ unsafe fn create_native_topic(client: *mut RDKafka, name: &str, topic_config_ptr
     }
 }
 
-fn topic_send_copy<C: ProducerContext>(topic: *mut RDKafkaTopic,
-                                       partition: Option<i32>,
-                                       payload: Option<&[u8]>,
-                                       key: Option<&[u8]>,
-                                       delivery_context: Option<Box<C::DeliveryContext>>)
-    -> KafkaResult<()> {
+/// Given a pointer to a RDKafkaTopic, sends the provided data to the specified topic.
+fn topic_send_copy<T>(topic: *mut RDKafkaTopic,
+                      partition: Option<i32>,
+                      payload: Option<&[u8]>,
+                      key: Option<&[u8]>,
+                      delivery_context: Option<Box<T>>)
+        -> KafkaResult<()> {
     let (payload_ptr, payload_len) = match payload {
         None => (ptr::null_mut(), 0),
         Some(p) => (p.as_ptr() as *mut c_void, p.len()),
@@ -246,8 +246,13 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
     pub fn send_copy<P, K>(&self, partition: Option<i32>, payload: Option<&P>, key: Option<&K>, delivery_context: Option<Box<C::DeliveryContext>>) -> KafkaResult<()>
         where K: ToBytes,
               P: ToBytes {
-        topic_send_copy::<C>(self.ptr, partition, payload.map(P::to_bytes), key.map(K::to_bytes), delivery_context)
-    }
+        topic_send_copy::<C::DeliveryContext>(
+            self.ptr,
+            partition,
+            payload.map(P::to_bytes),
+            key.map(K::to_bytes),
+            delivery_context)
+        }
 }
 
 impl<C: ProducerContext> Drop for BaseProducerTopic<C> {
@@ -259,96 +264,9 @@ impl<C: ProducerContext> Drop for BaseProducerTopic<C> {
     }
 }
 
-// /// Represents a Kafka topic with an associated BaseProducer.
-// pub struct ProducerTopic<P: Producer> {
-//     ptr: *mut RDKafkaTopic,
-//     // A producer client cannot outlive the client it was created from.
-//     #[allow(dead_code)]
-//     producer: P,
-// }
-// 
-// impl<P: Producer> ProducerTopic<P> {
-//     /// Creates the ProducerTopic.
-//     pub fn new(producer: P, name: &str, topic_config: &TopicConfig)
-//             -> KafkaResult<ProducerTopic<P>> {
-//         let name_ptr = CString::new(name.to_string()).unwrap();
-//         let config_ptr = try!(topic_config.create_native_config());
-//         let topic_ptr = unsafe { rdkafka::rd_kafka_topic_new(producer.native_ptr(), name_ptr.as_ptr(), config_ptr) };
-//         if topic_ptr.is_null() {
-//             Err(KafkaError::TopicCreation(name.to_string()))
-//         } else {
-//             let topic = ProducerTopic {
-//                 ptr: topic_ptr,
-//                 producer: producer,
-//             };
-//             Ok(topic)
-//         }
-//     }
-// 
-//     /// Get topic's name
-//     pub fn get_name(&self) -> String {
-//         unsafe {
-//             cstr_to_owned(rdkafka::rd_kafka_topic_name(self.ptr))
-//         }
-//     }
-// 
-//     /// Returns a pointer to the correspondent rdkafka `RDKafkaTopic` struct.
-//     pub fn ptr(&self) -> *mut RDKafkaTopic {
-//         self.ptr
-//     }
-// 
-//     fn _send_copy(&self, partition: Option<i32>, payload: Option<&[u8]>, key: Option<&[u8]>, delivery_context: Option<Box<<P::Context as ProducerContext>::DeliveryContext>>) -> KafkaResult<()> {
-//         let (payload_ptr, payload_len) = match payload {
-//             None => (ptr::null_mut(), 0),
-//             Some(p) => (p.as_ptr() as *mut c_void, p.len()),
-//         };
-//         let (key_ptr, key_len) = match key {
-//             None => (ptr::null_mut(), 0),
-//             Some(k) => (k.as_ptr() as *mut c_void, k.len()),
-//         };
-//         let delivery_context_ptr = match delivery_context {
-//             Some(context) => Box::into_raw(context) as *mut c_void,
-//             None => ptr::null_mut(),
-//         };
-//         let produce_response = unsafe {
-//             rdkafka::rd_kafka_produce(
-//                 self.ptr(),
-//                 partition.unwrap_or(-1),
-//                 rdkafka::RD_KAFKA_MSG_F_COPY as i32,
-//                 payload_ptr,
-//                 payload_len,
-//                 key_ptr,
-//                 key_len,
-//                 delivery_context_ptr,
-//             )
-//         };
-//         if produce_response != 0 {
-//             let errno = errno::errno().0 as i32;
-//             let kafka_error = unsafe { rdkafka::rd_kafka_errno2err(errno) };
-//             Err(KafkaError::MessageProduction(kafka_error))
-//         } else {
-//             Ok(())
-//         }
-//     }
-// 
-//     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
-//     /// specified the underlying Kafka library picks a partition based on the key. If no key is
-//     /// specified, a random partition will be used.
-//     pub fn send_copy<V, K>(&self, partition: Option<i32>, payload: Option<&V>, key: Option<&K>, delivery_context: Option<Box<<P::Context as ProducerContext>::DeliveryContext>>) -> KafkaResult<()>
-//         where K: ToBytes,
-//               V: ToBytes {
-//         self._send_copy(partition, payload.map(V::to_bytes), key.map(K::to_bytes), delivery_context)
-//     }
-// }
-// 
-// impl<P: Producer> Drop for ProducerTopic<P> {
-//     fn drop(&mut self) {
-//         trace!("Destroy rd_kafka_topic");
-//         unsafe {
-//             rdkafka::rd_kafka_topic_destroy(self.ptr);
-//         }
-//     }
-// }
+//
+// ********** FUTURE PRODUCER **********
+//
 
 /// The ProducerContext used by the FutureProducer. This context will use a Future as its
 /// DeliveryContext and will complete the future when the message is delivered (or failed to). All
@@ -439,14 +357,6 @@ impl<C: ProducerContext> Clone for FutureProducer<C> {
     }
 }
 
-// impl<C: ProducerContext> Producer for FutureProducer<C> {
-//     type Context = FutureProducerContext<C>;
-// 
-//     fn native_ptr(&self) -> *mut RDKafka {
-//         self.inner.producer.native_ptr()
-//     }
-// }
-
 impl FromClientConfig for FutureProducer<EmptyProducerContext> {
     fn from_config(config: &ClientConfig) -> KafkaResult<FutureProducer<EmptyProducerContext>> {
         FutureProducer::from_config_and_context(config, EmptyProducerContext)
@@ -530,7 +440,7 @@ impl<C: ProducerContext> FutureProducerTopic<C> {
         where K: ToBytes,
               P: ToBytes {
         let (tx, rx) = futures::oneshot();
-        try!(topic_send_copy::<FutureProducerContext<C>>(
+        try!(topic_send_copy::<Complete<DeliveryStatus>>(
                 self.ptr,
                 partition,
                 payload.map(P::to_bytes),
