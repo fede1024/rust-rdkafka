@@ -25,6 +25,7 @@ fn produce(brokers: &str, topic_name: &str) {
 
     producer.start();
 
+    // The ProducerTopic represents a topic ready for production.
     let topic = producer.get_topic(topic_name, &topic_config)
         .expect("Topic creation error");
 
