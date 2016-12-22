@@ -134,50 +134,6 @@ impl<C: Context> Drop for Client<C> {
     }
 }
 
-/// Represents a Kafka topic with an associated producer.
-pub struct Topic<'a, C: Context + 'a> {
-    ptr: *mut RDKafkaTopic,
-    _client: &'a Client<C>,
-}
-
-impl<'a, C: Context> Topic<'a, C> {
-    /// Creates the Topic.
-    pub fn new(client: &'a Client<C>, name: &str, topic_config: &TopicConfig) -> KafkaResult<Topic<'a, C>> {
-        let name_ptr = CString::new(name.to_string()).unwrap();
-        let config_ptr = try!(topic_config.create_native_config());
-        let topic_ptr = unsafe { rdkafka::rd_kafka_topic_new(client.native.ptr, name_ptr.as_ptr(), config_ptr) };
-        if topic_ptr.is_null() {
-            Err(KafkaError::TopicCreation(name.to_string()))
-        } else {
-            let topic = Topic {
-                ptr: topic_ptr,
-                _client: client,
-            };
-            Ok(topic)
-        }
-    }
-
-    /// Get topic's name
-    pub fn get_name(&self) -> String {
-        unsafe {
-            cstr_to_owned(rdkafka::rd_kafka_topic_name(self.ptr))
-        }
-    }
-
-    /// Returns a pointer to the correspondent rdkafka `RDKafkaTopic` stuct.
-    pub fn ptr(&self) -> *mut RDKafkaTopic {
-        self.ptr
-    }
-}
-
-impl<'a, C: Context> Drop for Topic<'a, C> {
-    fn drop(&mut self) {
-        trace!("Destroy rd_kafka_topic");
-        unsafe {
-            rdkafka::rd_kafka_topic_destroy(self.ptr);
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

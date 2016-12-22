@@ -25,6 +25,7 @@ fn produce(brokers: &str, topic_name: &str) {
 
     producer.start();
 
+    // The ProducerTopic represents a topic ready for production.
     let topic = producer.get_topic(topic_name, &topic_config)
         .expect("Topic creation error");
 
@@ -35,7 +36,7 @@ fn produce(brokers: &str, topic_name: &str) {
             let value = format!("Message {}", i);
             // The send operation on the producer returns a future, that will be completed once the
             // result or failure from Kafka will be received.
-            producer.send_copy(&topic, None, Some(&value), Some(&vec![0, 1, 2, 3]))
+            topic.send_copy(None, Some(&value), Some(&vec![0, 1, 2, 3]))
                 .expect("Production failed")
                 .map(move |delivery_status| {   // This will be executed onw the result is received
                     info!("Delivery status for message {} received", i);

@@ -1,6 +1,5 @@
 extern crate log;
 extern crate env_logger;
-extern crate futures;
 
 use std::thread;
 use self::log::{LogRecord, LogLevelFilter};

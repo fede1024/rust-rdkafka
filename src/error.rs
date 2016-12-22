@@ -110,7 +110,7 @@ impl From<std::ffi::NulError> for KafkaError {
     }
 }
 
-fn resp_err_description(err: RDKafkaRespErr) -> String {
+pub fn resp_err_description(err: RDKafkaRespErr) -> String {
     unsafe {
         cstr_to_owned(rdkafka::rd_kafka_err2str(err))
     }
