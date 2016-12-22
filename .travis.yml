@@ -1,4 +1,9 @@
 language: rust
+
+rust:
+  - stable
+  - nightly
+
 script:
   - cargo build --verbose
   - cargo test --lib --verbose

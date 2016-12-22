@@ -363,6 +363,7 @@ mod tests {
     // Just call everything to test there no panics by default, behavior
     // is tested in the integrations tests.
     use super::*;
+    use config::{ClientConfig, TopicConfig};
 
     #[test]
     fn test_topic() {
