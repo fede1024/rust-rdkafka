@@ -158,22 +158,54 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 }
 
+struct NativeTopic {
+    ptr: *mut RDKafkaTopic,
+}
+
+unsafe impl Send for NativeTopic {}
+unsafe impl Sync for NativeTopic {}
+
+impl NativeTopic {
+    fn new(ptr: *mut RDKafkaTopic) -> NativeTopic {
+        NativeTopic { ptr: ptr }
+    }
+
+    fn ptr(&self) -> *mut RDKafkaTopic {
+        self.ptr
+    }
+
+    fn name(&self) -> String {
+        unsafe {
+            cstr_to_owned(rdkafka::rd_kafka_topic_name(self.ptr))
+        }
+    }
+}
+
+impl Drop for NativeTopic {
+    fn drop(&mut self) {
+        trace!("Destroy rd_kafka_topic");
+        unsafe {
+            rdkafka::rd_kafka_topic_destroy(self.ptr);
+        }
+    }
+}
+
 /// Given a pointer to a Kafka client, a topic name and a topic configuration, returns a new
 /// RDKafkaTopic created by the given client. The returned RDKafkaTopic should not outlive
 /// the client it was created from.
 unsafe fn create_native_topic(client: *mut RDKafka, name: &str, topic_config_ptr: *mut RDKafkaTopicConf)
-        -> KafkaResult<*mut RDKafkaTopic> {
+        -> KafkaResult<NativeTopic> {
     let name_ptr = CString::new(name.to_string()).unwrap(); // TODO: remove unwrap
     let topic_ptr = rdkafka::rd_kafka_topic_new(client, name_ptr.as_ptr(), topic_config_ptr);
     if topic_ptr.is_null() {
         Err(KafkaError::TopicCreation(name.to_owned()))
     } else {
-        Ok(topic_ptr)
+        Ok(NativeTopic::new(topic_ptr))
     }
 }
 
 /// Given a pointer to a RDKafkaTopic, sends the provided data to the specified topic.
-fn topic_send_copy<T>(topic: *mut RDKafkaTopic,
+fn topic_send_copy<T>(native_topic: &NativeTopic,
                       partition: Option<i32>,
                       payload: Option<&[u8]>,
                       key: Option<&[u8]>,
@@ -193,7 +225,7 @@ fn topic_send_copy<T>(topic: *mut RDKafkaTopic,
     };
     let produce_response = unsafe {
         rdkafka::rd_kafka_produce(
-            topic,
+            native_topic.ptr(),
             partition.unwrap_or(-1),
             rdkafka::RD_KAFKA_MSG_F_COPY as i32,
             payload_ptr,
@@ -214,7 +246,7 @@ fn topic_send_copy<T>(topic: *mut RDKafkaTopic,
 
 /// Represents a Kafka topic with an associated BaseProducer.
 pub struct BaseProducerTopic<C: ProducerContext> {
-    ptr: *mut RDKafkaTopic,
+    native_topic: NativeTopic,
     // A producer topic cannot outlive the client it was created from.
     #[allow(dead_code)]
     producer: BaseProducer<C>,
@@ -225,19 +257,17 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
     pub fn new(producer: BaseProducer<C>, name: &str, topic_config: &TopicConfig)
             -> KafkaResult<BaseProducerTopic<C>> {
         let config_ptr = try!(topic_config.create_native_config());
-        let topic_ptr = try!(unsafe { create_native_topic(producer.inner.client.native_ptr(), name, config_ptr) });
-        let topic = BaseProducerTopic {
-            ptr: topic_ptr,
+        let native_topic = try!(unsafe { create_native_topic(producer.inner.client.native_ptr(), name, config_ptr) });
+        let producer_topic = BaseProducerTopic {
+            native_topic: native_topic,
             producer: producer.clone(),
         };
-        Ok(topic)
+        Ok(producer_topic)
     }
 
     /// Get topic's name
     pub fn get_name(&self) -> String {
-        unsafe {
-            cstr_to_owned(rdkafka::rd_kafka_topic_name(self.ptr))
-        }
+        self.native_topic.name()
     }
 
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
@@ -247,21 +277,12 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
         where K: ToBytes,
               P: ToBytes {
         topic_send_copy::<C::DeliveryContext>(
-            self.ptr,
+            &self.native_topic,
             partition,
             payload.map(P::to_bytes),
             key.map(K::to_bytes),
             delivery_context)
         }
-}
-
-impl<C: ProducerContext> Drop for BaseProducerTopic<C> {
-    fn drop(&mut self) {
-        trace!("Destroy rd_kafka_topic");
-        unsafe {
-            rdkafka::rd_kafka_topic_destroy(self.ptr);
-        }
-    }
 }
 
 //
@@ -415,7 +436,7 @@ impl<C: ProducerContext> FutureProducer<C> {
 
 /// Represents a Kafka topic with an associated FutureProducer.
 pub struct FutureProducerTopic<C: ProducerContext + 'static> {
-    ptr: *mut RDKafkaTopic,
+    native_topic: NativeTopic,
     // A producer topic cannot outlive the client it was created from.
     #[allow(dead_code)]
     producer: FutureProducer<C>,
@@ -425,12 +446,12 @@ impl<C: ProducerContext> FutureProducerTopic<C> {
     /// Creates the ProducerTopic. TODO: update doc
     pub fn new(producer: FutureProducer<C>, name: &str, topic_config: &TopicConfig) -> KafkaResult<FutureProducerTopic<C>> {
         let config_ptr = try!(topic_config.create_native_config());
-        let topic_ptr = try!(unsafe { create_native_topic(producer.native_ptr(), name, config_ptr) });
-        let topic = FutureProducerTopic {
-            ptr: topic_ptr,
+        let native_topic = try!(unsafe { create_native_topic(producer.native_ptr(), name, config_ptr) });
+        let producer_topic = FutureProducerTopic {
+            native_topic: native_topic,
             producer: producer.clone(),
         };
-        Ok(topic)
+        Ok(producer_topic)
     }
 
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
@@ -441,7 +462,7 @@ impl<C: ProducerContext> FutureProducerTopic<C> {
               P: ToBytes {
         let (tx, rx) = futures::oneshot();
         try!(topic_send_copy::<Complete<DeliveryStatus>>(
-                self.ptr,
+                &self.native_topic,
                 partition,
                 payload.map(P::to_bytes),
                 key.map(K::to_bytes),
@@ -451,9 +472,7 @@ impl<C: ProducerContext> FutureProducerTopic<C> {
 
     /// Get topic's name
     pub fn get_name(&self) -> String {
-        unsafe {
-            cstr_to_owned(rdkafka::rd_kafka_topic_name(self.ptr))
-        }
+        self.native_topic.name()
     }
 }
 

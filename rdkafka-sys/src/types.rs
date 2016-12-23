@@ -15,6 +15,9 @@ pub type RDKafkaMessage = bindings::rd_kafka_message_t;
 /// Native rdkafka topic
 pub type RDKafkaTopic = bindings::rd_kafka_topic_t;
 
+unsafe impl Send for bindings::rd_kafka_topic_s {}
+unsafe impl Sync for bindings::rd_kafka_topic_s {}
+
 /// Native rdkafka topic configuration
 pub type RDKafkaTopicConf = bindings::rd_kafka_topic_conf_t;
 
