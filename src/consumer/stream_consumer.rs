@@ -7,9 +7,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::thread;
 
-use self::futures::Future;
+use self::futures::{Future, Poll};
 use self::futures::stream;
-use self::futures::stream::{Receiver, Sender};
+use self::futures::stream::{Receiver, Sender, Stream};
 
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
 use error::{KafkaError, KafkaResult};
@@ -56,9 +56,29 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
     }
 }
 
+// TODO: add doc
+pub struct MessageStream {
+    receiver: Receiver<Message, KafkaError>,
+}
+
+impl MessageStream {
+    fn new(receiver: Receiver<Message, KafkaError>) -> MessageStream {
+        MessageStream { receiver: receiver }
+    }
+}
+
+impl Stream for MessageStream {
+    type Item = Message;
+    type Error = KafkaError;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        self.receiver.poll()
+    }
+}
+
 impl<C: ConsumerContext> StreamConsumer<C> {
     /// Starts the StreamConsumer, returning a Stream.
-    pub fn start(&mut self) -> Receiver<Message, KafkaError> {
+    pub fn start(&mut self) -> MessageStream {
         let (sender, receiver) = stream::channel();
         let consumer = self.consumer.clone();
         let should_stop = self.should_stop.clone();
@@ -69,7 +89,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
             })
             .expect("Failed to start polling thread");
         self.handle = Some(handle);
-        receiver
+        MessageStream::new(receiver)
     }
 
     /// Stops the StreamConsumer. It blocks until the internal consumer

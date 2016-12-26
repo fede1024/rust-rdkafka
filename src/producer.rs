@@ -116,6 +116,7 @@ pub struct BaseProducer<C: ProducerContext> {
     inner: Arc<_BaseProducer<C>>,
 }
 
+// TODO: use alias instead
 impl<C: ProducerContext> Clone for BaseProducer<C> {
     fn clone(&self) -> BaseProducer<C> {
         BaseProducer { inner: self.inner.clone() }
