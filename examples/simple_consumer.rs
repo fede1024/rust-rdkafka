@@ -32,6 +32,7 @@ impl ConsumerContext for ConsumerLoggingContext {
     }
 }
 
+// A type alias with your custom consumer can be created for convenience.
 type LoggingConsumer = StreamConsumer<ConsumerLoggingContext>;
 
 fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {

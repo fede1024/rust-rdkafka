@@ -34,7 +34,7 @@ fn produce(brokers: &str, topic_name: &str) {
     let futures = (0..5)
         .map(|i| {
             let value = format!("Message {}", i);
-            // The send operation on the producer returns a future, that will be completed once the
+            // The send operation on the topic returns a future, that will be completed once the
             // result or failure from Kafka will be received.
             topic.send_copy(None, Some(&value), Some(&vec![0, 1, 2, 3]))
                 .expect("Production failed")

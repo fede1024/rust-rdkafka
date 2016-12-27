@@ -1,15 +1,14 @@
 //! Stream-based consumer implementation.
 extern crate rdkafka_sys as rdkafka;
-extern crate futures;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::thread;
 
-use self::futures::{Future, Poll};
-use self::futures::stream;
-use self::futures::stream::{Receiver, Sender, Stream};
+use futures::{Future, Poll};
+use futures::stream;
+use futures::stream::{Receiver, Sender, Stream};
 
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
 use error::{KafkaError, KafkaResult};
@@ -21,6 +20,9 @@ use consumer::base_consumer::BaseConsumer;
 
 /// A Consumer with an associated polling thread. This consumer doesn't need to
 /// be polled and it will return all consumed messages as a `Stream`.
+/// Due to the asynchronous nature of the stream, some messages might be consumed by the consumer
+/// without being processed on the other end of the stream. If auto commit is used, it might cause
+/// message loss after consumer restart. Manual offset commit should be used instead.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct StreamConsumer<C: ConsumerContext + 'static> {
     consumer: Arc<BaseConsumer<C>>,
@@ -56,7 +58,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
     }
 }
 
-// TODO: add doc
+/// A Stream of Kafka messages. It can be used to receive messages as they are received.
 pub struct MessageStream {
     receiver: Receiver<Message, KafkaError>,
 }
@@ -77,7 +79,7 @@ impl Stream for MessageStream {
 }
 
 impl<C: ConsumerContext> StreamConsumer<C> {
-    /// Starts the StreamConsumer, returning a Stream.
+    /// Starts the StreamConsumer, returning a MessageStream.
     pub fn start(&mut self) -> MessageStream {
         let (sender, receiver) = stream::channel();
         let consumer = self.consumer.clone();
@@ -92,7 +94,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         MessageStream::new(receiver)
     }
 
-    /// Stops the StreamConsumer. It blocks until the internal consumer
+    /// Stops the StreamConsumer, blocking the caller until the internal consumer
     /// has been stopped.
     pub fn stop(&mut self) {
         if self.handle.is_some() {
@@ -120,7 +122,7 @@ fn poll_loop<C: ConsumerContext>(consumer: Arc<BaseConsumer<C>>, sender: Sender<
     let mut curr_sender = sender;
     while !should_stop.load(Ordering::Relaxed) {
         let future_sender = match consumer.poll(100) {
-            Ok(None) => continue,
+            Ok(None) => continue,   // TODO: check stream closed
             Ok(Some(m)) => curr_sender.send(Ok(m)),
             Err(e) => curr_sender.send(Err(e)),
         };

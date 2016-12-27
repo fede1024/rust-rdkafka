@@ -21,18 +21,107 @@ use error::{KafkaError, KafkaResult};
 use message::ToBytes;
 use util::cstr_to_owned;
 
+//
+// ********** NATIVE TOPIC **********
+//
+
+/// A native rdkafka-sys topic, used for message production.
+struct NativeTopic {
+    ptr: *mut RDKafkaTopic,
+}
+
+unsafe impl Send for NativeTopic {}
+unsafe impl Sync for NativeTopic {}
+
+impl NativeTopic {
+    // TODO: this is not safe, since the called needs to know that the returned value cannot outlive
+    // the client. Should we add a reference to the producer?
+    /// Given a pointer to a Kafka client, a topic name and a topic configuration, returns a new
+    /// RDKafkaTopic created by the given client. The returned RDKafkaTopic should not outlive
+    /// the client it was created from.
+    unsafe fn new(client: *mut RDKafka, name: &str, topic_config_ptr: *mut RDKafkaTopicConf)
+            -> KafkaResult<NativeTopic> {
+        let name_ptr = CString::new(name.to_string()).unwrap(); // TODO: remove unwrap
+        let topic_ptr = rdkafka::rd_kafka_topic_new(client, name_ptr.as_ptr(), topic_config_ptr);
+        if topic_ptr.is_null() {
+            Err(KafkaError::TopicCreation(name.to_owned()))
+        } else {
+            Ok(NativeTopic { ptr: topic_ptr })
+        }
+    }
+
+    fn ptr(&self) -> *mut RDKafkaTopic {
+        self.ptr
+    }
+
+    fn name(&self) -> String {
+        unsafe {
+            cstr_to_owned(rdkafka::rd_kafka_topic_name(self.ptr))
+        }
+    }
+
+    /// Sends a copy of the provided data to the topic.
+    fn send_copy<T>(&self, partition: Option<i32>, payload: Option<&[u8]>, key: Option<&[u8]>,
+                    delivery_context: Option<Box<T>>)
+            -> KafkaResult<()> {
+        let (payload_ptr, payload_len) = match payload {
+            None => (ptr::null_mut(), 0),
+            Some(p) => (p.as_ptr() as *mut c_void, p.len()),
+        };
+        let (key_ptr, key_len) = match key {
+            None => (ptr::null_mut(), 0),
+            Some(k) => (k.as_ptr() as *mut c_void, k.len()),
+        };
+        let delivery_context_ptr = match delivery_context {
+            Some(context) => Box::into_raw(context) as *mut c_void,
+            None => ptr::null_mut(),
+        };
+        let produce_response = unsafe {
+            rdkafka::rd_kafka_produce(
+                self.ptr(),
+                partition.unwrap_or(-1),
+                rdkafka::RD_KAFKA_MSG_F_COPY as i32,
+                payload_ptr,
+                payload_len,
+                key_ptr,
+                key_len,
+                delivery_context_ptr,
+            )
+        };
+        if produce_response != 0 {
+            let errno = errno::errno().0 as i32;
+            let kafka_error = unsafe { rdkafka::rd_kafka_errno2err(errno) };
+            Err(KafkaError::MessageProduction(kafka_error))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Drop for NativeTopic {
+    fn drop(&mut self) {
+        trace!("Destroy rd_kafka_topic");
+        unsafe {
+            rdkafka::rd_kafka_topic_destroy(self.ptr);
+        }
+    }
+}
+
+//
+// ********** PRODUCER CONTEXT **********
+//
 
 /// A ProducerContext is a Context specific for producers. It can be used to store user-specified
 /// callbacks, such as `delivery`.
 pub trait ProducerContext: Context {
     /// A DeliveryContext is a user-defined structure that will be passed to the producer when
-    /// producing a message. The producer will call the `received` method on this data once the
-    /// associated message has been processed correctly.
+    /// producing a message, and returned to the `delivery` method once the message has been
+    /// delivered, or failed to.
     type DeliveryContext: Send + Sync;
 
     /// This method will be called once the message has beed delivered (or failed to). The
     /// DeliveryContext will be the one provided by the user when calling send.
-    fn delivery(&self, DeliveryStatus, Self::DeliveryContext);
+    fn delivery(&self, DeliveryReport, Self::DeliveryContext);
 }
 
 /// Simple empty producer context that can be use when the producer context is not required.
@@ -42,22 +131,22 @@ impl Context for EmptyProducerContext { }
 impl ProducerContext for EmptyProducerContext {
     type DeliveryContext = ();
 
-    fn delivery(&self, _: DeliveryStatus, _: Self::DeliveryContext) { }
+    fn delivery(&self, _: DeliveryReport, _: Self::DeliveryContext) { }
 }
 
 #[derive(Debug)]
 /// Information returned by the producer after a message has been delivered
 /// or failed to be delivered.
-pub struct DeliveryStatus {
+pub struct DeliveryReport {
     error: RDKafkaRespErr,
     partition: i32,
     offset: i64,
 }
 
-impl DeliveryStatus {
-    /// Creates a new DeliveryStatus. This should only be used in the delivery_cb.
-    fn new(err: RDKafkaRespErr, partition: i32, offset: i64) -> DeliveryStatus {
-        DeliveryStatus {
+impl DeliveryReport {
+    /// Creates a new DeliveryReport. This should only be used in the delivery_cb.
+    fn new(err: RDKafkaRespErr, partition: i32, offset: i64) -> DeliveryReport {
+        DeliveryReport {
             error: err,
             partition: partition,
             offset: offset,
@@ -85,7 +174,7 @@ impl DeliveryStatus {
 unsafe extern "C" fn delivery_cb<C: ProducerContext>(_client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
     let context = Box::from_raw(_opaque as *mut C);
     let delivery_context = Box::from_raw((*msg)._private as *mut C::DeliveryContext);
-    let delivery_status = DeliveryStatus::new((*msg).err, (*msg).partition, (*msg).offset);
+    let delivery_status = DeliveryReport::new((*msg).err, (*msg).partition, (*msg).offset);
     trace!("Delivery event received: {:?}", delivery_status);
     (*context).delivery(delivery_status, (*delivery_context))
 }
@@ -109,7 +198,7 @@ impl<C: ProducerContext> _BaseProducer<C> {
 }
 
 /// Simple Kafka producer. This producer needs to be `poll`ed at regular intervals in order to
-/// make progress with the processing of Kafka events. This producer can be cheaply cloned to
+/// serve queued delivery report callbacks. This producer can be cheaply cloned to
 /// create a new reference to the same underlying producer. Data production should be done using the
 /// `BaseProducerTopic`, that can be created from this producer.
 pub struct BaseProducer<C: ProducerContext> {
@@ -159,91 +248,7 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 }
 
-struct NativeTopic {
-    ptr: *mut RDKafkaTopic,
-}
 
-unsafe impl Send for NativeTopic {}
-unsafe impl Sync for NativeTopic {}
-
-impl NativeTopic {
-    fn new(ptr: *mut RDKafkaTopic) -> NativeTopic {
-        NativeTopic { ptr: ptr }
-    }
-
-    fn ptr(&self) -> *mut RDKafkaTopic {
-        self.ptr
-    }
-
-    fn name(&self) -> String {
-        unsafe {
-            cstr_to_owned(rdkafka::rd_kafka_topic_name(self.ptr))
-        }
-    }
-}
-
-impl Drop for NativeTopic {
-    fn drop(&mut self) {
-        trace!("Destroy rd_kafka_topic");
-        unsafe {
-            rdkafka::rd_kafka_topic_destroy(self.ptr);
-        }
-    }
-}
-
-/// Given a pointer to a Kafka client, a topic name and a topic configuration, returns a new
-/// RDKafkaTopic created by the given client. The returned RDKafkaTopic should not outlive
-/// the client it was created from.
-unsafe fn create_native_topic(client: *mut RDKafka, name: &str, topic_config_ptr: *mut RDKafkaTopicConf)
-        -> KafkaResult<NativeTopic> {
-    let name_ptr = CString::new(name.to_string()).unwrap(); // TODO: remove unwrap
-    let topic_ptr = rdkafka::rd_kafka_topic_new(client, name_ptr.as_ptr(), topic_config_ptr);
-    if topic_ptr.is_null() {
-        Err(KafkaError::TopicCreation(name.to_owned()))
-    } else {
-        Ok(NativeTopic::new(topic_ptr))
-    }
-}
-
-/// Given a pointer to a RDKafkaTopic, sends the provided data to the specified topic.
-fn topic_send_copy<T>(native_topic: &NativeTopic,
-                      partition: Option<i32>,
-                      payload: Option<&[u8]>,
-                      key: Option<&[u8]>,
-                      delivery_context: Option<Box<T>>)
-        -> KafkaResult<()> {
-    let (payload_ptr, payload_len) = match payload {
-        None => (ptr::null_mut(), 0),
-        Some(p) => (p.as_ptr() as *mut c_void, p.len()),
-    };
-    let (key_ptr, key_len) = match key {
-        None => (ptr::null_mut(), 0),
-        Some(k) => (k.as_ptr() as *mut c_void, k.len()),
-    };
-    let delivery_context_ptr = match delivery_context {
-        Some(context) => Box::into_raw(context) as *mut c_void,
-        None => ptr::null_mut(),
-    };
-    let produce_response = unsafe {
-        rdkafka::rd_kafka_produce(
-            native_topic.ptr(),
-            partition.unwrap_or(-1),
-            rdkafka::RD_KAFKA_MSG_F_COPY as i32,
-            payload_ptr,
-            payload_len,
-            key_ptr,
-            key_len,
-            delivery_context_ptr,
-        )
-    };
-    if produce_response != 0 {
-        let errno = errno::errno().0 as i32;
-        let kafka_error = unsafe { rdkafka::rd_kafka_errno2err(errno) };
-        Err(KafkaError::MessageProduction(kafka_error))
-    } else {
-        Ok(())
-    }
-}
 
 /// Represents a Kafka topic with an associated BaseProducer.
 pub struct BaseProducerTopic<C: ProducerContext> {
@@ -258,7 +263,7 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
     pub fn new(producer: BaseProducer<C>, name: &str, topic_config: &TopicConfig)
             -> KafkaResult<BaseProducerTopic<C>> {
         let config_ptr = try!(topic_config.create_native_config());
-        let native_topic = try!(unsafe { create_native_topic(producer.inner.client.native_ptr(), name, config_ptr) });
+        let native_topic = try!(unsafe { NativeTopic::new(producer.inner.client.native_ptr(), name, config_ptr) });
         let producer_topic = BaseProducerTopic {
             native_topic: native_topic,
             producer: producer.clone(),
@@ -274,15 +279,12 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key. If no key is
     /// specified, a random partition will be used.
-    pub fn send_copy<P, K>(&self, partition: Option<i32>, payload: Option<&P>, key: Option<&K>, delivery_context: Option<Box<C::DeliveryContext>>) -> KafkaResult<()>
-        where K: ToBytes,
-              P: ToBytes {
-        topic_send_copy::<C::DeliveryContext>(
-            &self.native_topic,
-            partition,
-            payload.map(P::to_bytes),
-            key.map(K::to_bytes),
-            delivery_context)
+    pub fn send_copy<P, K>(&self, partition: Option<i32>, payload: Option<&P>, key: Option<&K>,
+                           delivery_context: Option<Box<C::DeliveryContext>>) -> KafkaResult<()>
+            where K: ToBytes,
+                  P: ToBytes {
+        self.native_topic.send_copy::<C::DeliveryContext>(partition, payload.map(P::to_bytes),
+                                                          key.map(K::to_bytes), delivery_context)
         }
 }
 
@@ -302,9 +304,9 @@ pub struct FutureProducerContext<C: ProducerContext> {
 impl<C: ProducerContext> Context for FutureProducerContext<C> {}
 
 impl<C: ProducerContext> ProducerContext for FutureProducerContext<C> {
-    type DeliveryContext = Complete<DeliveryStatus>;
+    type DeliveryContext = Complete<DeliveryReport>;
 
-    fn delivery(&self, status: DeliveryStatus, tx: Complete<DeliveryStatus>) {
+    fn delivery(&self, status: DeliveryReport, tx: Complete<DeliveryReport>) {
         tx.complete(status);
     }
 }
@@ -397,17 +399,17 @@ impl<C: ProducerContext> FromClientConfigAndContext<C> for FutureProducer<C> {
     }
 }
 
-/// A future that will receive a `DeliveryStatus` containing information on the
+/// A future that will receive a `DeliveryReport` containing information on the
 /// delivery status of the message.
 pub struct DeliveryFuture {
-    rx: Oneshot<DeliveryStatus>,
+    rx: Oneshot<DeliveryReport>,
 }
 
 impl Future for DeliveryFuture {
-    type Item = DeliveryStatus;
+    type Item = DeliveryReport;
     type Error = Canceled;
 
-    fn poll(&mut self) -> Poll<DeliveryStatus, Canceled> {
+    fn poll(&mut self) -> Poll<DeliveryReport, Canceled> {
         self.rx.poll()
     }
 }
@@ -445,9 +447,10 @@ pub struct FutureProducerTopic<C: ProducerContext + 'static> {
 
 impl<C: ProducerContext> FutureProducerTopic<C> {
     /// Creates the ProducerTopic. TODO: update doc
-    pub fn new(producer: FutureProducer<C>, name: &str, topic_config: &TopicConfig) -> KafkaResult<FutureProducerTopic<C>> {
+    pub fn new(producer: FutureProducer<C>, name: &str, topic_config: &TopicConfig)
+            -> KafkaResult<FutureProducerTopic<C>> {
         let config_ptr = try!(topic_config.create_native_config());
-        let native_topic = try!(unsafe { create_native_topic(producer.native_ptr(), name, config_ptr) });
+        let native_topic = try!(unsafe { NativeTopic::new(producer.native_ptr(), name, config_ptr) });
         let producer_topic = FutureProducerTopic {
             native_topic: native_topic,
             producer: producer.clone(),
@@ -458,16 +461,13 @@ impl<C: ProducerContext> FutureProducerTopic<C> {
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key.
     /// Returns a `DeliveryFuture` or an error.
-    pub fn send_copy<P, K>(&self, partition: Option<i32>, payload: Option<&P>, key: Option<&K>) -> KafkaResult<DeliveryFuture>
-        where K: ToBytes,
-              P: ToBytes {
+    pub fn send_copy<P, K>(&self, partition: Option<i32>, payload: Option<&P>, key: Option<&K>)
+            -> KafkaResult<DeliveryFuture>
+            where K: ToBytes,
+                  P: ToBytes {
         let (tx, rx) = futures::oneshot();
-        try!(topic_send_copy::<Complete<DeliveryStatus>>(
-                &self.native_topic,
-                partition,
-                payload.map(P::to_bytes),
-                key.map(K::to_bytes),
-                Some(Box::new(tx))));
+        try!(self.native_topic.send_copy::<Complete<DeliveryReport>>(partition, payload.map(P::to_bytes),
+                                                                     key.map(K::to_bytes), Some(Box::new(tx))));
         Ok(DeliveryFuture{rx: rx})
     }
 
