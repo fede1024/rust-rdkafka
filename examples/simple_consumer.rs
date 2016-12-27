@@ -44,10 +44,9 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
-        .set_default_topic_config(
-             TopicConfig::new()
-             .set("auto.offset.reset", "smallest")
-             .finalize())
+        .set_default_topic_config(TopicConfig::new()
+            .set("auto.offset.reset", "smallest")
+            .finalize())
         .create_with_context::<_, LoggingConsumer>(context)
         .expect("Consumer creation failed");
 

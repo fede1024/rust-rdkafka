@@ -7,7 +7,7 @@ use self::rdkafka::types::*;
 
 use util::cstr_to_owned;
 
-/// Kafka result
+/// Kafka result.
 pub type KafkaResult<T> = Result<T, KafkaError>;
 
 /// Verify if the value represents an error condition.
@@ -110,6 +110,7 @@ impl From<std::ffi::NulError> for KafkaError {
     }
 }
 
+/// Returns a string containng a description of the error.
 pub fn resp_err_description(err: RDKafkaRespErr) -> String {
     unsafe {
         cstr_to_owned(rdkafka::rd_kafka_err2str(err))

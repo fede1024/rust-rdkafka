@@ -12,12 +12,7 @@ use client::Context;
 
 const ERR_LEN: usize = 256;
 
-unsafe extern "C" fn log_cb(
-    _client: *const RDKafkaState,
-    level: i32,
-    _fac: *const i8,
-    buf: *const i8
-) {
+unsafe extern "C" fn log_cb(_client: *const RDKafkaState, level: i32, _fac: *const i8, buf: *const i8) {
     let buf_str = CStr::from_ptr(buf).to_string_lossy();
     match level {
         0 => error!("rdkafka: {}", buf_str),
@@ -53,11 +48,14 @@ impl ClientConfig {
         self
     }
 
+    /// Sets the default topic configuration to use for automatically subscribed
+    /// topics (e.g., through pattern-matched topics).
     pub fn set_default_topic_config<'a>(&'a mut self, default_topic_config: TopicConfig) -> &'a mut ClientConfig {
         self.default_topic_config = Some(default_topic_config);
         self
     }
 
+    /// Returns the native rdkafka-sys configuration.
     pub fn create_native_config(&self) -> KafkaResult<*mut RDKafkaConf> {
         let conf = unsafe { rdkafka::rd_kafka_conf_new() };
         let errstr = [0; ERR_LEN];
@@ -88,15 +86,15 @@ impl ClientConfig {
         self.default_topic_config.as_ref().map(|c| c.create_native_config())
     }
 
-    pub fn config_clone(&self) -> ClientConfig {
-        (*self).clone()
-    }
-
+    /// Uses the current configuration to create a new Consumer or Producer.
     pub fn create<T: FromClientConfig>(&self) -> KafkaResult<T> {
         T::from_config(self)
     }
 
-    pub fn create_with_context<C: Context, T: FromClientConfigAndContext<C>>(&self, context: C) -> KafkaResult<T> {
+    /// Uses the current configuration and the provided context to create a new Consumer or Producer.
+    pub fn create_with_context<C, T>(&self, context: C) -> KafkaResult<T>
+            where C: Context,
+                  T: FromClientConfigAndContext<C> {
         T::from_config_and_context(self, context)
     }
 }
@@ -137,6 +135,7 @@ impl TopicConfig {
         TopicConfig { conf_map: self.conf_map.clone() }
     }
 
+    /// Creates a native rdkafka-sys topic configuration.
     pub fn create_native_config(&self) -> KafkaResult<*mut RDKafkaTopicConf> {
         let config_ptr = unsafe { rdkafka::rd_kafka_topic_conf_new() };
         let errstr = [0; ERR_LEN];

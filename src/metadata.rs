@@ -1,4 +1,4 @@
-//! Metadata fetch API
+//! Cluster metadata.
 extern crate rdkafka_sys as rdkafka;
 
 use std::ffi::CStr;

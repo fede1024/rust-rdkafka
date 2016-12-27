@@ -21,7 +21,7 @@ pub struct Partition {
 /// A map of topic names to partitions.
 pub type Topics = HashMap<String, Option<Vec<Partition>>>;
 
-/// Map of of topics with optionally partition configuration.
+/// Map of topics with optionally partition configuration.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TopicPartitionList {
     pub topics: Topics

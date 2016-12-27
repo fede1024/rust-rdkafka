@@ -112,7 +112,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
     }
 
-    /// Returns the metadata information of the entire cluster for all the topics in the cluster.
+    /// Returns the metadata information for all the topics in the cluster.
     pub fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
         self.client.fetch_metadata(timeout_ms)
     }

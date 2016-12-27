@@ -14,7 +14,7 @@ It currently exports a subset of the funcionalities provided by librdkafka 0.9.2
 `rust-rdkafka` provides low level and high level consumers and producers. Low level:
 
 * [`BaseConsumer`]: simple wrapper around the librdkafka consumer. It requires to be
-  periodically `poll()`ed in order to execute callbacks, rebalance and receive messages.
+  periodically `poll()`ed in order to execute callbacks, rebalances and to receive messages.
 * [`BaseProducer`]: simple wrapper around the librdkafka producer. As in the consumer case,
   the user must call `poll()` periodically to execute delivery callbacks.
 

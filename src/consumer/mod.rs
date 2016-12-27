@@ -18,15 +18,21 @@ use error::KafkaResult;
 pub use consumer::base_consumer::BaseConsumer;
 pub use topic_partition_list::TopicPartitionList;
 
+/// Rebalance information.
+#[derive(Clone, Debug)]
+pub enum Rebalance {
+    Assign(TopicPartitionList),
+    Revoke,
+    Error(String)
+}
+
 /// Consumer specific Context. This user-defined object can be used to provide custom callbacks to
 /// consumer events. Refer to the list of methods to check which callbacks can be specified.
 pub trait ConsumerContext: Context {
-    /// Implements the default rebalancing strategy and calls the pre_rebalance and
-    /// post_rebalance methods. If this method is overridden, it will be responsibility
+    /// Implements the default rebalancing strategy and calls the `pre_rebalance` and
+    /// `post_rebalance` methods. If this method is overridden, it will be responsibility
     /// of the user to call them if needed.
-    fn rebalance(&self,
-                 native_client: &NativeClient,
-                 err: RDKafkaRespErr,
+    fn rebalance(&self, native_client: &NativeClient, err: RDKafkaRespErr,
                  partitions_ptr: *mut RDKafkaTopicPartitionList) {
 
         let rebalance = match err {
@@ -64,30 +70,21 @@ pub trait ConsumerContext: Context {
         self.post_rebalance(&rebalance);
     }
 
-    /// Pre-rebalance callback. This method will run before the rebalance, and it will receive the
-    /// relabance information. This method is executed as part of the rebalance callback and should
+    /// Pre-rebalance callback. This method will run before the rebalance and should
     /// terminate its execution quickly.
     fn pre_rebalance(&self, _rebalance: &Rebalance) { }
 
-    /// Post-rebalance callback. This method will run before the rebalance, and it will receive the
-    /// relabance information. This method is executed as part of the rebalance callback and should
+    /// Post-rebalance callback. This method will run after the rebalance and should
     /// terminate its execution quickly.
     fn post_rebalance(&self, _rebalance: &Rebalance) { }
 }
 
+/// An empty consumer context that can be user when no context is needed.
 #[derive(Clone)]
 pub struct EmptyConsumerContext;
 
 impl Context for EmptyConsumerContext { }
 impl ConsumerContext for EmptyConsumerContext { }
-
-/// Contains rebalance information.
-#[derive(Clone, Debug)]
-pub enum Rebalance {
-    Assign(TopicPartitionList),
-    Revoke,
-    Error(String)
-}
 
 /// Native rebalance callback. This callback will run on every rebalance, and it will call the
 /// rebalance method defined in the current `Context`.
@@ -111,7 +108,7 @@ pub enum CommitMode {
     Async = 1,
 }
 
-/// Common trait for all consumers
+/// Common trait for all consumers.
 pub trait Consumer<C: ConsumerContext> {
     /// Returns a reference to the BaseConsumer.
     fn get_base_consumer(&self) -> &BaseConsumer<C>;
@@ -137,7 +134,7 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().commit_message(message, mode);
     }
 
-    /// Returns the metadata information of the entire cluster for all the topics in the cluster.
+    /// Returns the metadata information for all the topics in the cluster.
     fn fetch_metadata(&mut self, timeout_ms: i32) -> KafkaResult<Metadata> {
         self.get_base_consumer().fetch_metadata(timeout_ms)
     }

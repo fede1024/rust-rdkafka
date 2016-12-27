@@ -86,7 +86,7 @@ impl<C: Context> Client<C> {
         unsafe { rdkafka::rd_kafka_set_log_level(client_ptr, log_level) };
 
         Ok(Client {
-            native: NativeClient { ptr: client_ptr },
+            native: NativeClient::new(client_ptr),
             context: boxed_context,
         })
     }
@@ -101,7 +101,7 @@ impl<C: Context> Client<C> {
         self.context.as_ref()
     }
 
-    /// Returns the metadata information of the entire cluster for all the topics in the cluster.
+    /// Returns the metadata information for all the topics in the cluster.
     pub fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
         let mut metadata_ptr: *const RDKafkaMetadata = ptr::null_mut();
         trace!("Starting metadata fetch");
