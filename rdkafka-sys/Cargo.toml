@@ -1,6 +1,6 @@
 [package]
 name = "rdkafka-sys"
-version = "0.9.2-2"
+version = "0.9.2-3"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 build = "build.rs"
 links = "rdkafka"
