@@ -30,7 +30,7 @@ fn test_produce_consume_base() {
     let message_stream = consumer.start();
 
     // Produce some messages
-    let mut producer = ClientConfig::new()
+    let producer = ClientConfig::new()
         .set("bootstrap.servers", "localhost:9092")
         .create::<FutureProducer<_>>()
         .expect("Producer creation error");

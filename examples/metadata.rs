@@ -1,5 +1,5 @@
 #[macro_use] extern crate log;
-extern crate clap;
+#[macro_use] extern crate clap;
 extern crate rdkafka;
 
 use clap::{App, Arg};
@@ -10,7 +10,7 @@ use rdkafka::config::ClientConfig;
 mod example_utils;
 use example_utils::setup_logger;
 
-fn print_metadata(brokers: &str) {
+fn print_metadata(brokers: &str, timeout_ms: i32) {
     let consumer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create::<BaseConsumer<_>>()
@@ -18,7 +18,7 @@ fn print_metadata(brokers: &str) {
 
     trace!("Consumer created");
 
-    let metadata = consumer.fetch_metadata(10000)
+    let metadata = consumer.fetch_metadata(timeout_ms)
         .expect("Failed to fetch metadata");
 
     println!("Cluster information:");
@@ -60,11 +60,17 @@ fn main() {
              .long("log-conf")
              .help("Configure the logging format (example: 'rdkafka=trace')")
              .takes_value(true))
+        .arg(Arg::with_name("timeout")
+             .long("Timeout")
+             .help("Metadata fetch timeout in seconds")
+             .takes_value(true)
+             .default_value("60.0"))
         .get_matches();
 
     setup_logger(true, matches.value_of("log-conf"));
 
     let brokers = matches.value_of("brokers").unwrap();
+    let timeout = value_t!(matches, "timeout", f32).unwrap();
 
-    print_metadata(brokers);
+    print_metadata(brokers, (timeout * 1000f32) as i32);
 }

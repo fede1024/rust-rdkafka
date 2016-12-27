@@ -98,7 +98,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         if error.is_error() {
             return Err(match error {
                 rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
-                    KafkaError::PartitionEof
+                    KafkaError::PartitionEOF(unsafe { (*message_ptr).partition } )
                 },
                 e => KafkaError::MessageConsumption(e)
             })

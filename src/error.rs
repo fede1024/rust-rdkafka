@@ -40,7 +40,7 @@ pub enum KafkaError {
     Subscription(String),
     TopicConfig((RDKafkaConfRes, String, String, String)),
     TopicCreation(String),
-    PartitionEof
+    PartitionEOF(i32),
 }
 
 impl std::fmt::Debug for KafkaError {
@@ -56,7 +56,7 @@ impl std::fmt::Debug for KafkaError {
             KafkaError::Subscription(ref err) => write!(f, "KafkaError (Subscription error: {})", err),
             KafkaError::TopicConfig(ref err) => write!(f, "KafkaError (Topic config error: {} {} {})", err.1, err.2, err.3),
             KafkaError::TopicCreation(ref err) => write!(f, "KafkaError (Topic creation error: {})", err),
-            KafkaError::PartitionEof => write!(f, "KafkaError (Partition Eof error)")
+            KafkaError::PartitionEOF(part_n) => write!(f, "KafkaError (Partition EOF: {})", part_n)
         }
     }
 }
@@ -74,7 +74,7 @@ impl std::fmt::Display for KafkaError {
             KafkaError::Subscription(ref err) => write!(f, "Subscription error: {}", err),
             KafkaError::TopicConfig(ref err) => write!(f, "Topic config error: {} {} {}", err.1, err.2, err.3),
             KafkaError::TopicCreation(ref err) => write!(f, "Topic creation error: {}", err),
-            KafkaError::PartitionEof => write!(f, "Partition Eof error")
+            KafkaError::PartitionEOF(part_n) => write!(f, "Partition EOF: {}", part_n),
         }
     }
 }
@@ -92,7 +92,7 @@ impl std::error::Error for KafkaError {
             KafkaError::Subscription(_) => "Subscription error",
             KafkaError::TopicConfig(_) => "Topic config error",
             KafkaError::TopicCreation(_) => "Topic creation error",
-            KafkaError::PartitionEof => "Partition Eof error"
+            KafkaError::PartitionEOF(_) => "Partition EOF error"
         }
     }
 

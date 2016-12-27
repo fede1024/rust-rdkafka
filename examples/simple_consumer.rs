@@ -32,6 +32,9 @@ impl ConsumerContext for ConsumerLoggingContext {
     }
 }
 
+// A type alias with your custom consumer can be created for convenience.
+type LoggingConsumer = StreamConsumer<ConsumerLoggingContext>;
+
 fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
     let context = ConsumerLoggingContext{};
 
@@ -45,7 +48,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
              TopicConfig::new()
              .set("auto.offset.reset", "smallest")
              .finalize())
-        .create_with_context::<_, StreamConsumer<ConsumerLoggingContext>>(context)
+        .create_with_context::<_, LoggingConsumer>(context)
         .expect("Consumer creation failed");
 
     consumer.subscribe(topics).expect("Can't subscribe to specified topics");

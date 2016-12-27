@@ -97,8 +97,8 @@
 //! `localhost:9092`. Travis currently only runs the unit tests.
 //!
 
-#[macro_use]
-extern crate log;
+#[macro_use] extern crate log;
+extern crate futures;
 
 extern crate rdkafka_sys;
 
