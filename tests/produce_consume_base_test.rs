@@ -2,7 +2,6 @@ extern crate futures;
 extern crate rdkafka;
 
 use futures::*;
-use futures::stream::Stream;
 
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::consumer::{Consumer, CommitMode};
