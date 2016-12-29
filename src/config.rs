@@ -15,14 +15,14 @@ const ERR_LEN: usize = 256;
 unsafe extern "C" fn log_cb(_client: *const RDKafkaState, level: i32, _fac: *const i8, buf: *const i8) {
     let buf_str = CStr::from_ptr(buf).to_string_lossy();
     match level {
-        0 => error!("rdkafka: {}", buf_str),
-        1 => error!("rdkafka: {}", buf_str),
-        2 => error!("rdkafka: {}", buf_str),
-        3 => error!("rdkafka: {}", buf_str),
-        4 => warn!("rdkafka: {}", buf_str),
-        5 => info!("rdkafka: {}", buf_str),
-        6 => info!("rdkafka: {}", buf_str),
-        _ => debug!("rdkafka: {}", buf_str),
+        0 => error!("librdkafka: {}", buf_str),
+        1 => error!("librdkafka: {}", buf_str),
+        2 => error!("librdkafka: {}", buf_str),
+        3 => error!("librdkafka: {}", buf_str),
+        4 => warn!("librdkafka: {}", buf_str),
+        5 => info!("librdkafka: {}", buf_str),
+        6 => info!("librdkafka: {}", buf_str),
+        _ => debug!("librdkafka: {}", buf_str),
     }
 }
 
