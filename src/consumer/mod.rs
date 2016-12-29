@@ -89,15 +89,14 @@ impl ConsumerContext for EmptyConsumerContext { }
 /// Native rebalance callback. This callback will run on every rebalance, and it will call the
 /// rebalance method defined in the current `Context`.
 unsafe extern "C" fn rebalance_cb<C: ConsumerContext>(rk: *mut RDKafka,
-                                                          err: RDKafkaRespErr,
-                                                          partitions: *mut RDKafkaTopicPartitionList,
-                                                          opaque_ptr: *mut c_void) {
+                                                      err: RDKafkaRespErr,
+                                                      partitions: *mut RDKafkaTopicPartitionList,
+                                                      opaque_ptr: *mut c_void) {
     let context: &C = &*(opaque_ptr as *const C);
     let native_client = NativeClient::new(rk);
 
     context.rebalance(&native_client, err, partitions);
 }
-
 
 /// Specifies if the commit should be performed synchronously
 /// or asynchronously.
@@ -125,6 +124,16 @@ pub trait Consumer<C: ConsumerContext> {
     /// Manually assign topics and partitions to the consumer.
     fn assign(&mut self, assignment: &TopicPartitionList) -> KafkaResult<()> {
         self.get_base_consumer_mut().assign(assignment)
+    }
+
+    /// Pause consuming of this consumer.
+    fn pause(&self) {
+        self.get_base_consumer().pause()
+    }
+
+    /// Resume consuming of this consumer.
+    fn resume(&self) {
+        self.get_base_consumer().resume()
     }
 
     /// Commit a specific message. If mode is set to CommitMode::Sync,
