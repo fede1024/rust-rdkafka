@@ -330,7 +330,7 @@ impl<C: ProducerContext> _FutureProducer<C> {
                  while !should_stop.load(Ordering::Relaxed) {
                      let n = producer_clone.poll(100);
                      if n != 0 {
-                         trace!("Receved {} events", n);
+                         trace!("Received {} events", n);
                      }
                  }
                  trace!("Polling thread loop terminated");
