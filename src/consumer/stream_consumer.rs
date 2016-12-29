@@ -121,6 +121,7 @@ fn poll_loop<C: ConsumerContext>(consumer: Arc<BaseConsumer<C>>, sender: Sender<
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
     while !should_stop.load(Ordering::Relaxed) {
+        trace!("Polling base consumer");
         let future_sender = match consumer.poll(100) {
             Ok(None) => continue,   // TODO: check stream closed
             Ok(Some(m)) => curr_sender.send(Ok(m)),
