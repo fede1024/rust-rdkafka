@@ -5,13 +5,14 @@ extern crate futures;
 
 use self::rdkafka::types::*;
 
+use std::ffi::CString;
+use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
-use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, RwLock};
 use std::thread::JoinHandle;
 use std::thread;
-use std::ffi::CString;
 
 use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
 
@@ -176,7 +177,8 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(_client: *mut RDKafka, msg:
     let delivery_context = Box::from_raw((*msg)._private as *mut C::DeliveryContext);
     let delivery_status = DeliveryReport::new((*msg).err, (*msg).partition, (*msg).offset);
     trace!("Delivery event received: {:?}", delivery_status);
-    (*context).delivery(delivery_status, (*delivery_context))
+    (*context).delivery(delivery_status, (*delivery_context));
+    mem::forget(context);   // Do not free the context
 }
 
 //
