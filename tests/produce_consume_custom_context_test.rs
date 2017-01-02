@@ -3,19 +3,37 @@ extern crate rdkafka;
 
 use futures::*;
 
+use rdkafka::client::Context;
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::message::Message;
-use rdkafka::producer::FutureProducer;
+use rdkafka::producer::{DeliveryReport,FutureProducer,ProducerContext};
 
 static NUMBER_OF_MESSAGES: u64 = 100;
 
+pub struct CustomProducerContext {
+    pub name: &'static str
+}
+impl CustomProducerContext {
+    pub fn new(name: &'static str) -> CustomProducerContext {
+        CustomProducerContext { name: name }
+    }
+}
+impl Context for CustomProducerContext { }
+impl ProducerContext for CustomProducerContext {
+    type DeliveryContext = ();
+
+    fn delivery(&self, report: DeliveryReport, _: Self::DeliveryContext) {
+        println!("Delivery on {}: {:?}", self.name, report);
+    }
+}
+
 #[test]
-fn test_produce_consume_base() {
+fn produce_consume_custom_context_test() {
     // Create consumer
     let mut consumer = ClientConfig::new()
-        .set("group.id", "produce_consume_base")
+        .set("group.id", "produce_consume_custom_context")
         .set("bootstrap.servers", "localhost:9092")
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
@@ -27,13 +45,13 @@ fn test_produce_consume_base() {
         )
         .create::<StreamConsumer<_>>()
         .expect("Consumer creation failed");
-    consumer.subscribe(&vec!["produce_consume_base"]).expect("Can't subscribe to specified topics");
+    consumer.subscribe(&vec!["produce_consume_custom_context"]).expect("Can't subscribe to specified topics");
     let message_stream = consumer.start();
 
     // Produce some messages
     let producer = ClientConfig::new()
         .set("bootstrap.servers", "localhost:9092")
-        .create::<FutureProducer<_>>()
+        .create_with_context::<_, FutureProducer<_>>(CustomProducerContext::new("producer"))
         .expect("Producer creation error");
 
     producer.start();
@@ -42,7 +60,7 @@ fn test_produce_consume_base() {
         .set("produce.offset.report", "true")
         .finalize();
 
-    let topic = producer.get_topic("produce_consume_base", &topic_config)  // TODO: randomize topic name
+    let topic = producer.get_topic("produce_consume_custom_context", &topic_config)  // TODO: randomize topic name
         .expect("Topic creation error");
 
     let futures = (0..NUMBER_OF_MESSAGES)

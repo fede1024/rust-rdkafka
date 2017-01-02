@@ -18,7 +18,7 @@ use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
 
 use client::{Client, Context};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, TopicConfig};
-use error::{KafkaError, KafkaResult};
+use error::{KafkaError, KafkaResult, IsError};
 use message::ToBytes;
 use util::cstr_to_owned;
 
@@ -42,7 +42,7 @@ impl NativeTopic {
     /// the client it was created from.
     unsafe fn new(client: *mut RDKafka, name: &str, topic_config_ptr: *mut RDKafkaTopicConf)
             -> KafkaResult<NativeTopic> {
-        let name_ptr = CString::new(name.to_string()).unwrap(); // TODO: remove unwrap
+        let name_ptr = CString::new(name.to_string()).expect("could not create name CString"); // TODO: remove expect
         let topic_ptr = rdkafka::rd_kafka_topic_new(client, name_ptr.as_ptr(), topic_config_ptr);
         if topic_ptr.is_null() {
             Err(KafkaError::TopicCreation(name.to_owned()))
@@ -154,9 +154,13 @@ impl DeliveryReport {
         }
     }
 
-    /// Returns the error associated with the production of the message.
-    pub fn error(&self) -> RDKafkaRespErr {
-        self.error
+    /// Returns the result of the production of the message.
+    pub fn result(&self) -> Result<(), KafkaError> {
+        if self.error.is_error() {
+            Err(KafkaError::MessageProduction(self.error))
+        } else {
+            Ok(())
+        }
     }
 
     /// Returns the partition of the message.
@@ -351,7 +355,7 @@ impl<C: ProducerContext> _FutureProducer<C> {
                     trace!("Stopping polling");
                     self.should_stop.store(true, Ordering::Relaxed);
                     trace!("Waiting for polling thread termination");
-                    match handle.take().unwrap().join() {
+                    match handle.take().expect("no handle present in producer context").join() {
                         Ok(()) => trace!("Polling stopped"),
                         Err(e) => warn!("Failure while terminating thread: {:?}", e),
                     };

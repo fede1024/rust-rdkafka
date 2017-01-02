@@ -75,7 +75,7 @@ impl ClientConfig {
             if let Err(e) = topic_config {
                 return Err(e);
             } else {
-                unsafe { rdkafka::rd_kafka_conf_set_default_topic_conf(conf, topic_config.unwrap()) };
+                unsafe { rdkafka::rd_kafka_conf_set_default_topic_conf(conf, topic_config.expect("No topic config present when creating native config")) };
             }
         }
         unsafe { rdkafka::rd_kafka_conf_set_log_cb(conf, Some(log_cb)) };
