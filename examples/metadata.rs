@@ -10,7 +10,7 @@ use rdkafka::config::ClientConfig;
 mod example_utils;
 use example_utils::setup_logger;
 
-fn print_metadata(brokers: &str, timeout_ms: i32) {
+fn print_metadata(brokers: &str, timeout_ms: i32, fetch_offsets: bool) {
     let consumer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create::<BaseConsumer<_>>()
@@ -42,6 +42,11 @@ fn print_metadata(brokers: &str, timeout_ms: i32) {
                      partition.replicas(),
                      partition.isr(),
                      partition.error());
+            if fetch_offsets {
+                let (low, high) = consumer.fetch_watermarks(topic.name(), partition.id(), 1000)
+                    .unwrap_or((-1, -1));
+                println!("       Low watermark: {}  High watermark: {}", low, high);
+            }
         }
     }
 }
@@ -56,12 +61,15 @@ fn main() {
              .help("Broker list in kafka format")
              .takes_value(true)
              .default_value("localhost:9092"))
+        .arg(Arg::with_name("offsets")
+             .long("offsets")
+             .help("Enables offset fetching"))
         .arg(Arg::with_name("log-conf")
              .long("log-conf")
              .help("Configure the logging format (example: 'rdkafka=trace')")
              .takes_value(true))
         .arg(Arg::with_name("timeout")
-             .long("Timeout")
+             .long("timeout")
              .help("Metadata fetch timeout in seconds")
              .takes_value(true)
              .default_value("60.0"))
@@ -71,6 +79,7 @@ fn main() {
 
     let brokers = matches.value_of("brokers").unwrap();
     let timeout = value_t!(matches, "timeout", f32).unwrap();
+    let fetch_offsets = matches.is_present("offsets");
 
-    print_metadata(brokers, (timeout * 1000f32) as i32);
+    print_metadata(brokers, (timeout * 1000f32) as i32, fetch_offsets);
 }

@@ -116,6 +116,11 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     pub fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
         self.client.fetch_metadata(timeout_ms)
     }
+
+    /// Returns high and low watermark for the specified topic and partition.
+    pub fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
+        self.client.fetch_watermarks(topic, partition, timeout_ms)
+    }
 }
 
 impl<C: ConsumerContext> Drop for BaseConsumer<C> {

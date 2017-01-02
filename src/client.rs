@@ -3,6 +3,7 @@ extern crate rdkafka_sys as rdkafka;
 
 use std::os::raw::c_void;
 use std::ptr;
+use std::ffi::CString;
 
 use log::LogLevel;
 
@@ -119,6 +120,21 @@ impl<C: Context> Client<C> {
         }
 
         Ok(Metadata::from_ptr(metadata_ptr))
+    }
+
+    /// Returns high and low watermark for the specified topic and partition.
+    pub fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
+        let mut low = -1;
+        let mut high = -1;
+        let topic_c = try!(CString::new(topic.to_string()));
+        let ret = unsafe {
+            rdkafka::rd_kafka_query_watermark_offsets(self.native_ptr(), topic_c.as_ptr(), partition,
+                                                      &mut low as *mut i64, &mut high as *mut i64, timeout_ms)
+        };
+        if ret.is_error() {
+            return Err(KafkaError::MetadataFetch(ret));
+        }
+        Ok((low, high))
     }
 }
 
