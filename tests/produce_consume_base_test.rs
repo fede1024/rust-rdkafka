@@ -9,6 +9,8 @@ use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::message::Message;
 use rdkafka::producer::FutureProducer;
 
+static NUMBER_OF_MESSAGES: u64 = 100;
+
 #[test]
 fn test_produce_consume_base() {
     // Create consumer
@@ -43,7 +45,7 @@ fn test_produce_consume_base() {
     let topic = producer.get_topic("produce_consume_base", &topic_config)  // TODO: randomize topic name
         .expect("Topic creation error");
 
-    let futures = (0..5)
+    let futures = (0..NUMBER_OF_MESSAGES)
         .map(|i| {
             let value = format!("Message {}", i);
             topic.send_copy(None, Some(&value), Some(&vec![0, 1, 2, 3]))
@@ -52,11 +54,17 @@ fn test_produce_consume_base() {
         .collect::<Vec<_>>();
 
     for future in futures {
-        future.wait().expect("Waiting for future failed");
+        match future.wait() {
+            Ok(report) => match report.result() {
+                Err(e) => panic!("Delivery failed: {}", e),
+                Ok(_) => ()
+            },
+            Err(e) => panic!("Waiting for future failed: {}", e)
+        }
     }
 
     // Consume the messages
-    let messages: Vec<Message> = message_stream.take(5).wait().map({ |message|
+    let messages: Vec<Message> = message_stream.take(NUMBER_OF_MESSAGES).wait().map({ |message|
         match message {
             Ok(m) => {
                 consumer.commit_message(&m, CommitMode::Async);
@@ -66,8 +74,8 @@ fn test_produce_consume_base() {
         }
     }).collect();
 
-    for i in 0..5 {
-        match messages.get(i) {
+    for i in 0..NUMBER_OF_MESSAGES {
+        match messages.get(i as usize) {
             Some(ref message) => {
                 assert_eq!(message.key_view::<[u8]>().unwrap().unwrap(), [0, 1, 2, 3]);
                 assert_eq!(message.payload_view::<str>().unwrap().unwrap(), format!("Message {}", i));
