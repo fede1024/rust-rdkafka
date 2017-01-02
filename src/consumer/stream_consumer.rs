@@ -36,7 +36,7 @@ impl<C: ConsumerContext> Consumer<C> for StreamConsumer<C> {
     }
 
     fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<C> {
-        Arc::get_mut(&mut self.consumer).unwrap()  // TODO add check?
+        Arc::get_mut(&mut self.consumer).expect("Could not get mutable consumer from context")  // TODO add check?
     }
 }
 
@@ -101,7 +101,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
             trace!("Stopping polling");
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
-            match self.handle.take().unwrap().join() {
+            match self.handle.take().expect("no handle present in consumer context").join() {
                 Ok(()) => trace!("Polling stopped"),
                 Err(e) => warn!("Failure while terminating thread: {:?}", e),
             };

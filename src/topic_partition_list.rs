@@ -89,7 +89,7 @@ impl TopicPartitionList {
         let tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(self.topics.len() as i32) };
 
         for (topic, partitions) in self.topics.iter() {
-            let topic_cstring = CString::new(topic.as_str()).unwrap();
+            let topic_cstring = CString::new(topic.as_str()).expect("could not create name CString");
             match partitions {
                 &Some(ref ps) => {
                     // Partitions specified
