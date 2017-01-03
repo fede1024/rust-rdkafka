@@ -42,7 +42,7 @@ impl NativeTopic {
     /// the client it was created from.
     unsafe fn new(client: *mut RDKafka, name: &str, topic_config_ptr: *mut RDKafkaTopicConf)
             -> KafkaResult<NativeTopic> {
-        let name_ptr = CString::new(name.to_string()).unwrap(); // TODO: remove unwrap
+        let name_ptr = CString::new(name.to_string()).expect("could not create name CString"); // TODO: remove expect
         let topic_ptr = rdkafka::rd_kafka_topic_new(client, name_ptr.as_ptr(), topic_config_ptr);
         if topic_ptr.is_null() {
             Err(KafkaError::TopicCreation(name.to_owned()))
@@ -351,7 +351,7 @@ impl<C: ProducerContext> _FutureProducer<C> {
                     trace!("Stopping polling");
                     self.should_stop.store(true, Ordering::Relaxed);
                     trace!("Waiting for polling thread termination");
-                    match handle.take().unwrap().join() {
+                    match handle.take().expect("no handle present in producer context").join() {
                         Ok(()) => trace!("Polling stopped"),
                         Err(e) => warn!("Failure while terminating thread: {:?}", e),
                     };
