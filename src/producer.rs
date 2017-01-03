@@ -18,7 +18,7 @@ use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
 
 use client::{Client, Context};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, TopicConfig};
-use error::{KafkaError, KafkaResult};
+use error::{KafkaError, KafkaResult, IsError};
 use message::ToBytes;
 use util::cstr_to_owned;
 
@@ -154,9 +154,13 @@ impl DeliveryReport {
         }
     }
 
-    /// Returns the error associated with the production of the message.
-    pub fn error(&self) -> RDKafkaRespErr {
-        self.error
+    /// Returns the result of the production of the message.
+    pub fn result(&self) -> KafkaResult<()> {
+        if self.error.is_error() {
+            Err(KafkaError::MessageProduction(self.error))
+        } else {
+            Ok(())
+        }
     }
 
     /// Returns the partition of the message.
