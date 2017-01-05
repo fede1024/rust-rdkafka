@@ -299,17 +299,12 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
 //
 
 /// The ProducerContext used by the FutureProducer. This context will use a Future as its
-/// DeliveryContext and will complete the future when the message is delivered (or failed to). All
-/// other callbacks will be delegated to the wrapped ProducerContext.
-pub struct FutureProducerContext<C: ProducerContext> {
-    // The wrapped context is not used yet.
-    #[allow(dead_code)]
-    wrapped_context: C
-}
+/// DeliveryContext and will complete the future when the message is delivered (or failed to).
+pub struct FutureProducerContext;
 
-impl<C: ProducerContext> Context for FutureProducerContext<C> {}
+impl Context for FutureProducerContext {}
 
-impl<C: ProducerContext> ProducerContext for FutureProducerContext<C> {
+impl ProducerContext for FutureProducerContext {
     type DeliveryContext = Complete<DeliveryReport>;
 
     fn delivery(&self, status: DeliveryReport, tx: Complete<DeliveryReport>) {
@@ -319,13 +314,13 @@ impl<C: ProducerContext> ProducerContext for FutureProducerContext<C> {
 
 /// FutureProducer implementation.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-struct _FutureProducer<C: ProducerContext + 'static> {
-    producer: BaseProducer<FutureProducerContext<C>>,
+struct _FutureProducer {
+    producer: BaseProducer<FutureProducerContext>,
     should_stop: Arc<AtomicBool>,
     handle: RwLock<Option<JoinHandle<()>>>,  // TODO: is the lock actually needed?
 }
 
-impl<C: ProducerContext> _FutureProducer<C> {
+impl _FutureProducer {
     fn start(&self) {
         let producer_clone = self.producer.clone();
         let should_stop = self.should_stop.clone();
@@ -366,7 +361,7 @@ impl<C: ProducerContext> _FutureProducer<C> {
     }
 }
 
-impl<C: ProducerContext> Drop for _FutureProducer<C> {
+impl Drop for _FutureProducer {
     fn drop(&mut self) {
         trace!("Destroy _FutureProducer");
         self.stop();
@@ -377,27 +372,20 @@ impl<C: ProducerContext> Drop for _FutureProducer<C> {
 /// The internal thread can be terminated with the `stop` method or moving the
 /// `FutureProducer` out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-pub struct FutureProducer<C: ProducerContext + 'static> {
-    inner: Arc<_FutureProducer<C>>,
+pub struct FutureProducer {
+    inner: Arc<_FutureProducer>,
 }
 
-impl<C: ProducerContext> Clone for FutureProducer<C> {
-    fn clone(&self) -> FutureProducer<C> {
+impl Clone for FutureProducer {
+    fn clone(&self) -> FutureProducer {
         FutureProducer { inner: self.inner.clone() }
     }
 }
 
-impl FromClientConfig for FutureProducer<EmptyProducerContext> {
-    fn from_config(config: &ClientConfig) -> KafkaResult<FutureProducer<EmptyProducerContext>> {
-        FutureProducer::from_config_and_context(config, EmptyProducerContext)
-    }
-}
-
-impl<C: ProducerContext> FromClientConfigAndContext<C> for FutureProducer<C> {
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
-        let future_producer_context = FutureProducerContext { wrapped_context: context };
+impl FromClientConfig for FutureProducer {
+    fn from_config(config: &ClientConfig) -> KafkaResult<FutureProducer> {
         let inner = _FutureProducer {
-            producer: try!(BaseProducer::from_config_and_context(config, future_producer_context)),
+            producer: try!(BaseProducer::from_config_and_context(config, FutureProducerContext)),
             should_stop: Arc::new(AtomicBool::new(false)),
             handle: RwLock::new(None),
         };
@@ -420,9 +408,9 @@ impl Future for DeliveryFuture {
     }
 }
 
-impl<C: ProducerContext> FutureProducer<C> {
+impl FutureProducer {
     /// Returns a topic associated to the producer
-    pub fn get_topic(&self, name: &str, config: &TopicConfig) -> KafkaResult<FutureProducerTopic<C>> {
+    pub fn get_topic(&self, name: &str, config: &TopicConfig) -> KafkaResult<FutureProducerTopic> {
         FutureProducerTopic::new(self.clone(), name, config)
     }
 
@@ -444,17 +432,17 @@ impl<C: ProducerContext> FutureProducer<C> {
 }
 
 /// Represents a Kafka topic with an associated FutureProducer.
-pub struct FutureProducerTopic<C: ProducerContext + 'static> {
+pub struct FutureProducerTopic {
     native_topic: NativeTopic,
     // A producer topic cannot outlive the client it was created from.
     #[allow(dead_code)]
-    producer: FutureProducer<C>,
+    producer: FutureProducer,
 }
 
-impl<C: ProducerContext> FutureProducerTopic<C> {
+impl FutureProducerTopic {
     /// Creates the ProducerTopic. TODO: update doc
-    pub fn new(producer: FutureProducer<C>, name: &str, topic_config: &TopicConfig)
-            -> KafkaResult<FutureProducerTopic<C>> {
+    pub fn new(producer: FutureProducer, name: &str, topic_config: &TopicConfig)
+            -> KafkaResult<FutureProducerTopic> {
         let config_ptr = try!(topic_config.create_native_config());
         let native_topic = try!(unsafe { NativeTopic::new(producer.native_ptr(), name, config_ptr) });
         let producer_topic = FutureProducerTopic {
