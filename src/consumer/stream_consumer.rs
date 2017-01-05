@@ -6,12 +6,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::thread;
 
-use futures::{Future, Poll};
-use futures::stream;
-use futures::stream::{Receiver, Sender, Stream};
+use futures::{Future, Poll, Sink};
+use futures::stream::Stream;
+use futures::sync::mpsc;
 
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
-use error::{KafkaError, KafkaResult};
+use error::KafkaResult;
 use message::Message;
 
 use consumer::{Consumer, ConsumerContext, EmptyConsumerContext};
@@ -60,18 +60,18 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
 
 /// A Stream of Kafka messages. It can be used to receive messages as they are received.
 pub struct MessageStream {
-    receiver: Receiver<Message, KafkaError>,
+    receiver: mpsc::Receiver<KafkaResult<Message>>,
 }
 
 impl MessageStream {
-    fn new(receiver: Receiver<Message, KafkaError>) -> MessageStream {
+    fn new(receiver: mpsc::Receiver<KafkaResult<Message>>) -> MessageStream {
         MessageStream { receiver: receiver }
     }
 }
 
 impl Stream for MessageStream {
-    type Item = Message;
-    type Error = KafkaError;
+    type Item = KafkaResult<Message>;
+    type Error = ();
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         self.receiver.poll()
@@ -81,7 +81,7 @@ impl Stream for MessageStream {
 impl<C: ConsumerContext> StreamConsumer<C> {
     /// Starts the StreamConsumer, returning a MessageStream.
     pub fn start(&mut self) -> MessageStream {
-        let (sender, receiver) = stream::channel();
+        let (sender, receiver) = mpsc::channel(0);
         let consumer = self.consumer.clone();
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
@@ -117,7 +117,7 @@ impl<C: ConsumerContext> Drop for StreamConsumer<C> {
 }
 
 /// Internal consumer loop.
-fn poll_loop<C: ConsumerContext>(consumer: Arc<BaseConsumer<C>>, sender: Sender<Message, KafkaError>, should_stop: Arc<AtomicBool>) {
+fn poll_loop<C: ConsumerContext>(consumer: Arc<BaseConsumer<C>>, sender: mpsc::Sender<KafkaResult<Message>>, should_stop: Arc<AtomicBool>) {
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
     while !should_stop.load(Ordering::Relaxed) {

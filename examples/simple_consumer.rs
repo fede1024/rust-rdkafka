@@ -58,10 +58,10 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
 
     for message in message_stream.take(5).wait() {
         match message {
-            Err(e) => {
-                warn!("Can't receive message: {:?}", e);
+            Err(_) => {
+                warn!("Error while reading from stream.");
             },
-            Ok(m) => {
+            Ok(Ok(m)) => {
                 let key = match m.key_view::<[u8]>() {
                     None => &[],
                     Some(Ok(s)) => s,
@@ -81,6 +81,9 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                 info!("key: '{:?}', payload: '{}', partition: {}, offset: {}",
                       key, payload, m.partition(), m.offset());
                 consumer.commit_message(&m, CommitMode::Async);
+            },
+            Ok(Err(e)) => {
+                warn!("Kafka error: {}", e);
             },
         };
     }
