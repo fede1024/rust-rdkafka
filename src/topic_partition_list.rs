@@ -85,6 +85,12 @@ impl TopicPartitionList {
         self.topics.insert(topic.to_string(), Some(partitions_configs));
     }
 
+    /// Add topic with partitions and offsets configured
+    pub fn add_topic_with_partitions_and_offsets(&mut self, topic: &str, partitions: &Vec<(i32, i64)>) {
+        let partitions_configs: Vec<Partition> = partitions.iter().map(|p| Partition { partition: p.0, offset: p.1 } ).collect();
+        self.topics.insert(topic.to_string(), Some(partitions_configs));
+    }
+
     pub fn create_native_topic_partition_list(&self) -> *mut RDKafkaTopicPartitionList {
         let tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(self.topics.len() as i32) };
 
@@ -94,7 +100,11 @@ impl TopicPartitionList {
                 &Some(ref ps) => {
                     // Partitions specified
                     for p in ps {
-                        unsafe { rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), p.partition); }
+                        unsafe { rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), p.partition) };
+                        // Add offset if it's specified
+                        if p.offset > -1 {
+                            unsafe { rdkafka::rd_kafka_topic_partition_list_set_offset(tp_list, topic_cstring.as_ptr(), p.partition, p.offset) };
+                        }
                     }
                 },
                 &None => {
@@ -130,10 +140,21 @@ mod tests {
     }
 
     #[test]
-    fn test_topic_partition_list_with_configuration() {
+    fn test_topic_partition_list_with_partitions() {
         let mut list = TopicPartitionList::new();
         list.add_topic_with_partitions("topic_1", &vec![1, 2, 3]);
         list.add_topic_with_partitions("topic_2", &vec![1, 3, 5]);
+
+        let through_rdkafka = TopicPartitionList::from_rdkafka(list.create_native_topic_partition_list());
+
+        assert_eq!(list, through_rdkafka);
+    }
+
+    #[test]
+    fn test_topic_partition_list_with_partitions_and_offsets() {
+        let mut list = TopicPartitionList::new();
+        list.add_topic_with_partitions_and_offsets("topic_1", &vec![(1, 1), (2, 1), (3, 1)]);
+        list.add_topic_with_partitions_and_offsets("topic_2", &vec![(1, 1), (3, 1), (5, 1)]);
 
         let through_rdkafka = TopicPartitionList::from_rdkafka(list.create_native_topic_partition_list());
 
