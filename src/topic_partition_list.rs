@@ -100,7 +100,11 @@ impl TopicPartitionList {
                 &Some(ref ps) => {
                     // Partitions specified
                     for p in ps {
-                        unsafe { rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), p.partition); }
+                        unsafe { rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), p.partition) };
+                        // Add offset if it's specified
+                        if p.offset > -1 {
+                            unsafe { rdkafka::rd_kafka_topic_partition_list_set_offset(tp_list, topic_cstring.as_ptr(), p.partition, p.offset) };
+                        }
                     }
                 },
                 &None => {
@@ -152,12 +156,8 @@ mod tests {
         list.add_topic_with_partitions_and_offsets("topic_1", &vec![(1, 1), (2, 1), (3, 1)]);
         list.add_topic_with_partitions_and_offsets("topic_2", &vec![(1, 1), (3, 1), (5, 1)]);
 
-        let mut expected = TopicPartitionList::new();
-        expected.add_topic_with_partitions("topic_1", &vec![1, 2, 3]);
-        expected.add_topic_with_partitions("topic_2", &vec![1, 3, 5]);
-
         let through_rdkafka = TopicPartitionList::from_rdkafka(list.create_native_topic_partition_list());
 
-        assert_eq!(expected, through_rdkafka);
+        assert_eq!(list, through_rdkafka);
     }
 }
