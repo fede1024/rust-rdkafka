@@ -8,6 +8,7 @@ use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::message::Message;
 use rdkafka::producer::FutureProducer;
+use rdkafka::topic_partition_list::TopicPartitionList;
 
 static NUMBER_OF_MESSAGES: u64 = 100;
 
@@ -73,6 +74,11 @@ fn test_produce_consume_base() {
             Err(e) => panic!("Error receiving message: {:?}", e)
         }
     }).collect();
+
+    // Test that committing separately does not crash
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_topic_with_partitions_and_offsets("produce_consume_base", &vec![(1, 1)]);
+    consumer.commit(&tpl, CommitMode::Async);
 
     for i in 0..NUMBER_OF_MESSAGES {
         match messages.get(i as usize) {

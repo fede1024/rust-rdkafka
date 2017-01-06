@@ -107,7 +107,16 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         Ok(Some(kafka_message))
     }
 
-    /// Commits the current message. The commit can be synk (blocking), or async.
+    /// Commits the provided list of partitions. The commit can be sync (blocking), or async.
+    pub fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) {
+        let tp_list = topic_partition_list.create_native_topic_partition_list();
+        unsafe {
+            rdkafka::rd_kafka_commit(self.client.native_ptr(), tp_list, mode as i32);
+            rdkafka::rd_kafka_topic_partition_list_destroy(tp_list);
+        }
+    }
+
+    /// Commits the specified message. The commit can be sync (blocking), or async.
     pub fn commit_message(&self, message: &Message, mode: CommitMode) {
         unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
     }

@@ -126,6 +126,13 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer_mut().assign(assignment)
     }
 
+    /// Commit offsets on broker for the provided list of partitions.
+    /// If mode is set to CommitMode::Sync, the call will block until
+    /// the message has been succesfully committed.
+    fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) {
+        self.get_base_consumer().commit(topic_partition_list, mode);
+    }
+
     /// Commit a specific message. If mode is set to CommitMode::Sync,
     /// the call will block until the message has been succesfully
     /// committed.
