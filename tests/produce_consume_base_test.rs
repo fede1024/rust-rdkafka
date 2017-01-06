@@ -34,7 +34,7 @@ fn test_produce_consume_base() {
     // Produce some messages
     let producer = ClientConfig::new()
         .set("bootstrap.servers", "localhost:9092")
-        .create::<FutureProducer<_>>()
+        .create::<FutureProducer>()
         .expect("Producer creation error");
 
     producer.start();
@@ -67,10 +67,11 @@ fn test_produce_consume_base() {
     // Consume the messages
     let messages: Vec<Message> = message_stream.take(NUMBER_OF_MESSAGES).wait().map({ |message|
         match message {
-            Ok(m) => {
+            Ok(Ok(m)) => {
                 consumer.commit_message(&m, CommitMode::Async);
                 m
             },
+            Ok(Err(e)) => panic!("Error receiving message: {:?}", e),
             Err(e) => panic!("Error receiving message: {:?}", e)
         }
     }).collect();

@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_future_producer_topic() {
-        let producer = ClientConfig::new().create::<FutureProducer<_>>().unwrap();
+        let producer = ClientConfig::new().create::<FutureProducer>().unwrap();
         let producer_topic = producer.get_topic("topic_name", &TopicConfig::new()).unwrap();
         assert_eq!(producer_topic.get_name(), "topic_name");
     }
