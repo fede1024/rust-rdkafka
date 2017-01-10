@@ -126,6 +126,16 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer_mut().assign(assignment)
     }
 
+    /// Pause consuming of this consumer.
+    fn pause(&self) {
+        self.get_base_consumer().pause()
+    }
+
+    /// Resume consuming of this consumer.
+    fn resume(&self) {
+        self.get_base_consumer().resume()
+    }
+
     /// Commit offsets on broker for the provided list of partitions.
     /// If mode is set to CommitMode::Sync, the call will block until
     /// the message has been succesfully committed.
