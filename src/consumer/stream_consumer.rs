@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use std::thread;
+use std::time::Duration;
 
 use futures::{Future, Poll, Sink};
 use futures::stream::Stream;
@@ -26,6 +27,7 @@ use consumer::base_consumer::BaseConsumer;
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct StreamConsumer<C: ConsumerContext + 'static> {
     consumer: Arc<BaseConsumer<C>>,
+    paused: Arc<AtomicBool>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
@@ -51,6 +53,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<StreamConsumer<C>> {
         let stream_consumer = StreamConsumer {
             consumer: Arc::new(try!(BaseConsumer::from_config_and_context(config, context))),
+            paused: Arc::new(AtomicBool::new(false)),
             should_stop: Arc::new(AtomicBool::new(false)),
             handle: None,
         };
@@ -83,11 +86,12 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     pub fn start(&mut self) -> MessageStream {
         let (sender, receiver) = mpsc::channel(0);
         let consumer = self.consumer.clone();
+        let paused = self.paused.clone();
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
             .name("poll".to_string())
             .spawn(move || {
-                poll_loop(consumer, sender, should_stop);
+                poll_loop(consumer, sender, paused, should_stop);
             })
             .expect("Failed to start polling thread");
         self.handle = Some(handle);
@@ -107,6 +111,38 @@ impl<C: ConsumerContext> StreamConsumer<C> {
             };
         }
     }
+
+    /// Pause consuming of this consumer.
+    pub fn pause(&mut self) {
+        trace!("Pausing consumer");
+
+        // Pause the base consumer
+        self.consumer.pause();
+
+        // Indicate we're paused and start a thread that
+        // will poll while we're paused.
+        self.paused.store(true, Ordering::Relaxed);
+        let consumer = self.consumer.clone();
+        let paused = self.paused.clone();
+        thread::Builder::new()
+            .name("pause_poll".to_string())
+            .spawn(move || {
+                pause_loop(consumer, paused);
+            })
+            .expect("Failed to start pause polling thread");
+    }
+
+    /// Resume consuming of this consumer.
+    pub fn resume(&mut self) {
+        trace!("Resuming consumer");
+        // This will make the pause thread exit
+        self.paused.store(false, Ordering::Relaxed);
+        // Sleep for more than a tick of the loop to make sure
+        // the pause loop does not get a result.
+        thread::sleep(Duration::from_millis(150));
+        // Resume the base consumer
+        self.consumer.resume();
+    }
 }
 
 impl<C: ConsumerContext> Drop for StreamConsumer<C> {
@@ -117,10 +153,20 @@ impl<C: ConsumerContext> Drop for StreamConsumer<C> {
 }
 
 /// Internal consumer loop.
-fn poll_loop<C: ConsumerContext>(consumer: Arc<BaseConsumer<C>>, sender: mpsc::Sender<KafkaResult<Message>>, should_stop: Arc<AtomicBool>) {
+fn poll_loop<C: ConsumerContext>(
+    consumer: Arc<BaseConsumer<C>>,
+    sender: mpsc::Sender<KafkaResult<Message>>,
+    paused: Arc<AtomicBool>,
+    should_stop: Arc<AtomicBool>
+) {
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
     while !should_stop.load(Ordering::Relaxed) {
+        // If we're paused also pause this loop
+        while paused.load(Ordering::Relaxed) {
+            thread::sleep(Duration::from_millis(100));
+        }
+
         trace!("Polling base consumer");
         let future_sender = match consumer.poll(100) {
             Ok(None) => continue,   // TODO: check stream closed
@@ -136,4 +182,20 @@ fn poll_loop<C: ConsumerContext>(consumer: Arc<BaseConsumer<C>>, sender: mpsc::S
         };
     }
     trace!("Polling thread loop terminated");
+}
+
+/// Internal loop that polls while the consumer is paused
+fn pause_loop<C: ConsumerContext>(
+    consumer: Arc<BaseConsumer<C>>,
+    paused: Arc<AtomicBool>,
+) {
+    trace!("Pause polling loop started");
+    while paused.load(Ordering::Relaxed) {
+        match consumer.poll(100) {
+            Ok(None) => continue,
+            Ok(Some(_)) => panic!("Received result from poll while paused"),
+            Err(e) => error!("Error polling while paused: {}", e)
+        }
+    }
+    trace!("Pause polling thread loop terminated");
 }
