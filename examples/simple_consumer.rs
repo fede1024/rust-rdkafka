@@ -27,7 +27,7 @@ impl ConsumerContext for ConsumerLoggingContext {
         info!("Pre rebalance {:?}", rebalance);
     }
 
-    fn post_rebalance(&self, rebalance: &Rebalance) {
+    fn post_rebalance(&self, rebalance: Rebalance) {
         info!("Post rebalance {:?}", rebalance);
     }
 }

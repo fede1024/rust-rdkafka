@@ -67,7 +67,8 @@ pub trait ConsumerContext: Context {
                 }
             }
         }
-        self.post_rebalance(&rebalance);
+
+        self.post_rebalance(rebalance);
     }
 
     /// Pre-rebalance callback. This method will run before the rebalance and should
@@ -76,7 +77,7 @@ pub trait ConsumerContext: Context {
 
     /// Post-rebalance callback. This method will run after the rebalance and should
     /// terminate its execution quickly.
-    fn post_rebalance(&self, _rebalance: &Rebalance) { }
+    fn post_rebalance(&self, _rebalance: Rebalance) { }
 }
 
 /// An empty consumer context that can be user when no context is needed.
@@ -124,6 +125,16 @@ pub trait Consumer<C: ConsumerContext> {
     /// Manually assign topics and partitions to the consumer.
     fn assign(&mut self, assignment: &TopicPartitionList) -> KafkaResult<()> {
         self.get_base_consumer_mut().assign(assignment)
+    }
+
+    /// Pause consuming of this consumer.
+    fn pause(&self) {
+        self.get_base_consumer().pause()
+    }
+
+    /// Resume consuming of this consumer.
+    fn resume(&self) {
+        self.get_base_consumer().resume()
     }
 
     /// Commit offsets on broker for the provided list of partitions.

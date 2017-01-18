@@ -1,6 +1,9 @@
 extern crate futures;
 extern crate rdkafka;
 
+use std::thread::sleep;
+use std::time::Duration;
+
 use futures::*;
 
 use rdkafka::config::{ClientConfig, TopicConfig};
@@ -69,12 +72,21 @@ fn test_produce_consume_base() {
         match message {
             Ok(Ok(m)) => {
                 consumer.commit_message(&m, CommitMode::Async);
+                // Pause and resume
+                consumer.pause();
+                consumer.resume();
                 m
             },
             Ok(Err(e)) => panic!("Error receiving message: {:?}", e),
             Err(e) => panic!("Error receiving message: {:?}", e)
         }
     }).collect();
+
+
+    // Pause, wait for a few polls and then and resume
+    consumer.pause();
+    sleep(Duration::from_millis(500));
+    consumer.resume();
 
     // Test that committing separately does not crash
     let mut tpl = TopicPartitionList::new();
