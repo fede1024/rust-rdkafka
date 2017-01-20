@@ -84,6 +84,7 @@ fn test_produce_consume_base() {
     // Fetching various metadata should not fail
     consumer.committed(500).unwrap();
     consumer.position().unwrap();
+    consumer.fetch_metadata(500).unwrap();
 
     for i in 0..NUMBER_OF_MESSAGES {
         match messages.get(i as usize) {
