@@ -1,6 +1,7 @@
 //! Producer implementations.
 use rdsys;
 use rdsys::types::*;
+use rdsys::rd_kafka_vtype_t::*;
 
 use std::ffi::CString;
 use std::mem;
@@ -10,7 +11,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread::{self, JoinHandle};
 
-use errno;
 use futures::{self, Canceled, Complete, Future, Poll, Oneshot};
 
 use client::{Client, Context, EmptyContext};
@@ -26,7 +26,8 @@ use util::cstr_to_owned;
 
 /// A native rdkafka-sys topic, used for message production.
 struct NativeTopic {
-    ptr: *mut RDKafkaTopic,
+    client_ptr: *mut RDKafka,
+    topic_ptr: *mut RDKafkaTopic,
 }
 
 unsafe impl Send for NativeTopic {}
@@ -38,31 +39,30 @@ impl NativeTopic {
     /// Given a pointer to a Kafka client, a topic name and a topic configuration, returns a new
     /// RDKafkaTopic created by the given client. The returned RDKafkaTopic should not outlive
     /// the client it was created from.
-    unsafe fn new(client: *mut RDKafka, name: &str, topic_config_ptr: *mut RDKafkaTopicConf)
-            -> KafkaResult<NativeTopic> {
-        let name_ptr = CString::new(name.to_string()).expect("could not create name CString"); // TODO: remove expect
-        let topic_ptr = rdsys::rd_kafka_topic_new(client, name_ptr.as_ptr(), topic_config_ptr);
+    unsafe fn new(client: *mut RDKafka, name: &str, topic_config_ptr: *mut RDKafkaTopicConf) -> KafkaResult<NativeTopic> {
+        let name_cstring = CString::new(name.to_string()).expect("could not create name CString"); // TODO: remove expect
+        let topic_ptr = rdsys::rd_kafka_topic_new(client, name_cstring.as_ptr(), topic_config_ptr);
         if topic_ptr.is_null() {
             Err(KafkaError::TopicCreation(name.to_owned()))
         } else {
-            Ok(NativeTopic { ptr: topic_ptr })
+            Ok(NativeTopic { client_ptr: client, topic_ptr: topic_ptr })
         }
-    }
-
-    fn ptr(&self) -> *mut RDKafkaTopic {
-        self.ptr
     }
 
     fn name(&self) -> String {
         unsafe {
-            cstr_to_owned(rdsys::rd_kafka_topic_name(self.ptr))
+            cstr_to_owned(rdsys::rd_kafka_topic_name(self.topic_ptr))
         }
     }
 
     /// Sends a copy of the provided data to the topic.
-    fn send_copy<T>(&self, partition: Option<i32>, payload: Option<&[u8]>, key: Option<&[u8]>,
-                    delivery_context: Option<Box<T>>)
-            -> KafkaResult<()> {
+    fn send_copy<T>(
+        &self,
+        partition: Option<i32>,
+        payload: Option<&[u8]>,
+        key: Option<&[u8]>,
+        delivery_context: Option<Box<T>>
+    ) -> KafkaResult<()> {
         let (payload_ptr, payload_len) = match payload {
             None => (ptr::null_mut(), 0),
             Some(p) => (p.as_ptr() as *mut c_void, p.len()),
@@ -75,22 +75,20 @@ impl NativeTopic {
             Some(context) => Box::into_raw(context) as *mut c_void,
             None => ptr::null_mut(),
         };
-        let produce_response = unsafe {
-            rdsys::rd_kafka_produce(
-                self.ptr(),
-                partition.unwrap_or(-1),
-                rdsys::RD_KAFKA_MSG_F_COPY as i32,
-                payload_ptr,
-                payload_len,
-                key_ptr,
-                key_len,
-                delivery_context_ptr,
+        let produce_error = unsafe {
+            rdsys::rd_kafka_producev(
+                self.client_ptr,
+                RD_KAFKA_VTYPE_RKT, self.topic_ptr,
+                RD_KAFKA_VTYPE_PARTITION, partition.unwrap_or(-1),
+                RD_KAFKA_VTYPE_MSGFLAGS, rdsys::RD_KAFKA_MSG_F_COPY as i32,
+                RD_KAFKA_VTYPE_VALUE, payload_ptr, payload_len,
+                RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
+                RD_KAFKA_VTYPE_OPAQUE, delivery_context_ptr,
+                RD_KAFKA_VTYPE_END
             )
         };
-        if produce_response != 0 {
-            let errno = errno::errno().0 as i32;
-            let kafka_error = unsafe { rdsys::rd_kafka_errno2err(errno) };
-            Err(KafkaError::MessageProduction(kafka_error))
+        if produce_error.is_error() {
+            Err(KafkaError::MessageProduction(produce_error))
         } else {
             Ok(())
         }
@@ -101,7 +99,7 @@ impl Drop for NativeTopic {
     fn drop(&mut self) {
         trace!("Destroy rd_kafka_topic");
         unsafe {
-            rdsys::rd_kafka_topic_destroy(self.ptr);
+            rdsys::rd_kafka_topic_destroy(self.topic_ptr);
         }
     }
 }
