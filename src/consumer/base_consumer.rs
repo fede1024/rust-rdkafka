@@ -151,6 +151,24 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
+    /// Retrieve current positions (offsets) for topics and partitions.
+    pub fn position(&self) -> KafkaResult<TopicPartitionList> {
+        let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
+        let error = unsafe {
+            rdkafka::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list);
+            rdkafka::rd_kafka_position(
+                self.client.native_ptr(),
+                tp_list
+            )
+        };
+
+        if error.is_error() {
+            Err(KafkaError::MetadataFetch(error))
+        } else {
+            Ok(TopicPartitionList::from_rdkafka(tp_list))
+        }
+    }
+
     /// Returns the metadata information for all the topics in the cluster.
     pub fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
         self.client.fetch_metadata(timeout_ms)

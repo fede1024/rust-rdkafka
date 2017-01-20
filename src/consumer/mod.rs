@@ -145,6 +145,11 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().committed(timeout_ms)
     }
 
+    /// Retrieve current positions (offsets) for topics and partitions.
+    fn position(&self) -> KafkaResult<TopicPartitionList> {
+        self.get_base_consumer().position()
+    }
+
     /// Returns the metadata information for all the topics in the cluster.
     fn fetch_metadata(&mut self, timeout_ms: i32) -> KafkaResult<Metadata> {
         self.get_base_consumer().fetch_metadata(timeout_ms)
