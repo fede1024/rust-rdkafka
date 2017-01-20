@@ -140,6 +140,11 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().commit_message(message, mode)
     }
 
+    /// Retrieve committed offsets for topics and partitions.
+    fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
+        self.get_base_consumer().committed(timeout_ms)
+    }
+
     /// Returns the metadata information for all the topics in the cluster.
     fn fetch_metadata(&mut self, timeout_ms: i32) -> KafkaResult<Metadata> {
         self.get_base_consumer().fetch_metadata(timeout_ms)

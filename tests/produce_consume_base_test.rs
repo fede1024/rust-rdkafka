@@ -81,6 +81,9 @@ fn test_produce_consume_base() {
     tpl.add_topic_with_partitions_and_offsets("produce_consume_base", &vec![(1, 1)]);
     consumer.commit(&tpl, CommitMode::Async).unwrap();
 
+    // Getting committed offsets should not fail
+    consumer.committed(500).unwrap();
+
     for i in 0..NUMBER_OF_MESSAGES {
         match messages.get(i as usize) {
             Some(ref message) => {
