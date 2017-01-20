@@ -85,6 +85,7 @@ fn test_produce_consume_base() {
     consumer.committed(500).unwrap();
     consumer.position().unwrap();
     consumer.fetch_metadata(500).unwrap();
+    consumer.fetch_watermarks("produce_consume_base", 1, 500).unwrap();
 
     for i in 0..NUMBER_OF_MESSAGES {
         match messages.get(i as usize) {
