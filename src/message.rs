@@ -5,6 +5,14 @@ use rdsys::types::*;
 use std::slice;
 use std::str;
 
+/// Timestamp of a message
+#[derive(Debug,PartialEq,Eq)]
+pub enum Timestamp {
+    NotAvailable,
+    CreateTime(i64),
+    LogAppendTime(i64)
+}
+
 /// A native librdkafka message.
 #[derive(Debug)]
 pub struct Message {
@@ -76,6 +84,23 @@ impl<'a> Message {
     /// Returns the offset of the message.
     pub fn offset(&self) -> i64 {
         unsafe { (*self.ptr).offset }
+    }
+
+    /// Returns the message timestamp for a consumed message if available.
+    pub fn timestamp(&self) -> Timestamp {
+        let mut timestamp_type = rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_NOT_AVAILABLE;
+        let timestamp = unsafe {
+            rdsys::rd_kafka_message_timestamp(
+                self.ptr,
+                &mut timestamp_type
+            )
+        };
+
+        match timestamp_type {
+            rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_NOT_AVAILABLE => Timestamp::NotAvailable,
+            rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_CREATE_TIME => Timestamp::CreateTime(timestamp),
+            rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_LOG_APPEND_TIME => Timestamp::LogAppendTime(timestamp)
+        }
     }
 }
 

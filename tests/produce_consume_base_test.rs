@@ -11,6 +11,7 @@ mod test_utils;
 use futures::*;
 
 use rdkafka::consumer::{Consumer, CommitMode};
+use rdkafka::message::Timestamp;
 use rdkafka::topic_partition_list::TopicPartitionList;
 
 use test_utils::*;
@@ -31,6 +32,7 @@ fn test_produce_consume_base() {
             match message {
                 Ok(m) => {
                     let id = message_map.get(&(m.partition(), m.offset())).unwrap();
+                    assert_eq!(m.timestamp(), Timestamp::NotAvailable);
                     assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
                     assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
                 },
