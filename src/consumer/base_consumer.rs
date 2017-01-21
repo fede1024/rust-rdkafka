@@ -132,6 +132,20 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
+    /// Returns the current partition assignment.
+    pub fn assignment(&self) -> KafkaResult<TopicPartitionList> {
+        let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
+        let error = unsafe {
+            rdkafka::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
+        };
+
+        if error.is_error() {
+            Err(KafkaError::MetadataFetch(error))
+        } else {
+            Ok(TopicPartitionList::from_rdkafka(tp_list))
+        }
+    }
+
     /// Retrieve committed offsets for topics and partitions.
     pub fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
         let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };

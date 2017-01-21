@@ -82,6 +82,7 @@ fn test_produce_consume_base() {
     consumer.commit(&tpl, CommitMode::Async).unwrap();
 
     // Fetching various metadata should not fail
+    consumer.assignment().unwrap();
     consumer.committed(500).unwrap();
     consumer.position().unwrap();
     consumer.fetch_metadata(500).unwrap();

@@ -140,6 +140,11 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().commit_message(message, mode)
     }
 
+    /// Returns the current partition assignment.
+    fn assignment(&self) -> KafkaResult<TopicPartitionList> {
+        self.get_base_consumer().assignment()
+    }
+
     /// Retrieve committed offsets for topics and partitions.
     fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
         self.get_base_consumer().committed(timeout_ms)
