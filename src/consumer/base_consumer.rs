@@ -149,17 +149,22 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// Retrieve committed offsets for topics and partitions.
     pub fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
         let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
-        let error = unsafe {
-            rdkafka::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list);
+        let assignment_error = unsafe {
+            rdkafka::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
+        };
+        if assignment_error.is_error() {
+            return Err(KafkaError::MetadataFetch(assignment_error))
+        }
+
+        let committed_eror = unsafe {
             rdkafka::rd_kafka_committed(
                 self.client.native_ptr(),
                 tp_list,
                 timeout_ms
             )
         };
-
-        if error.is_error() {
-            Err(KafkaError::MetadataFetch(error))
+        if committed_eror.is_error() {
+            Err(KafkaError::MetadataFetch(committed_eror))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
         }
