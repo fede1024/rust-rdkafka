@@ -80,7 +80,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                 };
                 info!("key: '{:?}', payload: '{}', partition: {}, offset: {}",
                       key, payload, m.partition(), m.offset());
-                consumer.commit_message(&m, CommitMode::Async);
+                consumer.commit_message(&m, CommitMode::Async).unwrap();
             },
             Ok(Err(e)) => {
                 warn!("Kafka error: {}", e);
