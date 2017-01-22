@@ -68,7 +68,7 @@ fn test_produce_consume_base() {
     let messages: Vec<Message> = message_stream.take(NUMBER_OF_MESSAGES).wait().map({ |message|
         match message {
             Ok(Ok(m)) => {
-                consumer.commit_message(&m, CommitMode::Async);
+                consumer.commit_message(&m, CommitMode::Async).unwrap();
                 m
             },
             Ok(Err(e)) => panic!("Error receiving message: {:?}", e),
@@ -79,7 +79,7 @@ fn test_produce_consume_base() {
     // Test that committing separately does not crash
     let mut tpl = TopicPartitionList::new();
     tpl.add_topic_with_partitions_and_offsets("produce_consume_base", &vec![(1, 1)]);
-    consumer.commit(&tpl, CommitMode::Async);
+    consumer.commit(&tpl, CommitMode::Async).unwrap();
 
     for i in 0..NUMBER_OF_MESSAGES {
         match messages.get(i as usize) {

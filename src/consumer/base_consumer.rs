@@ -108,17 +108,28 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     }
 
     /// Commits the provided list of partitions. The commit can be sync (blocking), or async.
-    pub fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) {
+    pub fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) -> KafkaResult<()> {
         let tp_list = topic_partition_list.create_native_topic_partition_list();
-        unsafe {
-            rdkafka::rd_kafka_commit(self.client.native_ptr(), tp_list, mode as i32);
+        let error = unsafe {
+            let e = rdkafka::rd_kafka_commit(self.client.native_ptr(), tp_list, mode as i32);
             rdkafka::rd_kafka_topic_partition_list_destroy(tp_list);
+            e
+        };
+        if error.is_error() {
+            Err(KafkaError::ConsumerCommit(error))
+        } else {
+            Ok(())
         }
     }
 
     /// Commits the specified message. The commit can be sync (blocking), or async.
-    pub fn commit_message(&self, message: &Message, mode: CommitMode) {
-        unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
+    pub fn commit_message(&self, message: &Message, mode: CommitMode) -> KafkaResult<()> {
+        let error = unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
+        if error.is_error() {
+            Err(KafkaError::ConsumerCommit(error))
+        } else {
+            Ok(())
+        }
     }
 
     /// Returns the metadata information for all the topics in the cluster.
