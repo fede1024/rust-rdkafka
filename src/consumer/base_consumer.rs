@@ -133,6 +133,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         };
 
         if error.is_error() {
+            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
             Err(KafkaError::MetadataFetch(error))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
@@ -147,6 +148,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         };
 
         if error.is_error() {
+            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
             Err(KafkaError::MetadataFetch(error))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
@@ -160,6 +162,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             rdkafka::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
         };
         if assignment_error.is_error() {
+            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
             return Err(KafkaError::MetadataFetch(assignment_error))
         }
 
@@ -171,6 +174,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             )
         };
         if committed_eror.is_error() {
+            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
             Err(KafkaError::MetadataFetch(committed_eror))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
@@ -189,6 +193,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         };
 
         if error.is_error() {
+            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
             Err(KafkaError::MetadataFetch(error))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
