@@ -140,8 +140,33 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().commit_message(message, mode)
     }
 
+    /// Returns the current topic subscription.
+    fn subscription(&self) -> KafkaResult<TopicPartitionList> {
+        self.get_base_consumer().subscription()
+    }
+
+    /// Returns the current partition assignment.
+    fn assignment(&self) -> KafkaResult<TopicPartitionList> {
+        self.get_base_consumer().assignment()
+    }
+
+    /// Retrieve committed offsets for topics and partitions.
+    fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
+        self.get_base_consumer().committed(timeout_ms)
+    }
+
+    /// Retrieve current positions (offsets) for topics and partitions.
+    fn position(&self) -> KafkaResult<TopicPartitionList> {
+        self.get_base_consumer().position()
+    }
+
     /// Returns the metadata information for all the topics in the cluster.
-    fn fetch_metadata(&mut self, timeout_ms: i32) -> KafkaResult<Metadata> {
+    fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
         self.get_base_consumer().fetch_metadata(timeout_ms)
+    }
+
+    /// Returns the metadata information for all the topics in the cluster.
+    fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
+        self.get_base_consumer().fetch_watermarks(topic, partition, timeout_ms)
     }
 }

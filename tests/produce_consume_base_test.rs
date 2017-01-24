@@ -81,6 +81,14 @@ fn test_produce_consume_base() {
     tpl.add_topic_with_partitions_and_offsets("produce_consume_base", &vec![(1, 1)]);
     consumer.commit(&tpl, CommitMode::Async).unwrap();
 
+    // Fetching various metadata should not fail
+    consumer.subscription().unwrap();
+    consumer.assignment().unwrap();
+    consumer.committed(500).unwrap();
+    consumer.position().unwrap();
+    consumer.fetch_metadata(500).unwrap();
+    consumer.fetch_watermarks("produce_consume_base", 1, 500).unwrap();
+
     for i in 0..NUMBER_OF_MESSAGES {
         match messages.get(i as usize) {
             Some(ref message) => {
