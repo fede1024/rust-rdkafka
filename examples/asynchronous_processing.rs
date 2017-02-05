@@ -26,7 +26,7 @@ mod example_utils;
 use example_utils::setup_logger;
 
 // Emulates an expensive, synchronous computation. This function returns a string with the length
-// if the message payload, if any.
+// of the message payload, if any.
 fn expensive_computation(msg: Message) -> String {
     info!("Starting expensive computation on message");
     thread::sleep(Duration::from_millis(rand::random::<u64>() % 5000));
@@ -45,7 +45,7 @@ fn expensive_computation(msg: Message) -> String {
 //   4) produce the result to the output topic.
 // Moving each message from one stage of the pipeline to next one is handled by the event loop,
 // that runs on a single thread. The expensive CPU-bound computation is handled by the `CpuPool`,
-// without blocking the event pool.
+// without blocking the event loop.
 fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_topic: &str) {
     // Create the event loop. The event loop will run on a single thread and drive the pipeline.
     let mut core = Core::new().unwrap();
