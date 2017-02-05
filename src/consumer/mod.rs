@@ -134,7 +134,7 @@ pub trait Consumer<C: ConsumerContext> {
     }
 
     /// Commit a specific message. If mode is set to CommitMode::Sync,
-    /// the call will block until the message has been succesfully
+    /// the call will block until the message has been successfully
     /// committed.
     fn commit_message(&self, message: &Message, mode: CommitMode) -> KafkaResult<()> {
         self.get_base_consumer().commit_message(message, mode)
