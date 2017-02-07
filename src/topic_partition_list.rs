@@ -11,10 +11,13 @@ use util::cstr_to_owned;
 
 use self::rdkafka::types::*;
 
+// TODO: Add offset conversion
+// pub const OFFSET_INVALID: i64 = rdkafka::RD_KAFKA_OFFSET_INVALID as i64;
+
 /// Configuration of a partition
 #[derive(Clone, Debug, PartialEq)]
 pub struct Partition {
-    pub partition: i32,
+    pub id: i32,
     pub offset: i64
 }
 
@@ -42,7 +45,7 @@ impl TopicPartitionList {
                 match *topic {
                     Some(ref mut p) => {
                         p.push(Partition {
-                            partition: tp.partition,
+                            id: tp.partition,
                             offset: tp.offset
                         });
                     },
@@ -81,13 +84,17 @@ impl TopicPartitionList {
 
     /// Add topic with partitions configured
     pub fn add_topic_with_partitions(&mut self, topic: &str, partitions: &Vec<i32>) {
-        let partitions_configs: Vec<Partition> = partitions.iter().map(|p| Partition { partition: *p, offset: -1001 } ).collect();
+        let partitions_configs: Vec<Partition> = partitions.iter()
+            .map(|p| Partition { id: *p, offset: -1001 } )
+            .collect();
         self.topics.insert(topic.to_string(), Some(partitions_configs));
     }
 
     /// Add topic with partitions and offsets configured
     pub fn add_topic_with_partitions_and_offsets(&mut self, topic: &str, partitions: &Vec<(i32, i64)>) {
-        let partitions_configs: Vec<Partition> = partitions.iter().map(|p| Partition { partition: p.0, offset: p.1 } ).collect();
+        let partitions_configs: Vec<Partition> = partitions.iter()
+            .map(|p| Partition { id: p.0, offset: p.1 } )
+            .collect();
         self.topics.insert(topic.to_string(), Some(partitions_configs));
     }
 
@@ -100,10 +107,9 @@ impl TopicPartitionList {
                 &Some(ref ps) => {
                     // Partitions specified
                     for p in ps {
-                        unsafe { rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), p.partition) };
-                        // Add offset if it's specified
-                        if p.offset > -1 {
-                            unsafe { rdkafka::rd_kafka_topic_partition_list_set_offset(tp_list, topic_cstring.as_ptr(), p.partition, p.offset) };
+                        unsafe { rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), p.id) };
+                        if p.offset >= 0 {
+                            unsafe { rdkafka::rd_kafka_topic_partition_list_set_offset(tp_list, topic_cstring.as_ptr(), p.id, p.offset) };
                         }
                     }
                 },

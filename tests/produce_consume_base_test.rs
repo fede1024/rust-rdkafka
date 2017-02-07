@@ -125,8 +125,8 @@ fn test_produce_partition() {
     assert_eq!(res, 100);
 }
 
-#[test]
 // Test metadata.
+#[test]
 fn test_metadata() {
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0));
@@ -152,21 +152,57 @@ fn test_metadata() {
     assert_eq!(topic_metadata.partitions()[0].isr(), &[0]);
 }
 
+// Test consumer commit and watermarks.
 #[test]
-// Multiple checks. TODO: move to separate tests
-fn test_multi() {
+fn test_consumer_commit() {
     let topic_name = rand_test_topic();
-    let consumer = create_simple_stream_consumer(&topic_name);
+    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0));
+    produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1));
+    produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2));
+    let mut consumer = create_simple_stream_consumer(&topic_name);
 
-    // Test that committing separately does not crash
-    let mut tpl = TopicPartitionList::new();
-    tpl.add_topic_with_partitions_and_offsets("produce_consume_base", &vec![(1, 1)]);
-    consumer.commit(&tpl, CommitMode::Async).unwrap();
 
-    // Fetching various metadata should not fail
-    consumer.subscription().unwrap();
-    consumer.assignment().unwrap();
-    consumer.committed(500).unwrap();
-    consumer.position().unwrap();
-    consumer.fetch_watermarks("produce_consume_base", 1, 500).unwrap();
+    let _consumer_future = consumer.start()
+        .take(33)
+        .for_each(|message| {
+            match message {
+                Ok(m) => {
+                    if m.partition() == 1 {
+                        consumer.commit_message(&m, CommitMode::Async).unwrap();
+                    }
+                },
+                e => panic!("Error receiving message: {:?}", e)
+            };
+            Ok(())
+        })
+        .wait();
+
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 0, 5000).unwrap(), (0, 10));
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 1, 5000).unwrap(), (0, 11));
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 2, 5000).unwrap(), (0, 12));
+
+    let mut assignment = TopicPartitionList::new();
+    assignment.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, -1001), (1, -1001), (2, -1001)]);
+    assert_eq!(assignment, consumer.assignment().unwrap());
+
+    let mut committed = TopicPartitionList::new();
+    committed.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, -1001), (1, 11), (2, -1001)]);
+    assert_eq!(committed, consumer.committed(5000).unwrap());
+
+    let mut position = TopicPartitionList::new();
+    position.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, 10), (1, 11), (2, 12)]);
+    assert_eq!(position, consumer.position().unwrap());
+}
+
+// Test subscription.
+#[test]
+fn test_subscription() {
+    let topic_name = rand_test_topic();
+    produce_messages(&topic_name, 10, &value_fn, &key_fn, None);
+    let mut consumer = create_simple_stream_consumer(&topic_name);
+
+    let _consumer_future = consumer.start().take(10).wait();
+
+    let subscription = TopicPartitionList::with_topics(&vec![&topic_name]);
+    assert_eq!(subscription, consumer.subscription().unwrap());
 }
