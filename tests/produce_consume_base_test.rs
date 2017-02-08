@@ -1,5 +1,4 @@
 extern crate rdkafka;
-
 extern crate futures;
 extern crate rand;
 
@@ -62,7 +61,7 @@ fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_
 }
 
 // Create consumer
-fn create_simple_stream_consumer(topic_name: &str) -> StreamConsumer<EmptyConsumerContext> {
+fn create_stream_consumer(topic_name: &str) -> StreamConsumer<EmptyConsumerContext> {
     let mut consumer = ClientConfig::new()
         .set("group.id", &rand_test_group())
         .set("bootstrap.servers", "localhost:9092")
@@ -93,7 +92,7 @@ fn key_fn(id: i32) -> String {
 fn test_produce_consume_base() {
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, None);
-    let mut consumer = create_simple_stream_consumer(&topic_name);
+    let mut consumer = create_stream_consumer(&topic_name);
 
     let _consumer_future = consumer.start()
         .take(100)
@@ -103,7 +102,6 @@ fn test_produce_consume_base() {
                     let id = message_map.get(&(m.partition(), m.offset())).unwrap();
                     assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
                     assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
-                    //consumer.commit_message(&m, CommitMode::Async).unwrap();
                 },
                 e => panic!("Error receiving message: {:?}", e)
             };
@@ -125,14 +123,13 @@ fn test_produce_partition() {
     assert_eq!(res, 100);
 }
 
-// Test metadata.
 #[test]
 fn test_metadata() {
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0));
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1));
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2));
-    let consumer = create_simple_stream_consumer(&topic_name);
+    let consumer = create_stream_consumer(&topic_name);
 
     let metadata = consumer.fetch_metadata(5000).unwrap();
 
@@ -152,14 +149,13 @@ fn test_metadata() {
     assert_eq!(topic_metadata.partitions()[0].isr(), &[0]);
 }
 
-// Test consumer commit and watermarks.
 #[test]
 fn test_consumer_commit() {
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0));
     produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1));
     produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2));
-    let mut consumer = create_simple_stream_consumer(&topic_name);
+    let mut consumer = create_stream_consumer(&topic_name);
 
 
     let _consumer_future = consumer.start()
@@ -194,12 +190,11 @@ fn test_consumer_commit() {
     assert_eq!(position, consumer.position().unwrap());
 }
 
-// Test subscription.
 #[test]
 fn test_subscription() {
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 10, &value_fn, &key_fn, None);
-    let mut consumer = create_simple_stream_consumer(&topic_name);
+    let mut consumer = create_stream_consumer(&topic_name);
 
     let _consumer_future = consumer.start().take(10).wait();
 
