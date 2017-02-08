@@ -155,11 +155,11 @@ impl DeliveryReport {
     }
 
     /// Returns the result of the production of the message.
-    pub fn result(&self) -> KafkaResult<()> {
+    pub fn result(&self) -> KafkaResult<(i32, i64)> {
         if self.error.is_error() {
             Err(KafkaError::MessageProduction(self.error))
         } else {
-            Ok(())
+            Ok((self.partition, self.offset))
         }
     }
 

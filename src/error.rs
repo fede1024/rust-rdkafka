@@ -16,6 +16,13 @@ pub trait IsError {
     fn is_error(self) -> bool;
 }
 
+// TODO: Use type wrapper for RDKafkaRespErr
+//impl PartialEq for RDKafkaRespErr {
+//    fn eq(&self, other: &RDKafkaRespErr) -> bool {
+//        self as i32 == *other as i32
+//    }
+//}
+
 impl IsError for RDKafkaRespErr {
     fn is_error(self) -> bool {
         self as i32 != RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR as i32

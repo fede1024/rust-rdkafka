@@ -132,12 +132,14 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             rdkafka::rd_kafka_subscription(self.client.native_ptr(), &mut tp_list)
         };
 
-        if error.is_error() {
-            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        let result = if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
-        }
+        };
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+
+        result
     }
 
     /// Returns the current partition assignment.
@@ -147,12 +149,14 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             rdkafka::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
         };
 
-        if error.is_error() {
-            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        let result = if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
-        }
+        };
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+
+        result
     }
 
     /// Retrieve committed offsets for topics and partitions.
@@ -166,19 +170,22 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             return Err(KafkaError::MetadataFetch(assignment_error))
         }
 
-        let committed_eror = unsafe {
+        let committed_error = unsafe {
             rdkafka::rd_kafka_committed(
                 self.client.native_ptr(),
                 tp_list,
                 timeout_ms
             )
         };
-        if committed_eror.is_error() {
-            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
-            Err(KafkaError::MetadataFetch(committed_eror))
+
+        let result = if committed_error.is_error() {
+            Err(KafkaError::MetadataFetch(committed_error))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
-        }
+        };
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+
+        result
     }
 
     /// Retrieve current positions (offsets) for topics and partitions.
@@ -192,12 +199,14 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             )
         };
 
-        if error.is_error() {
-            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        let result = if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
-        }
+        };
+        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+
+        result
     }
 
     /// Returns the metadata information for all the topics in the cluster.
