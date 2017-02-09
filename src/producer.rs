@@ -112,7 +112,7 @@ impl Drop for NativeTopic {
 // ********** PRODUCER CONTEXT **********
 //
 
-/// A ProducerContext is a Context specific for producers. It can be used to store user-specified
+/// A `ProducerContext` is a `Context` specific for producers. It can be used to store user-specified
 /// callbacks, such as `delivery`.
 pub trait ProducerContext: Context {
     /// A DeliveryContext is a user-defined structure that will be passed to the producer when
@@ -120,8 +120,8 @@ pub trait ProducerContext: Context {
     /// delivered, or failed to.
     type DeliveryContext: Send + Sync;
 
-    /// This method will be called once the message has beed delivered (or failed to). The
-    /// DeliveryContext will be the one provided by the user when calling send.
+    /// This method will be called once the message has been delivered (or failed to). The
+    /// `DeliveryContext` will be the one provided by the user when calling send.
     fn delivery(&self, DeliveryReport, Self::DeliveryContext);
 }
 
@@ -145,7 +145,7 @@ pub struct DeliveryReport {
 }
 
 impl DeliveryReport {
-    /// Creates a new DeliveryReport. This should only be used in the delivery_cb.
+    /// Creates a new `DeliveryReport`. This should only be used in the delivery_cb.
     fn new(err: RDKafkaRespErr, partition: i32, offset: i64) -> DeliveryReport {
         DeliveryReport {
             error: err,
@@ -189,16 +189,16 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(_client: *mut RDKafka, msg:
 // ********** BASE PRODUCER **********
 //
 
-/// The BaseProducer implementation.
+/// The `BaseProducer` implementation.
 struct _BaseProducer<C: ProducerContext> {
     client: Client<C>,
 }
 
 impl<C: ProducerContext> _BaseProducer<C> {
     fn new(config: &ClientConfig, context: C) -> KafkaResult<_BaseProducer<C>> {
-        let config_ptr = try!(config.create_native_config());
-        unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(config_ptr, Some(delivery_cb::<C>)) };
-        let client = try!(Client::new(config_ptr, RDKafkaType::RD_KAFKA_PRODUCER, context));
+        let native_config = try!(config.create_native_config());
+        unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<C>)) };
+        let client = try!(Client::new(native_config, RDKafkaType::RD_KAFKA_PRODUCER, context));
         Ok(_BaseProducer { client: client })
     }
 }
@@ -254,9 +254,7 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 }
 
-
-
-/// Represents a Kafka topic with an associated BaseProducer.
+/// Represents a Kafka topic with an associated `BaseProducer`.
 pub struct BaseProducerTopic<C: ProducerContext> {
     native_topic: NativeTopic,
     // A producer topic cannot outlive the client it was created from.
@@ -298,8 +296,8 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
 // ********** FUTURE PRODUCER **********
 //
 
-/// The ProducerContext used by the FutureProducer. This context will use a Future as its
-/// DeliveryContext and will complete the future when the message is delivered (or failed to).
+/// The `ProducerContext` used by the `FutureProducer`. This context will use a Future as its
+/// `DeliveryContext` and will complete the future when the message is delivered (or failed to).
 pub struct FutureProducerContext;
 
 impl Context for FutureProducerContext {}
@@ -312,7 +310,7 @@ impl ProducerContext for FutureProducerContext {
     }
 }
 
-/// FutureProducer implementation.
+/// `FutureProducer` implementation.
 #[must_use = "Producer polling thread will stop immediately if unused"]
 struct _FutureProducer {
     producer: BaseProducer<FutureProducerContext>,
@@ -420,7 +418,7 @@ impl FutureProducer {
     }
 
     /// Stops the internal polling thread. The thread can also be stopped by moving
-    /// the ProducerPollingThread out of scope.
+    /// the `ProducerPollingThread` out of scope.
     pub fn stop(&self) {
         self.inner.stop();
     }
@@ -431,7 +429,7 @@ impl FutureProducer {
     }
 }
 
-/// Represents a Kafka topic with an associated FutureProducer.
+/// Represents a Kafka topic with an associated `FutureProducer`.
 pub struct FutureProducerTopic {
     native_topic: NativeTopic,
     // A producer topic cannot outlive the client it was created from.

@@ -26,8 +26,25 @@ unsafe extern "C" fn log_cb(_client: *const RDKafkaState, level: i32, _fac: *con
     }
 }
 
+/// A native rdkafka-sys client config.
+pub struct NativeClientConfig {
+    ptr: *mut RDKafkaConf,
+}
+
+impl NativeClientConfig {
+    /// Wraps a pointer to an `RDKafkaConfig` object and returns a new `NativeClientConfig`.
+    pub fn new(ptr: *mut RDKafkaConf) -> NativeClientConfig {
+        NativeClientConfig {ptr: ptr}
+    }
+
+    /// Returns the wrapped pointer to `RDKafkaConf`.
+    pub fn ptr(&self) -> *mut RDKafkaConf {
+        self.ptr
+    }
+}
+
 /// Client configuration.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
     default_topic_config: Option<TopicConfig>,
@@ -50,13 +67,13 @@ impl ClientConfig {
 
     /// Sets the default topic configuration to use for automatically subscribed
     /// topics (e.g., through pattern-matched topics).
-    pub fn set_default_topic_config<'a>(&'a mut self, default_topic_config: TopicConfig) -> &'a mut ClientConfig {
+    pub fn set_default_topic_config(&mut self, default_topic_config: TopicConfig) -> &mut ClientConfig {
         self.default_topic_config = Some(default_topic_config);
         self
     }
 
     /// Returns the native rdkafka-sys configuration.
-    pub fn create_native_config(&self) -> KafkaResult<*mut RDKafkaConf> {
+    pub fn create_native_config(&self) -> KafkaResult<NativeClientConfig> {
         let conf = unsafe { rdkafka::rd_kafka_conf_new() };
         let errstr = [0; ERR_LEN];
         for (key, value) in &self.conf_map {
@@ -79,7 +96,7 @@ impl ClientConfig {
             }
         }
         unsafe { rdkafka::rd_kafka_conf_set_log_cb(conf, Some(log_cb)) };
-        Ok(conf)
+        Ok(NativeClientConfig::new(conf))
     }
 
     fn create_native_default_topic_config(&self) -> Option<KafkaResult<*mut RDKafkaTopicConf>> {
@@ -110,7 +127,7 @@ pub trait FromClientConfigAndContext<C: Context>: Sized {
 }
 
 /// Topic configuration.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct TopicConfig {
     conf_map: HashMap<String, String>,
 }

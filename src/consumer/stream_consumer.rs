@@ -46,7 +46,7 @@ impl FromClientConfig for StreamConsumer<EmptyConsumerContext> {
     }
 }
 
-/// Creates a new Consumer starting from a ClientConfig.
+/// Creates a new `Consumer` starting from a `ClientConfig`.
 impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<StreamConsumer<C>> {
         let stream_consumer = StreamConsumer {

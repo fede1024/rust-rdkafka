@@ -198,6 +198,6 @@ fn test_subscription() {
 
     let _consumer_future = consumer.start().take(10).wait();
 
-    let subscription = TopicPartitionList::with_topics(&vec![&topic_name]);
+    let subscription = TopicPartitionList::with_topics(vec![topic_name.as_str()].as_slice());
     assert_eq!(subscription, consumer.subscription().unwrap());
 }
