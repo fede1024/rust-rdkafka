@@ -70,7 +70,7 @@ impl TopicPartitionList {
     }
 
     /// Create list with specified topics with default configuration
-    pub fn with_topics(topic_names: &Vec<&str>) -> TopicPartitionList {
+    pub fn with_topics(topic_names: &[&str]) -> TopicPartitionList {
         let mut topics: Topics = HashMap::with_capacity(topic_names.len());
 
         for topic_name in topic_names {

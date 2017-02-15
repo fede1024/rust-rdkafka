@@ -12,6 +12,7 @@ use self::rdkafka::types::*;
 use metadata::Metadata;
 use error::{IsError, KafkaError, KafkaResult};
 use util::bytes_cstr_to_owned;
+use config::NativeClientConfig;
 
 
 /// A Context is an object that can store user-defined data and on which callbacks can be
@@ -20,7 +21,7 @@ use util::bytes_cstr_to_owned;
 pub trait Context: Send + Sync { }
 
 /// An empty context that can be used when no context is needed.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct EmptyContext;
 
 impl Context for EmptyContext { }
@@ -43,7 +44,7 @@ unsafe impl Send for NativeClient {}
 impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
     pub fn new(ptr: *mut RDKafka) -> NativeClient {
-        NativeClient{ptr: ptr}
+        NativeClient {ptr: ptr}
     }
 
     /// Returns the wrapped pointer to RDKafka.
@@ -61,14 +62,16 @@ pub struct Client<C: Context> {
 }
 
 impl<C: Context> Client<C> {
-    /// Creates a new Client given a configuration, a client type and a context.
-    pub fn new(config_ptr: *mut RDKafkaConf, rd_kafka_type: RDKafkaType, context: C) -> KafkaResult<Client<C>> {
+    /// Creates a new `Client` given a configuration, a client type and a context.
+    pub fn new(native_config: NativeClientConfig, rd_kafka_type: RDKafkaType, context: C)
+            -> KafkaResult<Client<C>> {
         let errstr = [0i8; 1024];
         let mut boxed_context = Box::new(context);
-        unsafe { rdkafka::rd_kafka_conf_set_opaque(config_ptr, (&mut *boxed_context) as *mut C as *mut c_void) };
+        unsafe { rdkafka::rd_kafka_conf_set_opaque(
+            native_config.ptr(), (&mut *boxed_context) as *mut C as *mut c_void) };
 
-        let client_ptr =
-            unsafe { rdkafka::rd_kafka_new(rd_kafka_type, config_ptr, errstr.as_ptr() as *mut i8, errstr.len()) };
+        let client_ptr = unsafe { rdkafka::rd_kafka_new(
+            rd_kafka_type, native_config.ptr(), errstr.as_ptr() as *mut i8, errstr.len()) };
         if client_ptr.is_null() {
             let descr = unsafe { bytes_cstr_to_owned(&errstr) };
             return Err(KafkaError::ClientCreation(descr));
