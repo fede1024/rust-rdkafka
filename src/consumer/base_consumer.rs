@@ -96,7 +96,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
                 e => KafkaError::MessageConsumption(e)
             })
         }
-        let kafka_message = Message::new(message_ptr);
+        let kafka_message = Message::from_ptr(message_ptr);
         Ok(Some(kafka_message))
     }
 
