@@ -130,3 +130,6 @@ pub mod metadata;
 pub mod producer;
 pub mod topic_partition_list;
 pub mod util;
+
+// Re-export
+pub use message::Message;

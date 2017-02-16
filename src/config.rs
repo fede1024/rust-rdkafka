@@ -4,42 +4,41 @@ extern crate rdkafka_sys as rdkafka;
 use self::rdkafka::types::*;
 
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
-use util::bytes_cstr_to_owned;
+use std::ffi::CString;
 
+use util::bytes_cstr_to_owned;
 use error::{KafkaError, KafkaResult, IsError};
 use client::Context;
 
 const ERR_LEN: usize = 256;
 
-unsafe extern "C" fn log_cb(_client: *const RDKafkaState, level: i32, _fac: *const i8, buf: *const i8) {
-    let buf_str = CStr::from_ptr(buf).to_string_lossy();
-    match level {
-        0 => error!("librdkafka: {}", buf_str),
-        1 => error!("librdkafka: {}", buf_str),
-        2 => error!("librdkafka: {}", buf_str),
-        3 => error!("librdkafka: {}", buf_str),
-        4 => warn!("librdkafka: {}", buf_str),
-        5 => info!("librdkafka: {}", buf_str),
-        6 => info!("librdkafka: {}", buf_str),
-        _ => debug!("librdkafka: {}", buf_str),
-    }
-}
-
 /// A native rdkafka-sys client config.
 pub struct NativeClientConfig {
-    ptr: *mut RDKafkaConf,
+    ptr: Option<*mut RDKafkaConf>,
 }
 
 impl NativeClientConfig {
     /// Wraps a pointer to an `RDKafkaConfig` object and returns a new `NativeClientConfig`.
     pub fn new(ptr: *mut RDKafkaConf) -> NativeClientConfig {
-        NativeClientConfig {ptr: ptr}
+        NativeClientConfig {ptr: Some(ptr)}
     }
 
-    /// Returns the wrapped pointer to `RDKafkaConf`.
+    /// Returns the pointer to `RDKafkaConf`.
     pub fn ptr(&self) -> *mut RDKafkaConf {
-        self.ptr
+        self.ptr.expect("Pointer to native Kafka client config used after free")
+    }
+
+    /// Returns ownership of the pointer to `RDKafkaConf`. The caller must take care of freeing it.
+    pub fn ptr_mut(mut self) -> *mut RDKafkaConf {
+        self.ptr.take().expect("Pointer to native Kafka client config used after free")
+    }
+}
+
+impl Drop for NativeClientConfig {
+    fn drop(&mut self) {
+        if let Some(ptr) = self.ptr {
+            unsafe { rdkafka::rd_kafka_conf_destroy(ptr) }
+        }
     }
 }
 
@@ -48,6 +47,7 @@ impl NativeClientConfig {
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
     default_topic_config: Option<TopicConfig>,
+    log_level: Option<i32>,
 }
 
 impl ClientConfig {
@@ -56,6 +56,7 @@ impl ClientConfig {
         ClientConfig {
             conf_map: HashMap::new(),
             default_topic_config: None,
+            log_level: None,
         }
     }
 
@@ -69,6 +70,14 @@ impl ClientConfig {
     /// topics (e.g., through pattern-matched topics).
     pub fn set_default_topic_config(&mut self, default_topic_config: TopicConfig) -> &mut ClientConfig {
         self.default_topic_config = Some(default_topic_config);
+        self
+    }
+
+    // TODO: use enum
+    /// Sets the log level of the client, from 7 (debug) to 1 (errors only). If not specified, the
+    /// log level will be calculated based on the global log level.
+    pub fn set_log_level(&mut self, log_level: i32) -> &mut ClientConfig {
+        self.log_level = Some(log_level);
         self
     }
 
@@ -95,7 +104,6 @@ impl ClientConfig {
                 unsafe { rdkafka::rd_kafka_conf_set_default_topic_conf(conf, topic_config.expect("No topic config present when creating native config")) };
             }
         }
-        unsafe { rdkafka::rd_kafka_conf_set_log_cb(conf, Some(log_cb)) };
         Ok(NativeClientConfig::new(conf))
     }
 

@@ -176,7 +176,8 @@ impl DeliveryReport {
 
 /// Callback that gets called from librdkafka every time a message succeeds
 /// or fails to be delivered.
-unsafe extern "C" fn delivery_cb<C: ProducerContext>(_client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
+unsafe extern "C" fn delivery_cb<C: ProducerContext>(
+        _client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
     let context = Box::from_raw(_opaque as *mut C);
     let delivery_context = Box::from_raw((*msg)._private as *mut C::DeliveryContext);
     let delivery_status = DeliveryReport::new((*msg).err, (*msg).partition, (*msg).offset);
