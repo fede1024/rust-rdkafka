@@ -7,30 +7,28 @@ use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
 
-use log::LogLevel;
-
 use self::rdkafka::types::*;
 
 use metadata::Metadata;
 use error::{IsError, KafkaError, KafkaResult};
 use util::bytes_cstr_to_owned;
-use config::NativeClientConfig;
+use config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 
 
 /// A Context is an object that can store user-defined data and on which callbacks can be
 /// defined. Refer to the list of methods to see which callbacks can currently be overridden.
 /// The context must be thread safe, and might be owned by multiple threads.
 pub trait Context: Send + Sync {
-    fn log(&self, level: i32, fac: &str, log_message: &str) {
+    fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
         match level {
-            0 => error!("librdkafka: {} {}", fac, log_message),
-            1 => error!("librdkafka: {} {}", fac, log_message),
-            2 => error!("librdkafka: {} {}", fac, log_message),
-            3 => error!("librdkafka: {} {}", fac, log_message),
-            4 => warn!("librdkafka: {} {}", fac, log_message),
-            5 => info!("librdkafka: {} {}", fac, log_message),
-            6 => info!("librdkafka: {} {}", fac, log_message),
-            _ => debug!("librdkafka {}: {}", fac, log_message),
+            RDKafkaLogLevel::Emerg => error!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Alert => error!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Critical => error!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Error => error!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Warning => warn!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Notice => info!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Info => info!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Debug => debug!("librdkafka: {} {}", fac, log_message),
         }
     }
 
@@ -81,9 +79,9 @@ pub struct Client<C: Context> {
 }
 
 impl<C: Context> Client<C> {
-    //TODO : use log config
     /// Creates a new `Client` given a configuration, a client type and a context.
-    pub fn new(native_config: NativeClientConfig, rd_kafka_type: RDKafkaType, context: C)
+    pub fn new(config: &ClientConfig, native_config: NativeClientConfig, rd_kafka_type: RDKafkaType,
+               context: C)
             -> KafkaResult<Client<C>> {
         let errstr = [0i8; 1024];
         let mut boxed_context = Box::new(context);
@@ -99,17 +97,7 @@ impl<C: Context> Client<C> {
             return Err(KafkaError::ClientCreation(descr));
         }
 
-        // Set log level based on log crate's settings
-        let log_level = if log_enabled!(LogLevel::Debug) {
-            7
-        } else if log_enabled!(LogLevel::Info) {
-            5
-        } else if log_enabled!(LogLevel::Warn) {
-            4
-        } else {
-            3
-        };
-        unsafe { rdkafka::rd_kafka_set_log_level(client_ptr, log_level) };
+        unsafe { rdkafka::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
 
         Ok(Client {
             native: NativeClient::new(client_ptr),
@@ -181,7 +169,7 @@ pub unsafe extern "C" fn native_log_cb<C: Context>(
     let log_message = CStr::from_ptr(buf).to_string_lossy();
 
     let context = Box::from_raw(rdkafka::rd_kafka_opaque(client) as *mut C);
-    (*context).log(level, fac.trim(), log_message.trim());
+    (*context).log(RDKafkaLogLevel::from_int(level), fac.trim(), log_message.trim());
     mem::forget(context);   // Do not free the context
 }
 

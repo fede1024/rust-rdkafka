@@ -199,7 +199,7 @@ impl<C: ProducerContext> _BaseProducer<C> {
     fn new(config: &ClientConfig, context: C) -> KafkaResult<_BaseProducer<C>> {
         let native_config = try!(config.create_native_config());
         unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<C>)) };
-        let client = try!(Client::new(native_config, RDKafkaType::RD_KAFKA_PRODUCER, context));
+        let client = try!(Client::new(config, native_config, RDKafkaType::RD_KAFKA_PRODUCER, context));
         Ok(_BaseProducer { client: client })
     }
 }
