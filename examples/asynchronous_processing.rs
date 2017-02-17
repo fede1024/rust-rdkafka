@@ -71,7 +71,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     // Create the `FutureProducer` to produce asynchronously.
     let producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
-        .create::<FutureProducer>()
+        .create::<FutureProducer<_>>()
         .expect("Producer creation error");
 
     let topic_config = TopicConfig::new()

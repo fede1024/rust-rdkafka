@@ -19,6 +19,7 @@ use config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 /// defined. Refer to the list of methods to see which callbacks can currently be overridden.
 /// The context must be thread safe, and might be owned by multiple threads.
 pub trait Context: Send + Sync {
+    /// Receives log lines from librdkafka.
     fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
         match level {
             RDKafkaLogLevel::Emerg => error!("librdkafka: {} {}", fac, log_message),
@@ -32,9 +33,14 @@ pub trait Context: Send + Sync {
         }
     }
 
+    /// Receives the statistics of the librdkafka client in JSON format. To enable, the
+    /// "statistics.interval.ms" configuration parameter must be specified.
     fn stats(&self, json: String) {
         println!("Client stats: {}", json);
     }
+
+    // NOTE: when adding a new method, remember to add it to the FutureProducerContext as well.
+    // https://github.com/rust-lang/rfcs/pull/1406 will maybe help in the future.
 }
 
 /// An empty context that can be used when no context is needed.
@@ -199,8 +205,10 @@ mod tests {
 
     #[test]
     fn test_client() {
-        let config_ptr = ClientConfig::new().create_native_config().unwrap();
-        let client = Client::new(config_ptr, RDKafkaType::RD_KAFKA_PRODUCER, EmptyContext::new()).unwrap();
+        let config = ClientConfig::new();
+        let native_config = config.create_native_config().unwrap();
+        let client = Client::new(&config, native_config, RDKafkaType::RD_KAFKA_PRODUCER,
+                                 EmptyContext::new()).unwrap();
         assert!(!client.native_ptr().is_null());
     }
 }

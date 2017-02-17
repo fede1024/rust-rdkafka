@@ -6,86 +6,11 @@ mod test_utils;
 
 use futures::*;
 
-use rdkafka::config::{ClientConfig, TopicConfig};
-use rdkafka::consumer::{Consumer, CommitMode, EmptyConsumerContext};
-use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::producer::FutureProducer;
+use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::topic_partition_list::TopicPartitionList;
-use rdkafka::message::ToBytes;
 
-use test_utils::{rand_test_group, rand_test_topic};
+use test_utils::*;
 
-use std::collections::HashMap;
-
-fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K, partition: Option<i32>)
-    -> HashMap<(i32, i64), i32>
-    where P: Fn(i32) -> J,
-          K: Fn(i32) -> Q,
-          J: ToBytes,
-          Q: ToBytes {
-    // Produce some messages
-    let producer = ClientConfig::new()
-        .set("bootstrap.servers", "localhost:9092")
-        .create::<FutureProducer>()
-        .expect("Producer creation error");
-
-    producer.start();
-
-    let topic_config = TopicConfig::new()
-        .set("produce.offset.report", "true")
-        .set("message.timeout.ms", "5000")
-        .finalize();
-
-    let topic = producer.get_topic(&topic_name, &topic_config)
-        .expect("Topic creation error");
-
-    let futures = (0..count)
-        .map(|id| {
-            let future = topic.send_copy(partition, Some(&value_fn(id)), Some(&key_fn(id)))
-                .expect("Production failed");
-            (id, future)
-        }).collect::<Vec<_>>();
-
-    let mut message_map = HashMap::new();
-    for (id, future) in futures {
-        match future.wait() {
-            Ok(report) => match report.result() {
-                Err(e) => panic!("Delivery failed: {}", e),
-                Ok((partition, offset)) => message_map.insert((partition, offset), id),
-            },
-            Err(e) => panic!("Waiting for future failed: {}", e)
-        };
-    }
-
-    message_map
-}
-
-// Create consumer
-fn create_stream_consumer(topic_name: &str) -> StreamConsumer<EmptyConsumerContext> {
-    let mut consumer = ClientConfig::new()
-        .set("group.id", &rand_test_group())
-        .set("bootstrap.servers", "localhost:9092")
-        .set("enable.partition.eof", "false")
-        .set("session.timeout.ms", "6000")
-        .set("enable.auto.commit", "false")
-        .set_default_topic_config(
-            TopicConfig::new()
-                .set("auto.offset.reset", "earliest")
-                .finalize()
-        )
-        .create::<StreamConsumer<_>>()
-        .expect("Consumer creation failed");
-    consumer.subscribe(&vec![topic_name]).unwrap();
-    consumer
-}
-
-fn value_fn(id: i32) -> String {
-    format!("Message {}", id)
-}
-
-fn key_fn(id: i32) -> String {
-    format!("Key {}", id)
-}
 
 // All produced messages should be consumed.
 #[test]

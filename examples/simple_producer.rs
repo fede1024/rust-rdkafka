@@ -13,10 +13,11 @@ use rdkafka::util::get_rdkafka_version;
 mod example_utils;
 use example_utils::setup_logger;
 
+
 fn produce(brokers: &str, topic_name: &str) {
     let producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
-        .create::<FutureProducer>()
+        .create::<FutureProducer<_>>()
         .expect("Producer creation error");
 
     let topic_config = TopicConfig::new()
