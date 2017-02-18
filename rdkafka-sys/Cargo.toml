@@ -8,6 +8,7 @@ repository = "https://github.com/fede1024/rust-rdkafka"
 license = "MIT"
 description = "Native bindings to the librdkafka library"
 keywords = ["kafka", "rdkafka"]
+categories = ["external-ffi-bindings"]
 
 [dependencies]
 lz4-sys = "^ 1.0"
