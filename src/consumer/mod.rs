@@ -1,4 +1,4 @@
-//! Base trait and common functionalities for all consumers.
+//! Base trait and common functionality for all consumers.
 extern crate rdkafka_sys as rdkafka;
 
 pub mod base_consumer;

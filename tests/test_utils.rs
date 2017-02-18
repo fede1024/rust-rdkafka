@@ -5,9 +5,9 @@ extern crate futures;
 use rand::Rng;
 use futures::*;
 
-use rdkafka::client::{Context, EmptyContext};
-use rdkafka::config::{ClientConfig, TopicConfig};
-use rdkafka::consumer::{Consumer, EmptyConsumerContext};
+use rdkafka::client::Context;
+use rdkafka::config::{ClientConfig, RDKafkaLogLevel, TopicConfig};
+use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
 use rdkafka::message::ToBytes;
@@ -30,28 +30,47 @@ pub fn rand_test_group() -> String {
     format!("__test_{}", id)
 }
 
-pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K, partition: Option<i32>)
-                                    -> HashMap<(i32, i64), i32>
+
+// pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K, partition: Option<i32>)
+//                                     -> HashMap<(i32, i64), i32>
+//     where P: Fn(i32) -> J,
+//           K: Fn(i32) -> Q,
+//           J: ToBytes,
+//           Q: ToBytes {
+//     produce_messages_with_context(EmptyContext, topic_name, count, value_fn, key_fn, partition)
+// }
+
+pub struct TestContext;
+
+impl Context for TestContext {
+    fn log(&self, _level: RDKafkaLogLevel, fac: &str, log_message: &str) {
+        // log line received, calculate length
+        let _n = fac.len() + log_message.len();
+    }
+
+    fn stats(&self, json: String) {
+        // statistics received, calculate length
+        let _n = json.len();
+    }
+}
+
+impl ConsumerContext for TestContext { }
+
+pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K,
+                                    partition: Option<i32>)
+        -> HashMap<(i32, i64), i32>
     where P: Fn(i32) -> J,
           K: Fn(i32) -> Q,
           J: ToBytes,
           Q: ToBytes {
-    produce_messages_with_context(EmptyContext, topic_name, count, value_fn, key_fn, partition)
-}
 
-pub fn produce_messages_with_context<C, P, K, J, Q>(context: C, topic_name: &str, count: i32,
-                                                    value_fn: &P, key_fn: &K, partition: Option<i32>)
-        -> HashMap<(i32, i64), i32>
-    where C: Context + 'static,
-          P: Fn(i32) -> J,
-          K: Fn(i32) -> Q,
-          J: ToBytes,
-          Q: ToBytes {
+    let prod_context = TestContext;
+
     // Produce some messages
     let producer = ClientConfig::new()
         .set("bootstrap.servers", "localhost:9092")
-        .set("statistics.interval.ms", "200")
-        .create_with_context::<C, FutureProducer<C>>(context)
+        .set("statistics.interval.ms", "100")
+        .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 
     producer.start();
@@ -85,20 +104,24 @@ pub fn produce_messages_with_context<C, P, K, J, Q>(context: C, topic_name: &str
     message_map
 }
 
+
 // Create consumer
-pub fn create_stream_consumer(topic_name: &str) -> StreamConsumer<EmptyConsumerContext> {
+pub fn create_stream_consumer(topic_name: &str) -> StreamConsumer<TestContext> {
+    let cons_context = TestContext;
+
     let mut consumer = ClientConfig::new()
         .set("group.id", &rand_test_group())
         .set("bootstrap.servers", "localhost:9092")
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
+        .set("statistics.interval.ms", "100")
         .set_default_topic_config(
             TopicConfig::new()
                 .set("auto.offset.reset", "earliest")
                 .finalize()
         )
-        .create::<StreamConsumer<_>>()
+        .create_with_context::<TestContext, StreamConsumer<_>>(cons_context)
         .expect("Consumer creation failed");
     consumer.subscribe(&vec![topic_name]).unwrap();
     consumer
