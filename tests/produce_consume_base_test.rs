@@ -1,6 +1,7 @@
-extern crate rdkafka;
+extern crate env_logger;
 extern crate futures;
 extern crate rand;
+extern crate rdkafka;
 
 mod test_utils;
 
@@ -15,6 +16,8 @@ use test_utils::*;
 // All produced messages should be consumed.
 #[test]
 fn test_produce_consume_base() {
+    let _r = env_logger::init();
+
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, None);
     let mut consumer = create_stream_consumer(&topic_name);
@@ -38,6 +41,8 @@ fn test_produce_consume_base() {
 // All messages should go to the same partition.
 #[test]
 fn test_produce_partition() {
+    let _r = env_logger::init();
+
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0));
 
@@ -50,6 +55,8 @@ fn test_produce_partition() {
 
 #[test]
 fn test_metadata() {
+    let _r = env_logger::init();
+
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0));
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1));
@@ -76,6 +83,8 @@ fn test_metadata() {
 
 #[test]
 fn test_consumer_commit() {
+    let _r = env_logger::init();
+
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0));
     produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1));
@@ -117,6 +126,8 @@ fn test_consumer_commit() {
 
 #[test]
 fn test_subscription() {
+    let _r = env_logger::init();
+
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 10, &value_fn, &key_fn, None);
     let mut consumer = create_stream_consumer(&topic_name);
