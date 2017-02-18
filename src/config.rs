@@ -46,7 +46,6 @@ impl RDKafkaLogLevel {
             4 => RDKafkaLogLevel::Warning,
             5 => RDKafkaLogLevel::Notice,
             6 => RDKafkaLogLevel::Info,
-            7 => RDKafkaLogLevel::Debug,
             _ => RDKafkaLogLevel::Debug,
         }
     }
@@ -88,6 +87,12 @@ pub struct ClientConfig {
     conf_map: HashMap<String, String>,
     default_topic_config: Option<TopicConfig>,
     pub log_level: RDKafkaLogLevel,
+}
+
+impl Default for ClientConfig {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ClientConfig {

@@ -189,7 +189,7 @@ pub unsafe extern "C" fn native_stats_cb<C: Context>(
     (*context).stats(json_string);
     mem::forget(context);   // Do not free the context
 
-    return 1; // librdkafka will not free the pointer
+    1 // librdkafka will not free the pointer
 }
 
 
