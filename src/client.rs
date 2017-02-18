@@ -1,24 +1,47 @@
 //! Common client funcionalities.
 extern crate rdkafka_sys as rdkafka;
 
+use std::ffi::CStr;
+use std::ffi::CString;
+use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
-use std::ffi::CString;
-
-use log::LogLevel;
 
 use self::rdkafka::types::*;
 
 use metadata::Metadata;
 use error::{IsError, KafkaError, KafkaResult};
 use util::bytes_cstr_to_owned;
-use config::NativeClientConfig;
+use config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 
 
 /// A Context is an object that can store user-defined data and on which callbacks can be
 /// defined. Refer to the list of methods to see which callbacks can currently be overridden.
 /// The context must be thread safe, and might be owned by multiple threads.
-pub trait Context: Send + Sync { }
+pub trait Context: Send + Sync {
+    /// Receives log lines from librdkafka.
+    fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
+        match level {
+            RDKafkaLogLevel::Emerg => error!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Alert => error!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Critical => error!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Error => error!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Warning => warn!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Notice => info!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Info => info!("librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Debug => debug!("librdkafka: {} {}", fac, log_message),
+        }
+    }
+
+    /// Receives the statistics of the librdkafka client in JSON format. To enable, the
+    /// "statistics.interval.ms" configuration parameter must be specified.
+    fn stats(&self, json: String) {
+        println!("Client stats: {}", json);
+    }
+
+    // NOTE: when adding a new method, remember to add it to the FutureProducerContext as well.
+    // https://github.com/rust-lang/rfcs/pull/1406 will maybe help in the future.
+}
 
 /// An empty context that can be used when no context is needed.
 #[derive(Clone, Default)]
@@ -63,31 +86,24 @@ pub struct Client<C: Context> {
 
 impl<C: Context> Client<C> {
     /// Creates a new `Client` given a configuration, a client type and a context.
-    pub fn new(native_config: NativeClientConfig, rd_kafka_type: RDKafkaType, context: C)
+    pub fn new(config: &ClientConfig, native_config: NativeClientConfig, rd_kafka_type: RDKafkaType,
+               context: C)
             -> KafkaResult<Client<C>> {
         let errstr = [0i8; 1024];
         let mut boxed_context = Box::new(context);
         unsafe { rdkafka::rd_kafka_conf_set_opaque(
             native_config.ptr(), (&mut *boxed_context) as *mut C as *mut c_void) };
+        unsafe { rdkafka::rd_kafka_conf_set_log_cb(native_config.ptr(), Some(native_log_cb::<C>)) };
+        unsafe { rdkafka::rd_kafka_conf_set_stats_cb(native_config.ptr(), Some(native_stats_cb::<C>)) };
 
         let client_ptr = unsafe { rdkafka::rd_kafka_new(
-            rd_kafka_type, native_config.ptr(), errstr.as_ptr() as *mut i8, errstr.len()) };
+            rd_kafka_type, native_config.ptr_mut(), errstr.as_ptr() as *mut i8, errstr.len()) };
         if client_ptr.is_null() {
             let descr = unsafe { bytes_cstr_to_owned(&errstr) };
             return Err(KafkaError::ClientCreation(descr));
         }
 
-        // Set log level based on log crate's settings
-        let log_level = if log_enabled!(LogLevel::Debug) {
-            7
-        } else if log_enabled!(LogLevel::Info) {
-            5
-        } else if log_enabled!(LogLevel::Warn) {
-            4
-        } else {
-            3
-        };
-        unsafe { rdkafka::rd_kafka_set_log_level(client_ptr, log_level) };
+        unsafe { rdkafka::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
 
         Ok(Client {
             native: NativeClient::new(client_ptr),
@@ -151,6 +167,31 @@ impl<C: Context> Drop for Client<C> {
     }
 }
 
+pub unsafe extern "C" fn native_log_cb<C: Context>(
+        client: *const RDKafka, level: i32,
+        fac: *const i8, buf: *const i8
+) {
+    let fac = CStr::from_ptr(fac).to_string_lossy();
+    let log_message = CStr::from_ptr(buf).to_string_lossy();
+
+    let context = Box::from_raw(rdkafka::rd_kafka_opaque(client) as *mut C);
+    (*context).log(RDKafkaLogLevel::from_int(level), fac.trim(), log_message.trim());
+    mem::forget(context);   // Do not free the context
+}
+
+pub unsafe extern "C" fn native_stats_cb<C: Context>(
+        _conf: *mut RDKafka, json: *mut i8, json_len: usize,
+        opaque: *mut c_void
+) -> i32 {
+    let json_string = String::from_raw_parts(json as *mut u8, json_len, json_len);
+
+    let context = Box::from_raw(opaque as *mut C);
+    (*context).stats(json_string);
+    mem::forget(context);   // Do not free the context
+
+    1 // librdkafka will not free the pointer
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -164,8 +205,10 @@ mod tests {
 
     #[test]
     fn test_client() {
-        let config_ptr = ClientConfig::new().create_native_config().unwrap();
-        let client = Client::new(config_ptr, RDKafkaType::RD_KAFKA_PRODUCER, EmptyContext::new()).unwrap();
+        let config = ClientConfig::new();
+        let native_config = config.create_native_config().unwrap();
+        let client = Client::new(&config, native_config, RDKafkaType::RD_KAFKA_PRODUCER,
+                                 EmptyContext::new()).unwrap();
         assert!(!client.native_ptr().is_null());
     }
 }

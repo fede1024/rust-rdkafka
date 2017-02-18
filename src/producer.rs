@@ -16,8 +16,8 @@ use std::thread;
 
 use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
 
-use client::{Client, Context};
-use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, TopicConfig};
+use client::{Client, Context, EmptyContext};
+use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel, TopicConfig};
 use error::{KafkaError, KafkaResult, IsError};
 use message::ToBytes;
 use util::cstr_to_owned;
@@ -176,7 +176,8 @@ impl DeliveryReport {
 
 /// Callback that gets called from librdkafka every time a message succeeds
 /// or fails to be delivered.
-unsafe extern "C" fn delivery_cb<C: ProducerContext>(_client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
+unsafe extern "C" fn delivery_cb<C: ProducerContext>(
+        _client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
     let context = Box::from_raw(_opaque as *mut C);
     let delivery_context = Box::from_raw((*msg)._private as *mut C::DeliveryContext);
     let delivery_status = DeliveryReport::new((*msg).err, (*msg).partition, (*msg).offset);
@@ -198,7 +199,7 @@ impl<C: ProducerContext> _BaseProducer<C> {
     fn new(config: &ClientConfig, context: C) -> KafkaResult<_BaseProducer<C>> {
         let native_config = try!(config.create_native_config());
         unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<C>)) };
-        let client = try!(Client::new(native_config, RDKafkaType::RD_KAFKA_PRODUCER, context));
+        let client = try!(Client::new(config, native_config, RDKafkaType::RD_KAFKA_PRODUCER, context));
         Ok(_BaseProducer { client: client })
     }
 }
@@ -298,11 +299,22 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
 
 /// The `ProducerContext` used by the `FutureProducer`. This context will use a Future as its
 /// `DeliveryContext` and will complete the future when the message is delivered (or failed to).
-pub struct FutureProducerContext;
+pub struct FutureProducerContext<C: Context + 'static> {
+    wrapped_context: C
+}
 
-impl Context for FutureProducerContext {}
+// Delegates all the methods calls to the wrapped context.
+impl<C: Context + 'static> Context for FutureProducerContext<C> {
+    fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
+        self.wrapped_context.log(level, fac, log_message);
+    }
 
-impl ProducerContext for FutureProducerContext {
+    fn stats(&self, json: String) {
+        self.wrapped_context.stats(json);
+    }
+}
+
+impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
     type DeliveryContext = Complete<DeliveryReport>;
 
     fn delivery(&self, status: DeliveryReport, tx: Complete<DeliveryReport>) {
@@ -312,13 +324,13 @@ impl ProducerContext for FutureProducerContext {
 
 /// `FutureProducer` implementation.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-struct _FutureProducer {
-    producer: BaseProducer<FutureProducerContext>,
+struct _FutureProducer<C: Context + 'static> {
+    producer: BaseProducer<FutureProducerContext<C>>,
     should_stop: Arc<AtomicBool>,
     handle: RwLock<Option<JoinHandle<()>>>,  // TODO: is the lock actually needed?
 }
 
-impl _FutureProducer {
+impl<C: Context + 'static> _FutureProducer<C> {
     fn start(&self) {
         let producer_clone = self.producer.clone();
         let should_stop = self.should_stop.clone();
@@ -359,31 +371,38 @@ impl _FutureProducer {
     }
 }
 
-impl Drop for _FutureProducer {
+impl<C: Context + 'static> Drop for _FutureProducer<C> {
     fn drop(&mut self) {
         trace!("Destroy _FutureProducer");
         self.stop();
     }
 }
 
-/// A producer with an internal running thread. This producer doesn't neeed to be polled.
+/// A producer with an internal running thread. This producer doesn't need to be polled.
 /// The internal thread can be terminated with the `stop` method or moving the
 /// `FutureProducer` out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-pub struct FutureProducer {
-    inner: Arc<_FutureProducer>,
+pub struct FutureProducer<C: Context + 'static> {
+    inner: Arc<_FutureProducer<C>>,
 }
 
-impl Clone for FutureProducer {
-    fn clone(&self) -> FutureProducer {
+impl<C: Context + 'static> Clone for FutureProducer<C> {
+    fn clone(&self) -> FutureProducer<C> {
         FutureProducer { inner: self.inner.clone() }
     }
 }
 
-impl FromClientConfig for FutureProducer {
-    fn from_config(config: &ClientConfig) -> KafkaResult<FutureProducer> {
+impl FromClientConfig for FutureProducer<EmptyContext> {
+    fn from_config(config: &ClientConfig) -> KafkaResult<FutureProducer<EmptyContext>> {
+        FutureProducer::from_config_and_context(config, EmptyContext)
+    }
+}
+
+impl<C: Context + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
+    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
+        let future_context = FutureProducerContext { wrapped_context: context};
         let inner = _FutureProducer {
-            producer: try!(BaseProducer::from_config_and_context(config, FutureProducerContext)),
+            producer: BaseProducer::from_config_and_context(config, future_context)?,
             should_stop: Arc::new(AtomicBool::new(false)),
             handle: RwLock::new(None),
         };
@@ -406,9 +425,9 @@ impl Future for DeliveryFuture {
     }
 }
 
-impl FutureProducer {
+impl<C: Context + 'static> FutureProducer<C> {
     /// Returns a topic associated to the producer
-    pub fn get_topic(&self, name: &str, config: &TopicConfig) -> KafkaResult<FutureProducerTopic> {
+    pub fn get_topic(&self, name: &str, config: &TopicConfig) -> KafkaResult<FutureProducerTopic<C>> {
         FutureProducerTopic::new(self.clone(), name, config)
     }
 
@@ -430,17 +449,17 @@ impl FutureProducer {
 }
 
 /// Represents a Kafka topic with an associated `FutureProducer`.
-pub struct FutureProducerTopic {
+pub struct FutureProducerTopic<C: Context + 'static> {
     native_topic: NativeTopic,
     // A producer topic cannot outlive the client it was created from.
     #[allow(dead_code)]
-    producer: FutureProducer,
+    producer: FutureProducer<C>,
 }
 
-impl FutureProducerTopic {
+impl<C: Context + 'static> FutureProducerTopic<C> {
     /// Creates the ProducerTopic. TODO: update doc
-    pub fn new(producer: FutureProducer, name: &str, topic_config: &TopicConfig)
-            -> KafkaResult<FutureProducerTopic> {
+    pub fn new(producer: FutureProducer<C>, name: &str, topic_config: &TopicConfig)
+            -> KafkaResult<FutureProducerTopic<C>> {
         let config_ptr = try!(topic_config.create_native_config());
         let native_topic = try!(unsafe { NativeTopic::new(producer.native_ptr(), name, config_ptr) });
         let producer_topic = FutureProducerTopic {
@@ -485,7 +504,7 @@ mod tests {
 
     #[test]
     fn test_future_producer_topic() {
-        let producer = ClientConfig::new().create::<FutureProducer>().unwrap();
+        let producer = ClientConfig::new().create::<FutureProducer<_>>().unwrap();
         let producer_topic = producer.get_topic("topic_name", &TopicConfig::new()).unwrap();
         assert_eq!(producer_topic.get_name(), "topic_name");
     }

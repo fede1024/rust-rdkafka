@@ -9,7 +9,7 @@ use futures::stream::Stream;
 use rdkafka::client::{Context};
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::config::{ClientConfig, TopicConfig};
+use rdkafka::config::{ClientConfig, TopicConfig, RDKafkaLogLevel};
 use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
@@ -44,9 +44,11 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
+        .set("statistics.interval.ms", "5000")
         .set_default_topic_config(TopicConfig::new()
             .set("auto.offset.reset", "smallest")
             .finalize())
+        .set_log_level(RDKafkaLogLevel::Debug)
         .create_with_context::<_, LoggingConsumer>(context)
         .expect("Consumer creation failed");
 

@@ -15,6 +15,7 @@
 //! - Offset commit.
 //! - Message production.
 //! - Access to cluster metadata (list of topic-partitions, replicas, active brokers etc).
+//! - Access to producer and consumer metrics and statistics.
 //!
 //! [librdkafka documentation]: https://github.com/edenhill/librdkafka/wiki/Broker-version-compatibility
 //!
@@ -130,3 +131,6 @@ pub mod metadata;
 pub mod producer;
 pub mod topic_partition_list;
 pub mod util;
+
+// Re-export
+pub use message::Message;

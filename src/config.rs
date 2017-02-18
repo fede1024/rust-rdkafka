@@ -3,51 +3,96 @@ extern crate rdkafka_sys as rdkafka;
 
 use self::rdkafka::types::*;
 
-use std::collections::HashMap;
-use std::ffi::{CStr, CString};
-use util::bytes_cstr_to_owned;
+use log::LogLevel;
 
+use std::collections::HashMap;
+use std::ffi::CString;
+
+use util::bytes_cstr_to_owned;
 use error::{KafkaError, KafkaResult, IsError};
 use client::Context;
 
 const ERR_LEN: usize = 256;
 
-unsafe extern "C" fn log_cb(_client: *const RDKafkaState, level: i32, _fac: *const i8, buf: *const i8) {
-    let buf_str = CStr::from_ptr(buf).to_string_lossy();
-    match level {
-        0 => error!("librdkafka: {}", buf_str),
-        1 => error!("librdkafka: {}", buf_str),
-        2 => error!("librdkafka: {}", buf_str),
-        3 => error!("librdkafka: {}", buf_str),
-        4 => warn!("librdkafka: {}", buf_str),
-        5 => info!("librdkafka: {}", buf_str),
-        6 => info!("librdkafka: {}", buf_str),
-        _ => debug!("librdkafka: {}", buf_str),
+
+/// The log levels supported by librdkafka.
+#[derive(Copy, Clone, Debug)]
+pub enum RDKafkaLogLevel {
+    /// Higher priority then LogLevel::Error from the log crate.
+    Emerg = 0,
+    /// Higher priority then LogLevel::Error from the log crate.
+    Alert = 1,
+    /// Higher priority then LogLevel::Error from the log crate.
+    Critical = 2,
+    /// Equivalent to LogLevel::Error from the log crate.
+    Error = 3,
+    /// Equivalent to LogLevel::Warning from the log crate.
+    Warning = 4,
+    /// Higher priority then LogLevel::Info from the log crate.
+    Notice = 5,
+    /// Equivalent to LogLevel::Info from the log crate.
+    Info = 6,
+    /// Equivalent to LogLevel::Debug from the log crate.
+    Debug = 7,
+}
+
+impl RDKafkaLogLevel {
+    pub fn from_int(level: i32) -> RDKafkaLogLevel {
+        match level {
+            0 => RDKafkaLogLevel::Emerg,
+            1 => RDKafkaLogLevel::Alert,
+            2 => RDKafkaLogLevel::Critical,
+            3 => RDKafkaLogLevel::Error,
+            4 => RDKafkaLogLevel::Warning,
+            5 => RDKafkaLogLevel::Notice,
+            6 => RDKafkaLogLevel::Info,
+            _ => RDKafkaLogLevel::Debug,
+        }
     }
 }
 
 /// A native rdkafka-sys client config.
 pub struct NativeClientConfig {
-    ptr: *mut RDKafkaConf,
+    ptr: Option<*mut RDKafkaConf>,
 }
 
 impl NativeClientConfig {
     /// Wraps a pointer to an `RDKafkaConfig` object and returns a new `NativeClientConfig`.
     pub fn new(ptr: *mut RDKafkaConf) -> NativeClientConfig {
-        NativeClientConfig {ptr: ptr}
+        NativeClientConfig {ptr: Some(ptr)}
     }
 
-    /// Returns the wrapped pointer to `RDKafkaConf`.
+    /// Returns the pointer to `RDKafkaConf`.
     pub fn ptr(&self) -> *mut RDKafkaConf {
-        self.ptr
+        self.ptr.expect("Pointer to native Kafka client config used after free")
+    }
+
+    /// Returns ownership of the pointer to `RDKafkaConf`. The caller must take care of freeing it.
+    pub fn ptr_mut(mut self) -> *mut RDKafkaConf {
+        self.ptr.take().expect("Pointer to native Kafka client config used after free")
+    }
+}
+
+impl Drop for NativeClientConfig {
+    fn drop(&mut self) {
+        if let Some(ptr) = self.ptr {
+            unsafe { rdkafka::rd_kafka_conf_destroy(ptr) }
+        }
     }
 }
 
 /// Client configuration.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
     default_topic_config: Option<TopicConfig>,
+    pub log_level: RDKafkaLogLevel,
+}
+
+impl Default for ClientConfig {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ClientConfig {
@@ -56,6 +101,7 @@ impl ClientConfig {
         ClientConfig {
             conf_map: HashMap::new(),
             default_topic_config: None,
+            log_level: log_level_from_global_config(),
         }
     }
 
@@ -69,6 +115,13 @@ impl ClientConfig {
     /// topics (e.g., through pattern-matched topics).
     pub fn set_default_topic_config(&mut self, default_topic_config: TopicConfig) -> &mut ClientConfig {
         self.default_topic_config = Some(default_topic_config);
+        self
+    }
+
+    /// Sets the log level of the client. If not specified, the log level will be calculated based
+    /// on the global log level of the log crate.
+    pub fn set_log_level(&mut self, log_level: RDKafkaLogLevel) -> &mut ClientConfig {
+        self.log_level = log_level;
         self
     }
 
@@ -95,7 +148,6 @@ impl ClientConfig {
                 unsafe { rdkafka::rd_kafka_conf_set_default_topic_conf(conf, topic_config.expect("No topic config present when creating native config")) };
             }
         }
-        unsafe { rdkafka::rd_kafka_conf_set_log_cb(conf, Some(log_cb)) };
         Ok(NativeClientConfig::new(conf))
     }
 
@@ -113,6 +165,19 @@ impl ClientConfig {
             where C: Context,
                   T: FromClientConfigAndContext<C> {
         T::from_config_and_context(self, context)
+    }
+}
+
+/// Return the log level
+fn log_level_from_global_config() -> RDKafkaLogLevel {
+    if log_enabled!(LogLevel::Debug) {
+        RDKafkaLogLevel::Debug
+    } else if log_enabled!(LogLevel::Info) {
+        RDKafkaLogLevel::Info
+    } else if log_enabled!(LogLevel::Warn) {
+        RDKafkaLogLevel::Warning
+    } else {
+        RDKafkaLogLevel::Error
     }
 }
 
