@@ -54,7 +54,7 @@ High level:
 To see rust-rdkafka in action with tokio-rs, check out the [asynchronous processing example] in the examples folder.
 
 [tokio-rs]: https://tokio.rs/
-[the asynchronous processing example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs
+[asynchronous processing example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs
 
 ## Installation
 

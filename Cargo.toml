@@ -17,10 +17,10 @@ libc = "^0.2.0"
 log = "^0.3.0"
 
 [dev-dependencies]
-clap = "2.18.0"
-tokio-core = "*"
+clap = "^2.18.0"
+tokio-core = "^0.1.4"
 futures-cpupool = "^0.1.2"
-rand = "*"
+rand = "^0.3.15"
 
 [features]
 default = []

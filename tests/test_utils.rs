@@ -69,7 +69,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
     // Produce some messages
     let producer = ClientConfig::new()
         .set("bootstrap.servers", "localhost:9092")
-        .set("statistics.interval.ms", "100")
+        .set("statistics.interval.ms", "10000")
         .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 
@@ -115,7 +115,7 @@ pub fn create_stream_consumer(topic_name: &str) -> StreamConsumer<TestContext> {
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
-        .set("statistics.interval.ms", "100")
+        .set("statistics.interval.ms", "10000")
         .set_default_topic_config(
             TopicConfig::new()
                 .set("auto.offset.reset", "earliest")
