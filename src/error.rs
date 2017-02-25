@@ -1,9 +1,8 @@
 //! Error manipulations.
-extern crate libc;
-extern crate rdkafka_sys as rdkafka;
-extern crate std;
+use rdsys;
+use rdsys::types::*;
 
-use self::rdkafka::types::*;
+use std::{error, ffi, fmt};
 
 use util::cstr_to_owned;
 
@@ -44,15 +43,15 @@ pub enum KafkaError {
     MessageProduction(RDKafkaRespErr),
     ConsumerCommit(RDKafkaRespErr),
     MetadataFetch(RDKafkaRespErr),
-    Nul(std::ffi::NulError),
+    Nul(ffi::NulError),
     Subscription(String),
     TopicConfig((RDKafkaConfRes, String, String, String)),
     TopicCreation(String),
     PartitionEOF(i32),
 }
 
-impl std::fmt::Debug for KafkaError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Debug for KafkaError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             KafkaError::ClientConfig(ref err) => write!(f, "KafkaError (Client config error: {} {} {})", err.1, err.2, err.3),
             KafkaError::ClientCreation(ref err) => write!(f, "KafkaError (Client creation error: {})", err),
@@ -70,8 +69,8 @@ impl std::fmt::Debug for KafkaError {
     }
 }
 
-impl std::fmt::Display for KafkaError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for KafkaError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             KafkaError::ClientConfig(ref err) => write!(f, "Client config error: {} {} {}", err.1, err.2, err.3),
             KafkaError::ClientCreation(ref err) => write!(f, "Client creation error: {}", err),
@@ -89,7 +88,7 @@ impl std::fmt::Display for KafkaError {
     }
 }
 
-impl std::error::Error for KafkaError {
+impl error::Error for KafkaError {
     fn description(&self) -> &str {
         match *self {
             KafkaError::ClientConfig(_) => "Client config error",
@@ -107,7 +106,7 @@ impl std::error::Error for KafkaError {
         }
     }
 
-    fn cause(&self) -> Option<&std::error::Error> {
+    fn cause(&self) -> Option<&error::Error> {
         match *self {
             KafkaError::Nul(ref err) => Some(err),
             _ => None
@@ -115,15 +114,15 @@ impl std::error::Error for KafkaError {
     }
 }
 
-impl From<std::ffi::NulError> for KafkaError {
-    fn from(err: std::ffi::NulError) -> KafkaError {
+impl From<ffi::NulError> for KafkaError {
+    fn from(err: ffi::NulError) -> KafkaError {
         KafkaError::Nul(err)
     }
 }
 
-/// Returns a string containng a description of the error.
+/// Returns a string containing a description of the error.
 pub fn resp_err_description(err: RDKafkaRespErr) -> String {
     unsafe {
-        cstr_to_owned(rdkafka::rd_kafka_err2str(err))
+        cstr_to_owned(rdsys::rd_kafka_err2str(err))
     }
 }

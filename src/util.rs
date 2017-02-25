@@ -1,14 +1,13 @@
 //! Utility functions.
-extern crate rdkafka_sys as rdkafka;
-extern crate std;
+use rdsys;
 
 use std::ffi::CStr;
 
 /// Return a tuple representing the version of `librdkafka` in
 /// hexadecimal and string format.
 pub fn get_rdkafka_version() -> (u16, String) {
-    let version_number = unsafe { rdkafka::rd_kafka_version() } as u16;
-    let c_str = unsafe { CStr::from_ptr(rdkafka::rd_kafka_version_str()) };
+    let version_number = unsafe { rdsys::rd_kafka_version() } as u16;
+    let c_str = unsafe { CStr::from_ptr(rdsys::rd_kafka_version_str()) };
     (version_number, c_str.to_string_lossy().into_owned())
 }
 

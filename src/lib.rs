@@ -117,10 +117,11 @@
 
 #[macro_use] extern crate log;
 extern crate futures;
+extern crate errno;
 
-extern crate rdkafka_sys;
+extern crate rdkafka_sys as rdsys;
 
-pub use rdkafka_sys::types as types;
+pub use rdsys::types as types;
 
 pub mod client;
 pub mod config;

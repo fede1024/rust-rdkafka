@@ -1,7 +1,5 @@
 //! A data structure representing topic, partitions and offsets, compatible with the
 //! `RDKafkaTopicPartitionList` exported by `rdkafka-sys`.
-extern crate rdkafka_sys as rdkafka;
-
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::ops::Deref;
@@ -9,10 +7,11 @@ use std::slice;
 
 use util::cstr_to_owned;
 
-use self::rdkafka::types::*;
+use rdsys;
+use rdsys::types::*;
 
 // TODO: Add offset conversion
-// pub const OFFSET_INVALID: i64 = rdkafka::RD_KAFKA_OFFSET_INVALID as i64;
+// pub const OFFSET_INVALID: i64 = rdsys::RD_KAFKA_OFFSET_INVALID as i64;
 
 /// Configuration of a partition
 #[derive(Clone, Debug, PartialEq)]
@@ -99,7 +98,7 @@ impl TopicPartitionList {
     }
 
     pub fn create_native_topic_partition_list(&self) -> *mut RDKafkaTopicPartitionList {
-        let tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(self.topics.len() as i32) };
+        let tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(self.topics.len() as i32) };
 
         for (topic, partitions) in self.topics.iter() {
             let topic_cstring = CString::new(topic.as_str()).expect("could not create name CString");
@@ -107,15 +106,15 @@ impl TopicPartitionList {
                 &Some(ref ps) => {
                     // Partitions specified
                     for p in ps {
-                        unsafe { rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), p.id) };
+                        unsafe { rdsys::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), p.id) };
                         if p.offset >= 0 {
-                            unsafe { rdkafka::rd_kafka_topic_partition_list_set_offset(tp_list, topic_cstring.as_ptr(), p.id, p.offset) };
+                            unsafe { rdsys::rd_kafka_topic_partition_list_set_offset(tp_list, topic_cstring.as_ptr(), p.id, p.offset) };
                         }
                     }
                 },
                 &None => {
                     // No partitions specified
-                    unsafe { rdkafka::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), -1); }
+                    unsafe { rdsys::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), -1); }
                 }
             }
         }

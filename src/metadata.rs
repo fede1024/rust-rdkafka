@@ -1,10 +1,9 @@
 //! Cluster metadata.
-extern crate rdkafka_sys as rdkafka;
-
 use std::ffi::CStr;
 use std::slice;
 
-use self::rdkafka::types::*;
+use rdsys;
+use rdsys::types::*;
 
 use error::IsError;
 
@@ -131,6 +130,6 @@ impl Metadata {
 
 impl Drop for Metadata {
     fn drop(&mut self) {
-        unsafe { rdkafka::rd_kafka_metadata_destroy(self.0) };
+        unsafe { rdsys::rd_kafka_metadata_destroy(self.0) };
     }
 }

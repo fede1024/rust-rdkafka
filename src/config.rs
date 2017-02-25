@@ -1,7 +1,6 @@
 //! Configuration to create a Consumer or Producer.
-extern crate rdkafka_sys as rdkafka;
-
-use self::rdkafka::types::*;
+use rdsys;
+use rdsys::types::*;
 
 use log::LogLevel;
 
@@ -76,7 +75,7 @@ impl NativeClientConfig {
 impl Drop for NativeClientConfig {
     fn drop(&mut self) {
         if let Some(ptr) = self.ptr {
-            unsafe { rdkafka::rd_kafka_conf_destroy(ptr) }
+            unsafe { rdsys::rd_kafka_conf_destroy(ptr) }
         }
     }
 }
@@ -127,13 +126,13 @@ impl ClientConfig {
 
     /// Returns the native rdkafka-sys configuration.
     pub fn create_native_config(&self) -> KafkaResult<NativeClientConfig> {
-        let conf = unsafe { rdkafka::rd_kafka_conf_new() };
+        let conf = unsafe { rdsys::rd_kafka_conf_new() };
         let errstr = [0; ERR_LEN];
         for (key, value) in &self.conf_map {
             let key_c = try!(CString::new(key.to_string()));
             let value_c = try!(CString::new(value.to_string()));
             let ret = unsafe {
-                rdkafka::rd_kafka_conf_set(conf, key_c.as_ptr(), value_c.as_ptr(),
+                rdsys::rd_kafka_conf_set(conf, key_c.as_ptr(), value_c.as_ptr(),
                                            errstr.as_ptr() as *mut i8, errstr.len())
             };
             if ret.is_error() {
@@ -145,7 +144,7 @@ impl ClientConfig {
             if let Err(e) = topic_config {
                 return Err(e);
             } else {
-                unsafe { rdkafka::rd_kafka_conf_set_default_topic_conf(conf, topic_config.expect("No topic config present when creating native config")) };
+                unsafe { rdsys::rd_kafka_conf_set_default_topic_conf(conf, topic_config.expect("No topic config present when creating native config")) };
             }
         }
         Ok(NativeClientConfig::new(conf))
@@ -219,13 +218,13 @@ impl TopicConfig {
 
     /// Creates a native rdkafka-sys topic configuration.
     pub fn create_native_config(&self) -> KafkaResult<*mut RDKafkaTopicConf> {
-        let config_ptr = unsafe { rdkafka::rd_kafka_topic_conf_new() };
+        let config_ptr = unsafe { rdsys::rd_kafka_topic_conf_new() };
         let errstr = [0; ERR_LEN];
         for (name, value) in &self.conf_map {
             let name_c = try!(CString::new(name.to_string()));
             let value_c = try!(CString::new(value.to_string()));
             let ret = unsafe {
-                rdkafka::rd_kafka_topic_conf_set(config_ptr, name_c.as_ptr(), value_c.as_ptr(),
+                rdsys::rd_kafka_topic_conf_set(config_ptr, name_c.as_ptr(), value_c.as_ptr(),
                                                  errstr.as_ptr() as *mut i8, errstr.len())
             };
             if ret.is_error() {

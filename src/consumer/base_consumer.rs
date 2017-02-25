@@ -1,8 +1,6 @@
 //! Low level consumer wrapper.
-extern crate rdkafka_sys as rdkafka;
-extern crate futures;
-
-use self::rdkafka::types::*;
+use rdsys;
+use rdsys::types::*;
 
 use std::str;
 
@@ -42,9 +40,9 @@ impl FromClientConfig for BaseConsumer<EmptyConsumerContext> {
 impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
         let native_config = try!(config.create_native_config());
-        unsafe { rdkafka::rd_kafka_conf_set_rebalance_cb(native_config.ptr(), Some(rebalance_cb::<C>)) };
+        unsafe { rdsys::rd_kafka_conf_set_rebalance_cb(native_config.ptr(), Some(rebalance_cb::<C>)) };
         let client = try!(Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context));
-        unsafe { rdkafka::rd_kafka_poll_set_consumer(client.native_ptr()) };
+        unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
         Ok(BaseConsumer { client: client })
     }
 }
@@ -55,42 +53,42 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// the cluster and matching topics will be added to the subscription list.
     pub fn subscribe(&mut self, topics: &[&str]) -> KafkaResult<()> {
         let tp_list = TopicPartitionList::with_topics(topics).create_native_topic_partition_list();
-        let ret_code = unsafe { rdkafka::rd_kafka_subscribe(self.client.native_ptr(), tp_list) };
+        let ret_code = unsafe { rdsys::rd_kafka_subscribe(self.client.native_ptr(), tp_list) };
         if ret_code.is_error() {
-            let error = unsafe { cstr_to_owned(rdkafka::rd_kafka_err2str(ret_code)) };
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
             return Err(KafkaError::Subscription(error))
         };
-        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        unsafe { rdsys::rd_kafka_topic_partition_list_destroy(tp_list) };
         Ok(())
     }
 
     /// Unsubscribe from previous subscription list.
     pub fn unsubscribe(&mut self) {
-        unsafe { rdkafka::rd_kafka_unsubscribe(self.client.native_ptr()) };
+        unsafe { rdsys::rd_kafka_unsubscribe(self.client.native_ptr()) };
     }
 
     /// Manually assign topics and partitions to consume.
     pub fn assign(&mut self, assignment: &TopicPartitionList) -> KafkaResult<()> {
         let tp_list = assignment.create_native_topic_partition_list();
-        let ret_code = unsafe { rdkafka::rd_kafka_assign(self.client.native_ptr(), tp_list) };
+        let ret_code = unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), tp_list) };
         if ret_code.is_error() {
-            let error = unsafe { cstr_to_owned(rdkafka::rd_kafka_err2str(ret_code)) };
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
             return Err(KafkaError::Subscription(error))
         };
-        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        unsafe { rdsys::rd_kafka_topic_partition_list_destroy(tp_list) };
         Ok(())
     }
 
     /// Polls the consumer for events. It won't block more than the specified timeout.
     pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<Message>> {
-        let message_ptr = unsafe { rdkafka::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
+        let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
         if message_ptr.is_null() {
             return Ok(None);
         }
         let error = unsafe { (*message_ptr).err };
         if error.is_error() {
             return Err(match error {
-                rdkafka::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
+                rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
                     KafkaError::PartitionEOF(unsafe { (*message_ptr).partition } )
                 },
                 e => KafkaError::MessageConsumption(e)
@@ -104,8 +102,8 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     pub fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) -> KafkaResult<()> {
         let tp_list = topic_partition_list.create_native_topic_partition_list();
         let error = unsafe {
-            let e = rdkafka::rd_kafka_commit(self.client.native_ptr(), tp_list, mode as i32);
-            rdkafka::rd_kafka_topic_partition_list_destroy(tp_list);
+            let e = rdsys::rd_kafka_commit(self.client.native_ptr(), tp_list, mode as i32);
+            rdsys::rd_kafka_topic_partition_list_destroy(tp_list);
             e
         };
         if error.is_error() {
@@ -117,7 +115,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Commits the specified message. The commit can be sync (blocking), or async.
     pub fn commit_message(&self, message: &Message, mode: CommitMode) -> KafkaResult<()> {
-        let error = unsafe { rdkafka::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
+        let error = unsafe { rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
         if error.is_error() {
             Err(KafkaError::ConsumerCommit(error))
         } else {
@@ -127,9 +125,9 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Returns the current topic subscription.
     pub fn subscription(&self) -> KafkaResult<TopicPartitionList> {
-        let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
+        let mut tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(0) };
         let error = unsafe {
-            rdkafka::rd_kafka_subscription(self.client.native_ptr(), &mut tp_list)
+            rdsys::rd_kafka_subscription(self.client.native_ptr(), &mut tp_list)
         };
 
         let result = if error.is_error() {
@@ -137,16 +135,16 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
         };
-        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        unsafe { rdsys::rd_kafka_topic_partition_list_destroy(tp_list) };
 
         result
     }
 
     /// Returns the current partition assignment.
     pub fn assignment(&self) -> KafkaResult<TopicPartitionList> {
-        let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
+        let mut tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(0) };
         let error = unsafe {
-            rdkafka::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
+            rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
         };
 
         let result = if error.is_error() {
@@ -154,24 +152,24 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
         };
-        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        unsafe { rdsys::rd_kafka_topic_partition_list_destroy(tp_list) };
 
         result
     }
 
     /// Retrieve committed offsets for topics and partitions.
     pub fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
-        let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
+        let mut tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(0) };
         let assignment_error = unsafe {
-            rdkafka::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
+            rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
         };
         if assignment_error.is_error() {
-            unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+            unsafe { rdsys::rd_kafka_topic_partition_list_destroy(tp_list) };
             return Err(KafkaError::MetadataFetch(assignment_error))
         }
 
         let committed_error = unsafe {
-            rdkafka::rd_kafka_committed(
+            rdsys::rd_kafka_committed(
                 self.client.native_ptr(),
                 tp_list,
                 timeout_ms
@@ -183,17 +181,17 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
         };
-        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        unsafe { rdsys::rd_kafka_topic_partition_list_destroy(tp_list) };
 
         result
     }
 
     /// Retrieve current positions (offsets) for topics and partitions.
     pub fn position(&self) -> KafkaResult<TopicPartitionList> {
-        let mut tp_list = unsafe { rdkafka::rd_kafka_topic_partition_list_new(0) };
+        let mut tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(0) };
         let error = unsafe {
-            rdkafka::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list);
-            rdkafka::rd_kafka_position(
+            rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list);
+            rdsys::rd_kafka_position(
                 self.client.native_ptr(),
                 tp_list
             )
@@ -204,7 +202,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
         };
-        unsafe { rdkafka::rd_kafka_topic_partition_list_destroy(tp_list) };
+        unsafe { rdsys::rd_kafka_topic_partition_list_destroy(tp_list) };
 
         result
     }
@@ -223,6 +221,6 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 impl<C: ConsumerContext> Drop for BaseConsumer<C> {
     fn drop(&mut self) {
         trace!("Destroying consumer");  // TODO: fix me (multiple executions)
-        unsafe { rdkafka::rd_kafka_consumer_close(self.client.native_ptr()) };
+        unsafe { rdsys::rd_kafka_consumer_close(self.client.native_ptr()) };
     }
 }

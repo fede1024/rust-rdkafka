@@ -1,6 +1,4 @@
 //! Stream-based consumer implementation.
-extern crate rdkafka_sys as rdkafka;
-
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;

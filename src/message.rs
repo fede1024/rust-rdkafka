@@ -1,7 +1,6 @@
 //! Store and manipulate Kafka messages.
-extern crate rdkafka_sys as rdkafka;
-
-use self::rdkafka::types::*;
+use rdsys;
+use rdsys::types::*;
 
 use std::slice;
 use std::str;
@@ -83,7 +82,7 @@ impl<'a> Message {
 impl Drop for Message {
     fn drop(&mut self) {
         trace!("Destroying message {:?}", self);
-        unsafe { rdkafka::rd_kafka_message_destroy(self.ptr) };
+        unsafe { rdsys::rd_kafka_message_destroy(self.ptr) };
     }
 }
 

@@ -1,18 +1,16 @@
-//! Common client funcionalities.
-extern crate rdkafka_sys as rdkafka;
+//! Common client functionalities.
+use rdsys;
+use rdsys::types::*;
 
-use std::ffi::CStr;
-use std::ffi::CString;
+use std::ffi::{CString, CStr};
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
 
-use self::rdkafka::types::*;
-
-use metadata::Metadata;
-use error::{IsError, KafkaError, KafkaResult};
-use util::bytes_cstr_to_owned;
 use config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
+use error::{IsError, KafkaError, KafkaResult};
+use metadata::Metadata;
+use util::bytes_cstr_to_owned;
 
 
 /// A Context is an object that can store user-defined data and on which callbacks can be
@@ -91,19 +89,19 @@ impl<C: Context> Client<C> {
             -> KafkaResult<Client<C>> {
         let errstr = [0i8; 1024];
         let mut boxed_context = Box::new(context);
-        unsafe { rdkafka::rd_kafka_conf_set_opaque(
+        unsafe { rdsys::rd_kafka_conf_set_opaque(
             native_config.ptr(), (&mut *boxed_context) as *mut C as *mut c_void) };
-        unsafe { rdkafka::rd_kafka_conf_set_log_cb(native_config.ptr(), Some(native_log_cb::<C>)) };
-        unsafe { rdkafka::rd_kafka_conf_set_stats_cb(native_config.ptr(), Some(native_stats_cb::<C>)) };
+        unsafe { rdsys::rd_kafka_conf_set_log_cb(native_config.ptr(), Some(native_log_cb::<C>)) };
+        unsafe { rdsys::rd_kafka_conf_set_stats_cb(native_config.ptr(), Some(native_stats_cb::<C>)) };
 
-        let client_ptr = unsafe { rdkafka::rd_kafka_new(
+        let client_ptr = unsafe { rdsys::rd_kafka_new(
             rd_kafka_type, native_config.ptr_mut(), errstr.as_ptr() as *mut i8, errstr.len()) };
         if client_ptr.is_null() {
             let descr = unsafe { bytes_cstr_to_owned(&errstr) };
             return Err(KafkaError::ClientCreation(descr));
         }
 
-        unsafe { rdkafka::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
+        unsafe { rdsys::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
 
         Ok(Client {
             native: NativeClient::new(client_ptr),
@@ -126,7 +124,7 @@ impl<C: Context> Client<C> {
         let mut metadata_ptr: *const RDKafkaMetadata = ptr::null_mut();
         trace!("Starting metadata fetch");
         let ret = unsafe {
-            rdkafka::rd_kafka_metadata(
+            rdsys::rd_kafka_metadata(
                 self.native_ptr(),
                 1,   // All topics
                 ptr::null::<u8>() as *mut RDKafkaTopic,
@@ -147,7 +145,7 @@ impl<C: Context> Client<C> {
         let mut high = -1;
         let topic_c = try!(CString::new(topic.to_string()));
         let ret = unsafe {
-            rdkafka::rd_kafka_query_watermark_offsets(self.native_ptr(), topic_c.as_ptr(), partition,
+            rdsys::rd_kafka_query_watermark_offsets(self.native_ptr(), topic_c.as_ptr(), partition,
                                                       &mut low as *mut i64, &mut high as *mut i64, timeout_ms)
         };
         if ret.is_error() {
@@ -161,8 +159,8 @@ impl<C: Context> Drop for Client<C> {
     fn drop(&mut self) {
         trace!("Destroy rd_kafka");
         unsafe {
-            rdkafka::rd_kafka_destroy(self.native.ptr);
-            rdkafka::rd_kafka_wait_destroyed(1000);
+            rdsys::rd_kafka_destroy(self.native.ptr);
+            rdsys::rd_kafka_wait_destroyed(1000);
         }
     }
 }
@@ -174,7 +172,7 @@ pub unsafe extern "C" fn native_log_cb<C: Context>(
     let fac = CStr::from_ptr(fac).to_string_lossy();
     let log_message = CStr::from_ptr(buf).to_string_lossy();
 
-    let context = Box::from_raw(rdkafka::rd_kafka_opaque(client) as *mut C);
+    let context = Box::from_raw(rdsys::rd_kafka_opaque(client) as *mut C);
     (*context).log(RDKafkaLogLevel::from_int(level), fac.trim(), log_message.trim());
     mem::forget(context);   // Do not free the context
 }
@@ -198,9 +196,9 @@ mod tests {
     // Just call everything to test there no panics by default, behavior
     // is tested in the integrations tests.
 
-    extern crate rdkafka_sys as rdkafka;
+    extern crate rdkafka_sys as rdsys;
+    use rdsys::types::*;
     use config::ClientConfig;
-    use self::rdkafka::types::*;
     use super::*;
 
     #[test]

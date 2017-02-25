@@ -1,9 +1,6 @@
 //! Producer implementations.
-extern crate rdkafka_sys as rdkafka;
-extern crate errno;
-extern crate futures;
-
-use self::rdkafka::types::*;
+use rdsys;
+use rdsys::types::*;
 
 use std::ffi::CString;
 use std::mem;
@@ -11,10 +8,10 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
-use std::thread::JoinHandle;
-use std::thread;
+use std::thread::{self, JoinHandle};
 
-use self::futures::{Canceled, Complete, Future, Poll, Oneshot};
+use errno;
+use futures::{self, Canceled, Complete, Future, Poll, Oneshot};
 
 use client::{Client, Context, EmptyContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel, TopicConfig};
@@ -43,7 +40,7 @@ impl NativeTopic {
     unsafe fn new(client: *mut RDKafka, name: &str, topic_config_ptr: *mut RDKafkaTopicConf)
             -> KafkaResult<NativeTopic> {
         let name_ptr = CString::new(name.to_string()).expect("could not create name CString"); // TODO: remove expect
-        let topic_ptr = rdkafka::rd_kafka_topic_new(client, name_ptr.as_ptr(), topic_config_ptr);
+        let topic_ptr = rdsys::rd_kafka_topic_new(client, name_ptr.as_ptr(), topic_config_ptr);
         if topic_ptr.is_null() {
             Err(KafkaError::TopicCreation(name.to_owned()))
         } else {
@@ -57,7 +54,7 @@ impl NativeTopic {
 
     fn name(&self) -> String {
         unsafe {
-            cstr_to_owned(rdkafka::rd_kafka_topic_name(self.ptr))
+            cstr_to_owned(rdsys::rd_kafka_topic_name(self.ptr))
         }
     }
 
@@ -78,10 +75,10 @@ impl NativeTopic {
             None => ptr::null_mut(),
         };
         let produce_response = unsafe {
-            rdkafka::rd_kafka_produce(
+            rdsys::rd_kafka_produce(
                 self.ptr(),
                 partition.unwrap_or(-1),
-                rdkafka::RD_KAFKA_MSG_F_COPY as i32,
+                rdsys::RD_KAFKA_MSG_F_COPY as i32,
                 payload_ptr,
                 payload_len,
                 key_ptr,
@@ -91,7 +88,7 @@ impl NativeTopic {
         };
         if produce_response != 0 {
             let errno = errno::errno().0 as i32;
-            let kafka_error = unsafe { rdkafka::rd_kafka_errno2err(errno) };
+            let kafka_error = unsafe { rdsys::rd_kafka_errno2err(errno) };
             Err(KafkaError::MessageProduction(kafka_error))
         } else {
             Ok(())
@@ -103,7 +100,7 @@ impl Drop for NativeTopic {
     fn drop(&mut self) {
         trace!("Destroy rd_kafka_topic");
         unsafe {
-            rdkafka::rd_kafka_topic_destroy(self.ptr);
+            rdsys::rd_kafka_topic_destroy(self.ptr);
         }
     }
 }
@@ -198,7 +195,7 @@ struct _BaseProducer<C: ProducerContext> {
 impl<C: ProducerContext> _BaseProducer<C> {
     fn new(config: &ClientConfig, context: C) -> KafkaResult<_BaseProducer<C>> {
         let native_config = try!(config.create_native_config());
-        unsafe { rdkafka::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<C>)) };
+        unsafe { rdsys::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<C>)) };
         let client = try!(Client::new(config, native_config, RDKafkaType::RD_KAFKA_PRODUCER, context));
         Ok(_BaseProducer { client: client })
     }
@@ -246,7 +243,7 @@ impl<C: ProducerContext> BaseProducer<C> {
     /// Polls the producer. Regular calls to `poll` are required to process the evens
     /// and execute the message delivery callbacks.
     pub fn poll(&self, timeout_ms: i32) -> i32 {
-        unsafe { rdkafka::rd_kafka_poll(self.inner.client.native_ptr(), timeout_ms) }
+        unsafe { rdsys::rd_kafka_poll(self.inner.client.native_ptr(), timeout_ms) }
     }
 
     /// Returns a pointer to the native Kafka client

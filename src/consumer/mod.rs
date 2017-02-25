@@ -1,10 +1,9 @@
 //! Base trait and common functionality for all consumers.
-extern crate rdkafka_sys as rdkafka;
-
 pub mod base_consumer;
 pub mod stream_consumer;
 
-use self::rdkafka::types::*;
+use rdsys;
+use rdsys::types::*;
 
 use std::ptr;
 use std::os::raw::c_void;
@@ -45,7 +44,7 @@ pub trait ConsumerContext: Context {
                 Rebalance::Revoke
             },
             _ => {
-                let error = unsafe { cstr_to_owned(rdkafka::rd_kafka_err2str(err)) };
+                let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(err)) };
                 error!("Error rebalancing: {}", error);
                 Rebalance::Error(error)
             }
@@ -57,13 +56,13 @@ pub trait ConsumerContext: Context {
         unsafe {
             match err {
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-                    rdkafka::rd_kafka_assign(native_client.ptr(), partitions_ptr);
+                    rdsys::rd_kafka_assign(native_client.ptr(), partitions_ptr);
                 },
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
-                    rdkafka::rd_kafka_assign(native_client.ptr(), ptr::null());
+                    rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
                 },
                 _ => {
-                    rdkafka::rd_kafka_assign(native_client.ptr(), ptr::null());
+                    rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
                 }
             }
         }
