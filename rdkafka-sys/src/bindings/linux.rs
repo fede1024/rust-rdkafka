@@ -355,7 +355,171 @@ pub const __SIZEOF_PTHREAD_BARRIERATTR_T: ::std::os::raw::c_uchar = 4;
 pub const __have_pthread_attr_t: ::std::os::raw::c_uchar = 1;
 pub const __PTHREAD_MUTEX_HAVE_PREV: ::std::os::raw::c_uchar = 1;
 pub const __PTHREAD_RWLOCK_INT_FLAGS_SHARED: ::std::os::raw::c_uchar = 1;
-pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 590591;
+pub const _SYS_SOCKET_H: ::std::os::raw::c_uchar = 1;
+pub const _SYS_UIO_H: ::std::os::raw::c_uchar = 1;
+pub const _BITS_UIO_H: ::std::os::raw::c_uchar = 1;
+pub const UIO_MAXIOV: ::std::os::raw::c_ushort = 1024;
+pub const PF_UNSPEC: ::std::os::raw::c_uchar = 0;
+pub const PF_LOCAL: ::std::os::raw::c_uchar = 1;
+pub const PF_UNIX: ::std::os::raw::c_uchar = 1;
+pub const PF_FILE: ::std::os::raw::c_uchar = 1;
+pub const PF_INET: ::std::os::raw::c_uchar = 2;
+pub const PF_AX25: ::std::os::raw::c_uchar = 3;
+pub const PF_IPX: ::std::os::raw::c_uchar = 4;
+pub const PF_APPLETALK: ::std::os::raw::c_uchar = 5;
+pub const PF_NETROM: ::std::os::raw::c_uchar = 6;
+pub const PF_BRIDGE: ::std::os::raw::c_uchar = 7;
+pub const PF_ATMPVC: ::std::os::raw::c_uchar = 8;
+pub const PF_X25: ::std::os::raw::c_uchar = 9;
+pub const PF_INET6: ::std::os::raw::c_uchar = 10;
+pub const PF_ROSE: ::std::os::raw::c_uchar = 11;
+pub const PF_DECnet: ::std::os::raw::c_uchar = 12;
+pub const PF_NETBEUI: ::std::os::raw::c_uchar = 13;
+pub const PF_SECURITY: ::std::os::raw::c_uchar = 14;
+pub const PF_KEY: ::std::os::raw::c_uchar = 15;
+pub const PF_NETLINK: ::std::os::raw::c_uchar = 16;
+pub const PF_ROUTE: ::std::os::raw::c_uchar = 16;
+pub const PF_PACKET: ::std::os::raw::c_uchar = 17;
+pub const PF_ASH: ::std::os::raw::c_uchar = 18;
+pub const PF_ECONET: ::std::os::raw::c_uchar = 19;
+pub const PF_ATMSVC: ::std::os::raw::c_uchar = 20;
+pub const PF_RDS: ::std::os::raw::c_uchar = 21;
+pub const PF_SNA: ::std::os::raw::c_uchar = 22;
+pub const PF_IRDA: ::std::os::raw::c_uchar = 23;
+pub const PF_PPPOX: ::std::os::raw::c_uchar = 24;
+pub const PF_WANPIPE: ::std::os::raw::c_uchar = 25;
+pub const PF_LLC: ::std::os::raw::c_uchar = 26;
+pub const PF_CAN: ::std::os::raw::c_uchar = 29;
+pub const PF_TIPC: ::std::os::raw::c_uchar = 30;
+pub const PF_BLUETOOTH: ::std::os::raw::c_uchar = 31;
+pub const PF_IUCV: ::std::os::raw::c_uchar = 32;
+pub const PF_RXRPC: ::std::os::raw::c_uchar = 33;
+pub const PF_ISDN: ::std::os::raw::c_uchar = 34;
+pub const PF_PHONET: ::std::os::raw::c_uchar = 35;
+pub const PF_IEEE802154: ::std::os::raw::c_uchar = 36;
+pub const PF_CAIF: ::std::os::raw::c_uchar = 37;
+pub const PF_ALG: ::std::os::raw::c_uchar = 38;
+pub const PF_NFC: ::std::os::raw::c_uchar = 39;
+pub const PF_VSOCK: ::std::os::raw::c_uchar = 40;
+pub const PF_MAX: ::std::os::raw::c_uchar = 41;
+pub const AF_UNSPEC: ::std::os::raw::c_uchar = 0;
+pub const AF_LOCAL: ::std::os::raw::c_uchar = 1;
+pub const AF_UNIX: ::std::os::raw::c_uchar = 1;
+pub const AF_FILE: ::std::os::raw::c_uchar = 1;
+pub const AF_INET: ::std::os::raw::c_uchar = 2;
+pub const AF_AX25: ::std::os::raw::c_uchar = 3;
+pub const AF_IPX: ::std::os::raw::c_uchar = 4;
+pub const AF_APPLETALK: ::std::os::raw::c_uchar = 5;
+pub const AF_NETROM: ::std::os::raw::c_uchar = 6;
+pub const AF_BRIDGE: ::std::os::raw::c_uchar = 7;
+pub const AF_ATMPVC: ::std::os::raw::c_uchar = 8;
+pub const AF_X25: ::std::os::raw::c_uchar = 9;
+pub const AF_INET6: ::std::os::raw::c_uchar = 10;
+pub const AF_ROSE: ::std::os::raw::c_uchar = 11;
+pub const AF_DECnet: ::std::os::raw::c_uchar = 12;
+pub const AF_NETBEUI: ::std::os::raw::c_uchar = 13;
+pub const AF_SECURITY: ::std::os::raw::c_uchar = 14;
+pub const AF_KEY: ::std::os::raw::c_uchar = 15;
+pub const AF_NETLINK: ::std::os::raw::c_uchar = 16;
+pub const AF_ROUTE: ::std::os::raw::c_uchar = 16;
+pub const AF_PACKET: ::std::os::raw::c_uchar = 17;
+pub const AF_ASH: ::std::os::raw::c_uchar = 18;
+pub const AF_ECONET: ::std::os::raw::c_uchar = 19;
+pub const AF_ATMSVC: ::std::os::raw::c_uchar = 20;
+pub const AF_RDS: ::std::os::raw::c_uchar = 21;
+pub const AF_SNA: ::std::os::raw::c_uchar = 22;
+pub const AF_IRDA: ::std::os::raw::c_uchar = 23;
+pub const AF_PPPOX: ::std::os::raw::c_uchar = 24;
+pub const AF_WANPIPE: ::std::os::raw::c_uchar = 25;
+pub const AF_LLC: ::std::os::raw::c_uchar = 26;
+pub const AF_CAN: ::std::os::raw::c_uchar = 29;
+pub const AF_TIPC: ::std::os::raw::c_uchar = 30;
+pub const AF_BLUETOOTH: ::std::os::raw::c_uchar = 31;
+pub const AF_IUCV: ::std::os::raw::c_uchar = 32;
+pub const AF_RXRPC: ::std::os::raw::c_uchar = 33;
+pub const AF_ISDN: ::std::os::raw::c_uchar = 34;
+pub const AF_PHONET: ::std::os::raw::c_uchar = 35;
+pub const AF_IEEE802154: ::std::os::raw::c_uchar = 36;
+pub const AF_CAIF: ::std::os::raw::c_uchar = 37;
+pub const AF_ALG: ::std::os::raw::c_uchar = 38;
+pub const AF_NFC: ::std::os::raw::c_uchar = 39;
+pub const AF_VSOCK: ::std::os::raw::c_uchar = 40;
+pub const AF_MAX: ::std::os::raw::c_uchar = 41;
+pub const SOL_RAW: ::std::os::raw::c_uchar = 255;
+pub const SOL_DECNET: ::std::os::raw::c_ushort = 261;
+pub const SOL_X25: ::std::os::raw::c_ushort = 262;
+pub const SOL_PACKET: ::std::os::raw::c_ushort = 263;
+pub const SOL_ATM: ::std::os::raw::c_ushort = 264;
+pub const SOL_AAL: ::std::os::raw::c_ushort = 265;
+pub const SOL_IRDA: ::std::os::raw::c_ushort = 266;
+pub const SOMAXCONN: ::std::os::raw::c_uchar = 128;
+pub const _BITS_SOCKADDR_H: ::std::os::raw::c_uchar = 1;
+pub const _SS_SIZE: ::std::os::raw::c_uchar = 128;
+pub const FIOSETOWN: ::std::os::raw::c_ushort = 35073;
+pub const SIOCSPGRP: ::std::os::raw::c_ushort = 35074;
+pub const FIOGETOWN: ::std::os::raw::c_ushort = 35075;
+pub const SIOCGPGRP: ::std::os::raw::c_ushort = 35076;
+pub const SIOCATMARK: ::std::os::raw::c_ushort = 35077;
+pub const SIOCGSTAMP: ::std::os::raw::c_ushort = 35078;
+pub const SIOCGSTAMPNS: ::std::os::raw::c_ushort = 35079;
+pub const SOL_SOCKET: ::std::os::raw::c_uchar = 1;
+pub const SO_DEBUG: ::std::os::raw::c_uchar = 1;
+pub const SO_REUSEADDR: ::std::os::raw::c_uchar = 2;
+pub const SO_TYPE: ::std::os::raw::c_uchar = 3;
+pub const SO_ERROR: ::std::os::raw::c_uchar = 4;
+pub const SO_DONTROUTE: ::std::os::raw::c_uchar = 5;
+pub const SO_BROADCAST: ::std::os::raw::c_uchar = 6;
+pub const SO_SNDBUF: ::std::os::raw::c_uchar = 7;
+pub const SO_RCVBUF: ::std::os::raw::c_uchar = 8;
+pub const SO_SNDBUFFORCE: ::std::os::raw::c_uchar = 32;
+pub const SO_RCVBUFFORCE: ::std::os::raw::c_uchar = 33;
+pub const SO_KEEPALIVE: ::std::os::raw::c_uchar = 9;
+pub const SO_OOBINLINE: ::std::os::raw::c_uchar = 10;
+pub const SO_NO_CHECK: ::std::os::raw::c_uchar = 11;
+pub const SO_PRIORITY: ::std::os::raw::c_uchar = 12;
+pub const SO_LINGER: ::std::os::raw::c_uchar = 13;
+pub const SO_BSDCOMPAT: ::std::os::raw::c_uchar = 14;
+pub const SO_REUSEPORT: ::std::os::raw::c_uchar = 15;
+pub const SO_PASSCRED: ::std::os::raw::c_uchar = 16;
+pub const SO_PEERCRED: ::std::os::raw::c_uchar = 17;
+pub const SO_RCVLOWAT: ::std::os::raw::c_uchar = 18;
+pub const SO_SNDLOWAT: ::std::os::raw::c_uchar = 19;
+pub const SO_RCVTIMEO: ::std::os::raw::c_uchar = 20;
+pub const SO_SNDTIMEO: ::std::os::raw::c_uchar = 21;
+pub const SO_SECURITY_AUTHENTICATION: ::std::os::raw::c_uchar = 22;
+pub const SO_SECURITY_ENCRYPTION_TRANSPORT: ::std::os::raw::c_uchar = 23;
+pub const SO_SECURITY_ENCRYPTION_NETWORK: ::std::os::raw::c_uchar = 24;
+pub const SO_BINDTODEVICE: ::std::os::raw::c_uchar = 25;
+pub const SO_ATTACH_FILTER: ::std::os::raw::c_uchar = 26;
+pub const SO_DETACH_FILTER: ::std::os::raw::c_uchar = 27;
+pub const SO_GET_FILTER: ::std::os::raw::c_uchar = 26;
+pub const SO_PEERNAME: ::std::os::raw::c_uchar = 28;
+pub const SO_TIMESTAMP: ::std::os::raw::c_uchar = 29;
+pub const SCM_TIMESTAMP: ::std::os::raw::c_uchar = 29;
+pub const SO_ACCEPTCONN: ::std::os::raw::c_uchar = 30;
+pub const SO_PEERSEC: ::std::os::raw::c_uchar = 31;
+pub const SO_PASSSEC: ::std::os::raw::c_uchar = 34;
+pub const SO_TIMESTAMPNS: ::std::os::raw::c_uchar = 35;
+pub const SCM_TIMESTAMPNS: ::std::os::raw::c_uchar = 35;
+pub const SO_MARK: ::std::os::raw::c_uchar = 36;
+pub const SO_TIMESTAMPING: ::std::os::raw::c_uchar = 37;
+pub const SCM_TIMESTAMPING: ::std::os::raw::c_uchar = 37;
+pub const SO_PROTOCOL: ::std::os::raw::c_uchar = 38;
+pub const SO_DOMAIN: ::std::os::raw::c_uchar = 39;
+pub const SO_RXQ_OVFL: ::std::os::raw::c_uchar = 40;
+pub const SO_WIFI_STATUS: ::std::os::raw::c_uchar = 41;
+pub const SCM_WIFI_STATUS: ::std::os::raw::c_uchar = 41;
+pub const SO_PEEK_OFF: ::std::os::raw::c_uchar = 42;
+pub const SO_NOFCS: ::std::os::raw::c_uchar = 43;
+pub const SO_LOCK_FILTER: ::std::os::raw::c_uchar = 44;
+pub const SO_SELECT_ERR_QUEUE: ::std::os::raw::c_uchar = 45;
+pub const SO_BUSY_POLL: ::std::os::raw::c_uchar = 46;
+pub const SO_MAX_PACING_RATE: ::std::os::raw::c_uchar = 47;
+pub const SO_BPF_EXTENSIONS: ::std::os::raw::c_uchar = 48;
+pub const SO_INCOMING_CPU: ::std::os::raw::c_uchar = 49;
+pub const SO_ATTACH_BPF: ::std::os::raw::c_uchar = 50;
+pub const SO_DETACH_BPF: ::std::os::raw::c_uchar = 27;
+pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 590847;
 pub const RD_KAFKA_OFFSET_BEGINNING: ::std::os::raw::c_char = -2;
 pub const RD_KAFKA_OFFSET_END: ::std::os::raw::c_char = -1;
 pub const RD_KAFKA_OFFSET_STORED: ::std::os::raw::c_short = -1000;
@@ -952,6 +1116,135 @@ impl pthread_barrierattr_t {
 impl ::std::default::Default for pthread_barrierattr_t {
     fn default() -> Self { unsafe { ::std::mem::zeroed() } }
 }
+#[repr(C)]
+#[derive(Copy, Clone)]
+#[derive(Debug)]
+pub struct iovec {
+    pub iov_base: *mut ::std::os::raw::c_void,
+    pub iov_len: size_t,
+}
+impl ::std::default::Default for iovec {
+    fn default() -> Self { unsafe { ::std::mem::zeroed() } }
+}
+pub type socklen_t = __socklen_t;
+#[derive(Copy, Clone)]
+#[repr(u32)]
+#[derive(Debug)]
+pub enum __socket_type {
+    SOCK_STREAM = 1,
+    SOCK_DGRAM = 2,
+    SOCK_RAW = 3,
+    SOCK_RDM = 4,
+    SOCK_SEQPACKET = 5,
+    SOCK_DCCP = 6,
+    SOCK_PACKET = 10,
+    SOCK_CLOEXEC = 524288,
+    SOCK_NONBLOCK = 2048,
+}
+pub type sa_family_t = ::std::os::raw::c_ushort;
+#[repr(C)]
+#[derive(Copy, Clone)]
+#[derive(Debug)]
+pub struct sockaddr {
+    pub sa_family: sa_family_t,
+    pub sa_data: [::std::os::raw::c_char; 14usize],
+}
+impl ::std::default::Default for sockaddr {
+    fn default() -> Self { unsafe { ::std::mem::zeroed() } }
+}
+#[repr(C)]
+#[derive(Copy)]
+pub struct sockaddr_storage {
+    pub ss_family: sa_family_t,
+    pub __ss_align: ::std::os::raw::c_ulong,
+    pub __ss_padding: [::std::os::raw::c_char; 112usize],
+}
+impl ::std::clone::Clone for sockaddr_storage {
+    fn clone(&self) -> Self { *self }
+}
+impl ::std::default::Default for sockaddr_storage {
+    fn default() -> Self { unsafe { ::std::mem::zeroed() } }
+}
+#[derive(Copy, Clone)]
+#[repr(u32)]
+#[derive(Debug)]
+pub enum Enum_Unnamed4 {
+    MSG_OOB = 1,
+    MSG_PEEK = 2,
+    MSG_DONTROUTE = 4,
+    MSG_CTRUNC = 8,
+    MSG_PROXY = 16,
+    MSG_TRUNC = 32,
+    MSG_DONTWAIT = 64,
+    MSG_EOR = 128,
+    MSG_WAITALL = 256,
+    MSG_FIN = 512,
+    MSG_SYN = 1024,
+    MSG_CONFIRM = 2048,
+    MSG_RST = 4096,
+    MSG_ERRQUEUE = 8192,
+    MSG_NOSIGNAL = 16384,
+    MSG_MORE = 32768,
+    MSG_WAITFORONE = 65536,
+    MSG_FASTOPEN = 536870912,
+    MSG_CMSG_CLOEXEC = 1073741824,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+#[derive(Debug)]
+pub struct msghdr {
+    pub msg_name: *mut ::std::os::raw::c_void,
+    pub msg_namelen: socklen_t,
+    pub msg_iov: *mut iovec,
+    pub msg_iovlen: size_t,
+    pub msg_control: *mut ::std::os::raw::c_void,
+    pub msg_controllen: size_t,
+    pub msg_flags: ::std::os::raw::c_int,
+    _bindgen_padding_0_: [u8; 4usize],
+}
+impl ::std::default::Default for msghdr {
+    fn default() -> Self { unsafe { ::std::mem::zeroed() } }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+#[derive(Debug)]
+pub struct cmsghdr {
+    pub cmsg_len: size_t,
+    pub cmsg_level: ::std::os::raw::c_int,
+    pub cmsg_type: ::std::os::raw::c_int,
+    pub __cmsg_data: [::std::os::raw::c_uchar; 0usize],
+}
+impl ::std::default::Default for cmsghdr {
+    fn default() -> Self { unsafe { ::std::mem::zeroed() } }
+}
+#[derive(Copy, Clone)]
+#[repr(u32)]
+#[derive(Debug)]
+pub enum Enum_Unnamed5 { SCM_RIGHTS = 1, }
+#[repr(C)]
+#[derive(Copy, Clone)]
+#[derive(Debug)]
+pub struct linger {
+    pub l_onoff: ::std::os::raw::c_int,
+    pub l_linger: ::std::os::raw::c_int,
+}
+impl ::std::default::Default for linger {
+    fn default() -> Self { unsafe { ::std::mem::zeroed() } }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+#[derive(Debug)]
+pub struct osockaddr {
+    pub sa_family: ::std::os::raw::c_ushort,
+    pub sa_data: [::std::os::raw::c_uchar; 14usize],
+}
+impl ::std::default::Default for osockaddr {
+    fn default() -> Self { unsafe { ::std::mem::zeroed() } }
+}
+#[derive(Copy, Clone)]
+#[repr(u32)]
+#[derive(Debug)]
+pub enum Enum_Unnamed6 { SHUT_RD = 0, SHUT_WR = 1, SHUT_RDWR = 2, }
 #[derive(Copy, Clone)]
 #[repr(u32)]
 #[derive(Debug)]
@@ -1459,6 +1752,71 @@ extern "C" {
     pub fn gnu_dev_makedev(__major: ::std::os::raw::c_uint,
                            __minor: ::std::os::raw::c_uint)
      -> ::std::os::raw::c_ulonglong;
+    pub fn readv(__fd: ::std::os::raw::c_int, __iovec: *const iovec,
+                 __count: ::std::os::raw::c_int) -> ssize_t;
+    pub fn writev(__fd: ::std::os::raw::c_int, __iovec: *const iovec,
+                  __count: ::std::os::raw::c_int) -> ssize_t;
+    pub fn preadv(__fd: ::std::os::raw::c_int, __iovec: *const iovec,
+                  __count: ::std::os::raw::c_int, __offset: __off_t)
+     -> ssize_t;
+    pub fn pwritev(__fd: ::std::os::raw::c_int, __iovec: *const iovec,
+                   __count: ::std::os::raw::c_int, __offset: __off_t)
+     -> ssize_t;
+    pub fn __cmsg_nxthdr(__mhdr: *mut msghdr, __cmsg: *mut cmsghdr)
+     -> *mut cmsghdr;
+    pub fn socket(__domain: ::std::os::raw::c_int,
+                  __type: ::std::os::raw::c_int,
+                  __protocol: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
+    pub fn socketpair(__domain: ::std::os::raw::c_int,
+                      __type: ::std::os::raw::c_int,
+                      __protocol: ::std::os::raw::c_int,
+                      __fds: *mut ::std::os::raw::c_int)
+     -> ::std::os::raw::c_int;
+    pub fn bind(__fd: ::std::os::raw::c_int, __addr: *const sockaddr,
+                __len: socklen_t) -> ::std::os::raw::c_int;
+    pub fn getsockname(__fd: ::std::os::raw::c_int, __addr: *mut sockaddr,
+                       __len: *mut socklen_t) -> ::std::os::raw::c_int;
+    pub fn connect(__fd: ::std::os::raw::c_int, __addr: *const sockaddr,
+                   __len: socklen_t) -> ::std::os::raw::c_int;
+    pub fn getpeername(__fd: ::std::os::raw::c_int, __addr: *mut sockaddr,
+                       __len: *mut socklen_t) -> ::std::os::raw::c_int;
+    pub fn send(__fd: ::std::os::raw::c_int,
+                __buf: *const ::std::os::raw::c_void, __n: size_t,
+                __flags: ::std::os::raw::c_int) -> ssize_t;
+    pub fn recv(__fd: ::std::os::raw::c_int,
+                __buf: *mut ::std::os::raw::c_void, __n: size_t,
+                __flags: ::std::os::raw::c_int) -> ssize_t;
+    pub fn sendto(__fd: ::std::os::raw::c_int,
+                  __buf: *const ::std::os::raw::c_void, __n: size_t,
+                  __flags: ::std::os::raw::c_int, __addr: *const sockaddr,
+                  __addr_len: socklen_t) -> ssize_t;
+    pub fn recvfrom(__fd: ::std::os::raw::c_int,
+                    __buf: *mut ::std::os::raw::c_void, __n: size_t,
+                    __flags: ::std::os::raw::c_int, __addr: *mut sockaddr,
+                    __addr_len: *mut socklen_t) -> ssize_t;
+    pub fn sendmsg(__fd: ::std::os::raw::c_int, __message: *const msghdr,
+                   __flags: ::std::os::raw::c_int) -> ssize_t;
+    pub fn recvmsg(__fd: ::std::os::raw::c_int, __message: *mut msghdr,
+                   __flags: ::std::os::raw::c_int) -> ssize_t;
+    pub fn getsockopt(__fd: ::std::os::raw::c_int,
+                      __level: ::std::os::raw::c_int,
+                      __optname: ::std::os::raw::c_int,
+                      __optval: *mut ::std::os::raw::c_void,
+                      __optlen: *mut socklen_t) -> ::std::os::raw::c_int;
+    pub fn setsockopt(__fd: ::std::os::raw::c_int,
+                      __level: ::std::os::raw::c_int,
+                      __optname: ::std::os::raw::c_int,
+                      __optval: *const ::std::os::raw::c_void,
+                      __optlen: socklen_t) -> ::std::os::raw::c_int;
+    pub fn listen(__fd: ::std::os::raw::c_int, __n: ::std::os::raw::c_int)
+     -> ::std::os::raw::c_int;
+    pub fn accept(__fd: ::std::os::raw::c_int, __addr: *mut sockaddr,
+                  __addr_len: *mut socklen_t) -> ::std::os::raw::c_int;
+    pub fn shutdown(__fd: ::std::os::raw::c_int, __how: ::std::os::raw::c_int)
+     -> ::std::os::raw::c_int;
+    pub fn sockatmark(__fd: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
+    pub fn isfdtype(__fd: ::std::os::raw::c_int,
+                    __fdtype: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
     pub fn rd_kafka_version() -> ::std::os::raw::c_int;
     pub fn rd_kafka_version_str() -> *const ::std::os::raw::c_char;
     pub fn rd_kafka_get_debug_contexts() -> *const ::std::os::raw::c_char;
@@ -1636,6 +1994,28 @@ extern "C" {
                                                                                           *mut ::std::os::raw::c_void)
                                                                      ->
                                                                          ::std::os::raw::c_int>);
+    pub fn rd_kafka_conf_set_connect_cb(conf: *mut rd_kafka_conf_t,
+                                        connect_cb:
+                                            ::std::option::Option<unsafe extern "C" fn(sockfd:
+                                                                                           ::std::os::raw::c_int,
+                                                                                       addr:
+                                                                                           *const sockaddr,
+                                                                                       addrlen:
+                                                                                           ::std::os::raw::c_int,
+                                                                                       id:
+                                                                                           *const ::std::os::raw::c_char,
+                                                                                       opaque:
+                                                                                           *mut ::std::os::raw::c_void)
+                                                                      ->
+                                                                          ::std::os::raw::c_int>);
+    pub fn rd_kafka_conf_set_closesocket_cb(conf: *mut rd_kafka_conf_t,
+                                            closesocket_cb:
+                                                ::std::option::Option<unsafe extern "C" fn(sockfd:
+                                                                                               ::std::os::raw::c_int,
+                                                                                           opaque:
+                                                                                               *mut ::std::os::raw::c_void)
+                                                                          ->
+                                                                              ::std::os::raw::c_int>);
     pub fn rd_kafka_conf_set_open_cb(conf: *mut rd_kafka_conf_t,
                                      open_cb:
                                          ::std::option::Option<unsafe extern "C" fn(pathname:

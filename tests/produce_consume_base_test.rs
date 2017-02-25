@@ -1,3 +1,6 @@
+#![feature(alloc_system)]
+extern crate alloc_system;
+
 extern crate env_logger;
 extern crate futures;
 extern crate rand;
