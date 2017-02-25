@@ -168,4 +168,9 @@ pub trait Consumer<C: ConsumerContext> {
     fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
         self.get_base_consumer().fetch_watermarks(topic, partition, timeout_ms)
     }
+
+    /// Returns the group membership information for all the groups in the cluster.
+    fn fetch_group_list(&self, timeout_ms: i32) -> KafkaResult<GroupList> {
+        self.get_base_consumer().fetch_group_list(timeout_ms)
+    }
 }

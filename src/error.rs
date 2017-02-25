@@ -38,16 +38,17 @@ impl IsError for RDKafkaConfRes {
 pub enum KafkaError {
     ClientConfig((RDKafkaConfRes, String, String, String)),
     ClientCreation(String),
+    ConsumerCommit(RDKafkaRespErr),
     ConsumerCreation(String),
+    GroupListFetch(RDKafkaRespErr),
     MessageConsumption(RDKafkaRespErr),
     MessageProduction(RDKafkaRespErr),
-    ConsumerCommit(RDKafkaRespErr),
     MetadataFetch(RDKafkaRespErr),
     Nul(ffi::NulError),
+    PartitionEOF(i32),
     Subscription(String),
     TopicConfig((RDKafkaConfRes, String, String, String)),
     TopicCreation(String),
-    PartitionEOF(i32),
 }
 
 impl fmt::Debug for KafkaError {

@@ -94,7 +94,6 @@ fn test_consumer_commit() {
     produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2));
     let mut consumer = create_stream_consumer(&topic_name);
 
-
     let _consumer_future = consumer.start()
         .take(33)
         .for_each(|message| {
@@ -139,4 +138,29 @@ fn test_subscription() {
 
     let subscription = TopicPartitionList::with_topics(vec![topic_name.as_str()].as_slice());
     assert_eq!(subscription, consumer.subscription().unwrap());
+}
+
+#[test]
+fn test_group_membership() {
+    let _r = env_logger::init();
+
+    let topic_name = rand_test_topic();
+    let consumer = create_stream_consumer(&topic_name);
+
+    let metadata = consumer.fetch_metadata(5000).unwrap();
+
+    let topic_metadata = metadata.topics().iter()
+        .find(|m| m.name() == topic_name).unwrap();
+
+    let mut ids = topic_metadata.partitions().iter().map(|p| p.id()).collect::<Vec<_>>();
+    ids.sort();
+
+    assert_eq!(ids, vec![0, 1, 2]);
+    // assert_eq!(topic_metadata.error(), None);
+    assert_eq!(topic_metadata.partitions().len(), 3);
+    assert_eq!(topic_metadata.partitions()[0].leader(), 0);
+    assert_eq!(topic_metadata.partitions()[1].leader(), 0);
+    assert_eq!(topic_metadata.partitions()[2].leader(), 0);
+    assert_eq!(topic_metadata.partitions()[0].replicas(), &[0]);
+    assert_eq!(topic_metadata.partitions()[0].isr(), &[0]);
 }

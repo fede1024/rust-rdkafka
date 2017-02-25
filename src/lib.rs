@@ -127,6 +127,7 @@ pub mod client;
 pub mod config;
 pub mod consumer;
 pub mod error;
+pub mod group_membership;
 pub mod message;
 pub mod metadata;
 pub mod producer;

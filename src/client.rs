@@ -9,6 +9,7 @@ use std::ptr;
 
 use config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 use error::{IsError, KafkaError, KafkaResult};
+use group_membership::GroupList;
 use metadata::Metadata;
 use util::bytes_cstr_to_owned;
 
@@ -152,6 +153,25 @@ impl<C: Context> Client<C> {
             return Err(KafkaError::MetadataFetch(ret));
         }
         Ok((low, high))
+    }
+
+    /// Returns the group membership information for all the groups in the cluster.
+    pub fn fetch_group_list(&self, timeout_ms: i32) -> KafkaResult<GroupList> {
+        let mut group_list_ptr: *const RDKafkaGroupList = ptr::null_mut();
+        trace!("Starting group list fetch");
+        let ret = unsafe {
+            rdkafka::rd_kafka_list_groups(
+                self.native_ptr(),
+                ptr::null_mut(),   // All groups
+                &mut group_list_ptr as *mut *const RDKafkaGroupList,
+                timeout_ms)
+        };
+        trace!("Group list fetch completed");
+        if ret.is_error() {
+            return Err(KafkaError::GroupListFetch(ret));
+        }
+
+        Ok(GroupList::from_ptr(group_list_ptr))
     }
 }
 

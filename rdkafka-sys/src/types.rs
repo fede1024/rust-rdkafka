@@ -36,6 +36,9 @@ pub type RDKafkaMetadataBroker = bindings::rd_kafka_metadata_broker_t;
 /// Native rdkafka state
 pub type RDKafkaState = bindings::rd_kafka_s;
 
+/// Native rdkafka list of groups
+pub type RDKafkaGroupList = bindings::rd_kafka_group_list;
+
 // ENUMS
 
 /// Client types

@@ -216,6 +216,11 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     pub fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
         self.client.fetch_watermarks(topic, partition, timeout_ms)
     }
+
+    /// Returns the group membership information for all the groups in the cluster.
+    pub fn fetch_group_list(&self, timeout_ms: i32) -> KafkaResult<GroupList> {
+        self.client.fetch_group_list(timeout_ms)
+    }
 }
 
 impl<C: ConsumerContext> Drop for BaseConsumer<C> {
