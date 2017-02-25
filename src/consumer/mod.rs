@@ -13,6 +13,7 @@ use client::{Context, NativeClient};
 use message::Message;
 use metadata::Metadata;
 use error::KafkaResult;
+use group_membership::GroupList;
 
 pub use consumer::base_consumer::BaseConsumer;
 pub use topic_partition_list::TopicPartitionList;

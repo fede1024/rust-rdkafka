@@ -1,8 +1,9 @@
 //! Group membership API
+use rdsys;
+use rdsys::types::*;
+
 use std::ffi::CStr;
 use std::slice;
-
-use rdkafka::types::*;
 
 use error::IsError;
 
@@ -42,6 +43,6 @@ impl GroupList {
 
 impl Drop for GroupList {
     fn drop(&mut self) {
-        unsafe { rdkafka::rd_kafka_group_list_destroy(self.0) };
+        unsafe { rdsys::rd_kafka_group_list_destroy(self.0) };
     }
 }

@@ -13,6 +13,7 @@ use metadata::Metadata;
 use message::Message;
 use util::cstr_to_owned;
 use topic_partition_list::TopicPartitionList;
+use group_membership::GroupList;
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.

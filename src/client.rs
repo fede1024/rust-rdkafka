@@ -160,7 +160,7 @@ impl<C: Context> Client<C> {
         let mut group_list_ptr: *const RDKafkaGroupList = ptr::null_mut();
         trace!("Starting group list fetch");
         let ret = unsafe {
-            rdkafka::rd_kafka_list_groups(
+            rdsys::rd_kafka_list_groups(
                 self.native_ptr(),
                 ptr::null_mut(),   // All groups
                 &mut group_list_ptr as *mut *const RDKafkaGroupList,
