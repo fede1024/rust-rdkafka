@@ -8,7 +8,12 @@
 Kafka client library for Rust based on [librdkafka].
 
 ## The library
-`rust-rdkafka` provides a safe Rust interface to librdkafka. It currently exports a subset of the funcionalities provided by librdkafka 0.9.3.
+`rust-rdkafka` provides a safe Rust interface to librdkafka. It is currently based on librdkafka 0.9.3.
+
+### Documentation
+
+- [Current master](https://fede1024.github.io/rust-rdkafka/)
+- [Latest release](https://docs.rs/rdkafka/)
 
 ### Features
 
