@@ -9,7 +9,7 @@ use std::ptr;
 
 use config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 use error::{IsError, KafkaError, KafkaResult};
-use group_membership::GroupList;
+use groups::GroupList;
 use metadata::Metadata;
 use util::bytes_cstr_to_owned;
 
@@ -144,7 +144,7 @@ impl<C: Context> Client<C> {
     pub fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
         let mut low = -1;
         let mut high = -1;
-        let topic_c = try!(CString::new(topic.to_string()));
+        let topic_c = CString::new(topic.to_string())?;
         let ret = unsafe {
             rdsys::rd_kafka_query_watermark_offsets(self.native_ptr(), topic_c.as_ptr(), partition,
                                                       &mut low as *mut i64, &mut high as *mut i64, timeout_ms)
@@ -155,14 +155,22 @@ impl<C: Context> Client<C> {
         Ok((low, high))
     }
 
-    /// Returns the group membership information for all the groups in the cluster.
-    pub fn fetch_group_list(&self, timeout_ms: i32) -> KafkaResult<GroupList> {
+    /// Returns the group membership information for the given group. If no group is
+    /// specified, all groups will be returned.
+    pub fn fetch_group_list(&self, group: Option<&str>, timeout_ms: i32) -> KafkaResult<GroupList> {
+        // Careful with group_c getting freed before time
+        let group_c = CString::new(group.map_or("".to_string(), |g| g.to_string())).unwrap();
+        let group_c_ptr = if group.is_some() {
+            group_c.as_ptr()
+        } else {
+            ptr::null_mut()
+        };
         let mut group_list_ptr: *const RDKafkaGroupList = ptr::null_mut();
         trace!("Starting group list fetch");
         let ret = unsafe {
             rdsys::rd_kafka_list_groups(
                 self.native_ptr(),
-                ptr::null_mut(),   // All groups
+                group_c_ptr,
                 &mut group_list_ptr as *mut *const RDKafkaGroupList,
                 timeout_ms)
         };

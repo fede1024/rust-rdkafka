@@ -13,7 +13,7 @@ use metadata::Metadata;
 use message::Message;
 use util::cstr_to_owned;
 use topic_partition_list::TopicPartitionList;
-use group_membership::GroupList;
+use groups::GroupList;
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.
@@ -218,9 +218,10 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         self.client.fetch_watermarks(topic, partition, timeout_ms)
     }
 
-    /// Returns the group membership information for all the groups in the cluster.
-    pub fn fetch_group_list(&self, timeout_ms: i32) -> KafkaResult<GroupList> {
-        self.client.fetch_group_list(timeout_ms)
+    /// Returns the group membership information for the given group. If no group is
+    /// specified, all groups will be returned.
+    pub fn fetch_group_list(&self, group: Option<&str>, timeout_ms: i32) -> KafkaResult<GroupList> {
+        self.client.fetch_group_list(group, timeout_ms)
     }
 }
 
