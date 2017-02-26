@@ -6,7 +6,7 @@
 //!
 //! ### Documentation
 //!
-//! - [Current master](https://fede1024.github.io/rust-rdkafka/)
+//! - [Current master branch](https://fede1024.github.io/rust-rdkafka/)
 //! - [Latest release](https://docs.rs/rdkafka/)
 //!
 //! ### Features

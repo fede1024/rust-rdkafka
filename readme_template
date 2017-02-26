@@ -8,10 +8,6 @@
 Kafka client library for Rust based on [librdkafka].
 
 __INCLUDE_RUST_DOC__$src/lib.rs$## The library
-## Documentation
-
-Documentation is available on [docs.rs](https://docs.rs/rdkafka/).
-
 ## Contributors
 
 Thanks to:

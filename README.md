@@ -12,7 +12,7 @@ Kafka client library for Rust based on [librdkafka].
 
 ### Documentation
 
-- [Current master](https://fede1024.github.io/rust-rdkafka/)
+- [Current master branch](https://fede1024.github.io/rust-rdkafka/)
 - [Latest release](https://docs.rs/rdkafka/)
 
 ### Features
@@ -125,10 +125,6 @@ cargo test
 ```
 
 In this case there is a broker expected to be running on `localhost:9092`. Travis currently only runs the unit tests.
-
-## Documentation
-
-Documentation is available on [docs.rs](https://docs.rs/rdkafka/).
 
 ## Contributors
 
