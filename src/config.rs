@@ -137,7 +137,7 @@ impl ClientConfig {
             };
             if ret.is_error() {
                 let descr = unsafe { bytes_cstr_to_owned(&errstr) };
-                return Err(KafkaError::ClientConfig((ret, descr, key.to_string(), value.to_string())));
+                return Err(KafkaError::ClientConfig(ret, descr, key.to_string(), value.to_string()));
             }
         }
         if let Some(topic_config) = self.create_native_default_topic_config() {
@@ -229,7 +229,7 @@ impl TopicConfig {
             };
             if ret.is_error() {
                 let descr = unsafe { bytes_cstr_to_owned(&errstr) };
-                return Err(KafkaError::TopicConfig((ret, descr, name.to_string(), value.to_string())));
+                return Err(KafkaError::TopicConfig(ret, descr, name.to_string(), value.to_string()));
             }
         }
         Ok(config_ptr)

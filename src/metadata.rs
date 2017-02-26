@@ -17,7 +17,7 @@ impl MetadataBroker {
     }
 
     /// Returns the host name of the broker.
-    pub fn host<'a>(&'a self) -> &'a str {
+    pub fn host(&self) -> &str {
         unsafe {
             CStr::from_ptr(self.0.host)
                 .to_str()
@@ -55,12 +55,12 @@ impl MetadataPartition {
     }
 
     /// Returns the broker ids of the replicas.
-    pub fn replicas<'a>(&'a self) -> &'a [i32] {
+    pub fn replicas(&self) -> &[i32] {
         unsafe { slice::from_raw_parts(self.0.replicas, self.0.replica_cnt as usize) }
     }
 
     /// Returns the broker ids of the in sync replicas.
-    pub fn isr<'a>(&'a self) -> &'a [i32] {
+    pub fn isr(&self) -> &[i32] {
         unsafe { slice::from_raw_parts(self.0.isrs, self.0.isr_cnt as usize) }
     }
 }
@@ -70,7 +70,7 @@ pub struct MetadataTopic(RDKafkaMetadataTopic);
 
 impl MetadataTopic {
     /// Returns the name of the topic.
-    pub fn name<'a>(&'a self) -> &'a str {
+    pub fn name(&self) -> &str {
         unsafe {
             CStr::from_ptr(self.0.topic)
                 .to_str()
@@ -79,7 +79,7 @@ impl MetadataTopic {
     }
 
     /// Returns the partition metadata information for all the partitions.
-    pub fn partitions<'a>(&'a self) -> &'a [MetadataPartition] {
+    pub fn partitions(&self) -> &[MetadataPartition] {
         unsafe { slice::from_raw_parts(self.0.partitions as *const MetadataPartition, self.0.partition_cnt as usize) }
     }
 
@@ -118,12 +118,12 @@ impl Metadata {
     }
 
     /// Returns the metadata information for all the brokers in the cluster.
-    pub fn brokers<'a>(&'a self) -> &'a [MetadataBroker] {
+    pub fn brokers(&self) -> &[MetadataBroker] {
         unsafe { slice::from_raw_parts((*self.0).brokers as *const MetadataBroker, (*self.0).broker_cnt as usize) }
     }
 
     /// Returns the metadata information for all the topics in the cluster.
-    pub fn topics<'a>(&'a self) -> &'a [MetadataTopic] {
+    pub fn topics(&self) -> &[MetadataTopic] {
         unsafe { slice::from_raw_parts((*self.0).topics as *const MetadataTopic, (*self.0).topic_cnt as usize) }
     }
 }

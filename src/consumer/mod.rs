@@ -13,6 +13,7 @@ use client::{Context, NativeClient};
 use message::Message;
 use metadata::Metadata;
 use error::KafkaResult;
+use groups::GroupList;
 
 pub use consumer::base_consumer::BaseConsumer;
 pub use topic_partition_list::TopicPartitionList;
@@ -167,5 +168,11 @@ pub trait Consumer<C: ConsumerContext> {
     /// Returns the metadata information for all the topics in the cluster.
     fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
         self.get_base_consumer().fetch_watermarks(topic, partition, timeout_ms)
+    }
+
+    /// Returns the group membership information for the given group. If no group is
+    /// specified, all groups will be returned.
+    fn fetch_group_list(&self, group: Option<&str>, timeout_ms: i32) -> KafkaResult<GroupList> {
+        self.get_base_consumer().fetch_group_list(group, timeout_ms)
     }
 }
