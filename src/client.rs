@@ -7,12 +7,14 @@ use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
 
+use serde_json;
+
 use config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 use error::{IsError, KafkaError, KafkaResult};
 use groups::GroupList;
 use metadata::Metadata;
+use statistics::Statistics;
 use util::bytes_cstr_to_owned;
-
 
 /// A Context is an object that can store user-defined data and on which callbacks can be
 /// defined. Refer to the list of methods to see which callbacks can currently be overridden.
@@ -32,10 +34,10 @@ pub trait Context: Send + Sync {
         }
     }
 
-    /// Receives the statistics of the librdkafka client in JSON format. To enable, the
+    /// Receives the statistics of the librdkafka client. To enable, the
     /// "statistics.interval.ms" configuration parameter must be specified.
-    fn stats(&self, json: String) {
-        println!("Client stats: {}", json);
+    fn stats(&self, statistics: Statistics) {
+        info!("Client stats: {:?}", statistics);
     }
 
     // NOTE: when adding a new method, remember to add it to the FutureProducerContext as well.
@@ -209,15 +211,18 @@ pub unsafe extern "C" fn native_stats_cb<C: Context>(
         _conf: *mut RDKafka, json: *mut i8, json_len: usize,
         opaque: *mut c_void
 ) -> i32 {
-    let json_string = String::from_raw_parts(json as *mut u8, json_len, json_len);
-
     let context = Box::from_raw(opaque as *mut C);
-    (*context).stats(json_string);
+
+    let statistics_json = String::from_raw_parts(json as *mut u8, json_len, json_len);
+    match serde_json::from_str(&statistics_json) {
+        Ok(stats) => (*context).stats(stats),
+        Err(e) => error!("Could not parse statistics json: {}", e)
+    }
+
     mem::forget(context);   // Do not free the context
 
-    1 // librdkafka will not free the pointer
+    1 // librdkafka will not free the json buffer
 }
-
 
 #[cfg(test)]
 mod tests {
