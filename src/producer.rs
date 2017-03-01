@@ -17,6 +17,7 @@ use client::{Client, Context, EmptyContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel, TopicConfig};
 use error::{KafkaError, KafkaResult, IsError};
 use message::ToBytes;
+use statistics::Statistics;
 use util::cstr_to_owned;
 
 //
@@ -306,7 +307,7 @@ impl<C: Context + 'static> Context for FutureProducerContext<C> {
         self.wrapped_context.log(level, fac, log_message);
     }
 
-    fn stats(&self, json: String) {
+    fn stats(&self, json: Statistics) {
         self.wrapped_context.stats(json);
     }
 }

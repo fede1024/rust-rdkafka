@@ -122,6 +122,8 @@
 //!
 
 #[macro_use] extern crate log;
+#[macro_use] extern crate serde_derive;
+extern crate serde_json;
 extern crate futures;
 extern crate errno;
 
@@ -137,6 +139,7 @@ pub mod groups;
 pub mod message;
 pub mod metadata;
 pub mod producer;
+pub mod statistics;
 pub mod topic_partition_list;
 pub mod util;
 

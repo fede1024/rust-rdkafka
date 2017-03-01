@@ -16,6 +16,9 @@ errno = "^0.1.8"
 futures = "^0.1.7"
 libc = "^0.2.0"
 log = "^0.3.0"
+serde = "^0.9.8"
+serde_derive = "^0.9.8"
+serde_json = "^0.9.8"
 
 [dev-dependencies]
 clap = "^2.18.0"

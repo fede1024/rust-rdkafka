@@ -11,6 +11,7 @@ use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
 use rdkafka::message::ToBytes;
+use rdkafka::statistics::Statistics;
 
 use std::collections::HashMap;
 
@@ -48,9 +49,7 @@ impl Context for TestContext {
         let _n = fac.len() + log_message.len();
     }
 
-    fn stats(&self, json: String) {
-        // statistics received, calculate length
-        let _n = json.len();
+    fn stats(&self, _: Statistics) {
     }
 }
 
