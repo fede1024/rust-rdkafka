@@ -25,10 +25,6 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     fn get_base_consumer(&self) -> &BaseConsumer<C> {
         self
     }
-
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<C> {
-        self
-    }
 }
 
 impl FromClientConfig for BaseConsumer<EmptyConsumerContext> {
@@ -52,7 +48,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// Subscribes the consumer to a list of topics and/or topic sets (using regex).
     /// Strings starting with `^` will be regex-matched to the full list of topics in
     /// the cluster and matching topics will be added to the subscription list.
-    pub fn subscribe(&mut self, topics: &[&str]) -> KafkaResult<()> {
+    pub fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
         let tp_list = TopicPartitionList::with_topics(topics).create_native_topic_partition_list();
         let ret_code = unsafe { rdsys::rd_kafka_subscribe(self.client.native_ptr(), tp_list) };
         if ret_code.is_error() {
@@ -64,12 +60,12 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     }
 
     /// Unsubscribe from previous subscription list.
-    pub fn unsubscribe(&mut self) {
+    pub fn unsubscribe(&self) {
         unsafe { rdsys::rd_kafka_unsubscribe(self.client.native_ptr()) };
     }
 
     /// Manually assign topics and partitions to consume.
-    pub fn assign(&mut self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+    pub fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
         let tp_list = assignment.create_native_topic_partition_list();
         let ret_code = unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), tp_list) };
         if ret_code.is_error() {

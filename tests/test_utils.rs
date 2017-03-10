@@ -108,7 +108,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
 pub fn create_stream_consumer(topic_name: &str, group_id: &str) -> StreamConsumer<TestContext> {
     let cons_context = TestContext;
 
-    let mut consumer = ClientConfig::new()
+    let consumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("client.id", "rdkafka_integration_test_client")
         .set("bootstrap.servers", "localhost:9092")
