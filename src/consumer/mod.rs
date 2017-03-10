@@ -111,19 +111,17 @@ pub enum CommitMode {
 pub trait Consumer<C: ConsumerContext> {
     /// Returns a reference to the BaseConsumer.
     fn get_base_consumer(&self) -> &BaseConsumer<C>;
-    /// Returns a mutable reference to the BaseConsumer.
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<C>;
 
     // Default implementations
 
     /// Subscribe the consumer to a list of topics.
-    fn subscribe(&mut self, topics: &Vec<&str>) -> KafkaResult<()> {
-        self.get_base_consumer_mut().subscribe(topics)
+    fn subscribe(&self, topics: &Vec<&str>) -> KafkaResult<()> {
+        self.get_base_consumer().subscribe(topics)
     }
 
     /// Manually assign topics and partitions to the consumer.
-    fn assign(&mut self, assignment: &TopicPartitionList) -> KafkaResult<()> {
-        self.get_base_consumer_mut().assign(assignment)
+    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+        self.get_base_consumer().assign(assignment)
     }
 
     /// Commit offsets on broker for the provided list of partitions.

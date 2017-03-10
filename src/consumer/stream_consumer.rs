@@ -32,10 +32,6 @@ impl<C: ConsumerContext> Consumer<C> for StreamConsumer<C> {
     fn get_base_consumer(&self) -> &BaseConsumer<C> {
         Arc::as_ref(&self.consumer)
     }
-
-    fn get_base_consumer_mut(&mut self) -> &mut BaseConsumer<C> {
-        Arc::get_mut(&mut self.consumer).expect("Could not get mutable consumer from context")  // TODO add check?
-    }
 }
 
 impl FromClientConfig for StreamConsumer<EmptyConsumerContext> {
