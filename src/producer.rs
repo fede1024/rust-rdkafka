@@ -33,7 +33,7 @@ unsafe impl Send for NativeTopic {}
 unsafe impl Sync for NativeTopic {}
 
 impl NativeTopic {
-    // TODO: this is not safe, since the called needs to know that the returned value cannot outlive
+    // TODO: this is not safe, since the caller needs to know that the returned value cannot outlive
     // the client. Should we add a reference to the producer?
     /// Given a pointer to a Kafka client, a topic name and a topic configuration, returns a new
     /// RDKafkaTopic created by the given client. The returned RDKafkaTopic should not outlive

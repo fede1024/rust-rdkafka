@@ -519,7 +519,8 @@ pub const SO_BPF_EXTENSIONS: ::std::os::raw::c_uchar = 48;
 pub const SO_INCOMING_CPU: ::std::os::raw::c_uchar = 49;
 pub const SO_ATTACH_BPF: ::std::os::raw::c_uchar = 50;
 pub const SO_DETACH_BPF: ::std::os::raw::c_uchar = 27;
-pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 590847;
+pub const LIBRDKAFKA_TYPECHECKS: ::std::os::raw::c_uchar = 1;
+pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 591103;
 pub const RD_KAFKA_OFFSET_BEGINNING: ::std::os::raw::c_char = -2;
 pub const RD_KAFKA_OFFSET_END: ::std::os::raw::c_char = -1;
 pub const RD_KAFKA_OFFSET_STORED: ::std::os::raw::c_short = -1000;
@@ -1306,6 +1307,8 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__NO_OFFSET = -168,
     RD_KAFKA_RESP_ERR__OUTDATED = -167,
     RD_KAFKA_RESP_ERR__TIMED_OUT_QUEUE = -166,
+    RD_KAFKA_RESP_ERR__UNSUPPORTED_FEATURE = -165,
+    RD_KAFKA_RESP_ERR__WAIT_CACHE = -164,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,
@@ -1344,7 +1347,15 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR_UNSUPPORTED_SASL_MECHANISM = 33,
     RD_KAFKA_RESP_ERR_ILLEGAL_SASL_STATE = 34,
     RD_KAFKA_RESP_ERR_UNSUPPORTED_VERSION = 35,
-    RD_KAFKA_RESP_ERR_END_ALL = 36,
+    RD_KAFKA_RESP_ERR_TOPIC_ALREADY_EXISTS = 36,
+    RD_KAFKA_RESP_ERR_INVALID_PARTITIONS = 37,
+    RD_KAFKA_RESP_ERR_INVALID_REPLICATION_FACTOR = 38,
+    RD_KAFKA_RESP_ERR_INVALID_REPLICA_ASSIGNMENT = 39,
+    RD_KAFKA_RESP_ERR_INVALID_CONFIG = 40,
+    RD_KAFKA_RESP_ERR_NOT_CONTROLLER = 41,
+    RD_KAFKA_RESP_ERR_INVALID_REQUEST = 42,
+    RD_KAFKA_RESP_ERR_UNSUPPORTED_FOR_MESSAGE_FORMAT = 43,
+    RD_KAFKA_RESP_ERR_END_ALL = 44,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1386,6 +1397,20 @@ impl ::std::default::Default for rd_kafka_topic_partition_list_s {
     fn default() -> Self { unsafe { ::std::mem::zeroed() } }
 }
 pub type rd_kafka_topic_partition_list_t = rd_kafka_topic_partition_list_s;
+#[derive(Copy, Clone)]
+#[repr(u32)]
+#[derive(Debug)]
+pub enum rd_kafka_vtype_t {
+    RD_KAFKA_VTYPE_END = 0,
+    RD_KAFKA_VTYPE_TOPIC = 1,
+    RD_KAFKA_VTYPE_RKT = 2,
+    RD_KAFKA_VTYPE_PARTITION = 3,
+    RD_KAFKA_VTYPE_VALUE = 4,
+    RD_KAFKA_VTYPE_KEY = 5,
+    RD_KAFKA_VTYPE_OPAQUE = 6,
+    RD_KAFKA_VTYPE_MSGFLAGS = 7,
+    RD_KAFKA_VTYPE_TIMESTAMP = 8,
+}
 #[repr(C)]
 #[derive(Copy, Clone)]
 #[derive(Debug)]
@@ -1875,6 +1900,19 @@ extern "C" {
                                                   *const ::std::os::raw::c_char,
                                               partition: int32_t)
      -> *mut rd_kafka_topic_partition_t;
+    pub fn rd_kafka_topic_partition_list_sort(rktparlist:
+                                                  *mut rd_kafka_topic_partition_list_t,
+                                              cmp:
+                                                  ::std::option::Option<unsafe extern "C" fn(a:
+                                                                                                 *const ::std::os::raw::c_void,
+                                                                                             b:
+                                                                                                 *const ::std::os::raw::c_void,
+                                                                                             opaque:
+                                                                                                 *mut ::std::os::raw::c_void)
+                                                                            ->
+                                                                                ::std::os::raw::c_int>,
+                                              opaque:
+                                                  *mut ::std::os::raw::c_void);
     pub fn rd_kafka_message_destroy(rkmessage: *mut rd_kafka_message_t);
     pub fn rd_kafka_message_timestamp(rkmessage: *const rd_kafka_message_t,
                                       tstype: *mut rd_kafka_timestamp_type_t)
@@ -2160,6 +2198,11 @@ extern "C" {
                                           low: *mut int64_t,
                                           high: *mut int64_t)
      -> rd_kafka_resp_err_t;
+    pub fn rd_kafka_offsets_for_times(rk: *mut rd_kafka_t,
+                                      offsets:
+                                          *mut rd_kafka_topic_partition_list_t,
+                                      timeout_ms: ::std::os::raw::c_int)
+     -> rd_kafka_resp_err_t;
     pub fn rd_kafka_mem_free(rk: *mut rd_kafka_t,
                              ptr: *mut ::std::os::raw::c_void);
     pub fn rd_kafka_queue_new(rk: *mut rd_kafka_t) -> *mut rd_kafka_queue_t;
@@ -2168,8 +2211,15 @@ extern "C" {
      -> *mut rd_kafka_queue_t;
     pub fn rd_kafka_queue_get_consumer(rk: *mut rd_kafka_t)
      -> *mut rd_kafka_queue_t;
+    pub fn rd_kafka_queue_get_partition(rk: *mut rd_kafka_t,
+                                        topic: *const ::std::os::raw::c_char,
+                                        partition: int32_t)
+     -> *mut rd_kafka_queue_t;
     pub fn rd_kafka_queue_forward(src: *mut rd_kafka_queue_t,
                                   dst: *mut rd_kafka_queue_t);
+    pub fn rd_kafka_set_log_queue(rk: *mut rd_kafka_t,
+                                  rkqu: *mut rd_kafka_queue_t)
+     -> rd_kafka_resp_err_t;
     pub fn rd_kafka_queue_length(rkqu: *mut rd_kafka_queue_t) -> size_t;
     pub fn rd_kafka_queue_io_event_enable(rkqu: *mut rd_kafka_queue_t,
                                           fd: ::std::os::raw::c_int,
@@ -2285,6 +2335,7 @@ extern "C" {
                             keylen: size_t,
                             msg_opaque: *mut ::std::os::raw::c_void)
      -> ::std::os::raw::c_int;
+    pub fn rd_kafka_producev(rk: *mut rd_kafka_t, ...) -> rd_kafka_resp_err_t;
     pub fn rd_kafka_produce_batch(rkt: *mut rd_kafka_topic_t,
                                   partition: int32_t,
                                   msgflags: ::std::os::raw::c_int,
@@ -2368,4 +2419,7 @@ extern "C" {
     pub fn rd_kafka_queue_poll(rkqu: *mut rd_kafka_queue_t,
                                timeout_ms: ::std::os::raw::c_int)
      -> *mut rd_kafka_event_t;
+    pub fn rd_kafka_queue_poll_callback(rkqu: *mut rd_kafka_queue_t,
+                                        timeout_ms: ::std::os::raw::c_int)
+     -> ::std::os::raw::c_int;
 }
