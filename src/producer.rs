@@ -61,7 +61,8 @@ impl NativeTopic {
         partition: Option<i32>,
         payload: Option<&[u8]>,
         key: Option<&[u8]>,
-        delivery_context: Option<Box<T>>
+        delivery_context: Option<Box<T>>,
+        timestamp: Option<i64>
     ) -> KafkaResult<()> {
         let (payload_ptr, payload_len) = match payload {
             None => (ptr::null_mut(), 0),
@@ -75,6 +76,10 @@ impl NativeTopic {
             Some(context) => Box::into_raw(context) as *mut c_void,
             None => ptr::null_mut(),
         };
+        let timestamp = match timestamp {
+            Some(t) => t,
+            None => 0
+        };
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.client_ptr,
@@ -84,6 +89,7 @@ impl NativeTopic {
                 RD_KAFKA_VTYPE_VALUE, payload_ptr, payload_len,
                 RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
                 RD_KAFKA_VTYPE_OPAQUE, delivery_context_ptr,
+                RD_KAFKA_VTYPE_TIMESTAMP, timestamp,
                 RD_KAFKA_VTYPE_END
             )
         };
@@ -280,12 +286,19 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key. If no key is
     /// specified, a random partition will be used.
-    pub fn send_copy<P, K>(&self, partition: Option<i32>, payload: Option<&P>, key: Option<&K>,
-                           delivery_context: Option<Box<C::DeliveryContext>>) -> KafkaResult<()>
+    pub fn send_copy<P, K>(
+        &self,
+        partition: Option<i32>,
+        payload: Option<&P>,
+        key: Option<&K>,
+        delivery_context: Option<Box<C::DeliveryContext>>,
+        timestamp: Option<i64>
+    ) -> KafkaResult<()>
             where K: ToBytes,
                   P: ToBytes {
         self.native_topic.send_copy::<C::DeliveryContext>(partition, payload.map(P::to_bytes),
-                                                          key.map(K::to_bytes), delivery_context)
+                                                          key.map(K::to_bytes), delivery_context,
+                                                          timestamp)
         }
 }
 
@@ -468,13 +481,19 @@ impl<C: Context + 'static> FutureProducerTopic<C> {
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key.
     /// Returns a `DeliveryFuture` or an error.
-    pub fn send_copy<P, K>(&self, partition: Option<i32>, payload: Option<&P>, key: Option<&K>)
-            -> KafkaResult<DeliveryFuture>
+    pub fn send_copy<P, K>(
+        &self,
+        partition: Option<i32>,
+        payload: Option<&P>,
+        key: Option<&K>,
+        timestamp: Option<i64>
+    ) -> KafkaResult<DeliveryFuture>
             where K: ToBytes,
                   P: ToBytes {
         let (tx, rx) = futures::oneshot();
         try!(self.native_topic.send_copy::<Complete<DeliveryReport>>(partition, payload.map(P::to_bytes),
-                                                                     key.map(K::to_bytes), Some(Box::new(tx))));
+                                                                     key.map(K::to_bytes), Some(Box::new(tx)),
+                                                                     timestamp));
         Ok(DeliveryFuture{rx: rx})
     }
 
