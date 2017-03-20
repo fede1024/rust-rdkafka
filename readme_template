@@ -8,6 +8,16 @@
 Kafka client library for Rust based on [librdkafka].
 
 __INCLUDE_RUST_DOC__$src/lib.rs$## The library
+## rdkafka-sys
+
+Sys wrapper around [librdkafka](https://github.com/edenhill/librdkafka).
+
+To regenerate the bindings:
+
+```
+bindgen --builtins --convert-macros librdkafka/src/rdkafka.h > src/bindings/{platform}.rs
+```
+
 ## Contributors
 
 Thanks to:
