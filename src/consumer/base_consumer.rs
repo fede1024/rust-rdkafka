@@ -166,11 +166,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
 
         let committed_error = unsafe {
-            rdsys::rd_kafka_committed(
-                self.client.native_ptr(),
-                tp_list,
-                timeout_ms
-            )
+            rdsys::rd_kafka_committed(self.client.native_ptr(), tp_list, timeout_ms)
         };
 
         let result = if committed_error.is_error() {
@@ -187,11 +183,9 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     pub fn position(&self) -> KafkaResult<TopicPartitionList> {
         let mut tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(0) };
         let error = unsafe {
+            // TODO: improve error handling
             rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list);
-            rdsys::rd_kafka_position(
-                self.client.native_ptr(),
-                tp_list
-            )
+            rdsys::rd_kafka_position(self.client.native_ptr(), tp_list)
         };
 
         let result = if error.is_error() {

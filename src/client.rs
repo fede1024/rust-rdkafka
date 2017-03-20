@@ -77,6 +77,16 @@ impl NativeClient {
     }
 }
 
+impl Drop for NativeClient {
+    fn drop(&mut self) {
+        trace!("Destroy rd_kafka {:p}", self.ptr);
+        unsafe {
+            rdsys::rd_kafka_destroy(self.ptr);
+            rdsys::rd_kafka_wait_destroyed(1000);
+        }
+    }
+}
+
 /// A low level rdkafka client. This client shouldn't be used directly. The producer and consumer modules
 /// provide different producer and consumer implementations based on top of `Client` that can be
 /// used instead.
@@ -106,6 +116,7 @@ impl<C: Context> Client<C> {
 
         unsafe { rdsys::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
 
+        trace!("Create new rd_kafka client {:p}", client_ptr);
         Ok(Client {
             native: NativeClient::new(client_ptr),
             context: boxed_context,
@@ -182,16 +193,6 @@ impl<C: Context> Client<C> {
         }
 
         Ok(GroupList::from_ptr(group_list_ptr))
-    }
-}
-
-impl<C: Context> Drop for Client<C> {
-    fn drop(&mut self) {
-        trace!("Destroy rd_kafka");
-        unsafe {
-            rdsys::rd_kafka_destroy(self.native.ptr);
-            rdsys::rd_kafka_wait_destroyed(1000);
-        }
     }
 }
 
