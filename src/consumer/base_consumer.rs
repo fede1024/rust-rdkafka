@@ -2,18 +2,18 @@
 use rdsys;
 use rdsys::types::*;
 
-use std::str;
-
 use client::Client;
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
-use consumer::{Consumer, ConsumerContext, CommitMode, EmptyConsumerContext};
 use consumer::rebalance_cb;  // TODO: reorganize module
+use consumer::{Consumer, ConsumerContext, CommitMode, EmptyConsumerContext};
 use error::{KafkaError, KafkaResult, IsError};
-use metadata::Metadata;
-use message::Message;
-use util::cstr_to_owned;
-use topic_partition_list::TopicPartitionList;
 use groups::GroupList;
+use message::Message;
+use metadata::Metadata;
+use topic_partition_list::TopicPartitionList;
+use util::cstr_to_owned;
+
+use std::str;
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.

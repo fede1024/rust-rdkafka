@@ -56,7 +56,12 @@ impl EmptyContext {
     }
 }
 
-/// A native rdkafka-sys client.
+//
+// ********** CLIENT **********
+//
+
+/// A native rdkafka-sys client. This struct shouldn't be used directly. Use higher level `Client`
+/// or producers and consumers.
 pub struct NativeClient {
     ptr: *mut RDKafka,
 }
@@ -68,6 +73,7 @@ unsafe impl Send for NativeClient {}
 impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
     pub fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
+        trace!("Create new NativeClient {:p}", client_ptr);
         NativeClient {ptr: ptr}
     }
 
@@ -108,9 +114,8 @@ impl<C: Context> Client<C> {
         unsafe { rdsys::rd_kafka_conf_set_stats_cb(native_config.ptr(), Some(native_stats_cb::<C>)) };
 
         let client_ptr = unsafe {
-            rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr(), errstr.as_ptr() as *mut i8, errstr.len())
+            rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr_move(), errstr.as_ptr() as *mut i8, errstr.len())
         };
-        mem::forget(native_config);  // rd_kafka client owns the config now
 
         if client_ptr.is_null() {
             let descr = unsafe { bytes_cstr_to_owned(&errstr) };
@@ -119,7 +124,6 @@ impl<C: Context> Client<C> {
 
         unsafe { rdsys::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
 
-        trace!("Create new rd_kafka client {:p}", client_ptr);
         Ok(Client {
             native: NativeClient::from_ptr(client_ptr),
             context: boxed_context,
@@ -163,7 +167,7 @@ impl<C: Context> Client<C> {
         let topic_c = CString::new(topic.to_string())?;
         let ret = unsafe {
             rdsys::rd_kafka_query_watermark_offsets(self.native_ptr(), topic_c.as_ptr(), partition,
-                                                      &mut low as *mut i64, &mut high as *mut i64, timeout_ms)
+                                                    &mut low as *mut i64, &mut high as *mut i64, timeout_ms)
         };
         if ret.is_error() {
             return Err(KafkaError::MetadataFetch(ret));
@@ -175,7 +179,7 @@ impl<C: Context> Client<C> {
     /// specified, all groups will be returned.
     pub fn fetch_group_list(&self, group: Option<&str>, timeout_ms: i32) -> KafkaResult<GroupList> {
         // Careful with group_c getting freed before time
-        let group_c = CString::new(group.map_or("".to_string(), |g| g.to_string())).unwrap();
+        let group_c = CString::new(group.map_or("".to_string(), |g| g.to_string()))?;
         let group_c_ptr = if group.is_some() {
             group_c.as_ptr()
         } else {
@@ -201,8 +205,7 @@ impl<C: Context> Client<C> {
 
 pub unsafe extern "C" fn native_log_cb<C: Context>(
         client: *const RDKafka, level: i32,
-        fac: *const i8, buf: *const i8
-) {
+        fac: *const i8, buf: *const i8) {
     let fac = CStr::from_ptr(fac).to_string_lossy();
     let log_message = CStr::from_ptr(buf).to_string_lossy();
 
@@ -213,8 +216,7 @@ pub unsafe extern "C" fn native_log_cb<C: Context>(
 
 pub unsafe extern "C" fn native_stats_cb<C: Context>(
         _conf: *mut RDKafka, json: *mut i8, json_len: usize,
-        opaque: *mut c_void
-) -> i32 {
+        opaque: *mut c_void) -> i32 {
     let context = Box::from_raw(opaque as *mut C);
 
     let statistics_json = String::from_raw_parts(json as *mut u8, json_len, json_len);

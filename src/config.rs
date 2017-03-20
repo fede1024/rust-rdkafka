@@ -65,13 +65,24 @@ impl NativeClientConfig {
         NativeClientConfig {ptr: ptr}
     }
 
+    /// Returns the pointer to the librdkafka RDKafkaConf structure.
     pub fn ptr(&self) -> *mut RDKafkaConf {
         self.ptr
+    }
+
+    /// Returns the pointer to the librdkafka RDKafkaConf structure. This method should be used when
+    /// the native pointer is intended to be moved. The destructor won't be executed automatically;
+    /// the caller should take care of deallocating the resource when no longer needed.
+    pub fn ptr_move(self) -> *mut RDKafkaConf {
+        let ptr = self.ptr;
+        mem::forget(self);
+        ptr
     }
 }
 
 impl Drop for NativeClientConfig {
     fn drop(&mut self) {
+        trace!("Drop NativeClientConfig {:p}", self.ptr());
         unsafe { rdsys::rd_kafka_conf_destroy(self.ptr) }
     }
 }
@@ -136,19 +147,11 @@ impl ClientConfig {
                 return Err(KafkaError::ClientConfig(ret, descr, key.to_string(), value.to_string()));
             }
         }
-        match self.create_native_default_topic_config() {
-            Some(Err(e)) => return Err(e),
-            Some(Ok(topic_config)) => unsafe {
-                rdsys::rd_kafka_conf_set_default_topic_conf(conf, topic_config.ptr());
-                mem::forget(topic_config);  // conf is the new owner
-            },
-            None => {},
+        if let Some(ref topic_config) = self.default_topic_config {
+            let native_topic_config = topic_config.create_native_config()?;
+            unsafe { rdsys::rd_kafka_conf_set_default_topic_conf(conf, native_topic_config.ptr_move()) };
         };
         Ok(NativeClientConfig::from_ptr(conf))
-    }
-
-    fn create_native_default_topic_config(&self) -> Option<KafkaResult<NativeTopicConfig>> {
-        self.default_topic_config.as_ref().map(|c| c.create_native_config())
     }
 
     /// Uses the current configuration to create a new Consumer or Producer.
@@ -202,8 +205,18 @@ impl NativeTopicConfig {
         NativeTopicConfig {ptr: ptr}
     }
 
+    /// Returns the pointer to the librdkafka RDKafkaTopicConf structure.
     pub fn ptr(&self) -> *mut RDKafkaTopicConf {
         self.ptr
+    }
+
+    /// Returns the pointer to the librdkafka RDKafkaTopicConf structure. This method should be used
+    /// when the native pointer is intended to be moved. The destructor won't be executed
+    /// automatically; the caller should take care of deallocating the resource when no longer needed.
+    pub fn ptr_move(self) -> *mut RDKafkaTopicConf {
+        let ptr = self.ptr;
+        mem::forget(self);
+        ptr
     }
 }
 
@@ -221,7 +234,7 @@ pub struct TopicConfig {
 }
 
 impl TopicConfig {
-    /// Returns a new TopicConfig for the specified topic name and client.
+    /// Returns a new TopicConfig.
     pub fn new() -> TopicConfig {
         TopicConfig {
             conf_map: HashMap::new(),

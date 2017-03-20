@@ -167,12 +167,11 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
     /// Creates the BaseProducerTopic.
     pub fn new(producer: BaseProducer<C>, name: &str, topic_config: &TopicConfig)
             -> KafkaResult<BaseProducerTopic<C>> {
-        let name_cstring = CString::new(name.to_string()).expect("could not create name CString"); // TODO: remove expect
+        let name_cstring = CString::new(name.to_string())?;
         let native_topic_config = topic_config.create_native_config()?;
         let topic_ptr = unsafe {
-            rdsys::rd_kafka_topic_new(producer.native_ptr(), name_cstring.as_ptr(), native_topic_config.ptr())
+            rdsys::rd_kafka_topic_new(producer.native_ptr(), name_cstring.as_ptr(), native_topic_config.ptr_move())
         };
-        mem::forget(native_topic_config);  // topic_ptr is the new owner
         if topic_ptr.is_null() {
             Err(KafkaError::TopicCreation(name.to_owned()))
         } else {
@@ -313,7 +312,7 @@ impl<C: Context + 'static> _FutureProducer<C> {
                     trace!("Stopping polling");
                     self.should_stop.store(true, Ordering::Relaxed);
                     trace!("Waiting for polling thread termination");
-                    match handle.take().expect("no handle present in producer context").join() {
+                    match handle.take().expect("No handle present in producer context").join() {
                         Ok(()) => trace!("Polling stopped"),
                         Err(e) => warn!("Failure while terminating thread: {:?}", e),
                     };
