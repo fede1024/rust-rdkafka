@@ -49,8 +49,7 @@ impl Context for TestContext {
         let _n = fac.len() + log_message.len();
     }
 
-    fn stats(&self, _: Statistics) {
-    }
+    fn stats(&self, _: Statistics) { }
 }
 
 impl ConsumerContext for TestContext { }
@@ -77,7 +76,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
 
     let topic_config = TopicConfig::new()
         .set("produce.offset.report", "true")
-        .set("message.timeout.ms", "5000")
+        .set("message.timeout.ms", "30000")
         .finalize();
 
     let topic = producer.get_topic(&topic_name, &topic_config)

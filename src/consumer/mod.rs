@@ -5,15 +5,16 @@ pub mod stream_consumer;
 use rdsys;
 use rdsys::types::*;
 
-use std::ptr;
-use std::os::raw::c_void;
-use util::cstr_to_owned;
-
 use client::{Context, NativeClient};
-use message::Message;
-use metadata::Metadata;
 use error::KafkaResult;
 use groups::GroupList;
+use message::Message;
+use metadata::Metadata;
+use util::cstr_to_owned;
+
+use std::mem;
+use std::ptr;
+use std::os::raw::c_void;
 
 pub use consumer::base_consumer::BaseConsumer;
 pub use topic_partition_list::TopicPartitionList;
@@ -93,9 +94,11 @@ unsafe extern "C" fn rebalance_cb<C: ConsumerContext>(rk: *mut RDKafka,
                                                       partitions: *mut RDKafkaTopicPartitionList,
                                                       opaque_ptr: *mut c_void) {
     let context: &C = &*(opaque_ptr as *const C);
-    let native_client = NativeClient::new(rk);
+    let native_client = NativeClient::from_ptr(rk);
 
     context.rebalance(&native_client, err, partitions);
+
+    mem::forget(native_client); // Don't free native client
 }
 
 /// Specifies if the commit should be performed synchronously
@@ -126,7 +129,7 @@ pub trait Consumer<C: ConsumerContext> {
 
     /// Commit offsets on broker for the provided list of partitions.
     /// If mode is set to CommitMode::Sync, the call will block until
-    /// the message has been succesfully committed.
+    /// the message has been successfully committed.
     fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) -> KafkaResult<()> {
         self.get_base_consumer().commit(topic_partition_list, mode)
     }

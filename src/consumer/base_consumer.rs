@@ -2,18 +2,18 @@
 use rdsys;
 use rdsys::types::*;
 
-use std::str;
-
 use client::Client;
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
-use consumer::{Consumer, ConsumerContext, CommitMode, EmptyConsumerContext};
 use consumer::rebalance_cb;  // TODO: reorganize module
+use consumer::{Consumer, ConsumerContext, CommitMode, EmptyConsumerContext};
 use error::{KafkaError, KafkaResult, IsError};
-use metadata::Metadata;
-use message::Message;
-use util::cstr_to_owned;
-use topic_partition_list::TopicPartitionList;
 use groups::GroupList;
+use message::Message;
+use metadata::Metadata;
+use topic_partition_list::TopicPartitionList;
+use util::cstr_to_owned;
+
+use std::str;
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.
@@ -36,9 +36,9 @@ impl FromClientConfig for BaseConsumer<EmptyConsumerContext> {
 /// Creates a new `BaseConsumer` starting from a `ClientConfig`.
 impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
-        let native_config = try!(config.create_native_config());
+        let native_config = config.create_native_config()?;
         unsafe { rdsys::rd_kafka_conf_set_rebalance_cb(native_config.ptr(), Some(rebalance_cb::<C>)) };
-        let client = try!(Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context));
+        let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context)?;
         unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
         Ok(BaseConsumer { client: client })
     }
@@ -166,11 +166,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
 
         let committed_error = unsafe {
-            rdsys::rd_kafka_committed(
-                self.client.native_ptr(),
-                tp_list,
-                timeout_ms
-            )
+            rdsys::rd_kafka_committed(self.client.native_ptr(), tp_list, timeout_ms)
         };
 
         let result = if committed_error.is_error() {
@@ -187,11 +183,9 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     pub fn position(&self) -> KafkaResult<TopicPartitionList> {
         let mut tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(0) };
         let error = unsafe {
+            // TODO: improve error handling
             rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list);
-            rdsys::rd_kafka_position(
-                self.client.native_ptr(),
-                tp_list
-            )
+            rdsys::rd_kafka_position(self.client.native_ptr(), tp_list)
         };
 
         let result = if error.is_error() {
