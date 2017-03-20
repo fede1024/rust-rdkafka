@@ -56,7 +56,7 @@ impl Context for TestContext {
 impl ConsumerContext for TestContext { }
 
 pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K,
-                                    partition: Option<i32>)
+                                    partition: Option<i32>, timestamp: Option<i64>)
         -> HashMap<(i32, i64), i32>
     where P: Fn(i32) -> J,
           K: Fn(i32) -> Q,
@@ -69,6 +69,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
     let producer = ClientConfig::new()
         .set("bootstrap.servers", "localhost:9092")
         .set("statistics.interval.ms", "10000")
+        .set("api.version.request", "true")
         .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 
@@ -84,7 +85,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
 
     let futures = (0..count)
         .map(|id| {
-            let future = topic.send_copy(partition, Some(&value_fn(id)), Some(&key_fn(id)))
+            let future = topic.send_copy(partition, Some(&value_fn(id)), Some(&key_fn(id)), timestamp)
                 .expect("Production failed");
             (id, future)
         }).collect::<Vec<_>>();
@@ -116,6 +117,7 @@ pub fn create_stream_consumer(topic_name: &str, group_id: &str) -> StreamConsume
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
         .set("statistics.interval.ms", "10000")
+        .set("api.version.request", "true")
         .set_default_topic_config(
             TopicConfig::new()
                 .set("auto.offset.reset", "earliest")

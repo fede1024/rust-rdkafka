@@ -109,7 +109,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             }).and_then(move |computation_result| {
                 // Send the result of the computation to Kafka, asynchronously.
                 info!("Sending result");
-                topic_handle.send_copy::<String, ()>(None, Some(&computation_result), None).unwrap()
+                topic_handle.send_copy::<String, ()>(None, Some(&computation_result), None, None).unwrap()
             }).and_then(|d_report| {
                 // Once the message has been produced, print the delivery report and terminate
                 // the pipeline.
