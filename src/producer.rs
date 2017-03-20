@@ -1,7 +1,15 @@
 //! Producer implementations.
-use rdsys;
-use rdsys::types::*;
+use futures::{self, Canceled, Complete, Future, Poll, Oneshot};
 use rdsys::rd_kafka_vtype_t::*;
+use rdsys::types::*;
+use rdsys;
+
+use client::{Client, Context, EmptyContext};
+use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel, TopicConfig};
+use error::{KafkaError, KafkaResult, IsError};
+use message::ToBytes;
+use statistics::Statistics;
+use util::cstr_to_owned;
 
 use std::ffi::CString;
 use std::mem;
@@ -10,15 +18,6 @@ use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread::{self, JoinHandle};
-
-use futures::{self, Canceled, Complete, Future, Poll, Oneshot};
-
-use client::{Client, Context, EmptyContext};
-use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel, TopicConfig};
-use error::{KafkaError, KafkaResult, IsError};
-use message::ToBytes;
-use statistics::Statistics;
-use util::cstr_to_owned;
 
 //
 // ********** PRODUCER CONTEXT **********
@@ -133,7 +132,6 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 }
 
-// TODO: try derive clone
 impl<C: ProducerContext> Clone for BaseProducer<C> {
     fn clone(&self) -> BaseProducer<C> {
         BaseProducer { client_arc: self.client_arc.clone() }
@@ -166,15 +164,15 @@ pub struct BaseProducerTopic<C: ProducerContext> {
 }
 
 impl<C: ProducerContext> BaseProducerTopic<C> {
-    // TODO: topic conf is freed by the function, wrap in Native* and get ownership.
     /// Creates the BaseProducerTopic.
     pub fn new(producer: BaseProducer<C>, name: &str, topic_config: &TopicConfig)
             -> KafkaResult<BaseProducerTopic<C>> {
         let name_cstring = CString::new(name.to_string()).expect("could not create name CString"); // TODO: remove expect
-        let config_ptr = topic_config.create_native_config()?;
+        let native_topic_config = topic_config.create_native_config()?;
         let topic_ptr = unsafe {
-            rdsys::rd_kafka_topic_new(producer.native_ptr(), name_cstring.as_ptr(), config_ptr)
+            rdsys::rd_kafka_topic_new(producer.native_ptr(), name_cstring.as_ptr(), native_topic_config.ptr())
         };
+        mem::forget(native_topic_config);  // topic_ptr is the new owner
         if topic_ptr.is_null() {
             Err(KafkaError::TopicCreation(name.to_owned()))
         } else {
@@ -411,7 +409,8 @@ pub struct FutureProducerTopic<C: Context + 'static> {
 }
 
 impl<C: Context + 'static> FutureProducerTopic<C> {
-    /// Creates the ProducerTopic. TODO: update doc
+    /// Creates the `FutureProducerTopic`. The `FutureProducerTopic` can be used to produce data to
+    /// the specified topic.
     pub fn new(producer: FutureProducer<C>, name: &str, topic_config: &TopicConfig)
             -> KafkaResult<FutureProducerTopic<C>> {
         let producer_topic = BaseProducerTopic::new(producer.base_producer(), name, topic_config)?;
@@ -435,7 +434,7 @@ impl<C: Context + 'static> FutureProducerTopic<C> {
         Ok(DeliveryFuture{rx: rx})
     }
 
-    /// Get topic's name
+    /// Get topic's name.
     pub fn name(&self) -> String {
         self.topic.name()
     }

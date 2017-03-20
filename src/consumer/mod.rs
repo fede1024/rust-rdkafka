@@ -94,7 +94,7 @@ unsafe extern "C" fn rebalance_cb<C: ConsumerContext>(rk: *mut RDKafka,
                                                       partitions: *mut RDKafkaTopicPartitionList,
                                                       opaque_ptr: *mut c_void) {
     let context: &C = &*(opaque_ptr as *const C);
-    let native_client = NativeClient::new(rk);
+    let native_client = NativeClient::from_ptr(rk);
 
     context.rebalance(&native_client, err, partitions);
 

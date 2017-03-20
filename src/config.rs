@@ -1,15 +1,15 @@
 //! Configuration to create a Consumer or Producer.
-use rdsys;
-use rdsys::types::*;
-
 use log::LogLevel;
+use rdsys::types::*;
+use rdsys;
+
+use client::Context;
+use error::{KafkaError, KafkaResult, IsError};
+use util::bytes_cstr_to_owned;
 
 use std::collections::HashMap;
 use std::ffi::CString;
-
-use util::bytes_cstr_to_owned;
-use error::{KafkaError, KafkaResult, IsError};
-use client::Context;
+use std::mem;
 
 const ERR_LEN: usize = 256;
 
@@ -50,33 +50,29 @@ impl RDKafkaLogLevel {
     }
 }
 
+//
+// ********** CLIENT CONFIG **********
+//
+
 /// A native rdkafka-sys client config.
 pub struct NativeClientConfig {
-    ptr: Option<*mut RDKafkaConf>,
+    ptr: *mut RDKafkaConf,
 }
 
 impl NativeClientConfig {
     /// Wraps a pointer to an `RDKafkaConfig` object and returns a new `NativeClientConfig`.
-    pub fn new(ptr: *mut RDKafkaConf) -> NativeClientConfig {
-        NativeClientConfig {ptr: Some(ptr)}
+    pub fn from_ptr(ptr: *mut RDKafkaConf) -> NativeClientConfig {
+        NativeClientConfig {ptr: ptr}
     }
 
-    /// Returns the pointer to `RDKafkaConf`.
     pub fn ptr(&self) -> *mut RDKafkaConf {
-        self.ptr.expect("Pointer to native Kafka client config used after free")
-    }
-
-    /// Returns ownership of the pointer to `RDKafkaConf`. The caller must take care of freeing it.
-    pub fn ptr_mut(mut self) -> *mut RDKafkaConf {
-        self.ptr.take().expect("Pointer to native Kafka client config used after free")
+        self.ptr
     }
 }
 
 impl Drop for NativeClientConfig {
     fn drop(&mut self) {
-        if let Some(ptr) = self.ptr {
-            unsafe { rdsys::rd_kafka_conf_destroy(ptr) }
-        }
+        unsafe { rdsys::rd_kafka_conf_destroy(self.ptr) }
     }
 }
 
@@ -129,8 +125,8 @@ impl ClientConfig {
         let conf = unsafe { rdsys::rd_kafka_conf_new() };
         let errstr = [0; ERR_LEN];
         for (key, value) in &self.conf_map {
-            let key_c = try!(CString::new(key.to_string()));
-            let value_c = try!(CString::new(value.to_string()));
+            let key_c = CString::new(key.to_string())?;
+            let value_c = CString::new(value.to_string())?;
             let ret = unsafe {
                 rdsys::rd_kafka_conf_set(conf, key_c.as_ptr(), value_c.as_ptr(),
                                            errstr.as_ptr() as *mut i8, errstr.len())
@@ -140,17 +136,18 @@ impl ClientConfig {
                 return Err(KafkaError::ClientConfig(ret, descr, key.to_string(), value.to_string()));
             }
         }
-        if let Some(topic_config) = self.create_native_default_topic_config() {
-            if let Err(e) = topic_config {
-                return Err(e);
-            } else {
-                unsafe { rdsys::rd_kafka_conf_set_default_topic_conf(conf, topic_config.expect("No topic config present when creating native config")) };
-            }
-        }
-        Ok(NativeClientConfig::new(conf))
+        match self.create_native_default_topic_config() {
+            Some(Err(e)) => return Err(e),
+            Some(Ok(topic_config)) => unsafe {
+                rdsys::rd_kafka_conf_set_default_topic_conf(conf, topic_config.ptr());
+                mem::forget(topic_config);  // conf is the new owner
+            },
+            None => {},
+        };
+        Ok(NativeClientConfig::from_ptr(conf))
     }
 
-    fn create_native_default_topic_config(&self) -> Option<KafkaResult<*mut RDKafkaTopicConf>> {
+    fn create_native_default_topic_config(&self) -> Option<KafkaResult<NativeTopicConfig>> {
         self.default_topic_config.as_ref().map(|c| c.create_native_config())
     }
 
@@ -190,6 +187,33 @@ pub trait FromClientConfigAndContext<C: Context>: Sized {
     fn from_config_and_context(&ClientConfig, C) -> KafkaResult<Self>;
 }
 
+//
+// ********** TOPIC CONFIG **********
+//
+
+/// A native rdkafka-sys client config.
+pub struct NativeTopicConfig {
+    ptr: *mut RDKafkaTopicConf,
+}
+
+impl NativeTopicConfig {
+    /// Wraps a pointer to an `RDKafkaTopicConf` object and returns a new `NativeTopicConfig`.
+    pub fn from_ptr(ptr: *mut RDKafkaTopicConf) -> NativeTopicConfig {
+        NativeTopicConfig {ptr: ptr}
+    }
+
+    pub fn ptr(&self) -> *mut RDKafkaTopicConf {
+        self.ptr
+    }
+}
+
+impl Drop for NativeTopicConfig {
+    fn drop(&mut self) {
+        trace!("Drop NativeTopicConfig {:p}", self.ptr);
+        unsafe { rdsys::rd_kafka_topic_conf_destroy(self.ptr) }
+    }
+}
+
 /// Topic configuration.
 #[derive(Clone, Default)]
 pub struct TopicConfig {
@@ -204,7 +228,7 @@ impl TopicConfig {
         }
     }
 
-    /// Adds a new key-value pair in the topic configution.
+    /// Adds a new key-value pair in the topic configuration.
     pub fn set(&mut self, key: &str, value: &str) -> &mut TopicConfig {
         self.conf_map.insert(key.to_string(), value.to_string());
         self
@@ -217,12 +241,12 @@ impl TopicConfig {
     }
 
     /// Creates a native rdkafka-sys topic configuration.
-    pub fn create_native_config(&self) -> KafkaResult<*mut RDKafkaTopicConf> {
+    pub fn create_native_config(&self) -> KafkaResult<NativeTopicConfig> {
         let config_ptr = unsafe { rdsys::rd_kafka_topic_conf_new() };
         let errstr = [0; ERR_LEN];
         for (name, value) in &self.conf_map {
-            let name_c = try!(CString::new(name.to_string()));
-            let value_c = try!(CString::new(value.to_string()));
+            let name_c = CString::new(name.to_string())?;
+            let value_c = CString::new(value.to_string())?;
             let ret = unsafe {
                 rdsys::rd_kafka_topic_conf_set(config_ptr, name_c.as_ptr(), value_c.as_ptr(),
                                                  errstr.as_ptr() as *mut i8, errstr.len())
@@ -232,6 +256,6 @@ impl TopicConfig {
                 return Err(KafkaError::TopicConfig(ret, descr, name.to_string(), value.to_string()));
             }
         }
-        Ok(config_ptr)
+        Ok(NativeTopicConfig::from_ptr(config_ptr))
     }
 }

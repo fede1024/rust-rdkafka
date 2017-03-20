@@ -67,7 +67,7 @@ unsafe impl Send for NativeClient {}
 
 impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
-    pub fn new(ptr: *mut RDKafka) -> NativeClient {
+    pub fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
         NativeClient {ptr: ptr}
     }
 
@@ -107,8 +107,11 @@ impl<C: Context> Client<C> {
         unsafe { rdsys::rd_kafka_conf_set_log_cb(native_config.ptr(), Some(native_log_cb::<C>)) };
         unsafe { rdsys::rd_kafka_conf_set_stats_cb(native_config.ptr(), Some(native_stats_cb::<C>)) };
 
-        let client_ptr = unsafe { rdsys::rd_kafka_new(
-            rd_kafka_type, native_config.ptr_mut(), errstr.as_ptr() as *mut i8, errstr.len()) };
+        let client_ptr = unsafe {
+            rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr(), errstr.as_ptr() as *mut i8, errstr.len())
+        };
+        mem::forget(native_config);  // rd_kafka client owns the config now
+
         if client_ptr.is_null() {
             let descr = unsafe { bytes_cstr_to_owned(&errstr) };
             return Err(KafkaError::ClientCreation(descr));
@@ -118,7 +121,7 @@ impl<C: Context> Client<C> {
 
         trace!("Create new rd_kafka client {:p}", client_ptr);
         Ok(Client {
-            native: NativeClient::new(client_ptr),
+            native: NativeClient::from_ptr(client_ptr),
             context: boxed_context,
         })
     }
