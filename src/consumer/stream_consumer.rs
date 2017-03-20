@@ -44,7 +44,7 @@ impl FromClientConfig for StreamConsumer<EmptyConsumerContext> {
 impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<StreamConsumer<C>> {
         let stream_consumer = StreamConsumer {
-            consumer: Arc::new(try!(BaseConsumer::from_config_and_context(config, context))),
+            consumer: Arc::new(BaseConsumer::from_config_and_context(config, context)?),
             should_stop: Arc::new(AtomicBool::new(false)),
             handle: None,
         };

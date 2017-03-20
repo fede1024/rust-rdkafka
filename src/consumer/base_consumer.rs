@@ -36,9 +36,9 @@ impl FromClientConfig for BaseConsumer<EmptyConsumerContext> {
 /// Creates a new `BaseConsumer` starting from a `ClientConfig`.
 impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
-        let native_config = try!(config.create_native_config());
+        let native_config = config.create_native_config()?;
         unsafe { rdsys::rd_kafka_conf_set_rebalance_cb(native_config.ptr(), Some(rebalance_cb::<C>)) };
-        let client = try!(Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context));
+        let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context)?;
         unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
         Ok(BaseConsumer { client: client })
     }
