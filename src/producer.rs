@@ -37,6 +37,7 @@ pub trait ProducerContext: Context {
 }
 
 /// Simple empty producer context that can be use when the producer context is not required.
+#[derive(Clone)]
 pub struct EmptyProducerContext;
 
 impl Context for EmptyProducerContext { }
@@ -155,10 +156,40 @@ impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
     }
 }
 
+struct NativeTopic {
+    ptr: *mut RDKafkaTopic,
+}
 
-/// Represents a Kafka topic with an associated `BaseProducer`.
+unsafe impl Send for NativeTopic {}
+unsafe impl Sync for NativeTopic {}
+
+impl NativeTopic {
+    /// Wraps a pointer to an `RDKafkaTopic` object and returns a new `Native `.
+    pub fn from_ptr(ptr: *mut RDKafkaTopic) -> NativeTopic {
+        NativeTopic { ptr: ptr }
+    }
+
+    /// Returns the pointer to the librdkafka RDKafkaTopic structure.
+    pub fn ptr(&self) -> *mut RDKafkaTopic {
+        self.ptr
+    }
+}
+
+impl Drop for NativeTopic {
+    fn drop(&mut self) {
+        trace!("Destroy NativeTopic");
+        unsafe {
+            rdsys::rd_kafka_topic_destroy(self.ptr);
+        }
+    }
+}
+
+/// Represents a Kafka topic with an associated `BaseProducer`. This struct can be cheaply
+/// cloned, generating a new reference to the same underlying resource, and can be used
+/// across different threads.
+#[derive(Clone)]
 pub struct BaseProducerTopic<C: ProducerContext> {
-    topic_ptr: *mut RDKafkaTopic,
+    native_topic: Arc<NativeTopic>,
     // A producer topic cannot outlive the client it was created from.
     producer: BaseProducer<C>,
 }
@@ -175,14 +206,18 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
         if topic_ptr.is_null() {
             Err(KafkaError::TopicCreation(name.to_owned()))
         } else {
-            Ok(BaseProducerTopic { topic_ptr: topic_ptr, producer: producer })
+            let native_topic = NativeTopic::from_ptr(topic_ptr);
+            Ok(BaseProducerTopic {
+                native_topic: Arc::new(native_topic),
+                producer: producer
+            })
         }
     }
 
     /// Get topic's name
     pub fn name(&self) -> String {
         unsafe {
-            cstr_to_owned(rdsys::rd_kafka_topic_name(self.topic_ptr))
+            cstr_to_owned(rdsys::rd_kafka_topic_name(self.native_topic.ptr()))
         }
     }
 
@@ -218,7 +253,7 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.producer.native_ptr(),
-                RD_KAFKA_VTYPE_RKT, self.topic_ptr,
+                RD_KAFKA_VTYPE_RKT, self.native_topic.ptr(),
                 RD_KAFKA_VTYPE_PARTITION, partition.unwrap_or(-1),
                 RD_KAFKA_VTYPE_MSGFLAGS, rdsys::RD_KAFKA_MSG_F_COPY as i32,
                 RD_KAFKA_VTYPE_VALUE, payload_ptr, payload_len,
@@ -236,21 +271,13 @@ impl<C: ProducerContext> BaseProducerTopic<C> {
     }
 }
 
-impl<C: ProducerContext> Drop for BaseProducerTopic<C> {
-    fn drop(&mut self) {
-        trace!("Destroy BaseProducerTopic");
-        unsafe {
-            rdsys::rd_kafka_topic_destroy(self.topic_ptr);
-        }
-    }
-}
-
 //
 // ********** FUTURE PRODUCER **********
 //
 
 /// The `ProducerContext` used by the `FutureProducer`. This context will use a Future as its
 /// `DeliveryContext` and will complete the future when the message is delivered (or failed to).
+#[derive(Clone)]
 pub struct FutureProducerContext<C: Context + 'static> {
     wrapped_context: C
 }
@@ -261,8 +288,8 @@ impl<C: Context + 'static> Context for FutureProducerContext<C> {
         self.wrapped_context.log(level, fac, log_message);
     }
 
-    fn stats(&self, json: Statistics) {
-        self.wrapped_context.stats(json);
+    fn stats(&self, statistics: Statistics) {
+        self.wrapped_context.stats(statistics);
     }
 }
 
@@ -401,8 +428,10 @@ impl<C: Context + 'static> FutureProducer<C> {
     }
 }
 
-// TODO: try remove static?
-/// Represents a Kafka topic with an associated `FutureProducer`.
+/// Represents a Kafka topic created by a `FutureProducer`. This struct can be cheaply
+/// cloned, generating a new reference to the same underlying resource, and can be used
+/// across different threads.
+#[derive(Clone)]
 pub struct FutureProducerTopic<C: Context + 'static> {
     topic: BaseProducerTopic<FutureProducerContext<C>>,
 }
@@ -441,22 +470,80 @@ impl<C: Context + 'static> FutureProducerTopic<C> {
 
 #[cfg(test)]
 mod tests {
-    // Just call everything to test there no panics by default, behavior
-    // is tested in the integrations tests.
+    // Just test that there are no panics, and that each struct implements the expected
+    // traits (Clone, Send, Sync etc.). Behavior is tested in the integrations tests.
     use super::*;
     use config::{ClientConfig, TopicConfig};
+    use std::thread;
 
-    #[test]
-    fn test_base_producer_topic() {
-        let producer = ClientConfig::new().create::<BaseProducer<_>>().unwrap();
-        let producer_topic = producer.get_topic("topic_name", &TopicConfig::new()).unwrap();
-        assert_eq!(producer_topic.name(), "topic_name");
+    struct TestContext;
+
+    impl Context for TestContext {}
+    impl ProducerContext for TestContext {
+        type DeliveryContext = i32;
+
+        fn delivery(&self, _: DeliveryReport, _: Self::DeliveryContext) {
+            unimplemented!()
+        }
     }
 
+    // Test that the base producer topic is clone, send and sync.
     #[test]
-    fn test_future_producer_topic() {
+    fn test_base_producer_topic_clone_send_sync() {
+        let producer = ClientConfig::new().create::<BaseProducer<_>>().unwrap();
+        let producer_topic = producer.get_topic("topic_name", &TopicConfig::new()).unwrap();
+
+        let producer_topic_clone = producer_topic.clone();
+        let handle = thread::spawn(move || {
+            assert_eq!(producer_topic_clone.name(), "topic_name");
+        });
+        assert_eq!(producer_topic.name(), "topic_name");
+
+        handle.join().unwrap();
+    }
+
+    // Test that the base producer topic can be used even if the context is not Clone.
+    #[test]
+    fn test_base_producer_topic_send_sync() {
+        let test_context = TestContext;
+        let producer = ClientConfig::new()
+            .create_with_context::<TestContext, BaseProducer<_>>(test_context).unwrap();
+        let producer_topic = producer.get_topic("topic_name", &TopicConfig::new()).unwrap();
+
+        let handle = thread::spawn(move || {
+            assert_eq!(producer_topic.name(), "topic_name");
+        });
+
+        handle.join().unwrap();
+    }
+
+    // Test that the future producer topic is clone, send and sync.
+    #[test]
+    fn test_future_producer_topic_clone_send_sync() {
         let producer = ClientConfig::new().create::<FutureProducer<_>>().unwrap();
         let producer_topic = producer.get_topic("topic_name", &TopicConfig::new()).unwrap();
+
+        let producer_topic_clone = producer_topic.clone();
+        let handle = thread::spawn(move || {
+            assert_eq!(producer_topic_clone.name(), "topic_name");
+        });
         assert_eq!(producer_topic.name(), "topic_name");
+
+        handle.join().unwrap();
+    }
+
+    // Test that the future producer topic can be used even if the context is not Clone.
+    #[test]
+    fn test_base_future_topic_send_sync() {
+        let test_context = TestContext;
+        let producer = ClientConfig::new()
+            .create_with_context::<TestContext, FutureProducer<_>>(test_context).unwrap();
+        let producer_topic = producer.get_topic("topic_name", &TopicConfig::new()).unwrap();
+
+        let handle = thread::spawn(move || {
+            assert_eq!(producer_topic.name(), "topic_name");
+        });
+
+        handle.join().unwrap();
     }
 }
