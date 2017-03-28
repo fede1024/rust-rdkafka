@@ -6,7 +6,7 @@ use rand::Rng;
 use futures::*;
 
 use rdkafka::client::Context;
-use rdkafka::config::{ClientConfig, RDKafkaLogLevel, TopicConfig};
+use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
@@ -72,19 +72,14 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
         .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 
-    producer.start();
-
     let topic_config = TopicConfig::new()
         .set("produce.offset.report", "true")
         .set("message.timeout.ms", "30000")
         .finalize();
 
-    let topic = producer.get_topic(&topic_name, &topic_config)
-        .expect("Topic creation error");
-
     let futures = (0..count)
         .map(|id| {
-            let future = topic.send_copy(partition, Some(&value_fn(id)), Some(&key_fn(id)), timestamp)
+            let future = producer.send_copy(topic_name, partition, Some(&value_fn(id)), Some(&key_fn(id)), timestamp)
                 .expect("Production failed");
             (id, future)
         }).collect::<Vec<_>>();
