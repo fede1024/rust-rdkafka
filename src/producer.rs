@@ -10,6 +10,7 @@ use error::{KafkaError, KafkaResult, IsError};
 use message::ToBytes;
 use statistics::Statistics;
 
+use std::ffi::CString;
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
@@ -151,10 +152,11 @@ impl<C: ProducerContext> BaseProducer<C> {
             Some(context) => Box::into_raw(context) as *mut c_void,
             None => ptr::null_mut(),
         };
+        let topic_name_c = CString::new(topic_name.to_owned())?;
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.native_ptr(),
-                RD_KAFKA_VTYPE_TOPIC, topic_name,
+                RD_KAFKA_VTYPE_TOPIC, topic_name_c.as_ptr(),
                 RD_KAFKA_VTYPE_PARTITION, partition.unwrap_or(-1),
                 RD_KAFKA_VTYPE_MSGFLAGS, rdsys::RD_KAFKA_MSG_F_COPY as i32,
                 RD_KAFKA_VTYPE_VALUE, payload_ptr, payload_len,
@@ -230,10 +232,11 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
 struct _FutureProducer<C: Context + 'static> {
     producer: BaseProducer<FutureProducerContext<C>>,
     should_stop: Arc<AtomicBool>,
-    handle: RwLock<Option<JoinHandle<()>>>,  // TODO: is the lock actually needed?
+    handle: RwLock<Option<JoinHandle<()>>>,
 }
 
 impl<C: Context + 'static> _FutureProducer<C> {
+    /// Starts the polling thread that will drive the producer.
     fn start(&self) {
         let producer_clone = self.producer.clone();
         let should_stop = self.should_stop.clone();
@@ -256,6 +259,7 @@ impl<C: Context + 'static> _FutureProducer<C> {
         };
     }
 
+    // See documentation in FutureProducer
     fn stop(&self) {
         match self.handle.write() {
             Ok(mut handle) => {
@@ -271,6 +275,22 @@ impl<C: Context + 'static> _FutureProducer<C> {
             },
             Err(_) => panic!("Poison error"),
         };
+    }
+
+    // See documentation in FutureProducer
+    fn send_copy<P, K>(
+        &self,
+        topic_name: &str,
+        partition: Option<i32>,
+        payload: Option<&P>,
+        key: Option<&K>,
+        timestamp: Option<i64>
+    ) -> KafkaResult<DeliveryFuture>
+        where K: ToBytes,
+              P: ToBytes {
+        let (tx, rx) = futures::oneshot();
+        self.producer.send_copy(topic_name, partition, payload, key, Some(Box::new(tx)), timestamp)?;
+        Ok(DeliveryFuture{rx: rx})
     }
 }
 
@@ -346,9 +366,7 @@ impl<C: Context + 'static> FutureProducer<C> {
     ) -> KafkaResult<DeliveryFuture>
         where K: ToBytes,
               P: ToBytes {
-        let (tx, rx) = futures::oneshot();
-        self.inner.producer.send_copy(topic_name, partition, payload, key, Some(Box::new(tx)), timestamp)?;
-        Ok(DeliveryFuture{rx: rx})
+        self.inner.send_copy(topic_name, partition, payload, key, timestamp)
     }
 
     /// Stops the internal polling thread. The thread can also be stopped by moving

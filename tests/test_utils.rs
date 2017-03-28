@@ -6,7 +6,7 @@ use rand::Rng;
 use futures::*;
 
 use rdkafka::client::Context;
-use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
+use rdkafka::config::{ClientConfig, RDKafkaLogLevel, TopicConfig};
 use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
@@ -69,13 +69,12 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
         .set("bootstrap.servers", "localhost:9092")
         .set("statistics.interval.ms", "10000")
         .set("api.version.request", "true")
+        .set_default_topic_config(TopicConfig::new()
+            .set("produce.offset.report", "true")
+            .set("message.timeout.ms", "30000")
+            .finalize())
         .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
-
-    let topic_config = TopicConfig::new()
-        .set("produce.offset.report", "true")
-        .set("message.timeout.ms", "30000")
-        .finalize();
 
     let futures = (0..count)
         .map(|id| {
