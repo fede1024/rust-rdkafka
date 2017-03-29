@@ -20,7 +20,6 @@ use rdkafka::producer::FutureProducer;
 
 use std::thread;
 use std::time::Duration;
-use std::sync::Arc;
 
 mod example_utils;
 use example_utils::setup_logger;
@@ -71,18 +70,11 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     // Create the `FutureProducer` to produce asynchronously.
     let producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
+        .set_default_topic_config(TopicConfig::new()
+            .set("produce.offset.report", "true")
+            .finalize())
         .create::<FutureProducer<_>>()
         .expect("Producer creation error");
-
-    let topic_config = TopicConfig::new()
-        .set("produce.offset.report", "true")
-        .finalize();
-
-    producer.start();  // Start the producer internal thread.
-
-    // Use the `FutureProducer` to create a handle for a specific topic.
-    let topic = Arc::new(producer.get_topic(output_topic, &topic_config)
-        .expect("Topic creation error"));
 
     // Create a handle to the core, that will be used to provide additional asynchronous work
     // to the event loop.
@@ -100,7 +92,8 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             }
         }).for_each(|msg| {     // Process each message
             info!("Enqueuing message for computation");
-            let topic_handle = topic.clone();
+            let producer = producer.clone();
+            let topic_name = output_topic.to_owned();
             // Create the inner pipeline, that represents the processing of a single event.
             let process_message = cpu_pool.spawn_fn(move || {
                 // Take ownership of the message, and runs an expensive computation on it,
@@ -109,7 +102,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             }).and_then(move |computation_result| {
                 // Send the result of the computation to Kafka, asynchronously.
                 info!("Sending result");
-                topic_handle.send_copy::<String, ()>(None, Some(&computation_result), None, None).unwrap()
+                producer.send_copy::<String, ()>(&topic_name, None, Some(&computation_result), None, None).unwrap()
             }).and_then(|d_report| {
                 // Once the message has been produced, print the delivery report and terminate
                 // the pipeline.
