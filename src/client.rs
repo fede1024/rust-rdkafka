@@ -88,7 +88,6 @@ impl Drop for NativeClient {
         trace!("Destroy rd_kafka {:p}", self.ptr);
         unsafe {
             rdsys::rd_kafka_destroy(self.ptr);
-            rdsys::rd_kafka_wait_destroyed(1000);
         }
     }
 }

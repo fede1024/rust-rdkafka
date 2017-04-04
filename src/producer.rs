@@ -244,9 +244,15 @@ impl<C: Context + 'static> _FutureProducer<C> {
             .name("polling thread".to_string())
             .spawn(move || {
                  trace!("Polling thread loop started");
-                 while !should_stop.load(Ordering::Relaxed) {
+                 loop {
                      let n = producer_clone.poll(100);
-                     if n != 0 {
+                     if n == 0 {
+                         if should_stop.load(Ordering::Relaxed) {
+                             // We received nothing and the thread should
+                             // stop, so break the loop.
+                             break
+                         }
+                     } else {
                          trace!("Received {} events", n);
                      }
                  }
