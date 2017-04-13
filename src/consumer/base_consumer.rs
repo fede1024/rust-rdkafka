@@ -13,6 +13,7 @@ use metadata::Metadata;
 use topic_partition_list::TopicPartitionList;
 use util::cstr_to_owned;
 
+use std::slice;
 use std::str;
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
@@ -171,6 +172,40 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
         let result = if committed_error.is_error() {
             Err(KafkaError::MetadataFetch(committed_error))
+        } else {
+            Ok(TopicPartitionList::from_rdkafka(tp_list))
+        };
+        unsafe { rdsys::rd_kafka_topic_partition_list_destroy(tp_list) };
+
+        result
+    }
+
+    /// Lookup the offsets for this consumer's partitions by timestamp.
+    pub fn offsets_for_timestamp(&self, timestamp: i64, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
+        let mut tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(0) };
+        let assignment_error = unsafe {
+            rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
+        };
+        if assignment_error.is_error() {
+            unsafe { rdsys::rd_kafka_topic_partition_list_destroy(tp_list) };
+            return Err(KafkaError::MetadataFetch(assignment_error))
+        }
+
+        // Set the timestamp we want in the offset field for every partition as librdkafka expects.
+        let elements = unsafe { slice::from_raw_parts((*tp_list).elems, (*tp_list).cnt as usize) };
+        for tp in elements {
+            unsafe {
+                rdsys::rd_kafka_topic_partition_list_set_offset(tp_list, tp.topic, tp.partition, timestamp);
+            }
+        }
+
+        // This call will then put the offset in the offset field of this topic partition list.
+        let offset_for_times_error = unsafe {
+            rdsys::rd_kafka_offsets_for_times(self.client.native_ptr(), tp_list, timeout_ms)
+        };
+
+        let result = if offset_for_times_error.is_error() {
+            Err(KafkaError::MetadataFetch(offset_for_times_error))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
         };
