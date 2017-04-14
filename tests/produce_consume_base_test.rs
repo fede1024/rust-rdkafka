@@ -70,6 +70,12 @@ fn test_produce_consume_with_timestamp() {
             Ok(())
         })
         .wait();
+
+    produce_messages(&topic_name, 100, &value_fn, &key_fn, None, Some(999999));
+
+    // Lookup the offsets
+    let mut offsets = consumer.offsets_for_timestamp(999999, 100).unwrap();
+    assert!(offsets.topics.remove(&topic_name).unwrap().take().unwrap().get(0).unwrap().offset > 10);
 }
 
 // All messages should go to the same partition.

@@ -156,6 +156,11 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().committed(timeout_ms)
     }
 
+    /// Lookup the offsets for this consumer's partitions by timestamp.
+    fn offsets_for_timestamp(&self, timestamp: i64, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
+        self.get_base_consumer().offsets_for_timestamp(timestamp, timeout_ms)
+    }
+
     /// Retrieve current positions (offsets) for topics and partitions.
     fn position(&self) -> KafkaResult<TopicPartitionList> {
         self.get_base_consumer().position()
