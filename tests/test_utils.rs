@@ -14,6 +14,8 @@ use rdkafka::message::ToBytes;
 use rdkafka::statistics::Statistics;
 
 use std::collections::HashMap;
+use std::env;
+
 
 pub fn rand_test_topic() -> String {
     let id = rand::thread_rng()
@@ -31,15 +33,11 @@ pub fn rand_test_group() -> String {
     format!("__test_{}", id)
 }
 
-
-// pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K, partition: Option<i32>)
-//                                     -> HashMap<(i32, i64), i32>
-//     where P: Fn(i32) -> J,
-//           K: Fn(i32) -> Q,
-//           J: ToBytes,
-//           Q: ToBytes {
-//     produce_messages_with_context(EmptyContext, topic_name, count, value_fn, key_fn, partition)
-// }
+fn get_bootstap_server() -> String {
+    let host = env::var("KAFKA_HOST").unwrap_or("localhost".to_owned());
+    let port = env::var("KAFKA_PORT").unwrap_or("9092".to_owned());
+    format!("{}:{}", host, port)
+}
 
 pub struct TestContext;
 
@@ -66,7 +64,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
 
     // Produce some messages
     let producer = ClientConfig::new()
-        .set("bootstrap.servers", "localhost:9092")
+        .set("bootstrap.servers", get_bootstap_server().as_str())
         .set("statistics.interval.ms", "10000")
         .set("api.version.request", "true")
         .set_default_topic_config(TopicConfig::new()
@@ -105,7 +103,7 @@ pub fn create_stream_consumer(topic_name: &str, group_id: &str) -> StreamConsume
     let consumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("client.id", "rdkafka_integration_test_client")
-        .set("bootstrap.servers", "localhost:9092")
+        .set("bootstrap.servers", get_bootstap_server().as_str())
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")

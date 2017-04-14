@@ -1,12 +1,10 @@
-language: rust
+sudo: required
 
-rust:
-  - stable
-  - nightly
+services:
+  - docker
 
 script:
-  - cargo build --verbose
-  - cargo test --lib --verbose
+  - ./integration_tests.sh
 
 notifications:
   webhooks:
