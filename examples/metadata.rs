@@ -10,7 +10,7 @@ use rdkafka::config::ClientConfig;
 mod example_utils;
 use example_utils::setup_logger;
 
-fn print_metadata(brokers: &str, timeout_ms: i32, fetch_offsets: bool) {
+fn print_metadata(brokers: &str, topic: Option<&str>, timeout_ms: i32, fetch_offsets: bool) {
     let consumer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create::<BaseConsumer<_>>()
@@ -18,7 +18,7 @@ fn print_metadata(brokers: &str, timeout_ms: i32, fetch_offsets: bool) {
 
     trace!("Consumer created");
 
-    let metadata = consumer.fetch_metadata(timeout_ms)
+    let metadata = consumer.fetch_metadata(topic, timeout_ms)
         .expect("Failed to fetch metadata");
 
     println!("Cluster information:");
@@ -64,6 +64,10 @@ fn main() {
         .arg(Arg::with_name("offsets")
              .long("offsets")
              .help("Enables offset fetching"))
+        .arg(Arg::with_name("topic")
+            .long("topic")
+            .help("Only fetch the metadata of the specified topic")
+            .takes_value(true))
         .arg(Arg::with_name("log-conf")
              .long("log-conf")
              .help("Configure the logging format (example: 'rdkafka=trace')")
@@ -79,7 +83,8 @@ fn main() {
 
     let brokers = matches.value_of("brokers").unwrap();
     let timeout = value_t!(matches, "timeout", f32).unwrap();
+    let topic = matches.value_of("topic");
     let fetch_offsets = matches.is_present("offsets");
 
-    print_metadata(brokers, (timeout * 1000f32) as i32, fetch_offsets);
+    print_metadata(brokers, topic, (timeout * 1000f32) as i32, fetch_offsets);
 }

@@ -233,9 +233,10 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         result
     }
 
-    /// Returns the metadata information for all the topics in the cluster.
-    pub fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
-        self.client.fetch_metadata(timeout_ms)
+    /// Returns the metadata information for the specified topic, or for all topics in the cluster
+    /// if no topic is specified.
+    pub fn fetch_metadata(&self, topic: Option<&str>, timeout_ms: i32) -> KafkaResult<Metadata> {
+        self.client.fetch_metadata(topic, timeout_ms)
     }
 
     /// Returns high and low watermark for the specified topic and partition.

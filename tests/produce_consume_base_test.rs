@@ -52,7 +52,7 @@ fn test_produce_consume_with_timestamp() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
-    let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, None, Some(99999));
+    let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
     let mut consumer = create_stream_consumer(&topic_name, &rand_test_group());
 
     let _consumer_future = consumer.start()
@@ -61,7 +61,7 @@ fn test_produce_consume_with_timestamp() {
             match message {
                 Ok(m) => {
                     let id = message_map.get(&(m.partition(), m.offset())).unwrap();
-                    assert_eq!(m.timestamp(), Timestamp::CreateTime(99999));
+                    assert_eq!(m.timestamp(), Timestamp::CreateTime(1111));
                     assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
                     assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
                 },
@@ -71,11 +71,11 @@ fn test_produce_consume_with_timestamp() {
         })
         .wait();
 
-    produce_messages(&topic_name, 100, &value_fn, &key_fn, None, Some(999999));
+    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999999));
 
     // Lookup the offsets
     let mut offsets = consumer.offsets_for_timestamp(999999, 100).unwrap();
-    assert!(offsets.topics.remove(&topic_name).unwrap().take().unwrap().get(0).unwrap().offset > 10);
+    assert_eq!(offsets.topics.remove(&topic_name).unwrap().take().unwrap().get(0).unwrap().offset, 100);
 }
 
 // All messages should go to the same partition.
@@ -93,6 +93,8 @@ fn test_produce_partition() {
     assert_eq!(res, 100);
 }
 
+// METADATA
+
 #[test]
 fn test_metadata() {
     let _r = env_logger::init();
@@ -103,7 +105,7 @@ fn test_metadata() {
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
     let consumer = create_stream_consumer(&topic_name, &rand_test_group());
 
-    let metadata = consumer.fetch_metadata(5000).unwrap();
+    let metadata = consumer.fetch_metadata(None, 5000).unwrap();
 
     let topic_metadata = metadata.topics().iter()
         .find(|m| m.name() == topic_name).unwrap();
@@ -119,6 +121,9 @@ fn test_metadata() {
     assert_eq!(topic_metadata.partitions()[2].leader(), 0);
     assert_eq!(topic_metadata.partitions()[0].replicas(), &[0]);
     assert_eq!(topic_metadata.partitions()[0].isr(), &[0]);
+
+    let metadata_one_topic = consumer.fetch_metadata(Some(&topic_name), 5000).unwrap();
+    assert_eq!(metadata_one_topic.topics().len(), 1);
 }
 
 #[test]

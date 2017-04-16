@@ -166,9 +166,10 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().position()
     }
 
-    /// Returns the metadata information for all the topics in the cluster.
-    fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
-        self.get_base_consumer().fetch_metadata(timeout_ms)
+    /// Returns the metadata information for the specified topic, or for all topics in the cluster
+    /// if no topic is specified.
+    fn fetch_metadata(&self, topic: Option<&str>, timeout_ms: i32) -> KafkaResult<Metadata> {
+        self.get_base_consumer().fetch_metadata(topic, timeout_ms)
     }
 
     /// Returns the metadata information for all the topics in the cluster.

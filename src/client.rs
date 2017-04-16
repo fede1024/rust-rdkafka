@@ -139,15 +139,21 @@ impl<C: Context> Client<C> {
         self.context.as_ref()
     }
 
-    /// Returns the metadata information for all the topics in the cluster.
-    pub fn fetch_metadata(&self, timeout_ms: i32) -> KafkaResult<Metadata> {
+    /// Returns the metadata information for the specified topic, or for all topics in the cluster
+    /// if no topic is specified.
+    pub fn fetch_metadata(&self, topic: Option<&str>, timeout_ms: i32) -> KafkaResult<Metadata> {
         let mut metadata_ptr: *const RDKafkaMetadata = ptr::null_mut();
+        let (flag, native_topic) = if let Some(topic_name) = topic {
+            (0, Some(self.native_topic(topic_name)?))
+        } else {
+            (1, None)
+        };
         trace!("Starting metadata fetch");
         let ret = unsafe {
             rdsys::rd_kafka_metadata(
                 self.native_ptr(),
-                1,   // All topics
-                ptr::null::<u8>() as *mut RDKafkaTopic,
+                flag,
+                native_topic.map(|t| t.ptr()).unwrap_or(NativeTopic::null()),
                 &mut metadata_ptr as *mut *const RDKafkaMetadata,
                 timeout_ms)
         };
@@ -199,6 +205,48 @@ impl<C: Context> Client<C> {
         }
 
         Ok(GroupList::from_ptr(group_list_ptr))
+    }
+
+    /// Returns a NativeTopic from the current client. The NativeTopic shouldn't outlive the client
+    /// it was generated from.
+    fn native_topic(&self, topic: &str) -> KafkaResult<NativeTopic> {
+        let topic_c = CString::new(topic.to_string())?;
+        let native_topic_ptr = unsafe {
+            rdsys::rd_kafka_topic_new(self.native_ptr(), topic_c.as_ptr(), ptr::null_mut()) };
+        Ok(NativeTopic::from_ptr(native_topic_ptr))
+    }
+}
+
+struct NativeTopic {
+    ptr: *mut RDKafkaTopic,
+}
+
+unsafe impl Send for NativeTopic {}
+unsafe impl Sync for NativeTopic {}
+
+impl NativeTopic {
+    /// Wraps a pointer to an `RDKafkaTopic` object and returns a new `Native `.
+    fn from_ptr(ptr: *mut RDKafkaTopic) -> NativeTopic {
+        NativeTopic { ptr: ptr }
+    }
+
+    /// Returns the pointer to the librdkafka RDKafkaTopic structure.
+    fn ptr(&self) -> *mut RDKafkaTopic {
+        self.ptr
+    }
+
+    /// Returns a null pointer.
+    fn null() -> *mut RDKafkaTopic {
+        ptr::null::<u8>() as *mut RDKafkaTopic
+    }
+}
+
+impl Drop for NativeTopic {
+    fn drop(&mut self) {
+        trace!("Destroy NativeTopic");
+        unsafe {
+            rdsys::rd_kafka_topic_destroy(self.ptr);
+        }
     }
 }
 
