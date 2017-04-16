@@ -37,10 +37,10 @@
 //!  * [`StreamConsumer`]: it returns a [`stream`] of messages and takes care of polling the consumer internally.
 //!  * [`FutureProducer`]: it returns a [`future`] that will be completed once the message is delivered to Kafka (or failed).
 //!
-//! [`BaseConsumer`]: https://docs.rs/rdkafka/0.8.1/rdkafka/consumer/base_consumer/struct.BaseConsumer.html
-//! [`BaseProducer`]: https://docs.rs/rdkafka/0.8.1/rdkafka/producer/struct.BaseProducer.html
-//! [`StreamConsumer`]: https://docs.rs/rdkafka/0.8.1/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html
-//! [`FutureProducer`]: https://docs.rs/rdkafka/0.8.1/rdkafka/producer/struct.FutureProducer.html
+//! [`BaseConsumer`]: https://docs.rs/rdkafka/0.9.0/rdkafka/consumer/base_consumer/struct.BaseConsumer.html
+//! [`BaseProducer`]: https://docs.rs/rdkafka/0.9.0/rdkafka/producer/struct.BaseProducer.html
+//! [`StreamConsumer`]: https://docs.rs/rdkafka/0.9.0/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html
+//! [`FutureProducer`]: https://docs.rs/rdkafka/0.9.0/rdkafka/producer/struct.FutureProducer.html
 //! [librdkafka]: https://github.com/edenhill/librdkafka
 //! [futures]: https://github.com/alexcrichton/futures-rs
 //! [`future`]: https://docs.rs/futures/0.1.3/futures/trait.Future.html
@@ -62,7 +62,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rdkafka = "^0.8.1"
+//! rdkafka = "^0.9.0"
 //! ```
 //!
 //! This crate will compile librdkafka from sources and link it statically to your executable. To compile librdkafka you'll need:
@@ -78,7 +78,7 @@
 //!
 //! ```toml
 //! [dependencies.rdkafka]
-//! version = "^0.8.1"
+//! version = "^0.9.0"
 //! features = ["ssl", "sasl"]
 //! ```
 //!
