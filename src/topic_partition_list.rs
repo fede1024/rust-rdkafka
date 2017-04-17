@@ -10,8 +10,10 @@ use util::cstr_to_owned;
 use rdsys;
 use rdsys::types::*;
 
-// TODO: Add offset conversion
-// pub const OFFSET_INVALID: i64 = rdsys::RD_KAFKA_OFFSET_INVALID as i64;
+pub const OFFSET_BEGINNING: i64 = rdsys::RD_KAFKA_OFFSET_BEGINNING as i64;
+pub const OFFSET_END: i64 = rdsys::RD_KAFKA_OFFSET_END as i64;
+pub const OFFSET_STORED: i64 = rdsys::RD_KAFKA_OFFSET_STORED as i64;
+pub const OFFSET_INVALID: i64 = rdsys::RD_KAFKA_OFFSET_INVALID as i64;
 
 /// Configuration of a partition
 #[derive(Clone, Debug, PartialEq)]

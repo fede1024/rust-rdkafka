@@ -7,7 +7,7 @@ use futures::*;
 
 use rdkafka::client::Context;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel, TopicConfig};
-use rdkafka::consumer::{Consumer, ConsumerContext};
+use rdkafka::consumer::ConsumerContext;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
 use rdkafka::message::ToBytes;
@@ -97,7 +97,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
 
 
 // Create consumer
-pub fn create_stream_consumer(topic_name: &str, group_id: &str) -> StreamConsumer<TestContext> {
+pub fn create_stream_consumer(group_id: &str) -> StreamConsumer<TestContext> {
     let cons_context = TestContext;
 
     let consumer = ClientConfig::new()
@@ -116,7 +116,6 @@ pub fn create_stream_consumer(topic_name: &str, group_id: &str) -> StreamConsume
         )
         .create_with_context::<TestContext, StreamConsumer<_>>(cons_context)
         .expect("Consumer creation failed");
-    consumer.subscribe(&vec![topic_name]).unwrap();
     consumer
 }
 

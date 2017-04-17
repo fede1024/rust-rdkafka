@@ -12,10 +12,25 @@ use futures::*;
 
 use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::message::Timestamp;
-use rdkafka::topic_partition_list::TopicPartitionList;
+use rdkafka::topic_partition_list::{OFFSET_BEGINNING, TopicPartitionList};
 
 use test_utils::*;
 
+
+// All messages should go to the same partition.
+#[test]
+fn test_produce_partition() {
+    let _r = env_logger::init();
+
+    let topic_name = rand_test_topic();
+    let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0), None);
+
+    let res = message_map.iter()
+        .filter(|&(&(partition, _), _)| partition == 0)
+        .count();
+
+    assert_eq!(res, 100);
+}
 
 // All produced messages should be consumed.
 #[test]
@@ -24,7 +39,8 @@ fn test_produce_consume_base() {
 
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, None, None);
-    let mut consumer = create_stream_consumer(&topic_name, &rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group());
+    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
         .take(100)
@@ -48,12 +64,44 @@ fn test_produce_consume_base() {
 
 // All produced messages should be consumed.
 #[test]
+fn test_produce_consume_base_assign() {
+    let _r = env_logger::init();
+
+    let topic_name = rand_test_topic();
+    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
+    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(1), None);
+    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(2), None);
+    let mut consumer = create_stream_consumer(&rand_test_group());
+    let mut tp_list = TopicPartitionList::new();
+    tp_list.add_topic_with_partitions_and_offsets(
+        topic_name.as_str(), &vec![(0, OFFSET_BEGINNING), (1, 2), (2, 9)]);
+    consumer.assign(&tp_list).unwrap();
+
+    let mut partition_count = vec![0, 0, 0];
+
+    let _consumer_future = consumer.start()
+        .take(19)
+        .for_each(|message| {
+            match message {
+                Ok(m) => partition_count[m.partition() as usize] += 1,
+                e => panic!("Error receiving message: {:?}", e)
+            };
+            Ok(())
+        })
+        .wait();
+
+    assert_eq!(partition_count, vec![10, 8, 1]);
+}
+
+// All produced messages should be consumed.
+#[test]
 fn test_produce_consume_with_timestamp() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
-    let mut consumer = create_stream_consumer(&topic_name, &rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group());
+    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
         .take(100)
@@ -78,20 +126,6 @@ fn test_produce_consume_with_timestamp() {
     assert_eq!(offsets.topics.remove(&topic_name).unwrap().take().unwrap().get(0).unwrap().offset, 100);
 }
 
-// All messages should go to the same partition.
-#[test]
-fn test_produce_partition() {
-    let _r = env_logger::init();
-
-    let topic_name = rand_test_topic();
-    let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0), None);
-
-    let res = message_map.iter()
-        .filter(|&(&(partition, _), _)| partition == 0)
-        .count();
-
-    assert_eq!(res, 100);
-}
 
 // METADATA
 
@@ -103,7 +137,7 @@ fn test_metadata() {
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
-    let consumer = create_stream_consumer(&topic_name, &rand_test_group());
+    let consumer = create_stream_consumer(&rand_test_group());
 
     let metadata = consumer.fetch_metadata(None, 5000).unwrap();
 
@@ -134,7 +168,8 @@ fn test_consumer_commit() {
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
-    let mut consumer = create_stream_consumer(&topic_name, &rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group());
+    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
         .take(33)
@@ -174,7 +209,8 @@ fn test_subscription() {
 
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 10, &value_fn, &key_fn, None, None);
-    let mut consumer = create_stream_consumer(&topic_name, &rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group());
+    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start().take(10).wait();
 
@@ -191,7 +227,8 @@ fn test_group_membership() {
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
-    let mut consumer = create_stream_consumer(&topic_name, &group_name);
+    let mut consumer = create_stream_consumer(&group_name);
+    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group
     let _consumer_future = consumer.start()
