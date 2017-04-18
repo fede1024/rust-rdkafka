@@ -13,8 +13,11 @@ use futures::*;
 use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::message::Timestamp;
 use rdkafka::topic_partition_list::{OFFSET_BEGINNING, TopicPartitionList};
+use rdkafka::error::KafkaError;
 
 use test_utils::*;
+
+use std::time::{Duration, Instant};
 
 
 // All messages should go to the same partition.
@@ -55,7 +58,7 @@ fn test_produce_consume_base() {
                     assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
                     assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
                 },
-                e => panic!("Error receiving message: {:?}", e)
+                Err(e) => panic!("Error receiving message: {:?}", e)
             };
             Ok(())
         })
@@ -84,7 +87,7 @@ fn test_produce_consume_base_assign() {
         .for_each(|message| {
             match message {
                 Ok(m) => partition_count[m.partition() as usize] += 1,
-                e => panic!("Error receiving message: {:?}", e)
+                Err(e) => panic!("Error receiving message: {:?}", e)
             };
             Ok(())
         })
@@ -113,7 +116,7 @@ fn test_produce_consume_with_timestamp() {
                     assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
                     assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
                 },
-                e => panic!("Error receiving message: {:?}", e)
+                Err(e) => panic!("Error receiving message: {:?}", e)
             };
             Ok(())
         })
@@ -124,6 +127,34 @@ fn test_produce_consume_with_timestamp() {
     // Lookup the offsets
     let mut offsets = consumer.offsets_for_timestamp(999999, 100).unwrap();
     assert_eq!(offsets.topics.remove(&topic_name).unwrap().take().unwrap().get(0).unwrap().offset, 100);
+}
+
+#[test]
+fn test_consume_with_no_message_error() {
+    let _r = env_logger::init();
+
+    let mut consumer = create_stream_consumer(&rand_test_group());
+
+    let message_stream = consumer.start_with(Duration::from_millis(200), true);
+
+    let start_time = Instant::now();
+    let mut timeouts_count = 0;
+    for message in message_stream.wait() {
+        match message {
+            Ok(Err(KafkaError::NoMessageReceived)) => {
+                timeouts_count += 1;
+                if timeouts_count == 5 {
+                    break;
+                }
+            }
+            Ok(m) => panic!("A message was actually received: {:?}", m),
+            Err(e) => panic!("Unexpected error while receiving message: {:?}", e)
+        };
+    }
+
+    assert_eq!(timeouts_count, 5);
+    assert!(Instant::now().duration_since(start_time) < Duration::from_millis(1100));
+    assert!(Instant::now().duration_since(start_time) > Duration::from_millis(900));
 }
 
 
@@ -181,7 +212,7 @@ fn test_consumer_commit() {
                         consumer.commit_message(&m, CommitMode::Async).unwrap();
                     }
                 },
-                e => panic!("Error receiving message: {:?}", e)
+                Err(e) => panic!("Error receiving message: {:?}", e)
             };
             Ok(())
         })

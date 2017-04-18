@@ -1,19 +1,19 @@
 //! Stream-based consumer implementation.
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::JoinHandle;
-use std::thread;
-
 use futures::{Future, Poll, Sink};
 use futures::stream::Stream;
 use futures::sync::mpsc;
 
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
-use error::KafkaResult;
-use message::Message;
-
-use consumer::{Consumer, ConsumerContext, EmptyConsumerContext};
 use consumer::base_consumer::BaseConsumer;
+use consumer::{Consumer, ConsumerContext, EmptyConsumerContext};
+use error::{KafkaError, KafkaResult};
+use message::Message;
+use util::duration_to_millis;
+
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 
 /// A Consumer with an associated polling thread. This consumer doesn't need to
@@ -73,14 +73,25 @@ impl Stream for MessageStream {
 }
 
 impl<C: ConsumerContext> StreamConsumer<C> {
-    /// Starts the StreamConsumer, returning a MessageStream.
+    /// Starts the StreamConsumer with default configuration (100ms polling interval and no
+    /// `NoMessageReceived` notifications).
     pub fn start(&mut self) -> MessageStream {
+        self.start_with(Duration::from_millis(100), false)
+    }
+
+    /// Starte the StreamConsumer with the specified poll interval. Additionally, if
+    /// `no_message_error` is set to true, it will return an error of type
+    /// `KafkaError::NoMessageReceived` every time the poll interval is reached and no message
+    /// has been received.
+    pub fn start_with(&mut self, poll_interval: Duration, no_message_error: bool) -> MessageStream {
         let (sender, receiver) = mpsc::channel(0);
         let consumer = self.consumer.clone();
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
             .name("poll".to_string())
-            .spawn(move || { poll_loop(consumer, sender, should_stop); })
+            .spawn(move || {
+                poll_loop(consumer, sender, should_stop, poll_interval, no_message_error);
+            })
             .expect("Failed to start polling thread");
         self.handle = Some(handle);
         MessageStream::new(receiver)
@@ -93,11 +104,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
             trace!("Stopping polling");
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
-            let thread_result = self.handle
-                .take()
-                .expect("no handle present in consumer context")
-                .join();
-            match thread_result {
+            match self.handle.take().expect("no handle present in consumer context").join() {
                 Ok(()) => trace!("Polling stopped"),
                 Err(e) => warn!("Failure while terminating thread: {:?}", e),
             };
@@ -117,13 +124,22 @@ fn poll_loop<C: ConsumerContext>(
     consumer: Arc<BaseConsumer<C>>,
     sender: mpsc::Sender<KafkaResult<Message>>,
     should_stop: Arc<AtomicBool>,
+    poll_interval: Duration,
+    no_message_error: bool,
 ) {
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
+    let poll_interval_ms = duration_to_millis(poll_interval) as i32;
     while !should_stop.load(Ordering::Relaxed) {
         trace!("Polling base consumer");
-        let future_sender = match consumer.poll(100) {
-            Ok(None) => continue,   // TODO: check stream closed
+        let future_sender = match consumer.poll(poll_interval_ms) {
+            Ok(None) => {
+                if no_message_error {
+                    curr_sender.send(Err(KafkaError::NoMessageReceived))
+                } else {
+                    continue // TODO: check stream closed
+                }
+            },
             Ok(Some(m)) => curr_sender.send(Ok(m)),
             Err(e) => curr_sender.send(Err(e)),
         };

@@ -64,6 +64,8 @@ impl<'a> Message {
         }
     }
 
+    // TODO: add topic
+
     /// Converts the raw bytes of the payload to a reference of type &P, pointing to the same data inside
     /// the message. The returned reference cannot outlive the message.
     pub fn payload_view<P: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a P, P::Error>> {
