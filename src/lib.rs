@@ -106,20 +106,35 @@
 //!
 //! ## Tests
 //!
+//! ### Unit tests
+//!
 //! The unit tests can run without a Kafka broker present:
 //!
 //! ```bash
 //! cargo test --lib
 //! ```
 //!
-//! To run the full suite:
+//! ### Integration tests
+//!
+//! rust-rdkafka contains a suite of integration tests which is automatically executed by travis in
+//! docker container. Given the frequent interaction with C code that rust-rdkafka has to do, tests
+//! are executed in valgrind to check eventual memory errors and leaks.
+//!
+//! To run the full suite using docker-compose:
 //!
 //! ```bash
-//! cargo test
+//! ./integration_tests.sh.
 //! ```
 //!
-//! In this case there is a broker expected to be running on `localhost:9092`.
-//! Travis currently only runs the unit tests.
+//! To run locally, instead:
+//!
+//! ```bash
+//! KAFKA_HOST="kafka_server:9092" cargo test
+//! ```
+//!
+//! In this case there is a broker expected to be running on `KAFKA_HOST`.
+//! The broker must be configured with default partition number 3 and topic autocreation in order
+//! for the tests to succeed.
 //!
 
 #[macro_use] extern crate log;

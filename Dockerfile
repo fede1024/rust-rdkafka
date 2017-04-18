@@ -26,7 +26,6 @@ ENV PATH /root/.cargo/bin/:$PATH
 
 COPY docker/run_tests.sh /rdkafka/
 
-ENV KAFKA_HOST kafka
-ENV KAFKA_PORT 9092
+ENV KAFKA_HOST kafka:9092
 
 WORKDIR /rdkafka
