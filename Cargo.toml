@@ -10,7 +10,7 @@ keywords = ["kafka", "rdkafka"]
 categories = ["api-bindings"]
 
 [dependencies]
-rdkafka-sys = { path = "rdkafka-sys", version = "0.9.4-0" }
+rdkafka-sys = { path = "rdkafka-sys", version = "0.9.5-0" }
 env_logger = "^0.3.0"
 errno = "^0.1.8"
 futures = "^0.1.7"
