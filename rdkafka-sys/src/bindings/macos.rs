@@ -599,7 +599,7 @@ pub const SHUT_RD: ::std::os::raw::c_uint = 0;
 pub const SHUT_WR: ::std::os::raw::c_uint = 1;
 pub const SHUT_RDWR: ::std::os::raw::c_uint = 2;
 pub const LIBRDKAFKA_TYPECHECKS: ::std::os::raw::c_uint = 1;
-pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 591103;
+pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 591359;
 pub const RD_KAFKA_DEBUG_CONTEXTS: &'static [u8; 81usize] =
     b"all,generic,broker,topic,metadata,queue,msg,protocol,cgrp,security,fetch,feature\x00";
 pub const RD_KAFKA_OFFSET_BEGINNING: ::std::os::raw::c_int = -2;
