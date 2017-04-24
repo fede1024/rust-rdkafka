@@ -17,6 +17,7 @@ use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::message::Message;
 use rdkafka::producer::FutureProducer;
+use rdkafka::error::KafkaError;
 
 use std::thread;
 use std::time::Duration;
@@ -50,7 +51,10 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     let mut core = Core::new().unwrap();
 
     // Create the CPU pool, for CPU-intensive message processing.
-    let cpu_pool = Builder::new().pool_size(4).create();
+    let cpu_pool = Builder::new()
+        .name_prefix("pool-")
+        .pool_size(4)
+        .create();
 
     // Create the `StreamConsumer`, to receive the messages from the topic in form of a `Stream`.
     let mut consumer = ClientConfig::new()
@@ -81,10 +85,14 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     let handle = core.handle();
 
     // Create the outer pipeline on the message stream.
-    let processed_stream = consumer.start()
+    let processed_stream = consumer.start_with(Duration::from_millis(200), true)
         .filter_map(|result| {  // Filter out errors
             match result {
                 Ok(msg) => Some(msg),
+                Err(KafkaError::NoMessageReceived) => {
+                    info!("Maybe commit");
+                    None
+                },
                 Err(kafka_error) => {
                     warn!("Error while receiving from Kafka: {:?}", kafka_error);
                     None
@@ -96,7 +104,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             let topic_name = output_topic.to_owned();
             // Create the inner pipeline, that represents the processing of a single event.
             let process_message = cpu_pool.spawn_fn(move || {
-                // Take ownership of the message, and runs an expensive computation on it,
+                // Take ownership of the message, and run an expensive computation on it,
                 // using one of the threads of the `cpu_pool`.
                 Ok(expensive_computation(msg))
             }).and_then(move |computation_result| {
@@ -107,6 +115,8 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
                 // Once the message has been produced, print the delivery report and terminate
                 // the pipeline.
                 info!("Delivery report for result: {:?}", d_report);
+                info!("MMM Mark message");
+                info!("Maybe commit");
                 Ok(())
             }).or_else(|err| {
                 // In case of error, this closure will be executed instead.
