@@ -83,7 +83,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     /// `no_message_error` is set to true, it will return an error of type
     /// `KafkaError::NoMessageReceived` every time the poll interval is reached and no message
     /// has been received.
-    pub fn start_with(poll_interval: Duration, no_message_error: bool) -> MessageStream {
+    pub fn start_with(&mut self, poll_interval: Duration, no_message_error: bool) -> MessageStream {
         let (sender, receiver) = mpsc::channel(0);
         let consumer = self.consumer.clone();
         let should_stop = self.should_stop.clone();
@@ -135,7 +135,7 @@ fn poll_loop<C: ConsumerContext>(
         let future_sender = match consumer.poll(poll_interval_ms) {
             Ok(None) => {
                 if no_message_error {
-                    curr_sender.send(Err(KafkaError::ConsumerPollTimeout))
+                    curr_sender.send(Err(KafkaError::NoMessageReceived))
                 } else {
                     continue // TODO: check stream closed
                 }

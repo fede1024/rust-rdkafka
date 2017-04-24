@@ -54,6 +54,7 @@ fn test_produce_consume_base() {
                     };
                     assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
                     assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
+                    assert_eq!(m.topic_name(), topic_name.as_str());
                 },
                 e => panic!("Error receiving message: {:?}", e)
             };
