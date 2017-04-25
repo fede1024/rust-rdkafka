@@ -27,7 +27,7 @@ use example_utils::setup_logger;
 
 // Emulates an expensive, synchronous computation. This function returns a string with the length
 // of the message payload, if any.
-fn expensive_computation(msg: Message) -> String {
+fn expensive_computation(msg: &Message) -> String {
     info!("Starting expensive computation on message");
     thread::sleep(Duration::from_millis(rand::random::<u64>() % 5000));
     info!("Expensive computation completed");
@@ -102,20 +102,21 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             info!("Enqueuing message for computation");
             let producer = producer.clone();
             let topic_name = output_topic.to_owned();
+            let source_msg_id = msg.identifier();
             // Create the inner pipeline, that represents the processing of a single event.
             let process_message = cpu_pool.spawn_fn(move || {
                 // Take ownership of the message, and run an expensive computation on it,
                 // using one of the threads of the `cpu_pool`.
-                Ok(expensive_computation(msg))
+                Ok(expensive_computation(&msg))
             }).and_then(move |computation_result| {
                 // Send the result of the computation to Kafka, asynchronously.
                 info!("Sending result");
                 producer.send_copy::<String, ()>(&topic_name, None, Some(&computation_result), None, None).unwrap()
-            }).and_then(|d_report| {
+            }).and_then(move |d_report| {
                 // Once the message has been produced, print the delivery report and terminate
                 // the pipeline.
                 info!("Delivery report for result: {:?}", d_report);
-                info!("MMM Mark message");
+                info!("MMM Mark message {:?}", source_msg_id);
                 info!("Maybe commit");
                 Ok(())
             }).or_else(|err| {
