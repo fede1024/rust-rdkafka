@@ -65,6 +65,7 @@ impl<'a> Message {
         }
     }
 
+    /// Returns the name of the topic.
     pub fn topic_name(&'a self) -> &'a str {
         unsafe {
             CStr::from_ptr(rdsys::rd_kafka_topic_name((*self.ptr).rkt))
@@ -93,6 +94,11 @@ impl<'a> Message {
     /// Returns the offset of the message.
     pub fn offset(&self) -> i64 {
         unsafe { (*self.ptr).offset }
+    }
+
+    /// Returns a (topic, partition, offset) tuple with no reference to the original message.
+    pub fn identifier(&self) -> (String, i32, i64) {
+        (self.topic_name().to_owned(), self.partition(), self.offset())
     }
 
     /// Returns the message timestamp for a consumed message if available.
