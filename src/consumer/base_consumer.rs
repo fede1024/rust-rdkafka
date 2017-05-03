@@ -203,6 +203,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         let elements = unsafe { slice::from_raw_parts((*tp_list).elems, (*tp_list).cnt as usize) };
         for tp in elements {
             unsafe {
+                // The timestamp is passed here as offset
                 rdsys::rd_kafka_topic_partition_list_set_offset(tp_list, tp.topic, tp.partition, timestamp);
             }
         }

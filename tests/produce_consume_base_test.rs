@@ -123,8 +123,8 @@ fn test_produce_consume_with_timestamp() {
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999999));
 
     // Lookup the offsets
-    let mut offsets = consumer.offsets_for_timestamp(999999, 100).unwrap();
-    assert_eq!(offsets.topics.remove(&topic_name).unwrap().take().unwrap().get(0).unwrap().offset, 100);
+    let offsets = consumer.offsets_for_timestamp(999999, 100).unwrap();
+    assert_eq!(*offsets.topic(&topic_name).unwrap().get(&0).unwrap(), 100);
 }
 
 

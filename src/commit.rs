@@ -137,7 +137,7 @@ mod test {
             },
         );
 
-        let mut reg_clone = reg.clone();
+        let reg_clone = reg.clone();
         let t = thread::spawn(move || {
             for i in 0..4 {
                 reg_clone.register_message(("a".to_owned(), 0, i as i64));

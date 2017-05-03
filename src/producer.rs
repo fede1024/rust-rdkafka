@@ -273,6 +273,7 @@ impl<C: Context + 'static> _FutureProducer<C> {
                     trace!("Stopping polling");
                     self.should_stop.store(true, Ordering::Relaxed);
                     trace!("Waiting for polling thread termination");
+                    // TODO: `expect` not needed
                     match handle.take().expect("No handle present in producer context").join() {
                         Ok(()) => trace!("Polling stopped"),
                         Err(e) => warn!("Failure while terminating thread: {:?}", e),
