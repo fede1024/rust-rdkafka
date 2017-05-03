@@ -1,6 +1,6 @@
 //! A data structure representing topic, partitions and offsets, compatible with the
 //! `RDKafkaTopicPartitionList` exported by `rdkafka-sys`.
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
 use std::ops::Deref;
 use std::slice;
@@ -16,14 +16,14 @@ pub const OFFSET_STORED: i64 = rdsys::RD_KAFKA_OFFSET_STORED as i64;
 pub const OFFSET_INVALID: i64 = rdsys::RD_KAFKA_OFFSET_INVALID as i64;
 
 /// Configuration of a partition
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Partition {
     pub id: i32,
     pub offset: i64
 }
 
 /// A map of topic names to partitions.
-pub type Topics = HashMap<String, Option<Vec<Partition>>>;
+pub type Topics = HashMap<String, Option<HashSet<Partition>>>;
 
 /// Map of topics with optionally partition configuration.
 #[derive(Clone, Debug, PartialEq)]
@@ -42,10 +42,10 @@ impl TopicPartitionList {
             // guaranteed to be immutable.
             let topic_name = unsafe { cstr_to_owned(tp.topic) };
             if tp.partition >= 0 || tp.offset >= 0 {
-                let topic = topics.entry(topic_name).or_insert(Some(vec![]));
+                let topic = topics.entry(topic_name).or_insert(Some(HashSet::new()));
                 match *topic {
                     Some(ref mut p) => {
-                        p.push(Partition {
+                        p.insert(Partition {
                             id: tp.partition,
                             offset: tp.offset
                         });
@@ -85,15 +85,15 @@ impl TopicPartitionList {
 
     /// Add topic with partitions configured
     pub fn add_topic_with_partitions(&mut self, topic: &str, partitions: &Vec<i32>) {
-        let partitions_configs: Vec<Partition> = partitions.iter()
-            .map(|p| Partition { id: *p, offset: -1001 } )
+        let partitions_configs: HashSet<Partition> = partitions.iter()
+            .map(|p| Partition { id: *p, offset: OFFSET_INVALID } )
             .collect();
         self.topics.insert(topic.to_string(), Some(partitions_configs));
     }
 
     /// Add topic with partitions and offsets configured
     pub fn add_topic_with_partitions_and_offsets(&mut self, topic: &str, partitions: &Vec<(i32, i64)>) {
-        let partitions_configs: Vec<Partition> = partitions.iter()
+        let partitions_configs: HashSet<Partition> = partitions.iter()
             .map(|p| Partition { id: p.0, offset: p.1 } )
             .collect();
         self.topics.insert(topic.to_string(), Some(partitions_configs));

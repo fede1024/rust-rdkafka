@@ -15,11 +15,19 @@ use util::cstr_to_owned;
 
 use std::slice;
 use std::str;
+use std::sync::Arc;
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
-/// to make progress on rebalance, callbacks and to receive messages.
+/// to make progress on rebalance, callbacks and to receive messages. The consumer can be cheaply
+/// cloned to create a new reference to the same underlying consumer.
 pub struct BaseConsumer<C: ConsumerContext> {
-    client: Client<C>,
+    client: Arc<Client<C>>,
+}
+
+impl<C: ConsumerContext> Clone for BaseConsumer<C> {
+    fn clone(&self) -> Self {
+        BaseConsumer { client: Arc::clone(&self.client) }
+    }
 }
 
 impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
@@ -41,7 +49,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
         unsafe { rdsys::rd_kafka_conf_set_rebalance_cb(native_config.ptr(), Some(rebalance_cb::<C>)) };
         let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context)?;
         unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
-        Ok(BaseConsumer { client: client })
+        Ok(BaseConsumer { client: Arc::new(client) })
     }
 }
 

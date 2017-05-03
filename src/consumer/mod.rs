@@ -103,6 +103,7 @@ unsafe extern "C" fn rebalance_cb<C: ConsumerContext>(rk: *mut RDKafka,
 
 /// Specifies if the commit should be performed synchronously
 /// or asynchronously.
+#[derive(Copy, Clone)]
 pub enum CommitMode {
     /// Synchronous commit.
     Sync = 0,

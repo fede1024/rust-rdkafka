@@ -12,12 +12,13 @@ use futures::stream::Stream;
 use futures_cpupool::Builder;
 use tokio_core::reactor::Core;
 
-use rdkafka::consumer::Consumer;
-use rdkafka::consumer::stream_consumer::StreamConsumer;
+use rdkafka::commit::AutoCommitRegistry;
 use rdkafka::config::{ClientConfig, TopicConfig};
+use rdkafka::consumer::{Consumer, CommitMode};
+use rdkafka::consumer::stream_consumer::StreamConsumer;
+use rdkafka::error::KafkaError;
 use rdkafka::message::Message;
 use rdkafka::producer::FutureProducer;
-use rdkafka::error::KafkaError;
 
 use std::thread;
 use std::time::Duration;
@@ -64,7 +65,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
         .set_default_topic_config(TopicConfig::new()
-            // .set("auto.offset.reset", "smallest")
+            .set("auto.offset.reset", "smallest")
             .finalize())
         .create::<StreamConsumer<_>>()
         .expect("Consumer creation failed");
@@ -83,6 +84,12 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     // Create a handle to the core, that will be used to provide additional asynchronous work
     // to the event loop.
     let handle = core.handle();
+    let offset_reg = AutoCommitRegistry::new(
+        Duration::from_secs(10),
+        CommitMode::Sync,
+        &consumer,
+        |offsets, commit_result| { println!("> {:?} {:?}", offsets, commit_result); }
+    );
 
     // Create the outer pipeline on the message stream.
     let processed_stream = consumer.start_with(Duration::from_millis(200), true)
@@ -90,7 +97,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             match result {
                 Ok(msg) => Some(msg),
                 Err(KafkaError::NoMessageReceived) => {
-                    info!("Maybe commit");
+                    // info!("Maybe commit");
                     None
                 },
                 Err(kafka_error) => {
@@ -103,6 +110,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             let producer = producer.clone();
             let topic_name = output_topic.to_owned();
             let source_msg_id = msg.identifier();
+            let offset_reg = offset_reg.clone();
             // Create the inner pipeline, that represents the processing of a single event.
             let process_message = cpu_pool.spawn_fn(move || {
                 // Take ownership of the message, and run an expensive computation on it,
@@ -116,8 +124,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
                 // Once the message has been produced, print the delivery report and terminate
                 // the pipeline.
                 info!("Delivery report for result: {:?}", d_report);
-                info!("MMM Mark message {:?}", source_msg_id);
-                info!("Maybe commit");
+                offset_reg.register_message(source_msg_id);
                 Ok(())
             }).or_else(|err| {
                 // In case of error, this closure will be executed instead.
