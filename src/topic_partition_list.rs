@@ -15,15 +15,8 @@ pub const OFFSET_END: i64 = rdsys::RD_KAFKA_OFFSET_END as i64;
 pub const OFFSET_STORED: i64 = rdsys::RD_KAFKA_OFFSET_STORED as i64;
 pub const OFFSET_INVALID: i64 = rdsys::RD_KAFKA_OFFSET_INVALID as i64;
 
-/// Configuration of a partition
-#[derive(Clone, Debug, PartialEq)]
-pub struct Partition {
-    pub id: i32,
-    pub offset: i64
-}
-
 /// A map of topic names to partitions.
-pub type Topics = HashMap<String, Option<Vec<Partition>>>;
+pub type Topics = HashMap<String, HashMap<i32, i64>>;
 
 /// Map of topics with optionally partition configuration.
 #[derive(Clone, Debug, PartialEq)]
@@ -43,20 +36,9 @@ impl TopicPartitionList {
             // TODO: check if the topic_name is a copy or a view in the C data. The C data is not
             // guaranteed to be immutable.
             let topic_name = unsafe { cstr_to_owned(tp.topic) };
+            let topic = topics.entry(topic_name).or_insert(HashMap::new());
             if tp.partition >= 0 || tp.offset >= 0 {
-                let topic = topics.entry(topic_name).or_insert(Some(vec![]));
-                match *topic {
-                    Some(ref mut p) => {
-                        p.push(Partition {
-                            id: tp.partition,
-                            offset: tp.offset
-                        });
-                    },
-                    None => ()
-                }
-            } else {
-                // No configuration
-                topics.insert(topic_name, None);
+                topic.insert(tp.partition, tp.offset);
             };
         }
 
@@ -77,7 +59,7 @@ impl TopicPartitionList {
         let mut topics: Topics = HashMap::with_capacity(topic_names.len());
 
         for topic_name in topic_names {
-            topics.insert(topic_name.to_string(), None);
+            topics.insert(topic_name.to_string(), HashMap::new());
         }
 
         TopicPartitionList {
@@ -87,18 +69,26 @@ impl TopicPartitionList {
 
     /// Add topic with partitions configured
     pub fn add_topic_with_partitions(&mut self, topic: &str, partitions: &Vec<i32>) {
-        let partitions_configs: Vec<Partition> = partitions.iter()
-            .map(|p| Partition { id: *p, offset: -1001 } )
+        let partition_map: HashMap<i32, i64> = partitions.iter()
+            .map(|p| (*p, OFFSET_INVALID))
             .collect();
-        self.topics.insert(topic.to_string(), Some(partitions_configs));
+        self.topics.insert(topic.to_string(), partition_map);
     }
 
     /// Add topic with partitions and offsets configured
     pub fn add_topic_with_partitions_and_offsets(&mut self, topic: &str, partitions: &Vec<(i32, i64)>) {
-        let partitions_configs: Vec<Partition> = partitions.iter()
-            .map(|p| Partition { id: p.0, offset: p.1 } )
+        let partition_map: HashMap<i32, i64> = partitions.iter()
+            .map(|p| (p.0, p.1))
             .collect();
-        self.topics.insert(topic.to_string(), Some(partitions_configs));
+        self.topics.insert(topic.to_string(), partition_map);
+    }
+
+    pub fn topic(&self, topic: &String) -> Option<&HashMap<i32, i64>> {
+        self.topics.get(topic)
+    }
+
+    pub fn partition(&self, topic: &String, partition: i32) -> Option<i64> {
+        (self.topics.get(topic).and_then(|t| t.get(&partition).cloned()))
     }
 
     pub fn create_native_topic_partition_list(&self) -> *mut RDKafkaTopicPartitionList {
@@ -106,19 +96,16 @@ impl TopicPartitionList {
 
         for (topic, partitions) in self.topics.iter() {
             let topic_cstring = CString::new(topic.as_str()).expect("could not create name CString");
-            match partitions {
-                &Some(ref ps) => {
-                    // Partitions specified
-                    for p in ps {
-                        unsafe { rdsys::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), p.id) };
-                        if p.offset >= 0 {
-                            unsafe { rdsys::rd_kafka_topic_partition_list_set_offset(tp_list, topic_cstring.as_ptr(), p.id, p.offset) };
-                        }
+            if partitions.is_empty() {
+                // No partitions specified
+                unsafe { rdsys::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), -1); }
+            } else {
+                // Partitions specified
+                for (partition, offset) in partitions {
+                    unsafe { rdsys::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), *partition) };
+                    if *offset >= 0 {
+                        unsafe { rdsys::rd_kafka_topic_partition_list_set_offset(tp_list, topic_cstring.as_ptr(), *partition, *offset) };
                     }
-                },
-                &None => {
-                    // No partitions specified
-                    unsafe { rdsys::rd_kafka_topic_partition_list_add(tp_list, topic_cstring.as_ptr(), -1); }
                 }
             }
         }

@@ -53,11 +53,19 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     mem::forget(context); // Do not free the context
 }
 
+use std::sync::Arc;
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
-/// to make progress on rebalance, callbacks and to receive messages.
+/// to make progress on rebalance, callbacks and to receive messages. The consumer can be cheaply
+/// cloned to create a new reference to the same underlying consumer.
 pub struct BaseConsumer<C: ConsumerContext> {
-    client: Client<C>,
+    client: Arc<Client<C>>,
+}
+
+impl<C: ConsumerContext> Clone for BaseConsumer<C> {
+    fn clone(&self) -> Self {
+        BaseConsumer { client: Arc::clone(&self.client) }
+    }
 }
 
 impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
@@ -82,7 +90,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
         }
         let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context)?;
         unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
-        Ok(BaseConsumer { client: client })
+        Ok(BaseConsumer { client: Arc::new(client) })
     }
 }
 
@@ -182,7 +190,9 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// Returns the current partition assignment.
     pub fn assignment(&self) -> KafkaResult<TopicPartitionList> {
         let mut tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(0) };
-        let error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list) };
+        let error = unsafe {
+            rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tp_list)
+        };
 
         let result = if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
@@ -228,6 +238,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         let elements = unsafe { slice::from_raw_parts((*tp_list).elems, (*tp_list).cnt as usize) };
         for tp in elements {
             unsafe {
+                // The timestamp is passed here as offset
                 rdsys::rd_kafka_topic_partition_list_set_offset(tp_list, tp.topic, tp.partition, timestamp);
             }
         }
