@@ -80,9 +80,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
             .name("poll".to_string())
-            .spawn(move || {
-                poll_loop(consumer, sender, should_stop);
-            })
+            .spawn(move || { poll_loop(consumer, sender, should_stop); })
             .expect("Failed to start polling thread");
         self.handle = Some(handle);
         MessageStream::new(receiver)
@@ -95,7 +93,11 @@ impl<C: ConsumerContext> StreamConsumer<C> {
             trace!("Stopping polling");
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
-            match self.handle.take().expect("no handle present in consumer context").join() {
+            let thread_result = self.handle
+                .take()
+                .expect("no handle present in consumer context")
+                .join();
+            match thread_result {
                 Ok(()) => trace!("Polling stopped"),
                 Err(e) => warn!("Failure while terminating thread: {:?}", e),
             };
@@ -111,7 +113,11 @@ impl<C: ConsumerContext> Drop for StreamConsumer<C> {
 }
 
 /// Internal consumer loop.
-fn poll_loop<C: ConsumerContext>(consumer: Arc<BaseConsumer<C>>, sender: mpsc::Sender<KafkaResult<Message>>, should_stop: Arc<AtomicBool>) {
+fn poll_loop<C: ConsumerContext>(
+    consumer: Arc<BaseConsumer<C>>,
+    sender: mpsc::Sender<KafkaResult<Message>>,
+    should_stop: Arc<AtomicBool>,
+) {
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
     while !should_stop.load(Ordering::Relaxed) {
