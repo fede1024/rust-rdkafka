@@ -84,12 +84,14 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     // Create a handle to the core, that will be used to provide additional asynchronous work
     // to the event loop.
     let handle = core.handle();
-    let offset_reg = AutoCommitRegistry::new(
+    let mut offsets = AutoCommitRegistry::new(
         Duration::from_secs(10),
         CommitMode::Sync,
-        &consumer,
-        |offsets, commit_result| { println!("> {:?} {:?}", offsets, commit_result); }
+        &consumer
     );
+    offsets.set_callback(|offsets, commit_result| {
+        println!("> {:?} {:?}", offsets, commit_result);
+    });
 
     // Create the outer pipeline on the message stream.
     let processed_stream = consumer.start_with(Duration::from_millis(200), true)
@@ -97,7 +99,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             match result {
                 Ok(msg) => Some(msg),
                 Err(KafkaError::NoMessageReceived) => {
-                    // info!("Maybe commit");
+                    offsets.maybe_commit();
                     None
                 },
                 Err(kafka_error) => {
@@ -110,7 +112,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             let producer = producer.clone();
             let topic_name = output_topic.to_owned();
             let source_msg_id = msg.identifier();
-            let offset_reg = offset_reg.clone();
+            let offsets = offsets.clone();
             // Create the inner pipeline, that represents the processing of a single event.
             let process_message = cpu_pool.spawn_fn(move || {
                 // Take ownership of the message, and run an expensive computation on it,
@@ -124,7 +126,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
                 // Once the message has been produced, print the delivery report and terminate
                 // the pipeline.
                 info!("Delivery report for result: {:?}", d_report);
-                offset_reg.register_message(source_msg_id);
+                offsets.register_message(source_msg_id);
                 Ok(())
             }).or_else(|err| {
                 // In case of error, this closure will be executed instead.
