@@ -35,6 +35,7 @@ impl IsError for RDKafkaConfRes {
 }
 
 /// Represents all Kafka errors.
+#[derive(Clone)]
 pub enum KafkaError {
     ClientConfig(RDKafkaConfRes, String, String, String),
     ClientCreation(String),

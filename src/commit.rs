@@ -7,49 +7,48 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 pub type OffsetMap = HashMap<(String, i32), i64>;
-// pub type CommitCb = Fn(&OffsetMap, KafkaResult<()>);
+pub type CommitCb = Fn(&OffsetMap, KafkaResult<()>);
 
-struct AutoCommitRegistryInner<F> {
+struct AutoCommitRegistryInner {
     offsets: OffsetMap,
     last_commit_time: Instant,
-    callback: F,
+    callback: Option<Box<CommitCb>>,
 }
 
-pub struct AutoCommitRegistry<F, C>
-    where F: Fn(&OffsetMap, KafkaResult<()>), C: ConsumerContext
+pub struct AutoCommitRegistry<C>
+    where C: ConsumerContext
 {
-    inner: Arc<Mutex<AutoCommitRegistryInner<F>>>,
+    inner: Arc<Mutex<AutoCommitRegistryInner>>,
     commit_interval: Duration,
     commit_mode: CommitMode,
     consumer: BaseConsumer<C>,
 }
 
-impl<F, C> Clone for AutoCommitRegistry<F, C>
-    where F: Fn(&OffsetMap, KafkaResult<()>), C: ConsumerContext
+impl<C> Clone for AutoCommitRegistry<C>
+    where C: ConsumerContext
 {
     fn clone(&self) -> Self {
         AutoCommitRegistry {
             inner: Arc::clone(&self.inner),
             commit_interval: self.commit_interval,
-            commit_mode: self.commit_mode.clone(),
+            commit_mode: self.commit_mode,
             consumer: self.consumer.clone(),
         }
     }
 }
 
-impl<F, C> AutoCommitRegistry<F, C>
-    where F: Fn(&OffsetMap, KafkaResult<()>), C: ConsumerContext
+impl<C> AutoCommitRegistry<C>
+    where C: ConsumerContext
 {
     pub fn new(
         commit_interval: Duration,
         commit_mode: CommitMode,
         consumer: &Consumer<C>,
-        callback: F
-    ) -> AutoCommitRegistry<F, C> {
+    ) -> AutoCommitRegistry<C> {
         let inner = AutoCommitRegistryInner {
             offsets: HashMap::new(),
             last_commit_time: Instant::now(),
-            callback: callback,
+            callback: None,
         };
         AutoCommitRegistry {
             inner: Arc::new(Mutex::new(inner)),
@@ -57,6 +56,13 @@ impl<F, C> AutoCommitRegistry<F, C>
             commit_mode: commit_mode,
             consumer: consumer.get_base_consumer().clone(),
         }
+    }
+
+    pub fn set_callback<F>(&mut self, callback: F)
+        where F: Fn(&OffsetMap, KafkaResult<()>) + 'static
+    {
+        let mut inner = self.inner.lock().unwrap();
+        inner.callback = Some(Box::new(callback))
     }
 
     pub fn register_message(&self, message_id: (String, i32, i64)) {
@@ -68,15 +74,35 @@ impl<F, C> AutoCommitRegistry<F, C>
     }
 
     pub fn maybe_commit(&self) {
-        let mut inner = self.inner.lock().unwrap();
         let now = Instant::now();
+        let mut inner = self.inner.lock().unwrap();
         if now.duration_since((*inner).last_commit_time) >= self.commit_interval {
-            let commit_result = self.consumer.commit(
-                &offset_map_to_tpl(&(*inner).offsets),
-                self.commit_mode);
-            ((*inner).callback)(&(*inner).offsets, commit_result);
             (*inner).last_commit_time = now;
+            let result = self.consumer.commit(&offset_map_to_tpl(&(*inner).offsets), self.commit_mode);
+//            if self.callback.is_some() {
+//                (self.callback.unwrap())((*inner).offsets.clone(), result);
+//            }
+            if (*inner).callback.is_some() {
+                ((*inner).callback.unwrap().as_ref())(&(*inner).offsets, result);
+            }
         }
+    }
+
+    pub fn commit(&self) -> KafkaResult<()> {
+        let mut inner = self.inner.lock().unwrap();
+        (*inner).last_commit_time = Instant::now();
+        let result = self.consumer.commit(&offset_map_to_tpl(&(*inner).offsets), self.commit_mode);
+        // ((*inner).callback)(&(*inner).offsets, result.clone());
+        result
+    }
+}
+
+impl<C> Drop for AutoCommitRegistry<C>
+    where C: ConsumerContext {
+
+    fn drop(&mut self) {
+        // Force commit before drop
+        let _ = self.commit();
     }
 }
 
@@ -127,14 +153,15 @@ mod test {
 
         let committed = Arc::new(Mutex::new(None));
         let committed_clone = Arc::clone(&committed);
-        let reg = AutoCommitRegistry::new(
+        let mut reg = AutoCommitRegistry::new(
             Duration::from_secs(2),
             CommitMode::Async,
             &consumer,
-            move |offsets, _| {
+        );
+        reg.set_callback(&move |offsets, _| {
                 let mut c = committed_clone.lock().unwrap();
                 (*c) = Some(offsets.clone());
-            },
+            }
         );
 
         let reg_clone = reg.clone();
@@ -150,8 +177,8 @@ mod test {
 
         let mut expected = HashMap::new();
         expected.insert(("a".to_owned(), 0), 3);
-        expected.insert(("a".to_owned(), 1), 3);
-        expected.insert(("b".to_owned(), 0), 2);
+        expected.insert(("a".to_owned(), 1), 4);
+        expected.insert(("b".to_owned(), 0), 3);
 
         assert_eq!(Some(expected), *committed.lock().unwrap());
     }

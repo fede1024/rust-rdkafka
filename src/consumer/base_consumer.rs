@@ -262,7 +262,10 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
 impl<C: ConsumerContext> Drop for BaseConsumer<C> {
     fn drop(&mut self) {
-        trace!("Destroying consumer");  // TODO: fix me (multiple executions)
-        unsafe { rdsys::rd_kafka_consumer_close(self.client.native_ptr()) };
+        trace!("Consumer drop");
+        if Arc::strong_count(&self.client) == 1 {
+            trace!("Destroying consumer");
+            unsafe { rdsys::rd_kafka_consumer_close(self.client.native_ptr()) };
+        }
     }
 }
