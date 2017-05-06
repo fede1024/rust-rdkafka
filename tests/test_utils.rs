@@ -1,4 +1,5 @@
 extern crate rdkafka;
+extern crate rdkafka_sys;
 extern crate rand;
 extern crate futures;
 
@@ -12,6 +13,7 @@ use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
 use rdkafka::message::ToBytes;
 use rdkafka::statistics::Statistics;
+use rdkafka::error::KafkaResult;
 
 use std::collections::HashMap;
 use std::env;
@@ -37,7 +39,9 @@ fn get_bootstrap_server() -> String {
     env::var("KAFKA_HOST").unwrap_or("localhost:9092".to_owned())
 }
 
-pub struct TestContext;
+pub struct TestContext {
+    _some_data: i64, // Add some data so that valgrind can check proper allocation
+}
 
 impl Context for TestContext {
     fn log(&self, _level: RDKafkaLogLevel, fac: &str, log_message: &str) {
@@ -48,7 +52,11 @@ impl Context for TestContext {
     fn stats(&self, _: Statistics) { }
 }
 
-impl ConsumerContext for TestContext { }
+impl ConsumerContext for TestContext {
+    fn commit_callback(&self, result: KafkaResult<()>, _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList) {
+        println!("Committing offsets: {:?}", result);
+    }
+}
 
 pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K,
                                     partition: Option<i32>, timestamp: Option<i64>)
@@ -58,7 +66,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
           J: ToBytes,
           Q: ToBytes {
 
-    let prod_context = TestContext;
+    let prod_context = TestContext { _some_data: 1234 };
 
     // Produce some messages
     let producer = ClientConfig::new()
@@ -96,7 +104,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
 
 // Create consumer
 pub fn create_stream_consumer(group_id: &str) -> StreamConsumer<TestContext> {
-    let cons_context = TestContext;
+    let cons_context = TestContext { _some_data: 64 };
 
     let consumer = ClientConfig::new()
         .set("group.id", group_id)

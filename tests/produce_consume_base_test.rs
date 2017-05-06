@@ -160,6 +160,7 @@ fn test_metadata() {
     assert_eq!(metadata_one_topic.topics().len(), 1);
 }
 
+// TODO: add check that commit cb gets called correctly
 #[test]
 fn test_consumer_commit() {
     let _r = env_logger::init();

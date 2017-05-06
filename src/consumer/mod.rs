@@ -12,9 +12,7 @@ use message::Message;
 use metadata::Metadata;
 use util::cstr_to_owned;
 
-use std::mem;
 use std::ptr;
-use std::os::raw::c_void;
 
 pub use consumer::base_consumer::BaseConsumer;
 pub use topic_partition_list::TopicPartitionList;
@@ -78,6 +76,10 @@ pub trait ConsumerContext: Context {
     /// Post-rebalance callback. This method will run after the rebalance and should
     /// terminate its execution quickly.
     fn post_rebalance(&self, _rebalance: &Rebalance) { }
+
+    /// Post commit callback. This method will run after a group of offsets was committed to the
+    /// offset store.
+    fn commit_callback(&self, _result: KafkaResult<()>, _offsets: *mut RDKafkaTopicPartitionList) { }
 }
 
 /// An empty consumer context that can be user when no context is needed.
@@ -86,20 +88,6 @@ pub struct EmptyConsumerContext;
 
 impl Context for EmptyConsumerContext { }
 impl ConsumerContext for EmptyConsumerContext { }
-
-/// Native rebalance callback. This callback will run on every rebalance, and it will call the
-/// rebalance method defined in the current `Context`.
-unsafe extern "C" fn rebalance_cb<C: ConsumerContext>(rk: *mut RDKafka,
-                                                      err: RDKafkaRespErr,
-                                                      partitions: *mut RDKafkaTopicPartitionList,
-                                                      opaque_ptr: *mut c_void) {
-    let context: &C = &*(opaque_ptr as *const C);
-    let native_client = NativeClient::from_ptr(rk);
-
-    context.rebalance(&native_client, err, partitions);
-
-    mem::forget(native_client); // Don't free native client
-}
 
 /// Specifies if the commit should be performed synchronously
 /// or asynchronously.

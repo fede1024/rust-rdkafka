@@ -2,6 +2,7 @@
 extern crate clap;
 extern crate futures;
 extern crate rdkafka;
+extern crate rdkafka_sys;
 
 use clap::{App, Arg};
 use futures::stream::Stream;
@@ -11,6 +12,7 @@ use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, TopicConfig, RDKafkaLogLevel};
 use rdkafka::util::get_rdkafka_version;
+use rdkafka::error::KafkaResult;
 
 mod example_utils;
 use example_utils::setup_logger;
@@ -18,11 +20,11 @@ use example_utils::setup_logger;
 // The Context can be used to change the behavior of producers and consumers by adding callbacks
 // that will be executed by librdkafka.
 // This particular ConsumerContext sets up custom callbacks to log rebalancing events.
-struct ConsumerLoggingContext;
+struct ConsumerContextExample;
 
-impl Context for ConsumerLoggingContext {}
+impl Context for ConsumerContextExample {}
 
-impl ConsumerContext for ConsumerLoggingContext {
+impl ConsumerContext for ConsumerContextExample {
     fn pre_rebalance(&self, rebalance: &Rebalance) {
         info!("Pre rebalance {:?}", rebalance);
     }
@@ -30,20 +32,24 @@ impl ConsumerContext for ConsumerLoggingContext {
     fn post_rebalance(&self, rebalance: &Rebalance) {
         info!("Post rebalance {:?}", rebalance);
     }
+
+    fn commit_callback(&self, _result: KafkaResult<()>, _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList) {
+        info!("Committing offsets");
+    }
 }
 
 // A type alias with your custom consumer can be created for convenience.
-type LoggingConsumer = StreamConsumer<ConsumerLoggingContext>;
+type LoggingConsumer = StreamConsumer<ConsumerContextExample>;
 
 fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
-    let context = ConsumerLoggingContext{};
+    let context = ConsumerContextExample;
 
     let mut consumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
-        .set("enable.auto.commit", "false")
+        .set("enable.auto.commit", "true")
         .set("statistics.interval.ms", "5000")
         .set_default_topic_config(TopicConfig::new()
             .set("auto.offset.reset", "smallest")
@@ -55,7 +61,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
     consumer.subscribe(topics).expect("Can't subscribe to specified topics");
 
     // consumer.start() returns a stream. The stream can be used ot chain together expensive steps,
-    // such as complext computations on a thread pool or asynchronous IO.
+    // such as complex computations on a thread pool or asynchronous IO.
     let message_stream = consumer.start();
 
     for message in message_stream.take(5).wait() {

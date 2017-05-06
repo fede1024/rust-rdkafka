@@ -31,6 +31,8 @@ pub struct TopicPartitionList {
     pub topics: Topics
 }
 
+// TODO: we should support accessing RDKafkaTopicPartitionList directly, without having to
+// build the Rust data structures.
 impl TopicPartitionList {
     /// Create list based on a list from the rdkafka side.
     pub fn from_rdkafka(tp_list: *const RDKafkaTopicPartitionList) -> TopicPartitionList {

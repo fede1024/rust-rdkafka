@@ -2,9 +2,8 @@
 use rdsys;
 use rdsys::types::*;
 
-use client::Client;
+use client::{Client, NativeClient};
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
-use consumer::rebalance_cb;  // TODO: reorganize module
 use consumer::{Consumer, ConsumerContext, CommitMode, EmptyConsumerContext};
 use error::{KafkaError, KafkaResult, IsError};
 use groups::GroupList;
@@ -13,8 +12,43 @@ use metadata::Metadata;
 use topic_partition_list::TopicPartitionList;
 use util::cstr_to_owned;
 
+use std::os::raw::c_void;
 use std::slice;
 use std::str;
+use std::mem;
+
+pub unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
+        _conf: *mut RDKafka, err: RDKafkaRespErr, offsets: *mut RDKafkaTopicPartitionList,
+        opaque_ptr: *mut c_void) {
+    let context = Box::from_raw(opaque_ptr as *mut C);
+
+    let commit_error = if err.is_error() {
+        Err(KafkaError::ConsumerCommit(err))
+    } else {
+        Ok(())
+    };
+    (*context).commit_callback(commit_error, offsets);
+
+    mem::forget(context);   // Do not free the context
+}
+
+/// Native rebalance callback. This callback will run on every rebalance, and it will call the
+/// rebalance method defined in the current `Context`.
+unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
+        rk: *mut RDKafka,
+        err: RDKafkaRespErr,
+        partitions: *mut RDKafkaTopicPartitionList,
+        opaque_ptr: *mut c_void) {
+    // let context: &C = &*(opaque_ptr as *const C);
+    let context = Box::from_raw(opaque_ptr as *mut C);
+    let native_client = NativeClient::from_ptr(rk);
+
+    context.rebalance(&native_client, err, partitions);
+
+    mem::forget(native_client); // Do not free native client
+    mem::forget(context);       // Do not free the context
+}
+
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.
@@ -38,7 +72,10 @@ impl FromClientConfig for BaseConsumer<EmptyConsumerContext> {
 impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
         let native_config = config.create_native_config()?;
-        unsafe { rdsys::rd_kafka_conf_set_rebalance_cb(native_config.ptr(), Some(rebalance_cb::<C>)) };
+        unsafe {
+            rdsys::rd_kafka_conf_set_rebalance_cb(native_config.ptr(), Some(native_rebalance_cb::<C>));
+            rdsys::rd_kafka_conf_set_offset_commit_cb(native_config.ptr(), Some(native_commit_cb::<C>));
+        }
         let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context)?;
         unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
         Ok(BaseConsumer { client: client })
