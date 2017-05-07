@@ -137,11 +137,16 @@ fn test_consume_with_no_message_error() {
 
     let message_stream = consumer.start_with(Duration::from_millis(200), true);
 
-    let start_time = Instant::now();
+    let mut previous_poll_time = None;
     let mut timeouts_count = 0;
     for message in message_stream.wait() {
         match message {
             Ok(Err(KafkaError::NoMessageReceived)) => {
+                if let Some(time) = previous_poll_time {
+                    assert!(Instant::now().duration_since(time) > Duration::from_millis(150));
+                    assert!(Instant::now().duration_since(time) < Duration::from_millis(250));
+                }
+                previous_poll_time = Some(Instant::now());
                 timeouts_count += 1;
                 if timeouts_count == 5 {
                     break;
@@ -153,8 +158,6 @@ fn test_consume_with_no_message_error() {
     }
 
     assert_eq!(timeouts_count, 5);
-    assert!(Instant::now().duration_since(start_time) < Duration::from_millis(1100));
-    assert!(Instant::now().duration_since(start_time) > Duration::from_millis(900));
 }
 
 

@@ -11,4 +11,4 @@ cd /rdkafka/
 rm target/debug/produce_consume_base_test-*
 cargo test --no-run
 # valgrind --leak-check=full target/debug/produce_consume_base_test-*
-valgrind --error-exitcode=100 target/debug/produce_consume_base_test-*
+valgrind --error-exitcode=100 target/debug/produce_consume_base_test-* --nocapture
