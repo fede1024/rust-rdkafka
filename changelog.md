@@ -5,6 +5,7 @@
 * Consumer commit callback
 * Add configurable poll timeout
 * Add special error code for message not received within poll time
+* Add topic field for messages
 
 <a name="0.9.1"></a>
 ## 0.9.1 (2017-04-19)

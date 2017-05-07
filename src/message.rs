@@ -2,6 +2,7 @@
 use rdsys;
 use rdsys::types::*;
 
+use std::ffi::CStr;
 use std::slice;
 use std::str;
 
@@ -64,7 +65,14 @@ impl<'a> Message {
         }
     }
 
-    // TODO: add topic
+    /// Returns the source topic of the message.
+    pub fn topic_name(&'a self) -> &'a str {
+         unsafe {
+             CStr::from_ptr(rdsys::rd_kafka_topic_name((*self.ptr).rkt))
+                 .to_str()
+                 .expect("Topic name is not valid UTF-8")
+         }
+     }
 
     /// Converts the raw bytes of the payload to a reference of type &P, pointing to the same data inside
     /// the message. The returned reference cannot outlive the message.

@@ -57,6 +57,7 @@ fn test_produce_consume_base() {
                     };
                     assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
                     assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
+                    assert_eq!(m.topic_name(), topic_name.as_str());
                 },
                 Err(e) => panic!("Error receiving message: {:?}", e)
             };
@@ -143,8 +144,8 @@ fn test_consume_with_no_message_error() {
         match message {
             Ok(Err(KafkaError::NoMessageReceived)) => {
                 if let Some(time) = previous_poll_time {
-                    assert!(Instant::now().duration_since(time) > Duration::from_millis(150));
-                    assert!(Instant::now().duration_since(time) < Duration::from_millis(250));
+                    assert!(Instant::now().duration_since(time) > Duration::from_millis(100));
+                    assert!(Instant::now().duration_since(time) < Duration::from_millis(300));
                 }
                 previous_poll_time = Some(Instant::now());
                 timeouts_count += 1;
