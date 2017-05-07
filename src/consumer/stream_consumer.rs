@@ -79,7 +79,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         self.start_with(Duration::from_millis(100), false)
     }
 
-    /// Starte the StreamConsumer with the specified poll interval. Additionally, if
+    /// Starts the StreamConsumer with the specified poll interval. Additionally, if
     /// `no_message_error` is set to true, it will return an error of type
     /// `KafkaError::NoMessageReceived` every time the poll interval is reached and no message
     /// has been received.
