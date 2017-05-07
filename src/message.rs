@@ -2,9 +2,9 @@
 use rdsys;
 use rdsys::types::*;
 
+use std::ffi::CStr;
 use std::slice;
 use std::str;
-use std::ffi::CStr;
 
 /// Timestamp of a message
 #[derive(Debug,PartialEq,Eq)]

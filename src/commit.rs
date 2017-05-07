@@ -1,18 +1,15 @@
 use consumer::{BaseConsumer, CommitMode, Consumer, ConsumerContext};
-use error::KafkaResult;
 use topic_partition_list::TopicPartitionList;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-pub type OffsetMap = HashMap<(String, i32), i64>;
-pub type CommitCb = Fn(&OffsetMap, KafkaResult<()>) + Send;
+type OffsetMap = HashMap<(String, i32), i64>;
 
 struct AutoCommitRegistryInner {
     offsets: OffsetMap,
     last_commit_time: Instant,
-    callback: Option<Box<CommitCb>>,
 }
 
 pub struct AutoCommitRegistry<C>
@@ -48,7 +45,6 @@ impl<C> AutoCommitRegistry<C>
         let inner = AutoCommitRegistryInner {
             offsets: HashMap::new(),
             last_commit_time: Instant::now(),
-            callback: None,
         };
         AutoCommitRegistry {
             inner: Arc::new(Mutex::new(inner)),
@@ -58,41 +54,31 @@ impl<C> AutoCommitRegistry<C>
         }
     }
 
-    pub fn set_callback<F>(&mut self, callback: F)
-        where F: Fn(&OffsetMap, KafkaResult<()>) + 'static + Send
-    {
-        let mut inner = self.inner.lock().unwrap();
-        inner.callback = Some(Box::new(callback))
-    }
-
-    pub fn register_message(&self, message_id: (String, i32, i64)) {
+    pub fn register_message(&self, message_id: (String, i32, i64)) -> bool {
         {
             let mut inner = self.inner.lock().unwrap();
             (*inner).offsets.insert((message_id.0, message_id.1), message_id.2);
         }
-        self.maybe_commit();
+        self.maybe_commit()
     }
 
-    pub fn maybe_commit(&self) {
+    pub fn maybe_commit(&self) -> bool {
         let now = Instant::now();
         let mut inner = self.inner.lock().unwrap();
         if now.duration_since((*inner).last_commit_time) >= self.commit_interval {
-            let _ = self.commit_inner(&mut inner);
+            self.commit_inner(&mut inner);
+            return true;
         }
+        false
     }
 
-    pub fn commit(&self) -> KafkaResult<()> {
+    pub fn commit(&self) {
         self.commit_inner(&mut self.inner.lock().unwrap())
     }
 
-    fn commit_inner(&self, inner: &mut AutoCommitRegistryInner) -> KafkaResult<()> {
+    fn commit_inner(&self, inner: &mut AutoCommitRegistryInner) {
         inner.last_commit_time = Instant::now();
-        let result = self.consumer.commit(&offset_map_to_tpl(&inner.offsets), self.commit_mode);
-        if inner.callback.is_some() {
-            let ref callback = inner.callback.as_ref().unwrap();
-            (callback)(&inner.offsets, result.clone());
-        }
-        result
+        let _ = self.consumer.commit(&offset_map_to_tpl(&inner.offsets), self.commit_mode);
     }
 }
 
@@ -121,12 +107,12 @@ fn offset_map_to_tpl(map: &OffsetMap) -> TopicPartitionList { let mut groups = H
 
 #[cfg(test)]
 mod test {
+    extern crate rdkafka_sys as rdsys;
     use super::*;
     use std::thread;
 
     use config::ClientConfig;
     use consumer::base_consumer::BaseConsumer;
-    use topic_partition_list::TopicPartitionList;
 
     #[test]
     fn test_offset_map_to_tpl() {
@@ -150,34 +136,31 @@ mod test {
             .create::<BaseConsumer<_>>()
             .unwrap();
 
-        let committed = Arc::new(Mutex::new(None));
-        let committed_clone = Arc::clone(&committed);
-        let mut reg = AutoCommitRegistry::new(
+        let reg = AutoCommitRegistry::new(
             Duration::from_secs(2),
             CommitMode::Async,
             &consumer,
         );
-        reg.set_callback(move |offsets, _| {
-            let mut c = committed_clone.lock().unwrap();
-            (*c) = Some(offsets.clone());
-        });
 
+        assert_eq!(reg.register_message(("a".to_owned(), 0, 0)), false);
+        assert_eq!(reg.register_message(("a".to_owned(), 1, 1)), false);
+        assert_eq!(reg.register_message(("b".to_owned(), 0, 2)), false);
+        thread::sleep(Duration::from_millis(1200));
+        assert_eq!(reg.register_message(("a".to_owned(), 0, 3)), false);
+        assert_eq!(reg.register_message(("a".to_owned(), 1, 4)), false);
+        assert_eq!(reg.register_message(("b".to_owned(), 0, 5)), false);
+        thread::sleep(Duration::from_millis(1200));
+        assert_eq!(reg.register_message(("a".to_owned(), 0, 6)), true);  // Commit
+        assert_eq!(reg.register_message(("a".to_owned(), 1, 7)), false);
+        assert_eq!(reg.register_message(("b".to_owned(), 0, 8)), false);
+
+        // Check AutoCommitRegistry is send and sync
         let reg_clone = reg.clone();
         let t = thread::spawn(move || {
-            for i in 0..4 {
-                reg_clone.register_message(("a".to_owned(), 0, i as i64));
-                reg_clone.register_message(("a".to_owned(), 1, i + 1 as i64));
-                reg_clone.register_message(("b".to_owned(), 0, i as i64));
-                thread::sleep(Duration::from_millis(800));
-            }
+            reg_clone.register_message(("b".to_owned(), 0, 8));
         });
-        let _ = t.join();
+        t.join().expect("Thread should exit correctly");
 
-        let mut expected = HashMap::new();
-        expected.insert(("a".to_owned(), 0), 3);
-        expected.insert(("a".to_owned(), 1), 3);
-        expected.insert(("b".to_owned(), 0), 2);
-
-        assert_eq!(Some(expected), *committed.lock().unwrap());
+        // TODO: move test to integration tests and verify commit callback
     }
 }

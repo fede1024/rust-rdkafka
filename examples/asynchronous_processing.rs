@@ -12,11 +12,9 @@ use futures::stream::Stream;
 use futures_cpupool::Builder;
 use tokio_core::reactor::Core;
 
-use rdkafka::commit::AutoCommitRegistry;
 use rdkafka::config::{ClientConfig, TopicConfig};
-use rdkafka::consumer::{Consumer, CommitMode};
+use rdkafka::consumer::Consumer;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::error::KafkaError;
 use rdkafka::message::Message;
 use rdkafka::producer::FutureProducer;
 
@@ -65,7 +63,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
         .set_default_topic_config(TopicConfig::new()
-            .set("auto.offset.reset", "smallest")
+            // .set("auto.offset.reset", "smallest")
             .finalize())
         .create::<StreamConsumer<_>>()
         .expect("Consumer creation failed");
@@ -84,24 +82,12 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     // Create a handle to the core, that will be used to provide additional asynchronous work
     // to the event loop.
     let handle = core.handle();
-    let mut offsets = AutoCommitRegistry::new(
-        Duration::from_secs(10),
-        CommitMode::Sync,
-        &consumer
-    );
-    offsets.set_callback(|offsets, commit_result| {
-        println!("> {:?} {:?}", offsets, commit_result);
-    });
 
     // Create the outer pipeline on the message stream.
-    let processed_stream = consumer.start_with(Duration::from_millis(200), true)
+    let processed_stream = consumer.start()
         .filter_map(|result| {  // Filter out errors
             match result {
                 Ok(msg) => Some(msg),
-                Err(KafkaError::NoMessageReceived) => {
-                    offsets.maybe_commit();
-                    None
-                },
                 Err(kafka_error) => {
                     warn!("Error while receiving from Kafka: {:?}", kafka_error);
                     None
@@ -111,10 +97,8 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             info!("Enqueuing message for computation");
             let producer = producer.clone();
             let topic_name = output_topic.to_owned();
-            let source_msg_id = msg.identifier();
-            let offsets = offsets.clone();
             // Create the inner pipeline, that represents the processing of a single event.
-            let process_message = cpu_pool.spawn_fn(move || {
+            let process_message = cpu_pool.spawn_fn(|| {
                 // Take ownership of the message, and run an expensive computation on it,
                 // using one of the threads of the `cpu_pool`.
                 Ok(expensive_computation(&msg))
@@ -122,11 +106,10 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
                 // Send the result of the computation to Kafka, asynchronously.
                 info!("Sending result");
                 producer.send_copy::<String, ()>(&topic_name, None, Some(&computation_result), None, None).unwrap()
-            }).and_then(move |d_report| {
+            }).and_then(|d_report| {
                 // Once the message has been produced, print the delivery report and terminate
                 // the pipeline.
                 info!("Delivery report for result: {:?}", d_report);
-                offsets.register_message(source_msg_id);
                 Ok(())
             }).or_else(|err| {
                 // In case of error, this closure will be executed instead.
