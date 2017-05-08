@@ -26,7 +26,7 @@ use example_utils::setup_logger;
 
 // Emulates an expensive, synchronous computation. This function returns a string with the length
 // of the message payload, if any.
-fn expensive_computation(msg: &Message) -> String {
+fn expensive_computation(msg: Message) -> String {
     info!("Starting expensive computation on message");
     thread::sleep(Duration::from_millis(rand::random::<u64>() % 5000));
     info!("Expensive computation completed");
@@ -98,10 +98,10 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             let producer = producer.clone();
             let topic_name = output_topic.to_owned();
             // Create the inner pipeline, that represents the processing of a single event.
-            let process_message = cpu_pool.spawn_fn(|| {
+            let process_message = cpu_pool.spawn_fn(move || {
                 // Take ownership of the message, and run an expensive computation on it,
                 // using one of the threads of the `cpu_pool`.
-                Ok(expensive_computation(&msg))
+                Ok(expensive_computation(msg))
             }).and_then(move |computation_result| {
                 // Send the result of the computation to Kafka, asynchronously.
                 info!("Sending result");

@@ -78,6 +78,7 @@ impl TopicPartitionList {
     /// Add topic with partitions and offsets configured
     pub fn add_topic_with_partitions_and_offsets(&mut self, topic: &str, partitions: &Vec<(i32, i64)>) {
         let partition_map: HashMap<i32, i64> = partitions.iter()
+            .cloned()
             .collect();
         self.topics.insert(topic.to_string(), partition_map);
     }
