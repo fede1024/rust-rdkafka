@@ -251,11 +251,11 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
 
         // This call will then put the offset in the offset field of this topic partition list.
-        let offset_for_times_error =
+        let offsets_for_times_error =
             unsafe { rdsys::rd_kafka_offsets_for_times(self.client.native_ptr(), tp_list, timeout_ms) };
 
-        let result = if offset_for_times_error.is_error() {
-            Err(KafkaError::MetadataFetch(offset_for_times_error))
+        let result = if offsets_for_times_error.is_error() {
+            Err(KafkaError::MetadataFetch(offsets_for_times_error))
         } else {
             Ok(TopicPartitionList::from_rdkafka(tp_list))
         };
