@@ -4,7 +4,7 @@ services:
   - docker
 
 script:
-  - ./integration_tests.sh
+  - ./test_suite.sh
 
 notifications:
   webhooks:

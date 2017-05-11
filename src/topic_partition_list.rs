@@ -11,6 +11,8 @@ use std::ffi::{CStr, CString};
 use std::ops::Deref;
 use std::slice;
 
+pub const PARTITION_UNASSIGNED: i32 = -1;
+
 pub const OFFSET_BEGINNING: i64 = rdsys::RD_KAFKA_OFFSET_BEGINNING as i64;
 pub const OFFSET_END: i64 = rdsys::RD_KAFKA_OFFSET_END as i64;
 pub const OFFSET_STORED: i64 = rdsys::RD_KAFKA_OFFSET_STORED as i64;
@@ -60,6 +62,7 @@ impl<'a> TopicPartitionListElem<'a> {
 //}
 
 
+/// The structure to store and manipulate a list of topics and partitions with optional offsets.
 pub struct TopicPartitionList2 {
     ptr: *mut RDKafkaTopicPartitionList,
 }
@@ -78,7 +81,15 @@ impl TopicPartitionList2 {
         TopicPartitionList2 { ptr: ptr }
     }
 
-    pub fn add_partition<'a>(&'a self, topic: &str, partition: i32) -> TopicPartitionListElem<'a> {
+    pub fn count(&self) -> usize {
+        unsafe { (*self.ptr).cnt as usize }
+    }
+
+    pub fn capacity(&self) -> usize {
+        unsafe { (*self.ptr).size as usize }
+    }
+
+    pub fn add_partition<'a>(&'a mut self, topic: &str, partition: i32) -> TopicPartitionListElem<'a> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let tp_ptr = unsafe {
             rdsys::rd_kafka_topic_partition_list_add(self.ptr, topic_c.as_ptr(), partition)
@@ -86,7 +97,7 @@ impl TopicPartitionList2 {
         TopicPartitionListElem::from_ptr(self, tp_ptr)
     }
 
-    pub fn add_partition_range(&self, topic: &str, start_partition: i32, stop_partition: i32) {
+    pub fn add_partition_range(&mut self, topic: &str, start_partition: i32, stop_partition: i32) {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         unsafe {
             rdsys::rd_kafka_topic_partition_list_add_range(self.ptr, topic_c.as_ptr(),
@@ -94,7 +105,7 @@ impl TopicPartitionList2 {
         }
     }
 
-    pub fn set_partition_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()> {
+    pub fn set_partition_offset(&mut self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let kafka_err = unsafe {
             rdsys::rd_kafka_topic_partition_list_set_offset(self.ptr, topic_c.as_ptr(), partition,
@@ -249,6 +260,69 @@ impl Deref for TopicPartitionList {
 mod tests {
     extern crate rdkafka_sys as rdkafka;
     use super::*;
+
+    #[test]
+    fn add_partition_offset_find() {
+        let mut tpl = TopicPartitionList2::new();
+
+        tpl.add_partition("topic1", 0);
+        tpl.add_partition("topic1", 1);
+        tpl.add_partition("topic2", 0);
+        tpl.add_partition("topic2", 1);
+
+        tpl.set_partition_offset("topic1", 0, 0).unwrap();
+        tpl.set_partition_offset("topic1", 1, 1).unwrap();
+        tpl.set_partition_offset("topic2", 0, 2).unwrap();
+        tpl.set_partition_offset("topic2", 1, 3).unwrap();
+
+        assert_eq!(tpl.count(), 4);
+        assert!(tpl.set_partition_offset("topic0", 3, 0).is_err());
+        assert!(tpl.set_partition_offset("topic3", 0, 0).is_err());
+
+        let tp0 = tpl.find_partition("topic1", 0).unwrap();
+        let tp1 = tpl.find_partition("topic1", 1).unwrap();
+        let tp2 = tpl.find_partition("topic2", 0).unwrap();
+        let tp3 = tpl.find_partition("topic2", 1).unwrap();
+
+        assert_eq!(tp0.topic(), "topic1");
+        assert_eq!(tp0.partition(), 0);
+        assert_eq!(tp0.offset(), 0);
+        assert_eq!(tp1.offset(), 1);
+        assert_eq!(tp1.topic(), "topic1");
+        assert_eq!(tp1.partition(), 1);
+        assert_eq!(tp2.offset(), 2);
+        assert_eq!(tp2.topic(), "topic2");
+        assert_eq!(tp2.partition(), 0);
+        assert_eq!(tp3.offset(), 3);
+        assert_eq!(tp3.topic(), "topic2");
+        assert_eq!(tp3.partition(), 1);
+
+        tp3.set_offset(1234);
+        assert_eq!(tp3.offset(), 1234);
+    }
+
+    #[test]
+    fn add_partition_range() {
+        let mut tpl = TopicPartitionList2::new();
+
+        tpl.add_partition_range("topic1", 0, 3);
+
+        tpl.set_partition_offset("topic1", 0, 0).unwrap();
+        tpl.set_partition_offset("topic1", 1, 1).unwrap();
+        tpl.set_partition_offset("topic1", 2, 2).unwrap();
+        tpl.set_partition_offset("topic1", 3, 2).unwrap();
+        assert!(tpl.set_partition_offset("topic1", 4, 2).is_err());
+    }
+
+    #[test]
+    fn check_defaults() {
+        let mut tpl = TopicPartitionList2::new();
+
+        tpl.add_partition("topic1", 0);
+
+        let tp = tpl.find_partition("topic1", 0).unwrap();
+        assert_eq!(tp.offset(), OFFSET_INVALID);
+    }
 
     #[test]
     fn test_topic_partition_list_no_configuration() {

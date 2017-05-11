@@ -138,16 +138,15 @@ fn test_consume_with_no_message_error() {
 
     let message_stream = consumer.start_with(Duration::from_millis(200), true);
 
-    let mut previous_poll_time = None;
+    let mut first_poll_time = None;
     let mut timeouts_count = 0;
     for message in message_stream.wait() {
         match message {
             Ok(Err(KafkaError::NoMessageReceived)) => {
-                if let Some(time) = previous_poll_time {
-                    assert!(Instant::now().duration_since(time) > Duration::from_millis(100));
-                    assert!(Instant::now().duration_since(time) < Duration::from_millis(300));
+                // TODO: use entry interface for Options once available
+                if first_poll_time.is_none() {
+                    first_poll_time = Some(Instant::now());
                 }
-                previous_poll_time = Some(Instant::now());
                 timeouts_count += 1;
                 if timeouts_count == 5 {
                     break;
@@ -159,6 +158,9 @@ fn test_consume_with_no_message_error() {
     }
 
     assert_eq!(timeouts_count, 5);
+    // It should take 800ms
+    assert!(Instant::now().duration_since(first_poll_time.unwrap()) < Duration::from_millis(1000));
+    assert!(Instant::now().duration_since(first_poll_time.unwrap()) > Duration::from_millis(600));
 }
 
 

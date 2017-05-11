@@ -13,6 +13,8 @@ services:
 
   kafka:
     build: docker/kafka_0.10.1.1
+    logging:
+      driver: none  # Hide output
     expose:
       - "9092"
     links:
@@ -20,5 +22,7 @@ services:
 
   zookeeper:
     build: docker/zookeeper
+    logging:
+      driver: none  # Hide output
     expose:
       - "2181"
