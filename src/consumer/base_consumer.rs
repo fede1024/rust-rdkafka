@@ -16,6 +16,7 @@ use std::os::raw::c_void;
 use std::slice;
 use std::str;
 use std::mem;
+use std::ptr;
 
 pub unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     _conf: *mut RDKafka,
@@ -139,12 +140,18 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         Ok(Some(kafka_message))
     }
 
-    /// Commits the provided list of partitions. The commit can be sync (blocking), or async.
-    pub fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) -> KafkaResult<()> {
-        let tp_list = topic_partition_list.create_native_topic_partition_list();
+    /// Commits the provided list of partitions, or the underlying consumers state if `None`.
+    /// The commit can be sync (blocking), or async.
+    pub fn commit(&self, topic_partition_list: Option<&TopicPartitionList>, mode: CommitMode) -> KafkaResult<()> {
+        let tp_list = match topic_partition_list {
+            Some(tpl) => tpl.create_native_topic_partition_list(),
+            None => ptr::null_mut()
+        };
         let error = unsafe {
             let e = rdsys::rd_kafka_commit(self.client.native_ptr(), tp_list, mode as i32);
-            rdsys::rd_kafka_topic_partition_list_destroy(tp_list);
+            if !tp_list.is_null() {
+                rdsys::rd_kafka_topic_partition_list_destroy(tp_list);
+            }
             e
         };
         if error.is_error() {
