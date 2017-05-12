@@ -18,7 +18,6 @@ use rdkafka::error::KafkaResult;
 use std::collections::HashMap;
 use std::env;
 
-
 pub fn rand_test_topic() -> String {
     let id = rand::thread_rng()
         .gen_ascii_chars()
@@ -103,26 +102,36 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
 
 
 // Create consumer
-pub fn create_stream_consumer(group_id: &str) -> StreamConsumer<TestContext> {
+pub fn create_stream_consumer(group_id: &str, config_overrides: Option<HashMap<&'static str, &'static str>>) -> StreamConsumer<TestContext> {
     let cons_context = TestContext { _some_data: 64 };
+    let mut config = ClientConfig::new();
 
-    let consumer = ClientConfig::new()
-        .set("group.id", group_id)
-        .set("client.id", "rdkafka_integration_test_client")
-        .set("bootstrap.servers", get_bootstrap_server().as_str())
-        .set("enable.partition.eof", "false")
-        .set("session.timeout.ms", "6000")
-        .set("enable.auto.commit", "false")
-        .set("statistics.interval.ms", "10000")
-        .set("api.version.request", "true")
-        .set_default_topic_config(
-            TopicConfig::new()
-                .set("auto.offset.reset", "earliest")
-                .finalize()
-        )
+    config.set("group.id", group_id);
+    config.set("client.id", "rdkafka_integration_test_client");
+    config.set("bootstrap.servers", get_bootstrap_server().as_str());
+    config.set("enable.partition.eof", "false");
+    config.set("session.timeout.ms", "6000");
+    config.set("enable.auto.commit", "false");
+    config.set("statistics.interval.ms", "10000");
+    config.set("api.version.request", "true");
+    config.set_default_topic_config(
+        TopicConfig::new()
+            .set("auto.offset.reset", "earliest")
+            .finalize()
+    );
+
+    match config_overrides {
+        Some(overrides) => {
+            for (key, value) in overrides {
+                config.set(key, value);
+            }
+        },
+        None => ()
+    }
+
+    config
         .create_with_context::<TestContext, StreamConsumer<_>>(cons_context)
-        .expect("Consumer creation failed");
-    consumer
+        .expect("Consumer creation failed")
 }
 
 pub fn value_fn(id: i32) -> String {

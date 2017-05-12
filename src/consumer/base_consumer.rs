@@ -171,6 +171,17 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
+    /// Store offset for this message to be used on the next (auto)commit.
+    /// When using this `enable.auto.offset.store` should be set to `false` in the config.
+    pub fn store_offset(&self, message: &Message) -> KafkaResult<()> {
+        let error = unsafe { rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset()) };
+        if error.is_error() {
+            Err(KafkaError::StoreOffset(error))
+        } else {
+            Ok(())
+        }
+    }
+
     /// Returns the current topic subscription.
     pub fn subscription(&self) -> KafkaResult<TopicPartitionList> {
         let mut tp_list = unsafe { rdsys::rd_kafka_topic_partition_list_new(0) };

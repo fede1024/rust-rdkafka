@@ -18,7 +18,7 @@ use rdkafka::error::KafkaError;
 use test_utils::*;
 
 use std::time::{Duration, Instant};
-
+use std::collections::HashMap;
 
 // All messages should go to the same partition.
 #[test]
@@ -42,7 +42,7 @@ fn test_produce_consume_base() {
 
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, None, None);
-    let mut consumer = create_stream_consumer(&rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
@@ -75,7 +75,7 @@ fn test_produce_consume_base_assign() {
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(2), None);
-    let mut consumer = create_stream_consumer(&rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group(), None);
     let mut tp_list = TopicPartitionList::new();
     tp_list.add_topic_with_partitions_and_offsets(
         topic_name.as_str(), &vec![(0, OFFSET_BEGINNING), (1, 2), (2, 9)]);
@@ -104,7 +104,7 @@ fn test_produce_consume_with_timestamp() {
 
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
-    let mut consumer = create_stream_consumer(&rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
@@ -134,7 +134,7 @@ fn test_produce_consume_with_timestamp() {
 fn test_consume_with_no_message_error() {
     let _r = env_logger::init();
 
-    let mut consumer = create_stream_consumer(&rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group(), None);
 
     let message_stream = consumer.start_with(Duration::from_millis(200), true);
 
@@ -172,7 +172,7 @@ fn test_metadata() {
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
-    let consumer = create_stream_consumer(&rand_test_group());
+    let consumer = create_stream_consumer(&rand_test_group(), None);
 
     let metadata = consumer.fetch_metadata(None, 5000).unwrap();
 
@@ -197,14 +197,14 @@ fn test_metadata() {
 
 // TODO: add check that commit cb gets called correctly
 #[test]
-fn test_consumer_commit() {
+fn test_consumer_commit_message() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
-    let mut consumer = create_stream_consumer(&rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
@@ -240,12 +240,60 @@ fn test_consumer_commit() {
 }
 
 #[test]
+fn test_consumer_store_offset_commit() {
+    let _r = env_logger::init();
+
+    let topic_name = rand_test_topic();
+    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
+    produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
+    produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
+    let mut config = HashMap::new();
+    config.insert("enable.auto.offset.store", "false");
+    let mut consumer = create_stream_consumer(&rand_test_group(), Some(config));
+    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
+
+    let _consumer_future = consumer.start()
+        .take(33)
+        .for_each(|message| {
+            match message {
+                Ok(m) => {
+                    if m.partition() == 1 {
+                        consumer.store_offset(&m).unwrap();
+                    }
+                },
+                Err(e) => panic!("Error receiving message: {:?}", e)
+            };
+            Ok(())
+        })
+        .wait();
+
+    // Commit the whole current state
+    consumer.commit(None, CommitMode::Sync).unwrap();
+
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 0, 5000).unwrap(), (0, 10));
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 1, 5000).unwrap(), (0, 11));
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 2, 5000).unwrap(), (0, 12));
+
+    let mut assignment = TopicPartitionList::new();
+    assignment.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, -1001), (1, -1001), (2, -1001)]);
+    assert_eq!(assignment, consumer.assignment().unwrap());
+
+    let mut committed = TopicPartitionList::new();
+    committed.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, -1001), (1, 11), (2, -1001)]);
+    assert_eq!(committed, consumer.committed(5000).unwrap());
+
+    let mut position = TopicPartitionList::new();
+    position.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, 10), (1, 11), (2, 12)]);
+    assert_eq!(position, consumer.position().unwrap());
+}
+
+#[test]
 fn test_subscription() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 10, &value_fn, &key_fn, None, None);
-    let mut consumer = create_stream_consumer(&rand_test_group());
+    let mut consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start().take(10).wait();
@@ -263,7 +311,7 @@ fn test_group_membership() {
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
-    let mut consumer = create_stream_consumer(&group_name);
+    let mut consumer = create_stream_consumer(&group_name, None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group

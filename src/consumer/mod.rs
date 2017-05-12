@@ -135,6 +135,12 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().commit_message(message, mode)
     }
 
+    /// Store offset for this message to be used on the next (auto)commit.
+    /// When using this `enable.auto.offset.store` should be set to `false` in the config.
+    fn store_offset(&self, message: &Message) -> KafkaResult<()> {
+        self.get_base_consumer().store_offset(message)
+    }
+
     /// Returns the current topic subscription.
     fn subscription(&self) -> KafkaResult<TopicPartitionList> {
         self.get_base_consumer().subscription()

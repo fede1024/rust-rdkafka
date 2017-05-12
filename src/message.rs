@@ -33,6 +33,11 @@ impl<'a> Message {
         self.ptr
     }
 
+    /// Returns a pointer to the message's RDKafkaTopic
+    pub fn topic_ptr(&self) -> *mut RDKafkaTopic {
+        unsafe { (*self.ptr).rkt }
+    }
+
     /// Returns the length of the key field of the message.
     pub fn key_len(&self) -> usize {
         unsafe { (*self.ptr).key_len }
