@@ -120,10 +120,10 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().assign(assignment)
     }
 
-    /// Commit offsets on broker for the provided list of partitions.
+    /// Commit offsets on broker for the provided list of partitions, or the underlying consumers state if `None`.
     /// If mode is set to CommitMode::Sync, the call will block until
     /// the message has been successfully committed.
-    fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) -> KafkaResult<()> {
+    fn commit(&self, topic_partition_list: Option<&TopicPartitionList>, mode: CommitMode) -> KafkaResult<()> {
         self.get_base_consumer()
             .commit(topic_partition_list, mode)
     }
