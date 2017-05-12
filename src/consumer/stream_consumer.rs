@@ -20,7 +20,8 @@ use std::time::Duration;
 /// be polled and it will return all consumed messages as a `Stream`.
 /// Due to the asynchronous nature of the stream, some messages might be consumed by the consumer
 /// without being processed on the other end of the stream. If auto commit is used, it might cause
-/// message loss after consumer restart. Manual offset commit should be used instead.
+/// message loss after consumer restart. Manual offset storing should be used, see the `store_offset`
+/// function on `Consumer`.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct StreamConsumer<C: ConsumerContext + 'static> {
     consumer: Arc<BaseConsumer<C>>,
