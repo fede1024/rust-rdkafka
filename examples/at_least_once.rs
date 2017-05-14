@@ -1,7 +1,7 @@
 /// This example shows how to achieve at-least-once message delivery semantics. This stream
-/// processing code will simply read from an input topic, and duplicate the content to two output
-/// topics. In case of failure (both client or server side), messages might be duplicated, but they
-/// won't be lost.
+/// processing code will simply read from an input topic, and duplicate the content to any number of
+/// output topics. In case of failure (client or server side), messages might be duplicated,
+/// but they won't be lost.
 ///
 /// The key point is committing the offset only once the message has been fully processed.
 /// Note that this technique only works when messages are processed in order. If a message with
@@ -49,7 +49,7 @@ impl ConsumerContext for LoggingConsumerContext {
     }
 }
 
-// Define a type for convenience
+// Define a new type for convenience
 type LoggingConsumer = StreamConsumer<LoggingConsumerContext>;
 
 fn create_message_stream(brokers: &str, group_id: &str, topic: &str) -> (MessageStream, LoggingConsumer) {
@@ -60,11 +60,10 @@ fn create_message_stream(brokers: &str, group_id: &str, topic: &str) -> (Message
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
-        // Commit automatically: our code won't have to call `consumer.commit*()`. The commit
-        // will be done in the background, every 5 seconds.
+        // Commit automatically every 5 seconds.
         .set("enable.auto.commit", "true")
         .set("auto.commit.interval.ms", "5000")
-        // but only commit the offset that I give you explicitly via `consumer.store_offset`.
+        // but only commit the offsets explicitly stored via `consumer.store_offset`.
         .set("enable.auto.offset.store", "false")
         .set_default_topic_config(TopicConfig::new()
             .finalize())
@@ -81,8 +80,7 @@ fn create_message_stream(brokers: &str, group_id: &str, topic: &str) -> (Message
 fn create_producer(brokers: &str) -> FutureProducer<EmptyContext> {
     ClientConfig::new()
         .set("bootstrap.servers", brokers)
-        //.set("queue.buffering.max.messages", "2")
-        .set("queue.buffering.max.ms", "0")
+        .set("queue.buffering.max.ms", "0")  // Do not buffer
         .set_default_topic_config(TopicConfig::new()
             .finalize())
         .create::<FutureProducer<EmptyContext>>()
@@ -135,7 +133,7 @@ fn main() {
     let (message_stream, consumer) = create_message_stream(brokers, group_id, input_topic);
     let producer = create_producer(brokers);
 
-    for message in message_stream.take(10).wait() {
+    for message in message_stream.wait() {
         match message {
             Err(()) => {
                 warn!("Error while reading from stream");
@@ -144,13 +142,17 @@ fn main() {
                 warn!("Kafka error: {}", e);
             }
             Ok(Ok(m)) => {
-                let delivery_reports = join_all(
+                // Send a copy to the message to every output topic in parallel, and wait for the
+                // delivery report to be received.
+                join_all(
                     output_topics.iter()
                         .map(|output_topic|
                             producer.send_copy(output_topic, None, m.payload(), m.key(), None)  // TODO: fix timestamp
-                                .expect("Failed to produce message")));
-                delivery_reports.wait()
+                                .expect("Failed to produce message")))
+                    .wait()
                     .expect("Message delivery failed for some topic");
+                // Now that the message is completely processed, add it's position to the offset
+                // store. The actual offset will be committed every 5 seconds.
                 if let Err(e) = consumer.store_offset(&m) {
                     warn!("Error while storing offset: {}", e);
                 }

@@ -1,4 +1,7 @@
-## Master
+# Changelog
+
+<a name="0.10.0"></a>
+## 0.10.0 (2017-05-15)
 
 #### Features
 
@@ -8,6 +11,7 @@
 * Add topic field for messages
 * Make the topic partition list optional for consumer commit
 * Add `store_offset` to consumer
+* Add at-least-once delivery example
 
 <a name="0.9.1"></a>
 ## 0.9.1 (2017-04-19)
