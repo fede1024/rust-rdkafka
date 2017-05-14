@@ -138,8 +138,8 @@ impl<C: ProducerContext> BaseProducer<C> {
         delivery_context: Option<Box<C::DeliveryContext>>,
         timestamp: Option<i64>
     ) -> KafkaResult<()>
-        where K: ToBytes,
-              P: ToBytes {
+        where K: ToBytes + ?Sized,
+              P: ToBytes + ?Sized {
         let (payload_ptr, payload_len) = match payload.map(P::to_bytes) {
             None => (ptr::null_mut(), 0),
             Some(p) => (p.as_ptr() as *mut c_void, p.len()),
@@ -292,8 +292,8 @@ impl<C: Context + 'static> _FutureProducer<C> {
         key: Option<&K>,
         timestamp: Option<i64>
     ) -> KafkaResult<DeliveryFuture>
-        where K: ToBytes,
-              P: ToBytes {
+        where K: ToBytes + ?Sized,
+              P: ToBytes + ?Sized {
         let (tx, rx) = futures::oneshot();
         self.producer.send_copy(topic_name, partition, payload, key, Some(Box::new(tx)), timestamp)?;
         Ok(DeliveryFuture{rx: rx})
@@ -370,8 +370,8 @@ impl<C: Context + 'static> FutureProducer<C> {
         key: Option<&K>,
         timestamp: Option<i64>
     ) -> KafkaResult<DeliveryFuture>
-        where K: ToBytes,
-              P: ToBytes {
+        where K: ToBytes + ?Sized,
+              P: ToBytes + ?Sized {
         self.inner.send_copy(topic_name, partition, payload, key, timestamp)
     }
 

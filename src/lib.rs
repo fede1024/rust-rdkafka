@@ -56,6 +56,17 @@
 //! [tokio-rs]: https://tokio.rs/
 //! [asynchronous processing example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs
 //!
+//! ### At-least-once delivery
+//!
+//! At-least-once delivery semantic is common in many streaming applications: every message is guaranteed to be processed at least once; in case of temporary failure, the message can be re-processed and/or re-delivered, but no message will be lost.
+//!
+//! In order to implement at-least-once delivery the stream processing application has to carefully commit the offset only once the message has been processed. Committing the offset too early, instead, might cause message loss, since upon recovery the consumer will start from the next message, skipping the one where the failure occurred.
+//!
+//! To see how to implement at-least-once delivery with `rdkafka`, check out the [at-least-once delivery example] in the examples folder. To know more about delivery semantics, check the [message delivery semantics] chapter in the Kafka documentation.
+//!
+//! [at-least-once delivery example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/at_least_once.rs
+//! [message delivery semantics]: https://kafka.apache.org/0101/documentation.html#semantics
+//!
 //! ## Installation
 //!
 //! Add this to your `Cargo.toml`:

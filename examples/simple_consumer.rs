@@ -52,7 +52,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
         .set("enable.auto.commit", "true")
         .set("statistics.interval.ms", "5000")
         .set_default_topic_config(TopicConfig::new()
-            .set("auto.offset.reset", "smallest")
+            //.set("auto.offset.reset", "smallest")
             .finalize())
         .set_log_level(RDKafkaLogLevel::Debug)
         .create_with_context::<_, LoggingConsumer>(context)
@@ -64,7 +64,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
     // such as complex computations on a thread pool or asynchronous IO.
     let message_stream = consumer.start();
 
-    for message in message_stream.take(5).wait() {
+    for message in message_stream.wait() {
         match message {
             Err(_) => {
                 warn!("Error while reading from stream.");
@@ -86,8 +86,8 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                         ""
                     },
                 };
-                info!("key: '{:?}', payload: '{}', partition: {}, offset: {}",
-                      key, payload, m.partition(), m.offset());
+                info!("key: '{:?}', payload: '{}', topic: {}, partition: {}, offset: {}",
+                      key, payload, m.topic_name(), m.partition(), m.offset());
                 consumer.commit_message(&m, CommitMode::Async).unwrap();
             },
             Ok(Err(e)) => {

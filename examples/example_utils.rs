@@ -1,5 +1,8 @@
 extern crate log;
 extern crate env_logger;
+extern crate chrono;
+
+use self::chrono::prelude::*;
 
 use std::thread;
 use self::log::{LogRecord, LogLevelFilter};
@@ -12,7 +15,10 @@ pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
         } else {
             "".to_string()
         };
-        format!("{}{} - {} - {}", thread_name, record.level(), record.target(), record.args())
+
+        let local_time: DateTime<Local> = Local::now();
+        let time_str = local_time.format("%H:%M:%S%.3f").to_string();
+        format!("{} {}{} - {} - {}", time_str, thread_name, record.level(), record.target(), record.args())
     };
 
     let mut builder = LogBuilder::new();
