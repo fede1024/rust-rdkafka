@@ -40,6 +40,11 @@ pub trait Context: Send + Sync {
         info!("Client stats: {:?}", statistics);
     }
 
+    /// Receives global errors from the librdkafka client.
+    fn error(&self, error: KafkaError, reason: &str) {
+        error!("librdkafka: {}: {}", error, reason);
+    }
+
     // NOTE: when adding a new method, remember to add it to the FutureProducerContext as well.
     // https://github.com/rust-lang/rfcs/pull/1406 will maybe help in the future.
 }
@@ -107,10 +112,10 @@ impl<C: Context> Client<C> {
             -> KafkaResult<Client<C>> {
         let errstr = [0i8; 1024];
         let mut boxed_context = Box::new(context);
-        unsafe { rdsys::rd_kafka_conf_set_opaque(
-            native_config.ptr(), (&mut *boxed_context) as *mut C as *mut c_void) };
+        unsafe { rdsys::rd_kafka_conf_set_opaque(native_config.ptr(), (&mut *boxed_context) as *mut C as *mut c_void) };
         unsafe { rdsys::rd_kafka_conf_set_log_cb(native_config.ptr(), Some(native_log_cb::<C>)) };
         unsafe { rdsys::rd_kafka_conf_set_stats_cb(native_config.ptr(), Some(native_stats_cb::<C>)) };
+        unsafe { rdsys::rd_kafka_conf_set_error_cb(native_config.ptr(), Some(native_error_cb::<C>)) };
 
         let client_ptr = unsafe {
             rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr_move(), errstr.as_ptr() as *mut i8, errstr.len())
@@ -275,6 +280,23 @@ pub unsafe extern "C" fn native_stats_cb<C: Context>(
     mem::forget(context);   // Do not free the context
 
     1 // librdkafka will not free the json buffer
+}
+
+pub unsafe extern "C" fn native_error_cb<C: Context>(
+        _client: *mut RDKafka, err: i32, reason: *const i8,
+        opaque: *mut c_void) {
+    let err = rdsys::primive_to_rd_kafka_resp_err_t(err).expect("global error not an rd_kafka_resp_err_t");
+    let error = match err {
+        rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN => {
+            KafkaError::AllBrokersDown(err)
+        }
+        _ => KafkaError::Global(err),
+    };
+    let reason = CStr::from_ptr(reason).to_string_lossy();
+
+    let context = Box::from_raw(opaque as *mut C);
+    (*context).error(error, reason.trim());
+    mem::forget(context);   // Do not free the context
 }
 
 #[cfg(test)]
