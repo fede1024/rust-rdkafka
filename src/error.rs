@@ -51,6 +51,7 @@ pub enum KafkaError {
     Subscription(String),
     TopicConfig(RDKafkaConfRes, String, String, String),
     TopicCreation(String),
+    AllBrokersDown(RDKafkaRespErr),
 }
 
 impl fmt::Debug for KafkaError {
@@ -71,6 +72,7 @@ impl fmt::Debug for KafkaError {
             KafkaError::Subscription(ref err) => write!(f, "KafkaError (Subscription error: {})", err),
             KafkaError::TopicConfig(_, ref desc, ref key, ref value) => write!(f, "KafkaError (Topic config error: {} {} {})", desc, key, value),
             KafkaError::TopicCreation(ref err) => write!(f, "KafkaError (Topic creation error: {})", err),
+            KafkaError::AllBrokersDown(err) => write!(f, "KafkaError (All brokers down error: {})", resp_err_description(err)),
         }
     }
 }
@@ -93,6 +95,7 @@ impl fmt::Display for KafkaError {
             KafkaError::Subscription(ref err) => write!(f, "Subscription error: {}", err),
             KafkaError::TopicConfig(_, ref desc, ref key, ref value) => write!(f, "Topic config error: {} {} {}", desc, key, value),
             KafkaError::TopicCreation(ref err) => write!(f, "Topic creation error: {}", err),
+            KafkaError::AllBrokersDown(err) => write!(f, "All brokers down error: {}", resp_err_description(err)),
         }
     }
 }
@@ -115,6 +118,7 @@ impl error::Error for KafkaError {
             KafkaError::Subscription(_) => "Subscription error",
             KafkaError::TopicConfig(_, _, _, _) => "Topic config error",
             KafkaError::TopicCreation(_) => "Topic creation error",
+            KafkaError::AllBrokersDown(_) => "All brokers down error",
         }
     }
 
