@@ -35,13 +35,12 @@ pub trait ConsumerContext: Context {
         &self,
         native_client: &NativeClient,
         err: RDKafkaRespErr,
-        partitions_ptr: *mut RDKafkaTopicPartitionList,
+        tpl_ptr: *mut RDKafkaTopicPartitionList,
     ) {
 
         let rebalance = match err {
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-                // TODO: this might be expensive
-                let topic_partition_list = TopicPartitionList::from_rdkafka(partitions_ptr);
+                let topic_partition_list = TopicPartitionList::from_ptr(tpl_ptr);
                 Rebalance::Assign(topic_partition_list)
             }
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke,
@@ -58,7 +57,7 @@ pub trait ConsumerContext: Context {
         unsafe {
             match err {
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-                    rdsys::rd_kafka_assign(native_client.ptr(), partitions_ptr);
+                    rdsys::rd_kafka_assign(native_client.ptr(), tpl_ptr);
                 }
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
                     rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
