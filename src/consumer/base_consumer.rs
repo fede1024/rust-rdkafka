@@ -185,7 +185,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         let result = if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
         } else {
-            Ok(TopicPartitionList::from_ptr(tpl_ptr))
+            Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
         };
 
         result
@@ -199,7 +199,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
         } else {
-            Ok(TopicPartitionList::from_ptr(tpl_ptr))
+            Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
         }
     }
 
@@ -217,7 +217,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         if committed_error.is_error() {
             Err(KafkaError::MetadataFetch(committed_error))
         } else {
-            Ok(TopicPartitionList::from_ptr(tpl_ptr))
+            Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
         }
     }
 
@@ -228,7 +228,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         if assignment_error.is_error() {
             return Err(KafkaError::MetadataFetch(assignment_error));
         }
-        let mut tpl = TopicPartitionList::from_ptr(tpl_ptr);
+        let mut tpl = unsafe { TopicPartitionList::from_ptr(tpl_ptr) };
 
         // Set the timestamp we want in the offset field for every partition as librdkafka expects.
         tpl.set_all_offsets(Offset(timestamp));
@@ -256,7 +256,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
         } else {
-            Ok(TopicPartitionList::from_ptr(tpl_ptr))
+            Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
         }
     }
 

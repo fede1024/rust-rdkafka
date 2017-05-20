@@ -77,9 +77,9 @@ fn test_produce_consume_base_assign() {
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(2), None);
     let mut consumer = create_stream_consumer(&rand_test_group(), None);
     let mut tpl = TopicPartitionList::new();
-    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning).unwrap();
-    tpl.add_partition_offset(&topic_name, 1, Offset::Offset(2)).unwrap();
-    tpl.add_partition_offset(&topic_name, 2, Offset::Offset(9)).unwrap();
+    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
+    tpl.add_partition_offset(&topic_name, 1, Offset::Offset(2));
+    tpl.add_partition_offset(&topic_name, 2, Offset::Offset(9));
     consumer.assign(&tpl).unwrap();
 
     let mut partition_count = vec![0, 0, 0];
@@ -231,21 +231,21 @@ fn test_consumer_commit_message() {
     assert_eq!(consumer.fetch_watermarks(&topic_name, 2, 5000).unwrap(), (0, 12));
 
     let mut assignment = TopicPartitionList::new();
-    assignment.add_partition_offset(&topic_name, 0, Offset::Invalid).unwrap();
-    assignment.add_partition_offset(&topic_name, 1, Offset::Invalid).unwrap();
-    assignment.add_partition_offset(&topic_name, 2, Offset::Invalid).unwrap();
+    assignment.add_partition_offset(&topic_name, 0, Offset::Invalid);
+    assignment.add_partition_offset(&topic_name, 1, Offset::Invalid);
+    assignment.add_partition_offset(&topic_name, 2, Offset::Invalid);
     assert_eq!(assignment, consumer.assignment().unwrap());
 
     let mut committed = TopicPartitionList::new();
-    committed.add_partition_offset(&topic_name, 0, Offset::Invalid).unwrap();
-    committed.add_partition_offset(&topic_name, 1, Offset::Offset(11)).unwrap();
-    committed.add_partition_offset(&topic_name, 2, Offset::Invalid).unwrap();
+    committed.add_partition_offset(&topic_name, 0, Offset::Invalid);
+    committed.add_partition_offset(&topic_name, 1, Offset::Offset(11));
+    committed.add_partition_offset(&topic_name, 2, Offset::Invalid);
     assert_eq!(committed, consumer.committed(5000).unwrap());
 
     let mut position = TopicPartitionList::new();
-    position.add_partition_offset(&topic_name, 0, Offset::Offset(10)).unwrap();
-    position.add_partition_offset(&topic_name, 1, Offset::Offset(11)).unwrap();
-    position.add_partition_offset(&topic_name, 2, Offset::Offset(12)).unwrap();
+    position.add_partition_offset(&topic_name, 0, Offset::Offset(10));
+    position.add_partition_offset(&topic_name, 1, Offset::Offset(11));
+    position.add_partition_offset(&topic_name, 2, Offset::Offset(12));
     assert_eq!(position, consumer.position().unwrap());
 }
 
@@ -285,21 +285,21 @@ fn test_consumer_store_offset_commit() {
     assert_eq!(consumer.fetch_watermarks(&topic_name, 2, 5000).unwrap(), (0, 12));
 
     let mut assignment = TopicPartitionList::new();
-    assignment.add_partition_offset(&topic_name, 0, Offset::Invalid).unwrap();
-    assignment.add_partition_offset(&topic_name, 1, Offset::Invalid).unwrap();
-    assignment.add_partition_offset(&topic_name, 2, Offset::Invalid).unwrap();
+    assignment.add_partition_offset(&topic_name, 0, Offset::Invalid);
+    assignment.add_partition_offset(&topic_name, 1, Offset::Invalid);
+    assignment.add_partition_offset(&topic_name, 2, Offset::Invalid);
     assert_eq!(assignment, consumer.assignment().unwrap());
 
     let mut committed = TopicPartitionList::new();
-    committed.add_partition_offset(&topic_name, 0, Offset::Invalid).unwrap();
-    committed.add_partition_offset(&topic_name, 1, Offset::Offset(11)).unwrap();
-    committed.add_partition_offset(&topic_name, 2, Offset::Invalid).unwrap();
+    committed.add_partition_offset(&topic_name, 0, Offset::Invalid);
+    committed.add_partition_offset(&topic_name, 1, Offset::Offset(11));
+    committed.add_partition_offset(&topic_name, 2, Offset::Invalid);
     assert_eq!(committed, consumer.committed(5000).unwrap());
 
     let mut position = TopicPartitionList::new();
-    position.add_partition_offset(&topic_name, 0, Offset::Offset(10)).unwrap();
-    position.add_partition_offset(&topic_name, 1, Offset::Offset(11)).unwrap();
-    position.add_partition_offset(&topic_name, 2, Offset::Offset(12)).unwrap();
+    position.add_partition_offset(&topic_name, 0, Offset::Offset(10));
+    position.add_partition_offset(&topic_name, 1, Offset::Offset(11));
+    position.add_partition_offset(&topic_name, 2, Offset::Offset(12));
     assert_eq!(position, consumer.position().unwrap());
 }
 
