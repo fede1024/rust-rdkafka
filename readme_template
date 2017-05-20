@@ -5,7 +5,7 @@
 [![Build Status](https://travis-ci.org/fede1024/rust-rdkafka.svg?branch=master)](https://travis-ci.org/fede1024/rust-rdkafka)
 [![Join the chat at https://gitter.im/rust-rdkafka/Lobby](https://badges.gitter.im/rust-rdkafka/Lobby.svg)](https://gitter.im/rust-rdkafka/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Kafka client library for Rust based on [librdkafka].
+A fully asynchronous, [futures]-based Kafka client library for Rust based on [librdkafka].
 
 __INCLUDE_RUST_DOC__$src/lib.rs$## The library
 ## rdkafka-sys
