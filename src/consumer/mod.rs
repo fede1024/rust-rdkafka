@@ -19,8 +19,8 @@ pub use topic_partition_list::TopicPartitionList;
 
 /// Rebalance information.
 #[derive(Clone, Debug)]
-pub enum Rebalance {
-    Assign(TopicPartitionList),
+pub enum Rebalance<'a> {
+    Assign(&'a TopicPartitionList),
     Revoke,
     Error(String),
 }
@@ -35,13 +35,12 @@ pub trait ConsumerContext: Context {
         &self,
         native_client: &NativeClient,
         err: RDKafkaRespErr,
-        tpl_ptr: *mut RDKafkaTopicPartitionList,
+        tpl: &TopicPartitionList,
     ) {
 
         let rebalance = match err {
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-                let topic_partition_list = TopicPartitionList::from_ptr(tpl_ptr);
-                Rebalance::Assign(topic_partition_list)
+                Rebalance::Assign(tpl)
             }
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke,
             _ => {
@@ -57,7 +56,7 @@ pub trait ConsumerContext: Context {
         unsafe {
             match err {
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-                    rdsys::rd_kafka_assign(native_client.ptr(), tpl_ptr);
+                    rdsys::rd_kafka_assign(native_client.ptr(), tpl.ptr());
                 }
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
                     rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
@@ -73,12 +72,12 @@ pub trait ConsumerContext: Context {
     /// Pre-rebalance callback. This method will run before the rebalance and should
     /// terminate its execution quickly.
     #[allow(unused_variables)]
-    fn pre_rebalance(&self, rebalance: &Rebalance) {}
+    fn pre_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
 
     /// Post-rebalance callback. This method will run after the rebalance and should
     /// terminate its execution quickly.
     #[allow(unused_variables)]
-    fn post_rebalance(&self, rebalance: &Rebalance) {}
+    fn post_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
 
     /// Post commit callback. This method will run after a group of offsets was committed to the
     /// offset store.

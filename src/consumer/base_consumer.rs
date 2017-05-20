@@ -10,6 +10,7 @@ use groups::GroupList;
 use message::Message;
 use metadata::Metadata;
 use topic_partition_list::TopicPartitionList;
+use topic_partition_list::Offset::Offset;
 use util::cstr_to_owned;
 
 use std::os::raw::c_void;
@@ -40,17 +41,19 @@ pub unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
 unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     rk: *mut RDKafka,
     err: RDKafkaRespErr,
-    partitions: *mut RDKafkaTopicPartitionList,
+    native_tpl: *mut RDKafkaTopicPartitionList,
     opaque_ptr: *mut c_void,
 ) {
     // let context: &C = &*(opaque_ptr as *const C);
     let context = Box::from_raw(opaque_ptr as *mut C);
     let native_client = NativeClient::from_ptr(rk);
+    let tpl = TopicPartitionList::from_ptr(native_tpl);
 
-    context.rebalance(&native_client, err, partitions);
+    context.rebalance(&native_client, err, &tpl);
 
-    mem::forget(native_client); // Do not free native client
     mem::forget(context); // Do not free the context
+    mem::forget(native_client); // Do not free native client TODO: check possible leak
+    tpl.leak() // Do not free native topic partition list
 }
 
 
@@ -176,13 +179,13 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Returns the current topic subscription.
     pub fn subscription(&self) -> KafkaResult<TopicPartitionList> {
-        let tpl = TopicPartitionList::new();
-        let error = unsafe { rdsys::rd_kafka_subscription(self.client.native_ptr(), &mut tpl.ptr()) };
+        let mut tpl_ptr = ptr::null_mut();
+        let error = unsafe { rdsys::rd_kafka_subscription(self.client.native_ptr(), &mut tpl_ptr) };
 
         let result = if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
         } else {
-            Ok(tpl)
+            Ok(TopicPartitionList::from_ptr(tpl_ptr))
         };
 
         result
@@ -190,43 +193,45 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Returns the current partition assignment.
     pub fn assignment(&self) -> KafkaResult<TopicPartitionList> {
-        let tpl = TopicPartitionList::new();
-        let error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl.ptr()) };
+        let mut tpl_ptr = ptr::null_mut();
+        let error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
 
         if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
         } else {
-            Ok(tpl)
+            Ok(TopicPartitionList::from_ptr(tpl_ptr))
         }
     }
 
-    /// Retrieve committed offsets for topics and partitions.
+    /// Retrieve committed offsets for topics and partitions currently assigned to the
+    /// consumer
     pub fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
-        let tpl = TopicPartitionList::new();
-        let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl.ptr()) };
+        let mut tpl_ptr = ptr::null_mut();
+        let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
         if assignment_error.is_error() {
             return Err(KafkaError::MetadataFetch(assignment_error));
         }
 
-        let committed_error = unsafe { rdsys::rd_kafka_committed(self.client.native_ptr(), tpl.ptr(), timeout_ms) };
+        let committed_error = unsafe { rdsys::rd_kafka_committed(self.client.native_ptr(), tpl_ptr, timeout_ms) };
 
         if committed_error.is_error() {
             Err(KafkaError::MetadataFetch(committed_error))
         } else {
-            Ok(tpl)
+            Ok(TopicPartitionList::from_ptr(tpl_ptr))
         }
     }
 
     /// Lookup the offsets for this consumer's partitions by timestamp.
     pub fn offsets_for_timestamp(&self, timestamp: i64, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
-        let mut tpl = TopicPartitionList::new();
-        let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl.ptr()) };
+        let mut tpl_ptr = ptr::null_mut();
+        let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
         if assignment_error.is_error() {
             return Err(KafkaError::MetadataFetch(assignment_error));
         }
+        let mut tpl = TopicPartitionList::from_ptr(tpl_ptr);
 
         // Set the timestamp we want in the offset field for every partition as librdkafka expects.
-        tpl.set_all_offsets(timestamp);
+        tpl.set_all_offsets(Offset(timestamp));
 
         // This call will then put the offset in the offset field of this topic partition list.
         let offsets_for_times_error =
@@ -241,17 +246,17 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Retrieve current positions (offsets) for topics and partitions.
     pub fn position(&self) -> KafkaResult<TopicPartitionList> {
-        let tpl = TopicPartitionList::new();
+        let mut tpl_ptr = ptr::null_mut();
         let error = unsafe {
             // TODO: improve error handling
-            rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl.ptr());
-            rdsys::rd_kafka_position(self.client.native_ptr(), tpl.ptr())
+            rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr);
+            rdsys::rd_kafka_position(self.client.native_ptr(), tpl_ptr)
         };
 
         if error.is_error() {
             Err(KafkaError::MetadataFetch(error))
         } else {
-            Ok(tpl)
+            Ok(TopicPartitionList::from_ptr(tpl_ptr))
         }
     }
 

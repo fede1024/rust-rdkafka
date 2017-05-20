@@ -21,8 +21,8 @@ echo -e "${GREEN}*** Build tests ***${NC}"
 cargo test --no-run
 
 echo -e "${GREEN}*** Run unit tests ***${NC}"
-# valgrind --leak-check=full target/debug/produce_consume_base_test-*
-valgrind --error-exitcode=100 target/debug/rdkafka-* --nocapture
+valgrind --error-exitcode=100 --leak-check=full target/debug/rdkafka-* --nocapture
+
 if [ "$?" != "0" ]; then
     echo -e "${RED}*** Failure in unit tests ***${NC}"
     exit 1
@@ -30,7 +30,7 @@ else
     echo -e "${GREEN}*** Unit tests succeeded ***${NC}"
 fi
 
-valgrind --error-exitcode=100 target/debug/produce_consume_base_test-* --nocapture
+valgrind --error-exitcode=100 --leak-check=full target/debug/produce_consume_base_test-* --nocapture
 if [ "$?" != "0" ]; then
     echo -e "${RED}*** Failure in integration tests ***${NC}"
     exit 1
