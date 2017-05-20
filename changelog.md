@@ -1,5 +1,9 @@
 # Changelog
 
+#### Features
+
+* The topic partition list object from librdkafka is now completely accessible from Rust.
+
 <a name="0.10.0"></a>
 ## 0.10.0 (2017-05-15)
 
