@@ -1,5 +1,5 @@
 //! # rust-rdkafka
-//! Kafka client library for Rust based on [librdkafka].
+//! A fully asynchronous, [futures]-based Kafka client library for Rust based on [librdkafka].
 //!
 //! ## The library
 //! `rust-rdkafka` provides a safe Rust interface to librdkafka. It is currently based on librdkafka 0.9.5.
@@ -14,15 +14,15 @@
 //!
 //! The main features provided at the moment are:
 //!
-//! - Support for Kafka 0.8.x, 0.9.x and 0.10.x (timestamp support coming soon). For more information about  broker compatibility options, check the [librdkafka documentation].
+//! - Support for Kafka 0.8.x, 0.9.x and 0.10.x. For more information about broker compatibility options, check the [librdkafka documentation].
 //! - Consume from single or multiple topics.
 //! - Automatic consumer rebalancing.
 //! - Customizable rebalance, with pre and post rebalance callbacks.
-//! - Offset commit.
-//! - Message production.
+//! - Synchronous or asynchronous message production.
+//! - Customizable offset commit.
 //! - Access to cluster metadata (list of topic-partitions, replicas, active brokers etc).
 //! - Access to group metadata (list groups, list members of groups, hostnames etc).
-//! - Access to producer and consumer metrics and statistics.
+//! - Access to producer and consumer metrics, errors and callbacks.
 //!
 //! [librdkafka documentation]: https://github.com/edenhill/librdkafka/wiki/Broker-version-compatibility
 //!
