@@ -2,6 +2,10 @@
 pub mod base_consumer;
 pub mod stream_consumer;
 
+// Re-export
+pub use self::base_consumer::BaseConsumer;
+pub use self::stream_consumer::{MessageStream, StreamConsumer};
+
 use rdsys;
 use rdsys::types::*;
 
@@ -14,8 +18,7 @@ use util::cstr_to_owned;
 
 use std::ptr;
 
-pub use consumer::base_consumer::BaseConsumer;
-pub use topic_partition_list::TopicPartitionList;
+use topic_partition_list::TopicPartitionList;
 
 /// Rebalance information.
 #[derive(Clone, Debug)]

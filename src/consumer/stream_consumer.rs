@@ -1,6 +1,5 @@
 //! Stream-based consumer implementation.
-use futures::{Future, Poll, Sink};
-use futures::stream::Stream;
+use futures::{Future, Poll, Sink, Stream};
 use futures::sync::mpsc;
 
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};

@@ -175,3 +175,5 @@ pub mod util;
 
 // Re-export
 pub use message::Message;
+pub use topic_partition_list::TopicPartitionList;
+pub use topic_partition_list::Offset;

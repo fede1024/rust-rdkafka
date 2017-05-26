@@ -243,6 +243,19 @@ impl TopicPartitionList {
         vec
     }
 
+    /// Returns all the elements of the list that belong to the specified topic.
+    pub fn elements_for_topic<'a>(&'a self, topic: &str) -> Vec<TopicPartitionListElem<'a>> {
+        let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
+        let mut vec = Vec::with_capacity(slice.len());
+        for elem_ptr in slice {
+            let tp = unsafe { TopicPartitionListElem::from_ptr(self, &mut *elem_ptr) };
+            if tp.topic() == topic {
+                vec.push(tp);
+            }
+        }
+        vec
+    }
+
     /// Returns a hashmap-based representation of the list.
     pub fn to_topic_map(&self) -> HashMap<(String, i32), Offset> {
         self.elements().iter()
