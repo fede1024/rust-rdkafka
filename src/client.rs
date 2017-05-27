@@ -3,6 +3,7 @@ use rdsys;
 use rdsys::types::*;
 
 use std::ffi::{CString, CStr};
+use std::slice;
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
@@ -266,15 +267,20 @@ pub unsafe extern "C" fn native_stats_cb<C: Context>(
         opaque: *mut c_void) -> i32 {
     let context = Box::from_raw(opaque as *mut C);
 
-    let statistics_json = String::from_raw_parts(json as *mut u8, json_len, json_len);
-    match serde_json::from_str(&statistics_json) {
-        Ok(stats) => (*context).stats(stats),
-        Err(e) => error!("Could not parse statistics json: {}", e)
+    let mut bytes_vec = Vec::new();
+    bytes_vec.extend_from_slice(slice::from_raw_parts(json as *mut u8, json_len));
+    let json_string = CString::from_vec_unchecked(bytes_vec).into_string();
+    match json_string {
+        Ok(json) => match serde_json::from_str(&json) {
+            Ok(stats) => (*context).stats(stats),
+            Err(e) => error!("Could not parse statistics JSON: {}", e)
+        },
+        Err(e) => error!("Statistics JSON string is not UTF-8: {:?}", e)
     }
 
     mem::forget(context);   // Do not free the context
 
-    1 // librdkafka will not free the json buffer
+    0 // librdkafka will free the json buffer
 }
 
 #[cfg(test)]

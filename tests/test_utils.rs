@@ -70,7 +70,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
     // Produce some messages
     let producer = ClientConfig::new()
         .set("bootstrap.servers", get_bootstrap_server().as_str())
-        .set("statistics.interval.ms", "10000")
+        .set("statistics.interval.ms", "500")
         .set("api.version.request", "true")
         .set_default_topic_config(TopicConfig::new()
             .set("produce.offset.report", "true")
@@ -112,7 +112,7 @@ pub fn create_stream_consumer(group_id: &str, config_overrides: Option<HashMap<&
     config.set("enable.partition.eof", "false");
     config.set("session.timeout.ms", "6000");
     config.set("enable.auto.commit", "false");
-    config.set("statistics.interval.ms", "10000");
+    config.set("statistics.interval.ms", "500");
     config.set("api.version.request", "true");
     config.set_default_topic_config(
         TopicConfig::new()

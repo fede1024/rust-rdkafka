@@ -4,6 +4,10 @@
 
 * The topic partition list object from librdkafka is now completely accessible from Rust.
 
+#### Bugs
+
+* Fix memory access bug in statistics callback
+
 <a name="0.10.0"></a>
 ## 0.10.0 (2017-05-15)
 
