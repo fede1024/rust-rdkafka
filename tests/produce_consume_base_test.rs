@@ -161,7 +161,7 @@ fn test_consume_with_no_message_error() {
 
     assert_eq!(timeouts_count, 5);
     // It should take 800ms
-    assert!(Instant::now().duration_since(first_poll_time.unwrap()) < Duration::from_millis(1000));
+    assert!(Instant::now().duration_since(first_poll_time.unwrap()) < Duration::from_millis(1500));
     assert!(Instant::now().duration_since(first_poll_time.unwrap()) > Duration::from_millis(600));
 }
 
