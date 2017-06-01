@@ -174,6 +174,7 @@ pub mod topic_partition_list;
 pub mod util;
 
 // Re-export
+pub use client::Context;
 pub use message::Message;
 pub use topic_partition_list::TopicPartitionList;
 pub use topic_partition_list::Offset;
