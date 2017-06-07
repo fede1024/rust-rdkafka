@@ -12,7 +12,7 @@ use futures::*;
 
 use rdkafka::consumer::{Consumer, CommitMode};
 use rdkafka::message::Timestamp;
-use rdkafka::topic_partition_list::{OFFSET_BEGINNING, TopicPartitionList};
+use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::error::KafkaError;
 
 use test_utils::*;
@@ -76,10 +76,11 @@ fn test_produce_consume_base_assign() {
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(2), None);
     let mut consumer = create_stream_consumer(&rand_test_group(), None);
-    let mut tp_list = TopicPartitionList::new();
-    tp_list.add_topic_with_partitions_and_offsets(
-        topic_name.as_str(), &vec![(0, OFFSET_BEGINNING), (1, 2), (2, 9)]);
-    consumer.assign(&tp_list).unwrap();
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
+    tpl.add_partition_offset(&topic_name, 1, Offset::Offset(2));
+    tpl.add_partition_offset(&topic_name, 2, Offset::Offset(9));
+    consumer.assign(&tpl).unwrap();
 
     let mut partition_count = vec![0, 0, 0];
 
@@ -126,8 +127,9 @@ fn test_produce_consume_with_timestamp() {
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999999));
 
     // Lookup the offsets
-    let mut offsets = consumer.offsets_for_timestamp(999999, 100).unwrap();
-    assert_eq!(offsets.topics.remove(&topic_name).unwrap().take().unwrap().get(0).unwrap().offset, 100);
+    let tpl = consumer.offsets_for_timestamp(999999, 100).unwrap();
+    let tp = tpl.find_partition(&topic_name, 0).unwrap();
+    assert_eq!(tp.offset(), Offset::Offset(100));
 }
 
 #[test]
@@ -138,16 +140,15 @@ fn test_consume_with_no_message_error() {
 
     let message_stream = consumer.start_with(Duration::from_millis(200), true);
 
-    let mut previous_poll_time = None;
+    let mut first_poll_time = None;
     let mut timeouts_count = 0;
     for message in message_stream.wait() {
         match message {
             Ok(Err(KafkaError::NoMessageReceived)) => {
-                if let Some(time) = previous_poll_time {
-                    assert!(Instant::now().duration_since(time) > Duration::from_millis(100));
-                    assert!(Instant::now().duration_since(time) < Duration::from_millis(300));
+                // TODO: use entry interface for Options once available
+                if first_poll_time.is_none() {
+                    first_poll_time = Some(Instant::now());
                 }
-                previous_poll_time = Some(Instant::now());
                 timeouts_count += 1;
                 if timeouts_count == 5 {
                     break;
@@ -159,6 +160,9 @@ fn test_consume_with_no_message_error() {
     }
 
     assert_eq!(timeouts_count, 5);
+    // It should take 800ms
+    assert!(Instant::now().duration_since(first_poll_time.unwrap()) < Duration::from_millis(1500));
+    assert!(Instant::now().duration_since(first_poll_time.unwrap()) > Duration::from_millis(600));
 }
 
 
@@ -227,15 +231,21 @@ fn test_consumer_commit_message() {
     assert_eq!(consumer.fetch_watermarks(&topic_name, 2, 5000).unwrap(), (0, 12));
 
     let mut assignment = TopicPartitionList::new();
-    assignment.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, -1001), (1, -1001), (2, -1001)]);
+    assignment.add_partition_offset(&topic_name, 0, Offset::Invalid);
+    assignment.add_partition_offset(&topic_name, 1, Offset::Invalid);
+    assignment.add_partition_offset(&topic_name, 2, Offset::Invalid);
     assert_eq!(assignment, consumer.assignment().unwrap());
 
     let mut committed = TopicPartitionList::new();
-    committed.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, -1001), (1, 11), (2, -1001)]);
+    committed.add_partition_offset(&topic_name, 0, Offset::Invalid);
+    committed.add_partition_offset(&topic_name, 1, Offset::Offset(11));
+    committed.add_partition_offset(&topic_name, 2, Offset::Invalid);
     assert_eq!(committed, consumer.committed(5000).unwrap());
 
     let mut position = TopicPartitionList::new();
-    position.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, 10), (1, 11), (2, 12)]);
+    position.add_partition_offset(&topic_name, 0, Offset::Offset(10));
+    position.add_partition_offset(&topic_name, 1, Offset::Offset(11));
+    position.add_partition_offset(&topic_name, 2, Offset::Offset(12));
     assert_eq!(position, consumer.position().unwrap());
 }
 
@@ -275,15 +285,21 @@ fn test_consumer_store_offset_commit() {
     assert_eq!(consumer.fetch_watermarks(&topic_name, 2, 5000).unwrap(), (0, 12));
 
     let mut assignment = TopicPartitionList::new();
-    assignment.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, -1001), (1, -1001), (2, -1001)]);
+    assignment.add_partition_offset(&topic_name, 0, Offset::Invalid);
+    assignment.add_partition_offset(&topic_name, 1, Offset::Invalid);
+    assignment.add_partition_offset(&topic_name, 2, Offset::Invalid);
     assert_eq!(assignment, consumer.assignment().unwrap());
 
     let mut committed = TopicPartitionList::new();
-    committed.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, -1001), (1, 11), (2, -1001)]);
+    committed.add_partition_offset(&topic_name, 0, Offset::Invalid);
+    committed.add_partition_offset(&topic_name, 1, Offset::Offset(11));
+    committed.add_partition_offset(&topic_name, 2, Offset::Invalid);
     assert_eq!(committed, consumer.committed(5000).unwrap());
 
     let mut position = TopicPartitionList::new();
-    position.add_topic_with_partitions_and_offsets(&topic_name, &vec![(0, 10), (1, 11), (2, 12)]);
+    position.add_partition_offset(&topic_name, 0, Offset::Offset(10));
+    position.add_partition_offset(&topic_name, 1, Offset::Offset(11));
+    position.add_partition_offset(&topic_name, 2, Offset::Offset(12));
     assert_eq!(position, consumer.position().unwrap());
 }
 
@@ -298,8 +314,9 @@ fn test_subscription() {
 
     let _consumer_future = consumer.start().take(10).wait();
 
-    let subscription = TopicPartitionList::with_topics(vec![topic_name.as_str()].as_slice());
-    assert_eq!(subscription, consumer.subscription().unwrap());
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_topic_unassigned(&topic_name);
+    assert_eq!(tpl, consumer.subscription().unwrap());
 }
 
 #[test]

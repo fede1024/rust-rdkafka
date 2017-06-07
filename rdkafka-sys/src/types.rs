@@ -18,6 +18,9 @@ pub type RDKafkaTopic = bindings::rd_kafka_topic_t;
 /// Native rdkafka topic configuration
 pub type RDKafkaTopicConf = bindings::rd_kafka_topic_conf_t;
 
+/// Native rdkafka topic partition
+pub type RDKafkaTopicPartition = bindings::rd_kafka_topic_partition_t;
+
 /// Native rdkafka topic partition list
 pub type RDKafkaTopicPartitionList = bindings::rd_kafka_topic_partition_list_t;
 

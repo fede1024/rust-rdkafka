@@ -14,9 +14,9 @@ docker-compose up --abort-on-container-exit
 failures=`docker inspect -f '{{ .State.ExitCode }}' rustrdkafka_itest_1`
 
 if [ "$failures" != "0" ]; then
-    echo -e "${RED}One or more terminated with errors${NC}"
-    echo -e "${RED}Integration tests failed${NC}"
+    echo -e "${RED}One or more container terminated with errors${NC}"
+    echo -e "${RED}Test suite failed${NC}"
     exit 1
 else
-    echo -e "${GREEN}Ingtegration tests succeeded${NC}"
+    echo -e "${GREEN}Test suite succeeded${NC}"
 fi

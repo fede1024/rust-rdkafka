@@ -1,4 +1,5 @@
 extern crate num_cpus;
+extern crate pkg_config;
 
 use std::path::Path;
 use std::process::Command;
@@ -24,11 +25,31 @@ fn run_command_or_fail(dir: &str, cmd: &str, args: &[&str]) {
 }
 
 fn main() {
-    if !Path::new("librdkafka/LICENSE").exists() {
-        println!("Setting up submodules");
-        run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
-    }
+    let librdkafka_version = env!("CARGO_PKG_VERSION")
+        .split('-')
+        .next()
+        .expect("Crate version is not valid");
 
+    let pkg_probe = pkg_config::Config::new()
+        .cargo_metadata(true)
+        .atleast_version(librdkafka_version)
+        .probe("rdkafka");
+
+    match pkg_probe {
+        Ok(library) => {
+            println_stderr!("librdkafka found on the system:");
+            println_stderr!("  Name: {:?}", library.libs);
+            println_stderr!("  Path: {:?}", library.link_paths);
+            println_stderr!("  Version: {}", library.version);
+        }
+        Err(_) => {
+            println_stderr!("librdkafka not found, building");
+            build_librdkafka();
+        }
+    }
+}
+
+fn build_librdkafka() {
     let mut configure_flags = Vec::new();
 
     if env::var("CARGO_FEATURE_SASL").is_ok() {
@@ -45,12 +66,18 @@ fn main() {
 
     configure_flags.push("--enable-static");
 
+    if !Path::new("librdkafka/LICENSE").exists() {
+        println_stderr!("Setting up submodules");
+        run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
+    }
+
     println!("Configuring librdkafka");
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
 
     println!("Compiling librdkafka");
     run_command_or_fail("librdkafka", "make", &["-j", &num_cpus::get().to_string()]);
 
-    println!("cargo:rustc-link-search=native={}/librdkafka/src", env::current_dir().expect("Can't find current dir").display());
+    println!("cargo:rustc-link-search=native={}/librdkafka/src",
+             env::current_dir().expect("Can't find current dir").display());
     println!("cargo:rustc-link-lib=static=rdkafka");
 }

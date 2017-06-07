@@ -1,5 +1,5 @@
 //! # rust-rdkafka
-//! Kafka client library for Rust based on [librdkafka].
+//! A fully asynchronous, [futures]-based Kafka client library for Rust based on [librdkafka].
 //!
 //! ## The library
 //! `rust-rdkafka` provides a safe Rust interface to librdkafka. It is currently based on librdkafka 0.9.5.
@@ -14,15 +14,15 @@
 //!
 //! The main features provided at the moment are:
 //!
-//! - Support for Kafka 0.8.x, 0.9.x and 0.10.x (timestamp support coming soon). For more information about  broker compatibility options, check the [librdkafka documentation].
+//! - Support for Kafka 0.8.x, 0.9.x and 0.10.x. For more information about broker compatibility options, check the [librdkafka documentation].
 //! - Consume from single or multiple topics.
 //! - Automatic consumer rebalancing.
 //! - Customizable rebalance, with pre and post rebalance callbacks.
-//! - Offset commit.
-//! - Message production.
+//! - Synchronous or asynchronous message production.
+//! - Customizable offset commit.
 //! - Access to cluster metadata (list of topic-partitions, replicas, active brokers etc).
 //! - Access to group metadata (list groups, list members of groups, hostnames etc).
-//! - Access to producer and consumer metrics and statistics.
+//! - Access to producer and consumer metrics, errors and callbacks.
 //!
 //! [librdkafka documentation]: https://github.com/edenhill/librdkafka/wiki/Broker-version-compatibility
 //!
@@ -126,16 +126,16 @@
 //! cargo test --lib
 //! ```
 //!
-//! ### Integration tests
+//! ### Automatic testing
 //!
-//! rust-rdkafka contains a suite of integration tests which is automatically executed by travis in
-//! docker container. Given the frequent interaction with C code that rust-rdkafka has to do, tests
+//! rust-rdkafka contains a suite of tests which is automatically executed by travis in
+//! docker-compose. Given the interaction with C code that rust-rdkafka has to do, tests
 //! are executed in valgrind to check eventual memory errors and leaks.
 //!
 //! To run the full suite using docker-compose:
 //!
 //! ```bash
-//! ./integration_tests.sh.
+//! ./test_suite.sh
 //! ```
 //!
 //! To run locally, instead:
@@ -148,6 +148,8 @@
 //! The broker must be configured with default partition number 3 and topic autocreation in order
 //! for the tests to succeed.
 //!
+
+//>alloc_system
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
@@ -172,4 +174,7 @@ pub mod topic_partition_list;
 pub mod util;
 
 // Re-export
+pub use client::Context;
 pub use message::Message;
+pub use topic_partition_list::TopicPartitionList;
+pub use topic_partition_list::Offset;
