@@ -217,6 +217,11 @@ impl<C: Context + 'static> Context for FutureProducerContext<C> {
     fn stats(&self, statistics: Statistics) {
         self.wrapped_context.stats(statistics);
     }
+
+    /// Receives global errors from the librdkafka client.
+    fn error(&self, error: KafkaError, reason: &str) {
+        self.wrapped_context.error(error, reason);
+    }
 }
 
 impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {

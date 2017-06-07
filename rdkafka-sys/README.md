@@ -30,3 +30,9 @@ to a specific commit will be used to compile and statically link the library.
 The build process is defined in [`build.rs`].
 
 [`build.rs`]: https://github.com/fede1024/rust-rdkafka/blob/master/rdkafka-sys/build.rs
+
+## Updating
+
+To upgrade change the git submodule in `librdkafka`, check if new errors
+need to be added to `helpers::primive_to_rd_kafka_resp_err_t` and update
+the version in `Cargo.toml`.
