@@ -1,12 +1,22 @@
 # Changelog
 
+<a name="master"></a>
+## Master
+
 #### Features
 
-* The topic partition list object from librdkafka is now completely accessible from Rust.
+* The topic partition list object from librdkafka is now completely accessible
+  from Rust.
+* The test suite will now run both unit tests and integration tests in
+  valgrind, and it will also check for memory leaks.
+* rdkafka-sys will use the system librdkafka if it's already installed.
+* rdkafka-sys will verify that the crate version corresponds to the librdkafka
+  version during the build.
 
 #### Bugs
 
-* Fix memory access bug in statistics callback
+* Fix memory access bug in statistics callback.
+* Fix memory leak in topic partition list.
 
 <a name="0.10.0"></a>
 ## 0.10.0 (2017-05-15)
