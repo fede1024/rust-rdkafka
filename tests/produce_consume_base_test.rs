@@ -356,3 +356,33 @@ fn test_group_membership() {
     let consumer_member = &consumer_group.members()[0];
     assert_eq!(consumer_member.client_id(), "rdkafka_integration_test_client");
 }
+
+#[test]
+fn test_produce_consume_messages_beyond_consumer_lifetime() {
+    let _r = env_logger::init();
+
+    let topic_name = rand_test_topic();
+    let _message_map = produce_messages(&topic_name, 5, &value_fn, &key_fn, None, None);
+    //let mut messages = Vec::new();
+
+    // Drop consumer before checking vector contents
+    {
+        let mut consumer = create_stream_consumer(&rand_test_group(), None);
+        consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
+
+        let _consumer_future = consumer.start()
+            .take(5)
+            .for_each(|message| {
+                match message {
+                    Ok(m) => {},//messages.push(m),
+                    Err(e) => panic!("Error receiving message: {:?}", e)
+                };
+                Ok(())
+            })
+            .wait();
+        println!("About to drop");
+    }
+    println!("Dropped");
+
+    //assert_eq!(5, messages.len());
+}

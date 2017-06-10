@@ -53,18 +53,18 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
 }
 
 /// A Stream of Kafka messages. It can be used to receive messages as they are received.
-pub struct MessageStream {
-    receiver: mpsc::Receiver<KafkaResult<Message>>,
+pub struct MessageStream<'a> {
+    receiver: mpsc::Receiver<KafkaResult<Message<'a>>>,
 }
 
-impl MessageStream {
-    fn new(receiver: mpsc::Receiver<KafkaResult<Message>>) -> MessageStream {
-        MessageStream { receiver: receiver }
+impl<'a> MessageStream<'a> {
+    fn new(receiver: mpsc::Receiver<KafkaResult<Message<'a>>>) -> MessageStream<'a> {
+        MessageStream<'a> { receiver: receiver }
     }
 }
 
-impl Stream for MessageStream {
-    type Item = KafkaResult<Message>;
+impl<'a> Stream for MessageStream<'a> {
+    type Item = KafkaResult<Message<'a>>;
     type Error = ();
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -75,7 +75,7 @@ impl Stream for MessageStream {
 impl<C: ConsumerContext> StreamConsumer<C> {
     /// Starts the StreamConsumer with default configuration (100ms polling interval and no
     /// `NoMessageReceived` notifications).
-    pub fn start(&mut self) -> MessageStream {
+    pub fn start<'a>(&'a mut self) -> MessageStream<'a> {
         self.start_with(Duration::from_millis(100), false)
     }
 

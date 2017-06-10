@@ -52,7 +52,7 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     context.rebalance(&native_client, err, &tpl);
 
     mem::forget(context); // Do not free the context
-    mem::forget(native_client); // Do not free native client TODO: check possible leak
+    mem::forget(native_client); // Do not free native client
     tpl.leak() // Do not free native topic partition list
 }
 
@@ -122,7 +122,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     }
 
     /// Polls the consumer for events. It won't block more than the specified timeout.
-    pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<Message>> {
+    pub fn poll<'a>(&'a self, timeout_ms: i32) -> KafkaResult<Option<Message<'a>>> {
         let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
         if message_ptr.is_null() {
             return Ok(None);
@@ -138,7 +138,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
                 },
             );
         }
-        let kafka_message = Message::new(message_ptr);
+        let kafka_message = Message::new(message_ptr, self.client.native_client());
         Ok(Some(kafka_message))
     }
 

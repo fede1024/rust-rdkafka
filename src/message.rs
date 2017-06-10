@@ -2,9 +2,13 @@
 use rdsys;
 use rdsys::types::*;
 
+use std::fmt;
 use std::ffi::CStr;
 use std::slice;
 use std::str;
+
+use client::NativeClient;
+
 
 /// Timestamp of a message
 #[derive(Debug,PartialEq,Eq)]
@@ -14,18 +18,28 @@ pub enum Timestamp {
     LogAppendTime(i64)
 }
 
-/// A native librdkafka message.
-#[derive(Debug)]
-pub struct Message {
+/// A native librdkafka message. Since messages cannot outlive the consumer they were received from,
+/// they hold a reference to it.
+pub struct Message<'a> {
     ptr: *mut RDKafkaMessage,
+    native_client: &'a NativeClient,
 }
 
-unsafe impl Send for Message {}
+impl<'a> fmt::Debug for Message<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Message {{ ptr: {:?}, client: {:?} }}", self.ptr, self.native_client.ptr())
+    }
+}
 
-impl<'a> Message {
+unsafe impl<'a> Send for Message<'a> {}
+
+impl<'a> Message<'a> {
     /// Creates a new Message that wraps the native Kafka message pointer.
-    pub fn new(ptr: *mut RDKafkaMessage) -> Message {
-        Message { ptr: ptr }
+    pub fn new(ptr: *mut RDKafkaMessage, native_client: &NativeClient) -> Message {
+        Message {
+            ptr: ptr,
+            native_client: native_client,
+        }
     }
 
     /// Returns a pointer to the RDKafkaMessage.
@@ -119,7 +133,7 @@ impl<'a> Message {
     }
 }
 
-impl Drop for Message {
+impl<'a> Drop for Message<'a> {
     fn drop(&mut self) {
         trace!("Destroying message {:?}", self);
         unsafe { rdsys::rd_kafka_message_destroy(self.ptr) };
