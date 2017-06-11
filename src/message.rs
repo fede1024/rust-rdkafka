@@ -7,7 +7,7 @@ use std::slice;
 use std::str;
 
 /// Timestamp of a message
-#[derive(Debug,PartialEq,Eq)]
+#[derive(Debug,PartialEq,Eq,Clone,Copy)]
 pub enum Timestamp {
     NotAvailable,
     CreateTime(i64),
