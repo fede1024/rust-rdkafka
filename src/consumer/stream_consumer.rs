@@ -1,6 +1,7 @@
 //! Stream-based consumer implementation.
-use futures::{Future, Poll, Sink, Stream};
+use futures::{Async, Future, Poll, Sink, Stream};
 use futures::sync::mpsc;
+use rdsys::types::*;
 
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
 use consumer::base_consumer::BaseConsumer;
@@ -52,30 +53,48 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
     }
 }
 
+struct PolledPtr(*mut RDKafkaMessage);
+
+// TODO: add docs
+unsafe impl Send for PolledPtr {}
+
+
 /// A Stream of Kafka messages. It can be used to receive messages as they are received.
-pub struct MessageStream<'a> {
-    receiver: mpsc::Receiver<KafkaResult<Message<'a>>>,
+pub struct MessageStream<'a, C: ConsumerContext + 'static> {
+    consumer: &'a StreamConsumer<C>,
+    receiver: mpsc::Receiver<KafkaResult<PolledPtr>>,
 }
 
-impl<'a> MessageStream<'a> {
-    fn new(receiver: mpsc::Receiver<KafkaResult<Message<'a>>>) -> MessageStream<'a> {
-        MessageStream<'a> { receiver: receiver }
+impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
+    fn new(consumer: &'a StreamConsumer<C>, receiver: mpsc::Receiver<KafkaResult<PolledPtr>>) -> MessageStream<'a, C> {
+        MessageStream {
+            consumer: consumer,
+            receiver: receiver,
+        }
     }
 }
 
-impl<'a> Stream for MessageStream<'a> {
+impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
     type Item = KafkaResult<Message<'a>>;
     type Error = ();
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        self.receiver.poll()
+        match self.receiver.poll() {
+            Ok(async) => Ok(async.map(|option|
+                option.map(|result|
+                    result.map(|ptr| Message::new(ptr.0, self.consumer))))),
+            Err(e) => Err(e),
+        }
+//        self.receiver
+//            .map(|maybe_ptr| maybe_ptr.map(|ptr| Message::new(ptr.0, self.consumer)))
+//            .poll()
     }
 }
 
 impl<C: ConsumerContext> StreamConsumer<C> {
     /// Starts the StreamConsumer with default configuration (100ms polling interval and no
     /// `NoMessageReceived` notifications).
-    pub fn start<'a>(&'a mut self) -> MessageStream<'a> {
+    pub fn start(&mut self) -> MessageStream<C> {
         self.start_with(Duration::from_millis(100), false)
     }
 
@@ -83,7 +102,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     /// `no_message_error` is set to true, it will return an error of type
     /// `KafkaError::NoMessageReceived` every time the poll interval is reached and no message
     /// has been received.
-    pub fn start_with(&mut self, poll_interval: Duration, no_message_error: bool) -> MessageStream {
+    pub fn start_with(&mut self, poll_interval: Duration, no_message_error: bool) -> MessageStream<C> {
         let (sender, receiver) = mpsc::channel(0);
         let consumer = self.consumer.clone();
         let should_stop = self.should_stop.clone();
@@ -94,7 +113,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
             })
             .expect("Failed to start polling thread");
         self.handle = Some(handle);
-        MessageStream::new(receiver)
+        MessageStream::new(self, receiver)
     }
 
     /// Stops the StreamConsumer, blocking the caller until the internal consumer
@@ -122,7 +141,7 @@ impl<C: ConsumerContext> Drop for StreamConsumer<C> {
 /// Internal consumer loop.
 fn poll_loop<C: ConsumerContext>(
     consumer: Arc<BaseConsumer<C>>,
-    sender: mpsc::Sender<KafkaResult<Message>>,
+    sender: mpsc::Sender<KafkaResult<PolledPtr>>,
     should_stop: Arc<AtomicBool>,
     poll_interval: Duration,
     no_message_error: bool,
@@ -132,7 +151,7 @@ fn poll_loop<C: ConsumerContext>(
     let poll_interval_ms = duration_to_millis(poll_interval) as i32;
     while !should_stop.load(Ordering::Relaxed) {
         trace!("Polling base consumer");
-        let future_sender = match consumer.poll(poll_interval_ms) {
+        let future_sender = match consumer.poll_raw(poll_interval_ms) {
             Ok(None) => {
                 if no_message_error {
                     curr_sender.send(Err(KafkaError::NoMessageReceived))
@@ -140,7 +159,7 @@ fn poll_loop<C: ConsumerContext>(
                     continue // TODO: check stream closed
                 }
             },
-            Ok(Some(m)) => curr_sender.send(Ok(m)),
+            Ok(Some(m_ptr)) => curr_sender.send(Ok(PolledPtr(m_ptr))),
             Err(e) => curr_sender.send(Err(e)),
         };
         match future_sender.wait() {

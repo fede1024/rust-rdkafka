@@ -2,8 +2,9 @@
 use rdsys;
 use rdsys::types::*;
 
-use std::fmt;
 use std::ffi::CStr;
+use std::fmt;
+use std::marker::PhantomData;
 use std::slice;
 use std::str;
 
@@ -22,23 +23,23 @@ pub enum Timestamp {
 /// they hold a reference to it.
 pub struct Message<'a> {
     ptr: *mut RDKafkaMessage,
-    native_client: &'a NativeClient,
+    _p: PhantomData<&'a u8>,
 }
 
 impl<'a> fmt::Debug for Message<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Message {{ ptr: {:?}, client: {:?} }}", self.ptr, self.native_client.ptr())
+        write!(f, "Message {{ ptr: {:?} }}", self.ptr())
     }
 }
 
-unsafe impl<'a> Send for Message<'a> {}
+// unsafe impl<'a> Send for Message<'a> {}
 
 impl<'a> Message<'a> {
     /// Creates a new Message that wraps the native Kafka message pointer.
-    pub fn new(ptr: *mut RDKafkaMessage, native_client: &NativeClient) -> Message {
+    pub fn new<T>(ptr: *mut RDKafkaMessage, message_container: &'a T) -> Message<'a> {
         Message {
             ptr: ptr,
-            native_client: native_client,
+            _p: PhantomData,
         }
     }
 
