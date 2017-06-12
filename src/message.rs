@@ -8,8 +8,6 @@ use std::marker::PhantomData;
 use std::slice;
 use std::str;
 
-use client::NativeClient;
-
 
 /// Timestamp of a message
 #[derive(Debug,PartialEq,Eq)]
@@ -36,7 +34,7 @@ impl<'a> fmt::Debug for Message<'a> {
 
 impl<'a> Message<'a> {
     /// Creates a new Message that wraps the native Kafka message pointer.
-    pub fn new<T>(ptr: *mut RDKafkaMessage, message_container: &'a T) -> Message<'a> {
+    pub fn new<T>(ptr: *mut RDKafkaMessage, _message_container: &'a T) -> Message<'a> {
         Message {
             ptr: ptr,
             _p: PhantomData,

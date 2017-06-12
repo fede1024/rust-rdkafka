@@ -26,7 +26,7 @@ use example_utils::setup_logger;
 
 // Emulates an expensive, synchronous computation. This function returns a string with the length
 // of the message payload, if any.
-fn expensive_computation(msg: Message) -> String {
+fn _expensive_computation(msg: Message) -> String {
     info!("Starting expensive computation on message");
     thread::sleep(Duration::from_millis(rand::random::<u64>() % 5000));
     info!("Expensive computation completed");
@@ -53,7 +53,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     let cpu_pool = Builder::new().pool_size(4).create();
 
     // Create the `StreamConsumer`, to receive the messages from the topic in form of a `Stream`.
-    let mut consumer = ClientConfig::new()
+    let consumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
@@ -90,7 +90,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
                     None
                 }
             }
-        }).for_each(|msg| {     // Process each message
+        }).for_each(|_msg| {     // Process each message
             info!("Enqueuing message for computation");
             let producer = producer.clone();
             let topic_name = output_topic.to_owned();
@@ -98,7 +98,8 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             let process_message = cpu_pool.spawn_fn(move || {
                 // Take ownership of the message, and runs an expensive computation on it,
                 // using one of the threads of the `cpu_pool`.
-                Ok(expensive_computation(msg))
+                //Ok(expensive_computation(msg))
+                Ok("TMP string".to_owned())   // TODO: msg is not Send anymore
             }).and_then(move |computation_result| {
                 // Send the result of the computation to Kafka, asynchronously.
                 info!("Sending result");

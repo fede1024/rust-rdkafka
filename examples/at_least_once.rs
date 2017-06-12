@@ -24,7 +24,7 @@ use futures::stream::Stream;
 
 use rdkafka::client::{Context, EmptyContext};
 use rdkafka::config::{ClientConfig, TopicConfig, RDKafkaLogLevel};
-use rdkafka::consumer::stream_consumer::{MessageStream, StreamConsumer};
+use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::error::KafkaResult;
 use rdkafka::producer::FutureProducer;
@@ -52,10 +52,10 @@ impl ConsumerContext for LoggingConsumerContext {
 // Define a new type for convenience
 type LoggingConsumer = StreamConsumer<LoggingConsumerContext>;
 
-fn create_message_stream(brokers: &str, group_id: &str, topic: &str) -> (MessageStream, LoggingConsumer) {
+fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsumer {
     let context = LoggingConsumerContext;
 
-    let mut consumer = ClientConfig::new()
+    let consumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
@@ -73,7 +73,7 @@ fn create_message_stream(brokers: &str, group_id: &str, topic: &str) -> (Message
 
     consumer.subscribe(&vec![topic]).expect("Can't subscribe to specified topic");
 
-    (consumer.start(), consumer)
+    consumer
 }
 
 
@@ -130,10 +130,10 @@ fn main() {
     let brokers = matches.value_of("brokers").unwrap();
     let group_id = matches.value_of("group-id").unwrap();
 
-    let (message_stream, consumer) = create_message_stream(brokers, group_id, input_topic);
+    let consumer = create_consumer(brokers, group_id, input_topic);
     let producer = create_producer(brokers);
 
-    for message in message_stream.wait() {
+    for message in consumer.start().wait() {
         match message {
             Err(()) => {
                 warn!("Error while reading from stream");

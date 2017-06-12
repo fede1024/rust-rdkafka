@@ -42,7 +42,7 @@ fn test_produce_consume_base() {
 
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, None, None);
-    let mut consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
@@ -75,7 +75,7 @@ fn test_produce_consume_base_assign() {
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(2), None);
-    let mut consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer(&rand_test_group(), None);
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
     tpl.add_partition_offset(&topic_name, 1, Offset::Offset(2));
@@ -105,7 +105,7 @@ fn test_produce_consume_with_timestamp() {
 
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
-    let mut consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
@@ -136,7 +136,7 @@ fn test_produce_consume_with_timestamp() {
 fn test_consume_with_no_message_error() {
     let _r = env_logger::init();
 
-    let mut consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer(&rand_test_group(), None);
 
     let message_stream = consumer.start_with(Duration::from_millis(200), true);
 
@@ -208,7 +208,7 @@ fn test_consumer_commit_message() {
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
-    let mut consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
@@ -259,7 +259,7 @@ fn test_consumer_store_offset_commit() {
     produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
     let mut config = HashMap::new();
     config.insert("enable.auto.offset.store", "false");
-    let mut consumer = create_stream_consumer(&rand_test_group(), Some(config));
+    let consumer = create_stream_consumer(&rand_test_group(), Some(config));
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
@@ -309,7 +309,7 @@ fn test_subscription() {
 
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 10, &value_fn, &key_fn, None, None);
-    let mut consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start().take(10).wait();
@@ -328,7 +328,7 @@ fn test_group_membership() {
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
-    let mut consumer = create_stream_consumer(&group_name, None);
+    let consumer = create_stream_consumer(&group_name, None);
     consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group
@@ -355,34 +355,4 @@ fn test_group_membership() {
 
     let consumer_member = &consumer_group.members()[0];
     assert_eq!(consumer_member.client_id(), "rdkafka_integration_test_client");
-}
-
-#[test]
-fn test_produce_consume_messages_beyond_consumer_lifetime() {
-    let _r = env_logger::init();
-
-    let topic_name = rand_test_topic();
-    let _message_map = produce_messages(&topic_name, 5, &value_fn, &key_fn, None, None);
-    //let mut messages = Vec::new();
-
-    // Drop consumer before checking vector contents
-    {
-        let mut consumer = create_stream_consumer(&rand_test_group(), None);
-        consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
-
-        let _consumer_future = consumer.start()
-            .take(5)
-            .for_each(|message| {
-                match message {
-                    Ok(m) => {},//messages.push(m),
-                    Err(e) => panic!("Error receiving message: {:?}", e)
-                };
-                Ok(())
-            })
-            .wait();
-        println!("About to drop");
-    }
-    println!("Dropped");
-
-    //assert_eq!(5, messages.len());
 }
