@@ -7,7 +7,7 @@ use std::slice;
 use std::str;
 
 /// Timestamp of a message
-#[derive(Debug,PartialEq,Eq)]
+#[derive(Debug,PartialEq,Eq,Clone,Copy)]
 pub enum Timestamp {
     NotAvailable,
     CreateTime(i64),
@@ -22,7 +22,7 @@ pub struct Message {
 
 unsafe impl Send for Message {}
 
-impl<'a> Message {
+impl Message {
     /// Creates a new Message that wraps the native Kafka message pointer.
     pub fn new(ptr: *mut RDKafkaMessage) -> Message {
         Message { ptr: ptr }
@@ -49,7 +49,7 @@ impl<'a> Message {
     }
 
     /// Returns the key of the message, or None if there is no key.
-    pub fn key(&'a self) -> Option<&'a [u8]> {
+    pub fn key(&self) -> Option<&[u8]> {
         unsafe {
             if (*self.ptr).key.is_null() {
                 None
@@ -60,7 +60,7 @@ impl<'a> Message {
     }
 
     /// Returns the payload of the message, or None if there is no payload.
-    pub fn payload(&'a self) -> Option<&'a [u8]> {
+    pub fn payload(&self) -> Option<&[u8]> {
         unsafe {
             if (*self.ptr).payload.is_null() {
                 None
@@ -71,7 +71,7 @@ impl<'a> Message {
     }
 
     /// Returns the source topic of the message.
-    pub fn topic_name(&'a self) -> &'a str {
+    pub fn topic_name(&self) -> &str {
          unsafe {
              CStr::from_ptr(rdsys::rd_kafka_topic_name((*self.ptr).rkt))
                  .to_str()
@@ -81,13 +81,13 @@ impl<'a> Message {
 
     /// Converts the raw bytes of the payload to a reference of type &P, pointing to the same data inside
     /// the message. The returned reference cannot outlive the message.
-    pub fn payload_view<P: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a P, P::Error>> {
+    pub fn payload_view<P: ?Sized + FromBytes>(&self) -> Option<Result<&P, P::Error>> {
         self.payload().map(P::from_bytes)
     }
 
     /// Converts the raw bytes of the key to a reference of type &K, pointing to the same data inside
     /// the message. The returned reference cannot outlive the message.
-    pub fn key_view<K: ?Sized + FromBytes>(&'a self) -> Option<Result<&'a K, K::Error>> {
+    pub fn key_view<K: ?Sized + FromBytes>(&self) -> Option<Result<&K, K::Error>> {
         self.key().map(K::from_bytes)
     }
 
