@@ -52,7 +52,7 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     context.rebalance(&native_client, err, &tpl);
 
     mem::forget(context); // Do not free the context
-    mem::forget(native_client); // Do not free native client TODO: check possible leak
+    mem::forget(native_client); // Do not free native client
     tpl.leak() // Do not free native topic partition list
 }
 
@@ -121,8 +121,8 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         Ok(())
     }
 
-    /// Polls the consumer for events. It won't block more than the specified timeout.
-    pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<Message>> {
+    /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
+    pub fn poll_raw<'a>(&'a self, timeout_ms: i32) -> KafkaResult<Option<*mut RDKafkaMessage>> {
         let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
         if message_ptr.is_null() {
             return Ok(None);
@@ -138,8 +138,13 @@ impl<C: ConsumerContext> BaseConsumer<C> {
                 },
             );
         }
-        let kafka_message = Message::new(message_ptr);
-        Ok(Some(kafka_message))
+        Ok(Some(message_ptr))
+    }
+
+    /// Polls the consumer for events. It won't block more than the specified timeout.
+    pub fn poll<'a>(&'a self, timeout_ms: i32) -> KafkaResult<Option<Message<'a>>> {
+        self.poll_raw(timeout_ms)
+            .map(|opt_ptr| opt_ptr.map(|ptr| Message::new(ptr, self)))
     }
 
     /// Commits the provided list of partitions, or the underlying consumers state if `None`.

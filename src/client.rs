@@ -79,7 +79,6 @@ unsafe impl Send for NativeClient {}
 impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
     pub fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
-        trace!("Create new NativeClient {:p}", ptr);
         NativeClient {ptr: ptr}
     }
 
@@ -91,7 +90,7 @@ impl NativeClient {
 
 impl Drop for NativeClient {
     fn drop(&mut self) {
-        trace!("Destroy rd_kafka {:p}", self.ptr);
+        trace!("Destroy librdkafka client {:p}", self.ptr);
         unsafe {
             rdsys::rd_kafka_destroy(self.ptr);
         }
@@ -121,6 +120,7 @@ impl<C: Context> Client<C> {
         let client_ptr = unsafe {
             rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr_move(), errstr.as_ptr() as *mut i8, errstr.len())
         };
+        trace!("Create new librdkafka client {:p}", client_ptr);
 
         if client_ptr.is_null() {
             let descr = unsafe { bytes_cstr_to_owned(&errstr) };
@@ -133,6 +133,11 @@ impl<C: Context> Client<C> {
             native: NativeClient::from_ptr(client_ptr),
             context: boxed_context,
         })
+    }
+
+    /// Returns a reference to the native rdkafka-sys client.
+    pub fn native_client(&self) -> &NativeClient {
+        &self.native
     }
 
     /// Returns a pointer to the native rdkafka-sys client.

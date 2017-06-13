@@ -3,8 +3,13 @@ use rdsys;
 use rdsys::types::*;
 
 use std::ffi::CStr;
+use std::fmt;
+use std::marker::PhantomData;
 use std::slice;
 use std::str;
+
+use consumer::{Consumer, ConsumerContext};
+
 
 /// Timestamp of a message
 #[derive(Debug,PartialEq,Eq,Clone,Copy)]
@@ -14,18 +19,29 @@ pub enum Timestamp {
     LogAppendTime(i64)
 }
 
-/// A native librdkafka message.
-#[derive(Debug)]
-pub struct Message {
+/// A native librdkafka message. Since messages cannot outlive the consumer they were received from,
+/// they hold a phantom reference to it.
+pub struct Message<'a> {
     ptr: *mut RDKafkaMessage,
+    _p: PhantomData<&'a u8>,
 }
 
-unsafe impl Send for Message {}
+impl<'a> fmt::Debug for Message<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Message {{ ptr: {:?} }}", self.ptr())
+    }
+}
 
-impl Message {
-    /// Creates a new Message that wraps the native Kafka message pointer.
-    pub fn new(ptr: *mut RDKafkaMessage) -> Message {
-        Message { ptr: ptr }
+impl<'a> Message<'a> {
+    /// Creates a new Message that wraps the native Kafka message pointer. The lifetime of the
+    /// message will be bound to the lifetime of the consumer passed as parameter.
+    pub fn new<C, X>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> Message<'a>
+            where X: ConsumerContext,
+                  C: Consumer<X> {
+        Message {
+            ptr: ptr,
+            _p: PhantomData,
+        }
     }
 
     /// Returns a pointer to the RDKafkaMessage.
@@ -119,7 +135,7 @@ impl Message {
     }
 }
 
-impl Drop for Message {
+impl<'a> Drop for Message<'a> {
     fn drop(&mut self) {
         trace!("Destroying message {:?}", self);
         unsafe { rdsys::rd_kafka_message_destroy(self.ptr) };

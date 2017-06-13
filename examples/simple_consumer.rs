@@ -44,7 +44,7 @@ type LoggingConsumer = StreamConsumer<ConsumerContextExample>;
 fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
     let context = ConsumerContextExample;
 
-    let mut consumer = ClientConfig::new()
+    let consumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
