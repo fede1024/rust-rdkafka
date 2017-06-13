@@ -12,11 +12,13 @@
 * rdkafka-sys will use the system librdkafka if it's already installed.
 * rdkafka-sys will verify that the crate version corresponds to the librdkafka
   version during the build.
+* Timestamp is now Copy.
 
 #### Bugs
 
 * Fix memory access bug in statistics callback.
 * Fix memory leak in topic partition list.
+* Messages lifetime is now explicit (issue [#48](https://github.com/fede1024/rust-rdkafka/issues/48))
 
 <a name="0.10.0"></a>
 ## 0.10.0 (2017-05-15)
