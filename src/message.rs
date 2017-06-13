@@ -8,6 +8,8 @@ use std::marker::PhantomData;
 use std::slice;
 use std::str;
 
+use consumer::{Consumer, ConsumerContext};
+
 
 /// Timestamp of a message
 #[derive(Debug,PartialEq,Eq)]
@@ -18,7 +20,7 @@ pub enum Timestamp {
 }
 
 /// A native librdkafka message. Since messages cannot outlive the consumer they were received from,
-/// they hold a reference to it.
+/// they hold a phantom reference to it.
 pub struct Message<'a> {
     ptr: *mut RDKafkaMessage,
     _p: PhantomData<&'a u8>,
@@ -30,11 +32,12 @@ impl<'a> fmt::Debug for Message<'a> {
     }
 }
 
-// unsafe impl<'a> Send for Message<'a> {}
-
 impl<'a> Message<'a> {
-    /// Creates a new Message that wraps the native Kafka message pointer.
-    pub fn new<T>(ptr: *mut RDKafkaMessage, _message_container: &'a T) -> Message<'a> {
+    /// Creates a new Message that wraps the native Kafka message pointer. The lifetime of the
+    /// message will be bound to the lifetime of the consumer passed as parameter.
+    pub fn new<C, X>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> Message<'a>
+            where X: ConsumerContext,
+                  C: Consumer<X> {
         Message {
             ptr: ptr,
             _p: PhantomData,
