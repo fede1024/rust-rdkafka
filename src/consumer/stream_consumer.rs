@@ -191,7 +191,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
 
     /// Stops the StreamConsumer, blocking the caller until the internal consumer
     /// has been stopped.
-    pub fn stop(&mut self) {
+    pub fn stop(&self) {
         if let Some(handle) = self.handle.take() {
             trace!("Stopping polling");
             self.should_stop.store(true, Ordering::Relaxed);
