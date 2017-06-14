@@ -170,7 +170,7 @@ impl<C: Context> Client<C> {
         };
         trace!("Metadata fetch completed");
         if ret.is_error() {
-            return Err(KafkaError::MetadataFetch(ret));
+            return Err(KafkaError::MetadataFetch(ret.into()));
         }
 
         Ok(Metadata::from_ptr(metadata_ptr))
@@ -186,7 +186,7 @@ impl<C: Context> Client<C> {
                                                     &mut low as *mut i64, &mut high as *mut i64, timeout_ms)
         };
         if ret.is_error() {
-            return Err(KafkaError::MetadataFetch(ret));
+            return Err(KafkaError::MetadataFetch(ret.into()));
         }
         Ok((low, high))
     }
@@ -212,7 +212,7 @@ impl<C: Context> Client<C> {
         };
         trace!("Group list fetch completed");
         if ret.is_error() {
-            return Err(KafkaError::GroupListFetch(ret));
+            return Err(KafkaError::GroupListFetch(ret.into()));
         }
 
         Ok(GroupList::from_ptr(group_list_ptr))
@@ -297,12 +297,7 @@ pub unsafe extern "C" fn native_error_cb<C: Context>(
         _client: *mut RDKafka, err: i32, reason: *const i8,
         opaque: *mut c_void) {
     let err = rdsys::primive_to_rd_kafka_resp_err_t(err).expect("global error not an rd_kafka_resp_err_t");
-    let error = match err {
-        rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN => {
-            KafkaError::AllBrokersDown(err)
-        }
-        _ => KafkaError::Global(err),
-    };
+    let error = KafkaError::Global(err.into());
     let reason = CStr::from_ptr(reason).to_string_lossy();
 
     let context = Box::from_raw(opaque as *mut C);
