@@ -175,6 +175,5 @@ pub mod util;
 
 // Re-export
 pub use client::Context;
-pub use message::Message;
-pub use topic_partition_list::TopicPartitionList;
-pub use topic_partition_list::Offset;
+pub use message::{Message, Timestamp};
+pub use topic_partition_list::{Offset, TopicPartitionList};

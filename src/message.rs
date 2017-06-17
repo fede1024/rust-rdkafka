@@ -19,26 +19,63 @@ pub enum Timestamp {
     LogAppendTime(i64)
 }
 
-/// A native librdkafka message. Since messages cannot outlive the consumer they were received from,
-/// they hold a phantom reference to it.
-pub struct Message<'a> {
+/// The `Message` trait provides access to the fields of a generic Kafka message.
+pub trait Message {
+    /// Returns the key of the message, or None if there is no key.
+    fn key(&self) -> Option<&[u8]>;
+
+    /// Returns the payload of the message, or None if there is no payload.
+    fn payload(&self) -> Option<&[u8]>;
+
+    /// Returns the source topic of the message.
+    fn topic(&self) -> &str;
+
+    /// Returns the partition number where the message is stored.
+    fn partition(&self) -> i32;
+
+    /// Returns the offset of the message.
+    fn offset(&self) -> i64;
+
+    /// Returns the message timestamp for a consumed message if available.
+    fn timestamp(&self) -> Timestamp;
+
+    /// Converts the raw bytes of the payload to a reference of the specified type, that points to the
+    /// same data inside the message and without performing any memory allocation
+    fn payload_view<P: ?Sized + FromBytes>(&self) -> Option<Result<&P, P::Error>> {
+        self.payload().map(P::from_bytes)
+    }
+
+    /// Converts the raw bytes of the key to a reference of the specified type, that points to the
+    /// same data inside the message and without performing any memory allocation
+    fn key_view<K: ?Sized + FromBytes>(&self) -> Option<Result<&K, K::Error>> {
+        self.key().map(K::from_bytes)
+    }
+}
+
+/// A native librdkafka message. The content of the message is stored in the receiving buffer of
+/// the consumer, to avoid memory allocations. As such, `BorrowedMessage` cannot outlive the
+/// consumer it is received from.
+/// `BorrowedMessage`s are removed from the consumer buffer once they are dropped. Holding
+/// references to many messages might cause the memory of the consumer to fill up and stop.
+/// To transform a `BorrowedMessage` into a `OwnedMessage`, use the `detach` method.
+pub struct BorrowedMessage<'a> {
     ptr: *mut RDKafkaMessage,
     _p: PhantomData<&'a u8>,
 }
 
-impl<'a> fmt::Debug for Message<'a> {
+impl<'a> fmt::Debug for BorrowedMessage<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Message {{ ptr: {:?} }}", self.ptr())
     }
 }
 
-impl<'a> Message<'a> {
-    /// Creates a new Message that wraps the native Kafka message pointer. The lifetime of the
+impl<'a> BorrowedMessage<'a> {
+    /// Creates a new `BorrowedMessage` that wraps the native Kafka message pointer. The lifetime of the
     /// message will be bound to the lifetime of the consumer passed as parameter.
-    pub fn new<C, X>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> Message<'a>
-            where X: ConsumerContext,
-                  C: Consumer<X> {
-        Message {
+    pub fn new<C, X>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> BorrowedMessage<'a>
+        where X: ConsumerContext,
+              C: Consumer<X> {
+        BorrowedMessage {
             ptr: ptr,
             _p: PhantomData,
         }
@@ -64,8 +101,22 @@ impl<'a> Message<'a> {
         unsafe { (*self.ptr).len }
     }
 
-    /// Returns the key of the message, or None if there is no key.
-    pub fn key(&self) -> Option<&[u8]> {
+    /// Clones the content of the `BorrowedMessage` and returns an `OwnedMessage`, that can
+    /// outlive the consumer. This operation requires memory allocation and can be expensive.
+    pub fn detach(&self) -> OwnedMessage {
+        OwnedMessage {
+            key: self.key().map(|k| k.to_vec()),
+            payload: self.payload().map(|p| p.to_vec()),
+            topic: self.topic().to_owned(),
+            timestamp: self.timestamp(),
+            partition: self.partition(),
+            offset: self.offset(),
+        }
+    }
+}
+
+impl<'a> Message for BorrowedMessage<'a> {
+    fn key(&self) -> Option<&[u8]> {
         unsafe {
             if (*self.ptr).key.is_null() {
                 None
@@ -75,8 +126,7 @@ impl<'a> Message<'a> {
         }
     }
 
-    /// Returns the payload of the message, or None if there is no payload.
-    pub fn payload(&self) -> Option<&[u8]> {
+    fn payload(&self) -> Option<&[u8]> {
         unsafe {
             if (*self.ptr).payload.is_null() {
                 None
@@ -86,8 +136,7 @@ impl<'a> Message<'a> {
         }
     }
 
-    /// Returns the source topic of the message.
-    pub fn topic_name(&self) -> &str {
+    fn topic(&self) -> &str {
          unsafe {
              CStr::from_ptr(rdsys::rd_kafka_topic_name((*self.ptr).rkt))
                  .to_str()
@@ -95,30 +144,15 @@ impl<'a> Message<'a> {
          }
      }
 
-    /// Converts the raw bytes of the payload to a reference of type &P, pointing to the same data inside
-    /// the message. The returned reference cannot outlive the message.
-    pub fn payload_view<P: ?Sized + FromBytes>(&self) -> Option<Result<&P, P::Error>> {
-        self.payload().map(P::from_bytes)
-    }
-
-    /// Converts the raw bytes of the key to a reference of type &K, pointing to the same data inside
-    /// the message. The returned reference cannot outlive the message.
-    pub fn key_view<K: ?Sized + FromBytes>(&self) -> Option<Result<&K, K::Error>> {
-        self.key().map(K::from_bytes)
-    }
-
-    /// Returns the partition number where the message is stored.
-    pub fn partition(&self) -> i32 {
+    fn partition(&self) -> i32 {
         unsafe { (*self.ptr).partition }
     }
 
-    /// Returns the offset of the message.
-    pub fn offset(&self) -> i64 {
+    fn offset(&self) -> i64 {
         unsafe { (*self.ptr).offset }
     }
 
-    /// Returns the message timestamp for a consumed message if available.
-    pub fn timestamp(&self) -> Timestamp {
+    fn timestamp(&self) -> Timestamp {
         let mut timestamp_type = rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_NOT_AVAILABLE;
         let timestamp = unsafe {
             rdsys::rd_kafka_message_timestamp(
@@ -135,12 +169,61 @@ impl<'a> Message<'a> {
     }
 }
 
-impl<'a> Drop for Message<'a> {
+impl<'a> Drop for BorrowedMessage<'a> {
     fn drop(&mut self) {
         trace!("Destroying message {:?}", self);
         unsafe { rdsys::rd_kafka_message_destroy(self.ptr) };
     }
 }
+
+//
+// ********** OWNED MESSAGE **********
+//
+
+/// An `OwnedMessage` can be created from a `BorrowedMessage` using the `detach` method.
+/// `OwnedMessage`s don't hold any reference to the consumer, and don't use any memory inside the
+/// consumer buffer.
+pub struct OwnedMessage {
+    payload: Option<Vec<u8>>,
+    key: Option<Vec<u8>>,
+    topic: String,
+    timestamp: Timestamp,
+    partition: i32,
+    offset: i64
+}
+
+impl Message for OwnedMessage {
+    fn key(&self) -> Option<&[u8]> {
+        match self.key {
+            Some(ref k) => Some(k.as_slice()),
+            None => None,
+        }
+    }
+
+    fn payload(&self) -> Option<&[u8]> {
+        match self.payload {
+            Some(ref p) => Some(p.as_slice()),
+            None => None,
+        }
+    }
+
+    fn topic(&self) -> &str {
+        self.topic.as_ref()
+    }
+
+    fn partition(&self) -> i32 {
+        self.partition
+    }
+
+    fn offset(&self) -> i64 {
+        self.offset
+    }
+
+    fn timestamp(&self) -> Timestamp {
+        self.timestamp
+    }
+}
+
 
 /// Given a reference to a byte array, returns a different view of the same data.
 /// No copy of the data should be performed.

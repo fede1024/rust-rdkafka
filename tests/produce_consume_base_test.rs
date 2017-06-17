@@ -10,8 +10,8 @@ mod test_utils;
 
 use futures::*;
 
+use rdkafka::{Message, Timestamp};
 use rdkafka::consumer::{Consumer, CommitMode};
-use rdkafka::message::Timestamp;
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::error::KafkaError;
 
@@ -57,7 +57,7 @@ fn test_produce_consume_base() {
                     };
                     assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
                     assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
-                    assert_eq!(m.topic_name(), topic_name.as_str());
+                    assert_eq!(m.topic(), topic_name.as_str());
                 },
                 Err(e) => panic!("Error receiving message: {:?}", e)
             };

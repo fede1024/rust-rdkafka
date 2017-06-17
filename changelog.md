@@ -13,6 +13,8 @@
 * rdkafka-sys will verify that the crate version corresponds to the librdkafka
   version during the build.
 * Timestamp is now Copy.
+* Message has been renamed to BorrowedMessage. Borrowed messages can be transformed
+  into owned messages. Both implement the new Message trait.
 
 #### Bugs
 

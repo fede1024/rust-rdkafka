@@ -8,7 +8,7 @@ use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
 use consumer::base_consumer::BaseConsumer;
 use consumer::{Consumer, ConsumerContext, EmptyConsumerContext};
 use error::{KafkaError, KafkaResult};
-use message::Message;
+use message::BorrowedMessage;
 use util::duration_to_millis;
 
 use std::cell::Cell;
@@ -20,7 +20,7 @@ use std::time::Duration;
 
 /// A small wrapper for a message pointer. This wrapper is only used to
 /// pass a message between the polling thread and the thread consuming the stream,
-/// and transform it from pointer to `Message` with a lifetime that derives from the
+/// and transform it from pointer to `BorrowedMessage` with a lifetime that derives from the
 /// lifetime of the stream consumer. In general is not safe to pass a struct with an internal
 /// reference across threads. However the `StreamConsumer` guarantees that the polling thread
 /// will be terminated before the consumer is actually dropped, ensuring that the messages
@@ -40,8 +40,8 @@ impl PolledMessagePtr {
 
     /// Transforms the `PolledMessagePtr` into a message, that will be bound to the lifetime
     /// of the provided consumer.
-    fn into_message_of<'a, C: ConsumerContext>(mut self, consumer: &'a StreamConsumer<C>) -> Message<'a> {
-        Message::new(self.message_ptr.take().unwrap(), consumer)
+    fn into_message_of<'a, C: ConsumerContext>(mut self, consumer: &'a StreamConsumer<C>) -> BorrowedMessage<'a> {
+        BorrowedMessage::new(self.message_ptr.take().unwrap(), consumer)
     }
 }
 
@@ -79,7 +79,7 @@ impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
 }
 
 impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
-    type Item = KafkaResult<Message<'a>>;
+    type Item = KafkaResult<BorrowedMessage<'a>>;
     type Error = ();
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {

@@ -12,10 +12,11 @@ use futures::stream::Stream;
 use futures_cpupool::Builder;
 use tokio_core::reactor::Core;
 
+use rdkafka::Message;
 use rdkafka::consumer::Consumer;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, TopicConfig};
-use rdkafka::message::Message;
+use rdkafka::message::BorrowedMessage;
 use rdkafka::producer::FutureProducer;
 
 use std::thread;
@@ -26,7 +27,7 @@ use example_utils::setup_logger;
 
 // Emulates an expensive, synchronous computation. This function returns a string with the length
 // of the message payload, if any.
-fn _expensive_computation(msg: Message) -> String {
+fn _expensive_computation(msg: BorrowedMessage) -> String {
     info!("Starting expensive computation on message");
     thread::sleep(Duration::from_millis(rand::random::<u64>() % 5000));
     info!("Expensive computation completed");

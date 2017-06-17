@@ -22,6 +22,7 @@ use futures::Future;
 use futures::future::join_all;
 use futures::stream::Stream;
 
+use rdkafka::Message;
 use rdkafka::client::{Context, EmptyContext};
 use rdkafka::config::{ClientConfig, TopicConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;

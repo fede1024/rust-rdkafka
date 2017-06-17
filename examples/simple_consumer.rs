@@ -7,6 +7,7 @@ extern crate rdkafka_sys;
 use clap::{App, Arg};
 use futures::stream::Stream;
 
+use rdkafka::Message;
 use rdkafka::client::{Context};
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -87,7 +88,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
                     },
                 };
                 info!("key: '{:?}', payload: '{}', topic: {}, partition: {}, offset: {}",
-                      key, payload, m.topic_name(), m.partition(), m.offset());
+                      key, payload, m.topic(), m.partition(), m.offset());
                 consumer.commit_message(&m, CommitMode::Async).unwrap();
             },
             Ok(Err(e)) => {

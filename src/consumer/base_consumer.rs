@@ -7,7 +7,7 @@ use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
 use consumer::{Consumer, ConsumerContext, CommitMode, EmptyConsumerContext};
 use error::{KafkaError, KafkaResult, IsError};
 use groups::GroupList;
-use message::Message;
+use message::{Message, BorrowedMessage};
 use metadata::Metadata;
 use topic_partition_list::TopicPartitionList;
 use topic_partition_list::Offset::Offset;
@@ -142,9 +142,9 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     }
 
     /// Polls the consumer for events. It won't block more than the specified timeout.
-    pub fn poll<'a>(&'a self, timeout_ms: i32) -> KafkaResult<Option<Message<'a>>> {
+    pub fn poll<'a>(&'a self, timeout_ms: i32) -> KafkaResult<Option<BorrowedMessage<'a>>> {
         self.poll_raw(timeout_ms)
-            .map(|opt_ptr| opt_ptr.map(|ptr| Message::new(ptr, self)))
+            .map(|opt_ptr| opt_ptr.map(|ptr| BorrowedMessage::new(ptr, self)))
     }
 
     /// Commits the provided list of partitions, or the underlying consumers state if `None`.
@@ -162,7 +162,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     }
 
     /// Commits the specified message. The commit can be sync (blocking), or async.
-    pub fn commit_message(&self, message: &Message, mode: CommitMode) -> KafkaResult<()> {
+    pub fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
         let error = unsafe { rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
         if error.is_error() {
             Err(KafkaError::ConsumerCommit(error))
@@ -173,7 +173,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Store offset for this message to be used on the next (auto)commit.
     /// When using this `enable.auto.offset.store` should be set to `false` in the config.
-    pub fn store_offset(&self, message: &Message) -> KafkaResult<()> {
+    pub fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
         let error = unsafe { rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset()) };
         if error.is_error() {
             Err(KafkaError::StoreOffset(error))
