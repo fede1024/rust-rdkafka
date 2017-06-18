@@ -1,8 +1,7 @@
-//! Utility functions.
 use rdsys;
 
 use std::ffi::CStr;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Return a tuple representing the version of `librdkafka` in
 /// hexadecimal and string format.
@@ -17,6 +16,11 @@ pub fn duration_to_millis(duration: Duration) -> u64 {
     let nanos = duration.subsec_nanos() as u64;
     duration.as_secs() * 1000 + nanos/1_000_000
 }
+
+pub fn millis_to_epoch(time: SystemTime) -> i64 {
+    duration_to_millis(time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0))) as i64
+}
+
 
 // TODO: check if the implementation returns a copy of the data and update the documentation
 /// Converts a byte array representing a C string into a String.

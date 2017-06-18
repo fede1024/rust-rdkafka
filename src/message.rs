@@ -19,6 +19,16 @@ pub enum Timestamp {
     LogAppendTime(i64)
 }
 
+impl Timestamp {
+    pub fn to_millis(&self) -> Option<i64> {
+        match *self {
+            Timestamp::NotAvailable => None,
+            Timestamp::CreateTime(-1) | Timestamp::LogAppendTime(-1) => None,
+            Timestamp::CreateTime(t) | Timestamp::LogAppendTime(t) => Some(t),
+        }
+    }
+}
+
 /// The `Message` trait provides access to the fields of a generic Kafka message.
 pub trait Message {
     /// Returns the key of the message, or None if there is no key.
@@ -152,6 +162,7 @@ impl<'a> Message for BorrowedMessage<'a> {
         unsafe { (*self.ptr).offset }
     }
 
+    // TODO: -1 should be "Not available"
     fn timestamp(&self) -> Timestamp {
         let mut timestamp_type = rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_NOT_AVAILABLE;
         let timestamp = unsafe {
