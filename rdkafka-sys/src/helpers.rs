@@ -45,6 +45,11 @@ pub fn primitive_to_rd_kafka_resp_err_t(error: i32) -> Option<RDKafkaRespErr> {
         -166 => Some(RD_KAFKA_RESP_ERR__TIMED_OUT_QUEUE),
         -165 => Some(RD_KAFKA_RESP_ERR__UNSUPPORTED_FEATURE),
         -164 => Some(RD_KAFKA_RESP_ERR__WAIT_CACHE),
+        -163 => Some(RD_KAFKA_RESP_ERR__INTR),
+        -162 => Some(RD_KAFKA_RESP_ERR__KEY_SERIALIZATION),
+        -161 => Some(RD_KAFKA_RESP_ERR__VALUE_SERIALIZATION),
+        -160 => Some(RD_KAFKA_RESP_ERR__KEY_DESERIALIZATION),
+        -159 => Some(RD_KAFKA_RESP_ERR__VALUE_DESERIALIZATION),
         -100 => Some(RD_KAFKA_RESP_ERR__END),
         -1   => Some(RD_KAFKA_RESP_ERR_UNKNOWN),
         0    => Some(RD_KAFKA_RESP_ERR_NO_ERROR),
@@ -91,7 +96,20 @@ pub fn primitive_to_rd_kafka_resp_err_t(error: i32) -> Option<RDKafkaRespErr> {
         41   => Some(RD_KAFKA_RESP_ERR_NOT_CONTROLLER),
         42   => Some(RD_KAFKA_RESP_ERR_INVALID_REQUEST),
         43   => Some(RD_KAFKA_RESP_ERR_UNSUPPORTED_FOR_MESSAGE_FORMAT),
-        44   => Some(RD_KAFKA_RESP_ERR_END_ALL),
+        44   => Some(RD_KAFKA_RESP_ERR_POLICY_VIOLATION),
+        45   => Some(RD_KAFKA_RESP_ERR_OUT_OF_ORDER_SEQUENCE_NUMBER),
+        46   => Some(RD_KAFKA_RESP_ERR_DUPLICATE_SEQUENCE_NUMBER),
+        47   => Some(RD_KAFKA_RESP_ERR_INVALID_PRODUCER_EPOCH),
+        48   => Some(RD_KAFKA_RESP_ERR_INVALID_TXN_STATE),
+        49   => Some(RD_KAFKA_RESP_ERR_INVALID_PRODUCER_ID_MAPPING),
+        50   => Some(RD_KAFKA_RESP_ERR_INVALID_TRANSACTION_TIMEOUT),
+        51   => Some(RD_KAFKA_RESP_ERR_CONCURRENT_TRANSACTIONS),
+        52   => Some(RD_KAFKA_RESP_ERR_TRANSACTION_COORDINATOR_FENCED),
+        53   => Some(RD_KAFKA_RESP_ERR_TRANSACTIONAL_ID_AUTHORIZATION_FAILED),
+        54   => Some(RD_KAFKA_RESP_ERR_SECURITY_DISABLED),
+        55   => Some(RD_KAFKA_RESP_ERR_OPERATION_NOT_ATTEMPTED),
+        // END ALL
+        56   => Some(RD_KAFKA_RESP_ERR_END_ALL),
         _ => None
     }
 }
@@ -113,7 +131,7 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR__UNKNOWN_TOPIC => UnknownTopic,
         RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN => AllBrokersDown,
         RD_KAFKA_RESP_ERR__INVALID_ARG => InvalidArgument,
-        RD_KAFKA_RESP_ERR__TIMED_OUT => MessageTimedOut,
+        RD_KAFKA_RESP_ERR__TIMED_OUT => OperationTimedOut,
         RD_KAFKA_RESP_ERR__QUEUE_FULL => QueueFull,
         RD_KAFKA_RESP_ERR__ISR_INSUFF => ISRInsufficient,
         RD_KAFKA_RESP_ERR__NODE_UPDATE => NodeUpdate,
@@ -135,6 +153,11 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR__TIMED_OUT_QUEUE => TimedOutQueue,
         RD_KAFKA_RESP_ERR__UNSUPPORTED_FEATURE => UnsupportedFeature,
         RD_KAFKA_RESP_ERR__WAIT_CACHE => WaitCache,
+        RD_KAFKA_RESP_ERR__INTR => Interrupted,
+        RD_KAFKA_RESP_ERR__KEY_SERIALIZATION => KeySerialization,
+        RD_KAFKA_RESP_ERR__VALUE_SERIALIZATION => ValueSerialization,
+        RD_KAFKA_RESP_ERR__KEY_DESERIALIZATION => KeyDeserialization,
+        RD_KAFKA_RESP_ERR__VALUE_DESERIALIZATION => ValueDeserialization,
         RD_KAFKA_RESP_ERR__END => End,
         RD_KAFKA_RESP_ERR_UNKNOWN => Unknown,
         RD_KAFKA_RESP_ERR_NO_ERROR => NoError,
@@ -181,6 +204,34 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR_NOT_CONTROLLER => NotController,
         RD_KAFKA_RESP_ERR_INVALID_REQUEST => InvalidRequest,
         RD_KAFKA_RESP_ERR_UNSUPPORTED_FOR_MESSAGE_FORMAT => UnsupportedForMessageFormat,
+        RD_KAFKA_RESP_ERR_POLICY_VIOLATION => PolicyViolation,
+        RD_KAFKA_RESP_ERR_OUT_OF_ORDER_SEQUENCE_NUMBER => OutOfOrderSequenceNumber,
+        RD_KAFKA_RESP_ERR_DUPLICATE_SEQUENCE_NUMBER => DuplicateSequenceNumber,
+        RD_KAFKA_RESP_ERR_INVALID_PRODUCER_EPOCH => InvalidProducerEpoch,
+        RD_KAFKA_RESP_ERR_INVALID_TXN_STATE => InvalidTransactionalState,
+        RD_KAFKA_RESP_ERR_INVALID_PRODUCER_ID_MAPPING => InvalidProducerIdMapping,
+        RD_KAFKA_RESP_ERR_INVALID_TRANSACTION_TIMEOUT => InvalidTransactionTimeout,
+        RD_KAFKA_RESP_ERR_CONCURRENT_TRANSACTIONS => ConcurrentTransactions,
+        RD_KAFKA_RESP_ERR_TRANSACTION_COORDINATOR_FENCED => TransactionCoordinatorFenced,
+        RD_KAFKA_RESP_ERR_TRANSACTIONAL_ID_AUTHORIZATION_FAILED => TransactionalIdAuthorizationFailed,
+        RD_KAFKA_RESP_ERR_SECURITY_DISABLED => SecurityDisabled,
+        RD_KAFKA_RESP_ERR_OPERATION_NOT_ATTEMPTED => OperationNotAttempted,
         RD_KAFKA_RESP_ERR_END_ALL => EndAll,
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_conversion() {
+        for error_code in -299..300 {
+            if let Some(resp_err) = primitive_to_rd_kafka_resp_err_t(error_code) {
+                let kafka_error = rd_kafka_resp_err_t_to_rdkafka_error(resp_err);
+                assert_eq!(error_code, kafka_error as i32);
+            }
+        }
     }
 }

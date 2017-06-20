@@ -520,7 +520,7 @@ pub const SO_INCOMING_CPU: ::std::os::raw::c_uchar = 49;
 pub const SO_ATTACH_BPF: ::std::os::raw::c_uchar = 50;
 pub const SO_DETACH_BPF: ::std::os::raw::c_uchar = 27;
 pub const LIBRDKAFKA_TYPECHECKS: ::std::os::raw::c_uchar = 1;
-pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 591359;
+pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 591104;
 pub const RD_KAFKA_OFFSET_BEGINNING: ::std::os::raw::c_char = -2;
 pub const RD_KAFKA_OFFSET_END: ::std::os::raw::c_char = -1;
 pub const RD_KAFKA_OFFSET_STORED: ::std::os::raw::c_short = -1000;
@@ -536,6 +536,7 @@ pub const RD_KAFKA_EVENT_LOG: ::std::os::raw::c_uchar = 4;
 pub const RD_KAFKA_EVENT_ERROR: ::std::os::raw::c_uchar = 8;
 pub const RD_KAFKA_EVENT_REBALANCE: ::std::os::raw::c_uchar = 16;
 pub const RD_KAFKA_EVENT_OFFSET_COMMIT: ::std::os::raw::c_uchar = 32;
+pub const RD_KAFKA_EVENT_STATS: ::std::os::raw::c_uchar = 64;
 pub type size_t = usize;
 pub type __u_char = ::std::os::raw::c_uchar;
 pub type __u_short = ::std::os::raw::c_ushort;
@@ -1309,6 +1310,11 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__TIMED_OUT_QUEUE = -166,
     RD_KAFKA_RESP_ERR__UNSUPPORTED_FEATURE = -165,
     RD_KAFKA_RESP_ERR__WAIT_CACHE = -164,
+    RD_KAFKA_RESP_ERR__INTR = -163,
+    RD_KAFKA_RESP_ERR__KEY_SERIALIZATION = -162,
+    RD_KAFKA_RESP_ERR__VALUE_SERIALIZATION = -161,
+    RD_KAFKA_RESP_ERR__KEY_DESERIALIZATION = -160,
+    RD_KAFKA_RESP_ERR__VALUE_DESERIALIZATION = -159,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,
@@ -1355,7 +1361,19 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR_NOT_CONTROLLER = 41,
     RD_KAFKA_RESP_ERR_INVALID_REQUEST = 42,
     RD_KAFKA_RESP_ERR_UNSUPPORTED_FOR_MESSAGE_FORMAT = 43,
-    RD_KAFKA_RESP_ERR_END_ALL = 44,
+    RD_KAFKA_RESP_ERR_POLICY_VIOLATION = 44,
+    RD_KAFKA_RESP_ERR_OUT_OF_ORDER_SEQUENCE_NUMBER = 45,
+    RD_KAFKA_RESP_ERR_DUPLICATE_SEQUENCE_NUMBER = 46,
+    RD_KAFKA_RESP_ERR_INVALID_PRODUCER_EPOCH = 47,
+    RD_KAFKA_RESP_ERR_INVALID_TXN_STATE = 48,
+    RD_KAFKA_RESP_ERR_INVALID_PRODUCER_ID_MAPPING = 49,
+    RD_KAFKA_RESP_ERR_INVALID_TRANSACTION_TIMEOUT = 50,
+    RD_KAFKA_RESP_ERR_CONCURRENT_TRANSACTIONS = 51,
+    RD_KAFKA_RESP_ERR_TRANSACTION_COORDINATOR_FENCED = 52,
+    RD_KAFKA_RESP_ERR_TRANSACTIONAL_ID_AUTHORIZATION_FAILED = 53,
+    RD_KAFKA_RESP_ERR_SECURITY_DISABLED = 54,
+    RD_KAFKA_RESP_ERR_OPERATION_NOT_ATTEMPTED = 55,
+    RD_KAFKA_RESP_ERR_END_ALL = 56,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1542,6 +1560,79 @@ impl ::std::default::Default for rd_kafka_group_list {
 pub type rd_kafka_event_type_t = ::std::os::raw::c_int;
 pub enum rd_kafka_op_s { }
 pub type rd_kafka_event_t = rd_kafka_op_s;
+pub type rd_kafka_plugin_f_conf_init_t =
+    ::std::option::Option<unsafe extern "C" fn(conf: *mut rd_kafka_conf_t,
+                                               plug_opaquep:
+                                                   *mut *mut ::std::os::raw::c_void,
+                                               errstr:
+                                                   *mut ::std::os::raw::c_char,
+                                               errstr_size: size_t)
+                              -> rd_kafka_resp_err_t>;
+pub type rd_kafka_interceptor_f_on_conf_set_t =
+    ::std::option::Option<unsafe extern "C" fn(conf: *mut rd_kafka_conf_t,
+                                               name:
+                                                   *const ::std::os::raw::c_char,
+                                               val:
+                                                   *const ::std::os::raw::c_char,
+                                               errstr:
+                                                   *mut ::std::os::raw::c_char,
+                                               errstr_size: size_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_conf_res_t>;
+pub type rd_kafka_interceptor_f_on_conf_dup_t =
+    ::std::option::Option<unsafe extern "C" fn(new_conf: *mut rd_kafka_conf_t,
+                                               old_conf:
+                                                   *const rd_kafka_conf_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+pub type rd_kafka_interceptor_f_on_conf_destroy_t =
+    ::std::option::Option<unsafe extern "C" fn(ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+pub type rd_kafka_interceptor_f_on_new_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void,
+                                               errstr:
+                                                   *mut ::std::os::raw::c_char,
+                                               errstr_size: size_t)
+                              -> rd_kafka_resp_err_t>;
+pub type rd_kafka_interceptor_f_on_destroy_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+pub type rd_kafka_interceptor_f_on_send_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               rkmessage:
+                                                   *mut rd_kafka_message_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+pub type rd_kafka_interceptor_f_on_acknowledgement_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               rkmessage:
+                                                   *mut rd_kafka_message_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+pub type rd_kafka_interceptor_f_on_consume_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               rkmessage:
+                                                   *mut rd_kafka_message_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+pub type rd_kafka_interceptor_f_on_commit_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               offsets:
+                                                   *const rd_kafka_topic_partition_list_t,
+                                               err: rd_kafka_resp_err_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
 pub type __builtin_va_list = [__va_list_tag; 1usize];
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1917,6 +2008,8 @@ extern "C" {
     pub fn rd_kafka_message_timestamp(rkmessage: *const rd_kafka_message_t,
                                       tstype: *mut rd_kafka_timestamp_type_t)
      -> int64_t;
+    pub fn rd_kafka_message_latency(rkmessage: *const rd_kafka_message_t)
+     -> int64_t;
     pub fn rd_kafka_conf_new() -> *mut rd_kafka_conf_t;
     pub fn rd_kafka_conf_destroy(conf: *mut rd_kafka_conf_t);
     pub fn rd_kafka_conf_dup(conf: *const rd_kafka_conf_t)
@@ -2160,7 +2253,11 @@ extern "C" {
     pub fn rd_kafka_destroy(rk: *mut rd_kafka_t);
     pub fn rd_kafka_name(rk: *const rd_kafka_t)
      -> *const ::std::os::raw::c_char;
+    pub fn rd_kafka_type(rk: *const rd_kafka_t) -> rd_kafka_type_t;
     pub fn rd_kafka_memberid(rk: *const rd_kafka_t)
+     -> *mut ::std::os::raw::c_char;
+    pub fn rd_kafka_clusterid(rk: *mut rd_kafka_t,
+                              timeout_ms: ::std::os::raw::c_int)
      -> *mut ::std::os::raw::c_char;
     pub fn rd_kafka_topic_new(rk: *mut rd_kafka_t,
                               topic: *const ::std::os::raw::c_char,
@@ -2277,6 +2374,10 @@ extern "C" {
     pub fn rd_kafka_offset_store(rkt: *mut rd_kafka_topic_t,
                                  partition: int32_t, offset: int64_t)
      -> rd_kafka_resp_err_t;
+    pub fn rd_kafka_offsets_store(rk: *mut rd_kafka_t,
+                                  offsets:
+                                      *mut rd_kafka_topic_partition_list_t)
+     -> rd_kafka_resp_err_t;
     pub fn rd_kafka_subscribe(rk: *mut rd_kafka_t,
                               topics: *const rd_kafka_topic_partition_list_t)
      -> rd_kafka_resp_err_t;
@@ -2386,6 +2487,7 @@ extern "C" {
     pub fn rd_kafka_thread_cnt() -> ::std::os::raw::c_int;
     pub fn rd_kafka_wait_destroyed(timeout_ms: ::std::os::raw::c_int)
      -> ::std::os::raw::c_int;
+    pub fn rd_kafka_unittest() -> ::std::os::raw::c_int;
     pub fn rd_kafka_poll_set_consumer(rk: *mut rd_kafka_t)
      -> rd_kafka_resp_err_t;
     pub fn rd_kafka_event_type(rkev: *const rd_kafka_event_t)
@@ -2412,6 +2514,8 @@ extern "C" {
                               str: *mut *const ::std::os::raw::c_char,
                               level: *mut ::std::os::raw::c_int)
      -> ::std::os::raw::c_int;
+    pub fn rd_kafka_event_stats(rkev: *mut rd_kafka_event_t)
+     -> *const ::std::os::raw::c_char;
     pub fn rd_kafka_event_topic_partition_list(rkev: *mut rd_kafka_event_t)
      -> *mut rd_kafka_topic_partition_list_t;
     pub fn rd_kafka_event_topic_partition(rkev: *mut rd_kafka_event_t)
@@ -2422,4 +2526,70 @@ extern "C" {
     pub fn rd_kafka_queue_poll_callback(rkqu: *mut rd_kafka_queue_t,
                                         timeout_ms: ::std::os::raw::c_int)
      -> ::std::os::raw::c_int;
+    pub fn rd_kafka_conf_interceptor_add_on_conf_set(conf:
+                                                         *mut rd_kafka_conf_t,
+                                                     ic_name:
+                                                         *const ::std::os::raw::c_char,
+                                                     on_conf_set:
+                                                         rd_kafka_interceptor_f_on_conf_set_t,
+                                                     ic_opaque:
+                                                         *mut ::std::os::raw::c_void);
+    pub fn rd_kafka_conf_interceptor_add_on_conf_dup(conf:
+                                                         *mut rd_kafka_conf_t,
+                                                     ic_name:
+                                                         *const ::std::os::raw::c_char,
+                                                     on_conf_dup:
+                                                         rd_kafka_interceptor_f_on_conf_dup_t,
+                                                     ic_opaque:
+                                                         *mut ::std::os::raw::c_void);
+    pub fn rd_kafka_conf_interceptor_add_on_conf_destroy(conf:
+                                                             *mut rd_kafka_conf_t,
+                                                         ic_name:
+                                                             *const ::std::os::raw::c_char,
+                                                         on_conf_destroy:
+                                                             rd_kafka_interceptor_f_on_conf_destroy_t,
+                                                         ic_opaque:
+                                                             *mut ::std::os::raw::c_void);
+    pub fn rd_kafka_conf_interceptor_add_on_new(conf: *mut rd_kafka_conf_t,
+                                                ic_name:
+                                                    *const ::std::os::raw::c_char,
+                                                on_new:
+                                                    rd_kafka_interceptor_f_on_new_t,
+                                                ic_opaque:
+                                                    *mut ::std::os::raw::c_void);
+    pub fn rd_kafka_interceptor_add_on_destroy(rk: *mut rd_kafka_t,
+                                               ic_name:
+                                                   *const ::std::os::raw::c_char,
+                                               on_destroy:
+                                                   rd_kafka_interceptor_f_on_destroy_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void);
+    pub fn rd_kafka_interceptor_add_on_send(rk: *mut rd_kafka_t,
+                                            ic_name:
+                                                *const ::std::os::raw::c_char,
+                                            on_send:
+                                                rd_kafka_interceptor_f_on_send_t,
+                                            ic_opaque:
+                                                *mut ::std::os::raw::c_void);
+    pub fn rd_kafka_interceptor_add_on_acknowledgement(rk: *mut rd_kafka_t,
+                                                       ic_name:
+                                                           *const ::std::os::raw::c_char,
+                                                       on_acknowledgement:
+                                                           rd_kafka_interceptor_f_on_acknowledgement_t,
+                                                       ic_opaque:
+                                                           *mut ::std::os::raw::c_void);
+    pub fn rd_kafka_interceptor_add_on_consume(rk: *mut rd_kafka_t,
+                                               ic_name:
+                                                   *const ::std::os::raw::c_char,
+                                               on_consume:
+                                                   rd_kafka_interceptor_f_on_consume_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void);
+    pub fn rd_kafka_interceptor_add_on_commit(rk: *mut rd_kafka_t,
+                                              ic_name:
+                                                  *const ::std::os::raw::c_char,
+                                              on_commit:
+                                                  rd_kafka_interceptor_f_on_commit_t,
+                                              ic_opaque:
+                                                  *mut ::std::os::raw::c_void);
 }

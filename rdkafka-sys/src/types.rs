@@ -113,7 +113,7 @@ pub enum RDKafkaError {
     /// Unknown client group
     UnknownGroup = -179,
     /// Operation in progress
-    InProgress = 178,
+    InProgress = -178,
     /// Previous operation in progress, wait for it to finish.
     PreviousInProgress = -177,
     /// This operation would interfere with an existing subscription
@@ -137,11 +137,21 @@ pub enum RDKafkaError {
     /// Outdated
     Outdated = -167,
     /// Timed out in queue
-    TimedOutQueue = 166,
+    TimedOutQueue = -166,
     /// Feature not supported by broker
     UnsupportedFeature = -165,
     /// Awaiting cache update
     WaitCache = -164,
+    /// Operation interrupted (e.g., due to yield))
+    Interrupted = -163,
+    /// Key serialization error
+    KeySerialization = -162,
+    /// Value serialization error
+    ValueSerialization = -161,
+    /// Key deserialization error
+    KeyDeserialization = -160,
+    /// Value deserialization error
+    ValueDeserialization = -159,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error
@@ -234,6 +244,33 @@ pub enum RDKafkaError {
     InvalidRequest = 42,
     /// Message format on broker does not support request
     UnsupportedForMessageFormat = 43,
+    /// Policy violation
+    PolicyViolation = 44,
+    /// Broker received an out of order sequence number
+    OutOfOrderSequenceNumber = 45,
+    /// Broker received a duplicate sequence number
+    DuplicateSequenceNumber = 46,
+    /// Producer attempted an operation with an old epoch
+    InvalidProducerEpoch = 47,
+    /// Producer attempted a transactional operation in an invalid state
+    InvalidTransactionalState = 48,
+    /// Producer attempted to use a producer id which is currently assigned to its transactional id
+    InvalidProducerIdMapping = 49,
+    /// Transaction timeout is larger than the maxi value allowed by the broker's
+    /// max.transaction.timeout.ms
+    InvalidTransactionTimeout = 50,
+    /// Producer attempted to update a transaction while another concurrent operation on the same
+    /// transaction was ongoing
+    ConcurrentTransactions = 51,
+    /// Indicates that the transaction coordinator sending a WriteTxnMarker is no longer the current
+    /// coordinator for a given producer
+    TransactionCoordinatorFenced = 52,
+    /// Transactional Id authorization failed
+    TransactionalIdAuthorizationFailed = 53,
+    /// Security features are disabled
+    SecurityDisabled = 54,
+    /// Operation not attempted
+    OperationNotAttempted = 55,
     #[doc(hidden)]
     EndAll,
 }

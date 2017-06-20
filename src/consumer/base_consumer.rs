@@ -172,7 +172,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     }
 
     /// Store offset for this message to be used on the next (auto)commit.
-    /// When using this `enable.auto.offset.store` should be set to `false` in the config.
+    /// When using this function, `enable.auto.offset.store` must be set to `false`.
     pub fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
         let error = unsafe { rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset()) };
         if error.is_error() {
