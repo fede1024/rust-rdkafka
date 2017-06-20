@@ -1,10 +1,12 @@
-use bindings::rd_kafka_resp_err_t;
-use bindings::rd_kafka_resp_err_t::*;
+use types::RDKafkaRespErr;
+use types::RDKafkaRespErr::*;
+use types::RDKafkaError;
+use types::RDKafkaError::*;
 
 /// This is not great. For legacy reasons some usage of rd_kafka_resp_err_t is
 /// passed as an integer in some places. There seems to be no easy way in Rust to
 /// match this the other way around so we do it manually.
-pub fn primive_to_rd_kafka_resp_err_t(error: i32) -> Option<rd_kafka_resp_err_t> {
+pub fn primive_to_rd_kafka_resp_err_t(error: i32) -> Option<RDKafkaRespErr> {
     match error {
         -200 => Some(RD_KAFKA_RESP_ERR__BEGIN),
         -199 => Some(RD_KAFKA_RESP_ERR__BAD_MSG),
@@ -91,5 +93,94 @@ pub fn primive_to_rd_kafka_resp_err_t(error: i32) -> Option<rd_kafka_resp_err_t>
         43   => Some(RD_KAFKA_RESP_ERR_UNSUPPORTED_FOR_MESSAGE_FORMAT),
         44   => Some(RD_KAFKA_RESP_ERR_END_ALL),
         _ => None
+    }
+}
+
+pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError {
+    match err {
+        RD_KAFKA_RESP_ERR__BEGIN => Begin,
+        RD_KAFKA_RESP_ERR__BAD_MSG => BadMessage,
+        RD_KAFKA_RESP_ERR__BAD_COMPRESSION => BadCompression,
+        RD_KAFKA_RESP_ERR__DESTROY => BrokerDestroy,
+        RD_KAFKA_RESP_ERR__FAIL => Fail,
+        RD_KAFKA_RESP_ERR__TRANSPORT => BrokerTransportFailure,
+        RD_KAFKA_RESP_ERR__CRIT_SYS_RESOURCE => CriticalSystemResource,
+        RD_KAFKA_RESP_ERR__RESOLVE => Resolve,
+        RD_KAFKA_RESP_ERR__MSG_TIMED_OUT => MessageTimedOut,
+        RD_KAFKA_RESP_ERR__PARTITION_EOF => PartitionEOF,
+        RD_KAFKA_RESP_ERR__UNKNOWN_PARTITION => UnknownPartition,
+        RD_KAFKA_RESP_ERR__FS => FileSystem,
+        RD_KAFKA_RESP_ERR__UNKNOWN_TOPIC => UnknownTopic,
+        RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN => AllBrokersDown,
+        RD_KAFKA_RESP_ERR__INVALID_ARG => InvalidArgument,
+        RD_KAFKA_RESP_ERR__TIMED_OUT => MessageTimedOut,
+        RD_KAFKA_RESP_ERR__QUEUE_FULL => QueueFull,
+        RD_KAFKA_RESP_ERR__ISR_INSUFF => ISRInsufficent,
+        RD_KAFKA_RESP_ERR__NODE_UPDATE => NodeUpdate,
+        RD_KAFKA_RESP_ERR__SSL => SSL,
+        RD_KAFKA_RESP_ERR__WAIT_COORD => WaitingForCoordinator,
+        RD_KAFKA_RESP_ERR__UNKNOWN_GROUP => UnknownGroup,
+        RD_KAFKA_RESP_ERR__IN_PROGRESS => InProgress,
+        RD_KAFKA_RESP_ERR__PREV_IN_PROGRESS => PreviousInProgress,
+        RD_KAFKA_RESP_ERR__EXISTING_SUBSCRIPTION => ExistingSubscription,
+        RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => AssignPartitions,
+        RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => RevokePartitions,
+        RD_KAFKA_RESP_ERR__CONFLICT => Conflict,
+        RD_KAFKA_RESP_ERR__STATE => State,
+        RD_KAFKA_RESP_ERR__UNKNOWN_PROTOCOL => UnkownProtocol,
+        RD_KAFKA_RESP_ERR__NOT_IMPLEMENTED => NotImplemented,
+        RD_KAFKA_RESP_ERR__AUTHENTICATION => Authentication,
+        RD_KAFKA_RESP_ERR__NO_OFFSET => NoOffset,
+        RD_KAFKA_RESP_ERR__OUTDATED => Outdated,
+        RD_KAFKA_RESP_ERR__TIMED_OUT_QUEUE => TimedOutQueue,
+        RD_KAFKA_RESP_ERR__UNSUPPORTED_FEATURE => UnsupportedFeature,
+        RD_KAFKA_RESP_ERR__WAIT_CACHE => WaitCache,
+        RD_KAFKA_RESP_ERR__END => End,
+        RD_KAFKA_RESP_ERR_UNKNOWN => Unknown,
+        RD_KAFKA_RESP_ERR_NO_ERROR => NoError,
+        RD_KAFKA_RESP_ERR_OFFSET_OUT_OF_RANGE => OffsetOutOfRange,
+        RD_KAFKA_RESP_ERR_INVALID_MSG => InvalidMessage,
+        RD_KAFKA_RESP_ERR_UNKNOWN_TOPIC_OR_PART => UnknownTopicOrParition,
+        RD_KAFKA_RESP_ERR_INVALID_MSG_SIZE => InvalidMessageSize,
+        RD_KAFKA_RESP_ERR_LEADER_NOT_AVAILABLE => LeaderNotAvailable,
+        RD_KAFKA_RESP_ERR_NOT_LEADER_FOR_PARTITION => NotLeaderForPartition,
+        RD_KAFKA_RESP_ERR_REQUEST_TIMED_OUT => RequestTimedOut,
+        RD_KAFKA_RESP_ERR_BROKER_NOT_AVAILABLE => BrokerNotAvailable,
+        RD_KAFKA_RESP_ERR_REPLICA_NOT_AVAILABLE => ReplicaNotAvailable,
+        RD_KAFKA_RESP_ERR_MSG_SIZE_TOO_LARGE => MessageSizeTooLarge,
+        RD_KAFKA_RESP_ERR_STALE_CTRL_EPOCH => StaleControllerEpoch,
+        RD_KAFKA_RESP_ERR_OFFSET_METADATA_TOO_LARGE => OffsetMetadataTooLarge,
+        RD_KAFKA_RESP_ERR_NETWORK_EXCEPTION => NetworkException,
+        RD_KAFKA_RESP_ERR_GROUP_LOAD_IN_PROGRESS => GroupLoadInProgress,
+        RD_KAFKA_RESP_ERR_GROUP_COORDINATOR_NOT_AVAILABLE => GroupCoordinatorNotAvailable,
+        RD_KAFKA_RESP_ERR_NOT_COORDINATOR_FOR_GROUP => NotCoordinatorForGroup,
+        RD_KAFKA_RESP_ERR_TOPIC_EXCEPTION => InvalidTopic,
+        RD_KAFKA_RESP_ERR_RECORD_LIST_TOO_LARGE => MessageBatchTooLarge,
+        RD_KAFKA_RESP_ERR_NOT_ENOUGH_REPLICAS => NotEnoughReplicas,
+        RD_KAFKA_RESP_ERR_NOT_ENOUGH_REPLICAS_AFTER_APPEND => NotEnoughReplicasAfterAppend,
+        RD_KAFKA_RESP_ERR_INVALID_REQUIRED_ACKS => InvalidRequiredAcks,
+        RD_KAFKA_RESP_ERR_ILLEGAL_GENERATION => IllegalGeneration,
+        RD_KAFKA_RESP_ERR_INCONSISTENT_GROUP_PROTOCOL => InconsistentGroupProtocol,
+        RD_KAFKA_RESP_ERR_INVALID_GROUP_ID => InvalidGroupId,
+        RD_KAFKA_RESP_ERR_UNKNOWN_MEMBER_ID => UnknownMemberId,
+        RD_KAFKA_RESP_ERR_INVALID_SESSION_TIMEOUT => InvalidSessionTimeout,
+        RD_KAFKA_RESP_ERR_REBALANCE_IN_PROGRESS => RebalanceInProgress,
+        RD_KAFKA_RESP_ERR_INVALID_COMMIT_OFFSET_SIZE => InvalidCommitOffsetSize,
+        RD_KAFKA_RESP_ERR_TOPIC_AUTHORIZATION_FAILED => TopicAuthorizationFailed,
+        RD_KAFKA_RESP_ERR_GROUP_AUTHORIZATION_FAILED => GroupAuthorizationFailed,
+        RD_KAFKA_RESP_ERR_CLUSTER_AUTHORIZATION_FAILED => ClusterAuthorizationFailed,
+        RD_KAFKA_RESP_ERR_INVALID_TIMESTAMP => InvalidTimestamp,
+        RD_KAFKA_RESP_ERR_UNSUPPORTED_SASL_MECHANISM => UnsupportedSASLMechanism,
+        RD_KAFKA_RESP_ERR_ILLEGAL_SASL_STATE => IllegalSASLState,
+        RD_KAFKA_RESP_ERR_UNSUPPORTED_VERSION => UnsupportedVersion,
+        RD_KAFKA_RESP_ERR_TOPIC_ALREADY_EXISTS => TopicAlreadyExists,
+        RD_KAFKA_RESP_ERR_INVALID_PARTITIONS => InvalidPartitions,
+        RD_KAFKA_RESP_ERR_INVALID_REPLICATION_FACTOR => InvalidReplicationFactor,
+        RD_KAFKA_RESP_ERR_INVALID_REPLICA_ASSIGNMENT => InvalidReplicaAssignment,
+        RD_KAFKA_RESP_ERR_INVALID_CONFIG => InvalidConfig,
+        RD_KAFKA_RESP_ERR_NOT_CONTROLLER => NotController,
+        RD_KAFKA_RESP_ERR_INVALID_REQUEST => InvalidRequest,
+        RD_KAFKA_RESP_ERR_UNSUPPORTED_FOR_MESSAGE_FORMAT => UnsupportedForMessageFormat,
+        RD_KAFKA_RESP_ERR_END_ALL => EndAll,
     }
 }

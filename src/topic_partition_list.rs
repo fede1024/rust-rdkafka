@@ -199,7 +199,7 @@ impl TopicPartitionList {
         };
 
         if kafka_err.is_error() {
-            Err(KafkaError::SetPartitionOffset(kafka_err))
+            Err(KafkaError::SetPartitionOffset(kafka_err.into()))
         } else {
             Ok(())
         }

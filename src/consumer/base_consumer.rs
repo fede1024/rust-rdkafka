@@ -27,7 +27,7 @@ pub unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     let context = Box::from_raw(opaque_ptr as *mut C);
 
     let commit_error = if err.is_error() {
-        Err(KafkaError::ConsumerCommit(err))
+        Err(KafkaError::ConsumerCommit(err.into()))
     } else {
         Ok(())
     };
@@ -134,7 +134,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
                     rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
                         KafkaError::PartitionEOF(unsafe { (*message_ptr).partition })
                     }
-                    e => KafkaError::MessageConsumption(e),
+                    e => KafkaError::MessageConsumption(e.into()),
                 },
             );
         }
@@ -155,7 +155,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             rdsys::rd_kafka_commit(self.client.native_ptr(), tpl_ptr, mode as i32)
         };
         if error.is_error() {
-            Err(KafkaError::ConsumerCommit(error))
+            Err(KafkaError::ConsumerCommit(error.into()))
         } else {
             Ok(())
         }
@@ -165,7 +165,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     pub fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
         let error = unsafe { rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
         if error.is_error() {
-            Err(KafkaError::ConsumerCommit(error))
+            Err(KafkaError::ConsumerCommit(error.into()))
         } else {
             Ok(())
         }
@@ -176,7 +176,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     pub fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
         let error = unsafe { rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset()) };
         if error.is_error() {
-            Err(KafkaError::StoreOffset(error))
+            Err(KafkaError::StoreOffset(error.into()))
         } else {
             Ok(())
         }
@@ -188,7 +188,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         let error = unsafe { rdsys::rd_kafka_subscription(self.client.native_ptr(), &mut tpl_ptr) };
 
         let result = if error.is_error() {
-            Err(KafkaError::MetadataFetch(error))
+            Err(KafkaError::MetadataFetch(error.into()))
         } else {
             Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
         };
@@ -202,7 +202,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         let error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
 
         if error.is_error() {
-            Err(KafkaError::MetadataFetch(error))
+            Err(KafkaError::MetadataFetch(error.into()))
         } else {
             Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
         }
@@ -214,13 +214,13 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         let mut tpl_ptr = ptr::null_mut();
         let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
         if assignment_error.is_error() {
-            return Err(KafkaError::MetadataFetch(assignment_error));
+            return Err(KafkaError::MetadataFetch(assignment_error.into()));
         }
 
         let committed_error = unsafe { rdsys::rd_kafka_committed(self.client.native_ptr(), tpl_ptr, timeout_ms) };
 
         if committed_error.is_error() {
-            Err(KafkaError::MetadataFetch(committed_error))
+            Err(KafkaError::MetadataFetch(committed_error.into()))
         } else {
             Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
         }
@@ -231,7 +231,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         let mut tpl_ptr = ptr::null_mut();
         let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
         if assignment_error.is_error() {
-            return Err(KafkaError::MetadataFetch(assignment_error));
+            return Err(KafkaError::MetadataFetch(assignment_error.into()));
         }
         let mut tpl = unsafe { TopicPartitionList::from_ptr(tpl_ptr) };
 
@@ -243,7 +243,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             unsafe { rdsys::rd_kafka_offsets_for_times(self.client.native_ptr(), tpl.ptr(), timeout_ms) };
 
         if offsets_for_times_error.is_error() {
-            Err(KafkaError::MetadataFetch(offsets_for_times_error))
+            Err(KafkaError::MetadataFetch(offsets_for_times_error.into()))
         } else {
             Ok(tpl)
         }
@@ -259,7 +259,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         };
 
         if error.is_error() {
-            Err(KafkaError::MetadataFetch(error))
+            Err(KafkaError::MetadataFetch(error.into()))
         } else {
             Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
         }

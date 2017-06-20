@@ -1,5 +1,9 @@
 //! This module contains type aliases for types defined in the auto-generated bindings.
+use std::{error, fmt};
+use std::ffi::CStr;
+
 use bindings;
+use helpers;
 
 // TYPES
 
@@ -58,3 +62,216 @@ pub use bindings::rd_kafka_conf_res_t as RDKafkaConfRes;
 
 /// Response error
 pub use bindings::rd_kafka_resp_err_t as RDKafkaRespErr;
+
+/// Errors enum
+
+/// Error from the underlying rdkafka library.
+#[derive(Debug,Clone,Copy)]
+pub enum RDKafkaError {
+    #[doc(hidden)]
+    Begin = -200,
+    /// Received message is incorrect
+    BadMessage = -199,
+    /// Bad/unknown compression
+    BadCompression = -198,
+    /// Broker is going away
+    BrokerDestroy = -197,
+    /// Generic failure
+    Fail = -196,
+    /// Broker transport failure
+    BrokerTransportFailure = -195,
+    /// Critical system resource
+    CriticalSystemResource = -194,
+    /// Failed to resolve broker
+    Resolve = -193,
+    /// Produced message timed out
+    MessageTimedOut = -192,
+    /// Reached the end of the topic+partition queue on the broker. Not really an error.
+    PartitionEOF = -191,
+    /// Permanent: Partition does not exist in cluster.
+    UnknownPartition = -190,
+    /// File or filesystem error
+    FileSystem = -189,
+    /// Permanent: Topic does not exist in cluster.
+    UnknownTopic = -188,
+    /// All broker connections are down.
+    AllBrokersDown = -187,
+    ///	Invalid argument, or invalid configuration
+    InvalidArgument = -186,
+    ///	Operation timed out
+    OperationTimedOut = -185,
+    ///	Queue is full
+    QueueFull = -184,
+    ///	ISR count < required.acks
+    ISRInsufficent = -183,
+    ///	Broker node update
+    NodeUpdate = -182,
+    /// SSL error
+    SSL = -181,
+    ///	Waiting for coordinator to become available.
+    WaitingForCoordinator = -180,
+    /// Unknown client group
+    UnknownGroup = -179,
+    /// Operation in progress
+    InProgress = 178,
+    /// Previous operation in progress, wait for it to finish.
+    PreviousInProgress = -177,
+    ///	This operation would interfere with an existing subscription
+    ExistingSubscription = -176,
+    /// Assigned partitions (rebalance_cb)
+    AssignPartitions = -175,
+    /// Revoked partitions (rebalance_cb)
+    RevokePartitions = -174,
+    ///	Conflicting use
+    Conflict = -173,
+    ///	Wrong state
+    State = -172,
+    ///	Unknown protocol
+    UnkownProtocol = -171,
+    ///	Not implemented
+    NotImplemented = -170,
+    ///	Authentication failure
+    Authentication = -169,
+    /// No stored offset
+    NoOffset = -168,
+    ///	Outdated
+    Outdated = -167,
+    ///	Timed out in queue
+    TimedOutQueue = 166,
+    /// Feature not supported by broker
+    UnsupportedFeature = -165,
+    /// Awaiting cache update
+    WaitCache = -164,
+    #[doc(hidden)]
+    End = -100,
+    /// Unknown broker error
+    Unknown = -1,
+    /// Success
+    NoError = 0,
+    ///	Offset out of range
+    OffsetOutOfRange = 1,
+    /// Invalid message
+    InvalidMessage = 2,
+    ///Unknown topic or partition
+    UnknownTopicOrParition = 3,
+    ///	Invalid message size
+    InvalidMessageSize = 4,
+    /// Leader not available
+    LeaderNotAvailable = 5,
+    /// Not leader for partition
+    NotLeaderForPartition = 6,
+    ///	Request timed out
+    RequestTimedOut = 7,
+    ///	Broker not available
+    BrokerNotAvailable = 8,
+    ///	Replica not available
+    ReplicaNotAvailable = 9,
+    ///	Message size too large
+    MessageSizeTooLarge = 10,
+    ///	Stale controller epoch code
+    StaleControllerEpoch = 11,
+    /// Offset metadata string too large
+    OffsetMetadataTooLarge = 12,
+    /// Broker disconnected before response received
+    NetworkException = 13,
+    ///	Group coordinator load in progress
+    GroupLoadInProgress = 14,
+    ///	Group coordinator not available
+    GroupCoordinatorNotAvailable = 15,
+    /// Not coordinator for group
+    NotCoordinatorForGroup = 16,
+    /// Invalid topic
+    InvalidTopic = 17,
+    /// Message batch larger than configured server segment size
+    MessageBatchTooLarge = 18,
+    /// Not enough in-sync replicas
+    NotEnoughReplicas = 19,
+    /// Message(s) written to insufficient number of in-sync replicas
+    NotEnoughReplicasAfterAppend = 20,
+    ///	Invalid required acks value
+    InvalidRequiredAcks = 21,
+    /// Specified group generation id is not valid
+    IllegalGeneration = 22,
+    /// Inconsistent group protocol
+    InconsistentGroupProtocol = 23,
+    /// Invalid group.id
+    InvalidGroupId = 24,
+    /// Unknown member
+    UnknownMemberId = 25,
+    /// Invalid session timeout
+    InvalidSessionTimeout = 26,
+    ///	Group rebalance in progres
+    RebalanceInProgress = 27,
+    /// Commit offset data size is not valid
+    InvalidCommitOffsetSize = 28,
+    /// Topic authorization failed
+    TopicAuthorizationFailed = 29,
+    ///	Group authorization failed
+    GroupAuthorizationFailed = 30,
+    ///	Cluster authorization failed
+    ClusterAuthorizationFailed = 31,
+    /// Invalid timestamp
+    InvalidTimestamp = 32,
+    ///	Unsupported SASL mechanism
+    UnsupportedSASLMechanism = 33,
+    ///	Illegal SASL state
+    IllegalSASLState = 34,
+    /// Unsupported version
+    UnsupportedVersion = 35,
+    ///	Topic already exists
+    TopicAlreadyExists = 36,
+    /// Invalid number of partitions
+    InvalidPartitions = 37,
+    ///	Invalid replication factor
+    InvalidReplicationFactor = 38,
+    ///	Invalid replica assignment
+    InvalidReplicaAssignment = 39,
+    ///	Invalid config */
+    InvalidConfig = 40,
+    ///	Not controller for cluster
+    NotController = 41,
+    /// Invalid request
+    InvalidRequest = 42,
+    ///	Message format on broker does not support request
+    UnsupportedForMessageFormat = 43,
+    #[doc(hidden)]
+    EndAll,
+}
+
+impl From<RDKafkaRespErr> for RDKafkaError {
+    fn from(err: RDKafkaRespErr) -> RDKafkaError {
+        helpers::rd_kafka_resp_err_t_to_rdkafka_error(err)
+    }
+}
+
+impl fmt::Display for RDKafkaError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let description = match helpers::primive_to_rd_kafka_resp_err_t(*self as i32) {
+            Some(err) => {
+                let cstr = unsafe { bindings::rd_kafka_err2str(err) };
+                unsafe { CStr::from_ptr(cstr) }.to_string_lossy().into_owned()
+            },
+            None => "Unknown error".to_owned()
+        };
+
+        write!(f, "{:?} ({})", self, description)
+    }
+}
+
+impl error::Error for RDKafkaError {
+    fn description(&self) -> &str {
+        "Error from underlying rdkafka library"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display_error() {
+        let error: RDKafkaError = RDKafkaRespErr::RD_KAFKA_RESP_ERR__PARTITION_EOF.into();
+        assert_eq!("PartitionEOF (Broker: No more messages)", format!("{}", error));
+        assert_eq!("PartitionEOF", format!("{:?}", error));
+    }
+}
