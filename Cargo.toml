@@ -1,6 +1,6 @@
 [package]
 name = "rdkafka"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 repository = "https://github.com/fede1024/rust-rdkafka"
 readme = "README.md"
@@ -10,7 +10,7 @@ keywords = ["kafka", "rdkafka"]
 categories = ["api-bindings"]
 
 [dependencies]
-rdkafka-sys = { path = "rdkafka-sys", version = "0.9.5-0" }
+rdkafka-sys = { path = "rdkafka-sys", version = "0.9.5-1" }
 env_logger = "^0.3.0"
 errno = "^0.1.8"
 futures = "^0.1.13"

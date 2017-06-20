@@ -3,6 +3,9 @@
 <a name="master"></a>
 ## Master
 
+<a name="0.11.0"></a>
+## 0.11.0 (2017-06-20)
+
 #### Features
 
 * The topic partition list object from librdkafka is now completely accessible
