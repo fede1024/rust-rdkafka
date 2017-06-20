@@ -6,7 +6,7 @@ use types::RDKafkaError::*;
 /// This is not great. For legacy reasons some usage of rd_kafka_resp_err_t is
 /// passed as an integer in some places. There seems to be no easy way in Rust to
 /// match this the other way around so we do it manually.
-pub fn primive_to_rd_kafka_resp_err_t(error: i32) -> Option<RDKafkaRespErr> {
+pub fn primitive_to_rd_kafka_resp_err_t(error: i32) -> Option<RDKafkaRespErr> {
     match error {
         -200 => Some(RD_KAFKA_RESP_ERR__BEGIN),
         -199 => Some(RD_KAFKA_RESP_ERR__BAD_MSG),
@@ -115,7 +115,7 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR__INVALID_ARG => InvalidArgument,
         RD_KAFKA_RESP_ERR__TIMED_OUT => MessageTimedOut,
         RD_KAFKA_RESP_ERR__QUEUE_FULL => QueueFull,
-        RD_KAFKA_RESP_ERR__ISR_INSUFF => ISRInsufficent,
+        RD_KAFKA_RESP_ERR__ISR_INSUFF => ISRInsufficient,
         RD_KAFKA_RESP_ERR__NODE_UPDATE => NodeUpdate,
         RD_KAFKA_RESP_ERR__SSL => SSL,
         RD_KAFKA_RESP_ERR__WAIT_COORD => WaitingForCoordinator,
@@ -127,7 +127,7 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => RevokePartitions,
         RD_KAFKA_RESP_ERR__CONFLICT => Conflict,
         RD_KAFKA_RESP_ERR__STATE => State,
-        RD_KAFKA_RESP_ERR__UNKNOWN_PROTOCOL => UnkownProtocol,
+        RD_KAFKA_RESP_ERR__UNKNOWN_PROTOCOL => UnknownProtocol,
         RD_KAFKA_RESP_ERR__NOT_IMPLEMENTED => NotImplemented,
         RD_KAFKA_RESP_ERR__AUTHENTICATION => Authentication,
         RD_KAFKA_RESP_ERR__NO_OFFSET => NoOffset,
@@ -140,7 +140,7 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR_NO_ERROR => NoError,
         RD_KAFKA_RESP_ERR_OFFSET_OUT_OF_RANGE => OffsetOutOfRange,
         RD_KAFKA_RESP_ERR_INVALID_MSG => InvalidMessage,
-        RD_KAFKA_RESP_ERR_UNKNOWN_TOPIC_OR_PART => UnknownTopicOrParition,
+        RD_KAFKA_RESP_ERR_UNKNOWN_TOPIC_OR_PART => UnknownTopicOrPartition,
         RD_KAFKA_RESP_ERR_INVALID_MSG_SIZE => InvalidMessageSize,
         RD_KAFKA_RESP_ERR_LEADER_NOT_AVAILABLE => LeaderNotAvailable,
         RD_KAFKA_RESP_ERR_NOT_LEADER_FOR_PARTITION => NotLeaderForPartition,

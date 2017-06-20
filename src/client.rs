@@ -296,7 +296,8 @@ pub unsafe extern "C" fn native_stats_cb<C: Context>(
 pub unsafe extern "C" fn native_error_cb<C: Context>(
         _client: *mut RDKafka, err: i32, reason: *const i8,
         opaque: *mut c_void) {
-    let err = rdsys::primive_to_rd_kafka_resp_err_t(err).expect("global error not an rd_kafka_resp_err_t");
+    let err = rdsys::primitive_to_rd_kafka_resp_err_t(err)
+        .expect("global error not an rd_kafka_resp_err_t");
     let error = KafkaError::Global(err.into());
     let reason = CStr::from_ptr(reason).to_string_lossy();
 

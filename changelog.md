@@ -15,6 +15,7 @@
 * Timestamp is now Copy.
 * Message has been renamed to BorrowedMessage. Borrowed messages can be transformed
   into owned messages. Both implement the new Message trait.
+* Improved error enumerations.
 
 #### Bugs
 
