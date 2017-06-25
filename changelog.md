@@ -3,6 +3,13 @@
 <a name="master"></a>
 ## Master
 
+<a name="0.11.1"></a>
+## 0.11.0 (2017-06-25)
+
+#### Features
+
+* Support direct creation of OwnedMessages.
+
 <a name="0.11.0"></a>
 ## 0.11.0 (2017-06-20)
 

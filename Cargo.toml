@@ -1,6 +1,6 @@
 [package]
 name = "rdkafka"
-version = "0.11.0"
+version = "0.11.1"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 repository = "https://github.com/fede1024/rust-rdkafka"
 readme = "README.md"
@@ -25,7 +25,7 @@ clap = "^2.18.0"
 tokio-core = "^0.1.4"
 futures-cpupool = "^0.1.2"
 rand = "^0.3.15"
-chrono = "^0.3.1"
+chrono = "^0.4.0"
 
 [features]
 default = []
