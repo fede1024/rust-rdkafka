@@ -51,7 +51,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "true")
-        .set("statistics.interval.ms", "5000")
+        .set("statistics.interval.ms", "30000")
         .set_default_topic_config(TopicConfig::new()
             //.set("auto.offset.reset", "smallest")
             .finalize())
