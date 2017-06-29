@@ -228,7 +228,7 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
     type DeliveryContext = Complete<KafkaResult<DeliveryReport>>;
 
     fn delivery(&self, status: DeliveryReport, tx: Complete<KafkaResult<DeliveryReport>>) {
-        tx.send(Ok(status));
+        let _ = tx.send(Ok(status));
     }
 }
 
@@ -305,7 +305,7 @@ impl<C: Context + 'static> _FutureProducer<C> {
             Ok(_) => DeliveryFuture{ rx },
             Err(e) => {
                 let (tx, rx) = futures::oneshot();
-                tx.send(Err(e));
+                let _ = tx.send(Err(e));
                 DeliveryFuture { rx }
             }
         }
