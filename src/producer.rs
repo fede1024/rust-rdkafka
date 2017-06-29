@@ -1,5 +1,5 @@
 //! Producer implementations.
-use futures::{self, Canceled, Complete, Future, Poll, Oneshot};
+use futures::{self, Canceled, Complete, Future, Poll, Oneshot, Async};
 use rdsys::rd_kafka_vtype_t::*;
 use rdsys::types::*;
 use rdsys;
@@ -225,10 +225,10 @@ impl<C: Context + 'static> Context for FutureProducerContext<C> {
 }
 
 impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
-    type DeliveryContext = Complete<DeliveryReport>;
+    type DeliveryContext = Complete<KafkaResult<DeliveryReport>>;
 
-    fn delivery(&self, status: DeliveryReport, tx: Complete<DeliveryReport>) {
-        tx.complete(status);
+    fn delivery(&self, status: DeliveryReport, tx: Complete<KafkaResult<DeliveryReport>>) {
+        tx.send(Ok(status));
     }
 }
 
@@ -296,12 +296,19 @@ impl<C: Context + 'static> _FutureProducer<C> {
         payload: Option<&P>,
         key: Option<&K>,
         timestamp: Option<i64>
-    ) -> KafkaResult<DeliveryFuture>
+    ) -> DeliveryFuture
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
         let (tx, rx) = futures::oneshot();
-        self.producer.send_copy(topic_name, partition, payload, key, Some(Box::new(tx)), timestamp)?;
-        Ok(DeliveryFuture{rx: rx})
+
+        match self.producer.send_copy(topic_name, partition, payload, key, Some(Box::new(tx)), timestamp) {
+            Ok(_) => DeliveryFuture{ rx },
+            Err(e) => {
+                let (tx, rx) = futures::oneshot();
+                tx.send(Err(e));
+                DeliveryFuture { rx }
+            }
+        }
     }
 }
 
@@ -351,15 +358,21 @@ impl<C: Context + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
 /// A future that will receive a `DeliveryReport` containing information on the
 /// delivery status of the message.
 pub struct DeliveryFuture {
-    rx: Oneshot<DeliveryReport>,
+    rx: Oneshot<KafkaResult<DeliveryReport>>,
 }
 
 impl Future for DeliveryFuture {
     type Item = DeliveryReport;
-    type Error = Canceled;
+    type Error = KafkaError;
 
-    fn poll(&mut self) -> Poll<DeliveryReport, Canceled> {
-        self.rx.poll()
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        match self.rx.poll() {
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Err(Canceled) => Err(KafkaError::FutureCanceled),
+
+            Ok(Async::Ready(Ok(delivery_report))) => Ok(Async::Ready(delivery_report)),
+            Ok(Async::Ready(Err(e))) => Err(e)
+        }
     }
 }
 
@@ -374,7 +387,7 @@ impl<C: Context + 'static> FutureProducer<C> {
         payload: Option<&P>,
         key: Option<&K>,
         timestamp: Option<i64>
-    ) -> KafkaResult<DeliveryFuture>
+    ) -> DeliveryFuture
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
         self.inner.send_copy(topic_name, partition, payload, key, timestamp)
