@@ -24,6 +24,276 @@ impl <T> ::std::fmt::Debug for __BindgenUnionField<T> {
         fmt.write_str("__BindgenUnionField")
     }
 }
+pub const __llvm__: ::std::os::raw::c_uint = 1;
+pub const __clang__: ::std::os::raw::c_uint = 1;
+pub const __clang_major__: ::std::os::raw::c_uint = 8;
+pub const __clang_minor__: ::std::os::raw::c_uint = 1;
+pub const __clang_patchlevel__: ::std::os::raw::c_uint = 0;
+pub const __clang_version__: &'static [u8; 23usize] =
+    b"8.1.0 (clang-802.0.42)\x00";
+pub const __GNUC_MINOR__: ::std::os::raw::c_uint = 2;
+pub const __GNUC_PATCHLEVEL__: ::std::os::raw::c_uint = 1;
+pub const __GNUC__: ::std::os::raw::c_uint = 4;
+pub const __GXX_ABI_VERSION: ::std::os::raw::c_uint = 1002;
+pub const __ATOMIC_RELAXED: ::std::os::raw::c_uint = 0;
+pub const __ATOMIC_CONSUME: ::std::os::raw::c_uint = 1;
+pub const __ATOMIC_ACQUIRE: ::std::os::raw::c_uint = 2;
+pub const __ATOMIC_RELEASE: ::std::os::raw::c_uint = 3;
+pub const __ATOMIC_ACQ_REL: ::std::os::raw::c_uint = 4;
+pub const __ATOMIC_SEQ_CST: ::std::os::raw::c_uint = 5;
+pub const __PRAGMA_REDEFINE_EXTNAME: ::std::os::raw::c_uint = 1;
+pub const __VERSION__: &'static [u8; 51usize] =
+    b"4.2.1 Compatible Apple LLVM 8.1.0 (clang-802.0.42)\x00";
+pub const __OBJC_BOOL_IS_BOOL: ::std::os::raw::c_uint = 0;
+pub const __CONSTANT_CFSTRINGS__: ::std::os::raw::c_uint = 1;
+pub const __BLOCKS__: ::std::os::raw::c_uint = 1;
+pub const __ORDER_LITTLE_ENDIAN__: ::std::os::raw::c_uint = 1234;
+pub const __ORDER_BIG_ENDIAN__: ::std::os::raw::c_uint = 4321;
+pub const __ORDER_PDP_ENDIAN__: ::std::os::raw::c_uint = 3412;
+pub const __BYTE_ORDER__: ::std::os::raw::c_uint = 1234;
+pub const __LITTLE_ENDIAN__: ::std::os::raw::c_uint = 1;
+pub const _LP64: ::std::os::raw::c_uint = 1;
+pub const __LP64__: ::std::os::raw::c_uint = 1;
+pub const __CHAR_BIT__: ::std::os::raw::c_uint = 8;
+pub const __SCHAR_MAX__: ::std::os::raw::c_uint = 127;
+pub const __SHRT_MAX__: ::std::os::raw::c_uint = 32767;
+pub const __INT_MAX__: ::std::os::raw::c_uint = 2147483647;
+pub const __LONG_MAX__: ::std::os::raw::c_ulonglong = 9223372036854775807;
+pub const __LONG_LONG_MAX__: ::std::os::raw::c_ulonglong =
+    9223372036854775807;
+pub const __WCHAR_MAX__: ::std::os::raw::c_uint = 2147483647;
+pub const __INTMAX_MAX__: ::std::os::raw::c_ulonglong = 9223372036854775807;
+pub const __SIZE_MAX__: ::std::os::raw::c_int = -1;
+pub const __UINTMAX_MAX__: ::std::os::raw::c_int = -1;
+pub const __PTRDIFF_MAX__: ::std::os::raw::c_ulonglong = 9223372036854775807;
+pub const __INTPTR_MAX__: ::std::os::raw::c_ulonglong = 9223372036854775807;
+pub const __UINTPTR_MAX__: ::std::os::raw::c_int = -1;
+pub const __SIZEOF_DOUBLE__: ::std::os::raw::c_uint = 8;
+pub const __SIZEOF_FLOAT__: ::std::os::raw::c_uint = 4;
+pub const __SIZEOF_INT__: ::std::os::raw::c_uint = 4;
+pub const __SIZEOF_LONG__: ::std::os::raw::c_uint = 8;
+pub const __SIZEOF_LONG_DOUBLE__: ::std::os::raw::c_uint = 16;
+pub const __SIZEOF_LONG_LONG__: ::std::os::raw::c_uint = 8;
+pub const __SIZEOF_POINTER__: ::std::os::raw::c_uint = 8;
+pub const __SIZEOF_SHORT__: ::std::os::raw::c_uint = 2;
+pub const __SIZEOF_PTRDIFF_T__: ::std::os::raw::c_uint = 8;
+pub const __SIZEOF_SIZE_T__: ::std::os::raw::c_uint = 8;
+pub const __SIZEOF_WCHAR_T__: ::std::os::raw::c_uint = 4;
+pub const __SIZEOF_WINT_T__: ::std::os::raw::c_uint = 4;
+pub const __SIZEOF_INT128__: ::std::os::raw::c_uint = 16;
+pub const __INTMAX_FMTd__: &'static [u8; 3usize] = b"ld\x00";
+pub const __INTMAX_FMTi__: &'static [u8; 3usize] = b"li\x00";
+pub const __UINTMAX_FMTo__: &'static [u8; 3usize] = b"lo\x00";
+pub const __UINTMAX_FMTu__: &'static [u8; 3usize] = b"lu\x00";
+pub const __UINTMAX_FMTx__: &'static [u8; 3usize] = b"lx\x00";
+pub const __UINTMAX_FMTX__: &'static [u8; 3usize] = b"lX\x00";
+pub const __INTMAX_WIDTH__: ::std::os::raw::c_uint = 64;
+pub const __PTRDIFF_FMTd__: &'static [u8; 3usize] = b"ld\x00";
+pub const __PTRDIFF_FMTi__: &'static [u8; 3usize] = b"li\x00";
+pub const __PTRDIFF_WIDTH__: ::std::os::raw::c_uint = 64;
+pub const __INTPTR_FMTd__: &'static [u8; 3usize] = b"ld\x00";
+pub const __INTPTR_FMTi__: &'static [u8; 3usize] = b"li\x00";
+pub const __INTPTR_WIDTH__: ::std::os::raw::c_uint = 64;
+pub const __SIZE_FMTo__: &'static [u8; 3usize] = b"lo\x00";
+pub const __SIZE_FMTu__: &'static [u8; 3usize] = b"lu\x00";
+pub const __SIZE_FMTx__: &'static [u8; 3usize] = b"lx\x00";
+pub const __SIZE_FMTX__: &'static [u8; 3usize] = b"lX\x00";
+pub const __SIZE_WIDTH__: ::std::os::raw::c_uint = 64;
+pub const __WCHAR_WIDTH__: ::std::os::raw::c_uint = 32;
+pub const __WINT_WIDTH__: ::std::os::raw::c_uint = 32;
+pub const __SIG_ATOMIC_WIDTH__: ::std::os::raw::c_uint = 32;
+pub const __SIG_ATOMIC_MAX__: ::std::os::raw::c_uint = 2147483647;
+pub const __UINTMAX_WIDTH__: ::std::os::raw::c_uint = 64;
+pub const __UINTPTR_FMTo__: &'static [u8; 3usize] = b"lo\x00";
+pub const __UINTPTR_FMTu__: &'static [u8; 3usize] = b"lu\x00";
+pub const __UINTPTR_FMTx__: &'static [u8; 3usize] = b"lx\x00";
+pub const __UINTPTR_FMTX__: &'static [u8; 3usize] = b"lX\x00";
+pub const __UINTPTR_WIDTH__: ::std::os::raw::c_uint = 64;
+pub const __FLT_HAS_DENORM__: ::std::os::raw::c_uint = 1;
+pub const __FLT_DIG__: ::std::os::raw::c_uint = 6;
+pub const __FLT_DECIMAL_DIG__: ::std::os::raw::c_uint = 9;
+pub const __FLT_HAS_INFINITY__: ::std::os::raw::c_uint = 1;
+pub const __FLT_HAS_QUIET_NAN__: ::std::os::raw::c_uint = 1;
+pub const __FLT_MANT_DIG__: ::std::os::raw::c_uint = 24;
+pub const __FLT_MAX_10_EXP__: ::std::os::raw::c_uint = 38;
+pub const __FLT_MAX_EXP__: ::std::os::raw::c_uint = 128;
+pub const __FLT_MIN_10_EXP__: ::std::os::raw::c_int = -37;
+pub const __FLT_MIN_EXP__: ::std::os::raw::c_int = -125;
+pub const __DBL_HAS_DENORM__: ::std::os::raw::c_uint = 1;
+pub const __DBL_DIG__: ::std::os::raw::c_uint = 15;
+pub const __DBL_DECIMAL_DIG__: ::std::os::raw::c_uint = 17;
+pub const __DBL_HAS_INFINITY__: ::std::os::raw::c_uint = 1;
+pub const __DBL_HAS_QUIET_NAN__: ::std::os::raw::c_uint = 1;
+pub const __DBL_MANT_DIG__: ::std::os::raw::c_uint = 53;
+pub const __DBL_MAX_10_EXP__: ::std::os::raw::c_uint = 308;
+pub const __DBL_MAX_EXP__: ::std::os::raw::c_uint = 1024;
+pub const __DBL_MIN_10_EXP__: ::std::os::raw::c_int = -307;
+pub const __DBL_MIN_EXP__: ::std::os::raw::c_int = -1021;
+pub const __LDBL_HAS_DENORM__: ::std::os::raw::c_uint = 1;
+pub const __LDBL_DIG__: ::std::os::raw::c_uint = 18;
+pub const __LDBL_DECIMAL_DIG__: ::std::os::raw::c_uint = 21;
+pub const __LDBL_HAS_INFINITY__: ::std::os::raw::c_uint = 1;
+pub const __LDBL_HAS_QUIET_NAN__: ::std::os::raw::c_uint = 1;
+pub const __LDBL_MANT_DIG__: ::std::os::raw::c_uint = 64;
+pub const __LDBL_MAX_10_EXP__: ::std::os::raw::c_uint = 4932;
+pub const __LDBL_MAX_EXP__: ::std::os::raw::c_uint = 16384;
+pub const __LDBL_MIN_10_EXP__: ::std::os::raw::c_int = -4931;
+pub const __LDBL_MIN_EXP__: ::std::os::raw::c_int = -16381;
+pub const __POINTER_WIDTH__: ::std::os::raw::c_uint = 64;
+pub const __BIGGEST_ALIGNMENT__: ::std::os::raw::c_uint = 16;
+pub const __INT8_FMTd__: &'static [u8; 4usize] = b"hhd\x00";
+pub const __INT8_FMTi__: &'static [u8; 4usize] = b"hhi\x00";
+pub const __INT16_FMTd__: &'static [u8; 3usize] = b"hd\x00";
+pub const __INT16_FMTi__: &'static [u8; 3usize] = b"hi\x00";
+pub const __INT32_FMTd__: &'static [u8; 2usize] = b"d\x00";
+pub const __INT32_FMTi__: &'static [u8; 2usize] = b"i\x00";
+pub const __INT64_FMTd__: &'static [u8; 4usize] = b"lld\x00";
+pub const __INT64_FMTi__: &'static [u8; 4usize] = b"lli\x00";
+pub const __UINT8_FMTo__: &'static [u8; 4usize] = b"hho\x00";
+pub const __UINT8_FMTu__: &'static [u8; 4usize] = b"hhu\x00";
+pub const __UINT8_FMTx__: &'static [u8; 4usize] = b"hhx\x00";
+pub const __UINT8_FMTX__: &'static [u8; 4usize] = b"hhX\x00";
+pub const __UINT8_MAX__: ::std::os::raw::c_uint = 255;
+pub const __INT8_MAX__: ::std::os::raw::c_uint = 127;
+pub const __UINT16_FMTo__: &'static [u8; 3usize] = b"ho\x00";
+pub const __UINT16_FMTu__: &'static [u8; 3usize] = b"hu\x00";
+pub const __UINT16_FMTx__: &'static [u8; 3usize] = b"hx\x00";
+pub const __UINT16_FMTX__: &'static [u8; 3usize] = b"hX\x00";
+pub const __UINT16_MAX__: ::std::os::raw::c_uint = 65535;
+pub const __INT16_MAX__: ::std::os::raw::c_uint = 32767;
+pub const __UINT32_FMTo__: &'static [u8; 2usize] = b"o\x00";
+pub const __UINT32_FMTu__: &'static [u8; 2usize] = b"u\x00";
+pub const __UINT32_FMTx__: &'static [u8; 2usize] = b"x\x00";
+pub const __UINT32_FMTX__: &'static [u8; 2usize] = b"X\x00";
+pub const __UINT32_MAX__: ::std::os::raw::c_uint = 4294967295;
+pub const __INT32_MAX__: ::std::os::raw::c_uint = 2147483647;
+pub const __UINT64_FMTo__: &'static [u8; 4usize] = b"llo\x00";
+pub const __UINT64_FMTu__: &'static [u8; 4usize] = b"llu\x00";
+pub const __UINT64_FMTx__: &'static [u8; 4usize] = b"llx\x00";
+pub const __UINT64_FMTX__: &'static [u8; 4usize] = b"llX\x00";
+pub const __UINT64_MAX__: ::std::os::raw::c_int = -1;
+pub const __INT64_MAX__: ::std::os::raw::c_ulonglong = 9223372036854775807;
+pub const __INT_LEAST8_MAX__: ::std::os::raw::c_uint = 127;
+pub const __INT_LEAST8_FMTd__: &'static [u8; 4usize] = b"hhd\x00";
+pub const __INT_LEAST8_FMTi__: &'static [u8; 4usize] = b"hhi\x00";
+pub const __UINT_LEAST8_MAX__: ::std::os::raw::c_uint = 255;
+pub const __UINT_LEAST8_FMTo__: &'static [u8; 4usize] = b"hho\x00";
+pub const __UINT_LEAST8_FMTu__: &'static [u8; 4usize] = b"hhu\x00";
+pub const __UINT_LEAST8_FMTx__: &'static [u8; 4usize] = b"hhx\x00";
+pub const __UINT_LEAST8_FMTX__: &'static [u8; 4usize] = b"hhX\x00";
+pub const __INT_LEAST16_MAX__: ::std::os::raw::c_uint = 32767;
+pub const __INT_LEAST16_FMTd__: &'static [u8; 3usize] = b"hd\x00";
+pub const __INT_LEAST16_FMTi__: &'static [u8; 3usize] = b"hi\x00";
+pub const __UINT_LEAST16_MAX__: ::std::os::raw::c_uint = 65535;
+pub const __UINT_LEAST16_FMTo__: &'static [u8; 3usize] = b"ho\x00";
+pub const __UINT_LEAST16_FMTu__: &'static [u8; 3usize] = b"hu\x00";
+pub const __UINT_LEAST16_FMTx__: &'static [u8; 3usize] = b"hx\x00";
+pub const __UINT_LEAST16_FMTX__: &'static [u8; 3usize] = b"hX\x00";
+pub const __INT_LEAST32_MAX__: ::std::os::raw::c_uint = 2147483647;
+pub const __INT_LEAST32_FMTd__: &'static [u8; 2usize] = b"d\x00";
+pub const __INT_LEAST32_FMTi__: &'static [u8; 2usize] = b"i\x00";
+pub const __UINT_LEAST32_MAX__: ::std::os::raw::c_uint = 4294967295;
+pub const __UINT_LEAST32_FMTo__: &'static [u8; 2usize] = b"o\x00";
+pub const __UINT_LEAST32_FMTu__: &'static [u8; 2usize] = b"u\x00";
+pub const __UINT_LEAST32_FMTx__: &'static [u8; 2usize] = b"x\x00";
+pub const __UINT_LEAST32_FMTX__: &'static [u8; 2usize] = b"X\x00";
+pub const __INT_LEAST64_MAX__: ::std::os::raw::c_ulonglong =
+    9223372036854775807;
+pub const __INT_LEAST64_FMTd__: &'static [u8; 3usize] = b"ld\x00";
+pub const __INT_LEAST64_FMTi__: &'static [u8; 3usize] = b"li\x00";
+pub const __UINT_LEAST64_MAX__: ::std::os::raw::c_int = -1;
+pub const __UINT_LEAST64_FMTo__: &'static [u8; 3usize] = b"lo\x00";
+pub const __UINT_LEAST64_FMTu__: &'static [u8; 3usize] = b"lu\x00";
+pub const __UINT_LEAST64_FMTx__: &'static [u8; 3usize] = b"lx\x00";
+pub const __UINT_LEAST64_FMTX__: &'static [u8; 3usize] = b"lX\x00";
+pub const __INT_FAST8_MAX__: ::std::os::raw::c_uint = 127;
+pub const __INT_FAST8_FMTd__: &'static [u8; 4usize] = b"hhd\x00";
+pub const __INT_FAST8_FMTi__: &'static [u8; 4usize] = b"hhi\x00";
+pub const __UINT_FAST8_MAX__: ::std::os::raw::c_uint = 255;
+pub const __UINT_FAST8_FMTo__: &'static [u8; 4usize] = b"hho\x00";
+pub const __UINT_FAST8_FMTu__: &'static [u8; 4usize] = b"hhu\x00";
+pub const __UINT_FAST8_FMTx__: &'static [u8; 4usize] = b"hhx\x00";
+pub const __UINT_FAST8_FMTX__: &'static [u8; 4usize] = b"hhX\x00";
+pub const __INT_FAST16_MAX__: ::std::os::raw::c_uint = 32767;
+pub const __INT_FAST16_FMTd__: &'static [u8; 3usize] = b"hd\x00";
+pub const __INT_FAST16_FMTi__: &'static [u8; 3usize] = b"hi\x00";
+pub const __UINT_FAST16_MAX__: ::std::os::raw::c_uint = 65535;
+pub const __UINT_FAST16_FMTo__: &'static [u8; 3usize] = b"ho\x00";
+pub const __UINT_FAST16_FMTu__: &'static [u8; 3usize] = b"hu\x00";
+pub const __UINT_FAST16_FMTx__: &'static [u8; 3usize] = b"hx\x00";
+pub const __UINT_FAST16_FMTX__: &'static [u8; 3usize] = b"hX\x00";
+pub const __INT_FAST32_MAX__: ::std::os::raw::c_uint = 2147483647;
+pub const __INT_FAST32_FMTd__: &'static [u8; 2usize] = b"d\x00";
+pub const __INT_FAST32_FMTi__: &'static [u8; 2usize] = b"i\x00";
+pub const __UINT_FAST32_MAX__: ::std::os::raw::c_uint = 4294967295;
+pub const __UINT_FAST32_FMTo__: &'static [u8; 2usize] = b"o\x00";
+pub const __UINT_FAST32_FMTu__: &'static [u8; 2usize] = b"u\x00";
+pub const __UINT_FAST32_FMTx__: &'static [u8; 2usize] = b"x\x00";
+pub const __UINT_FAST32_FMTX__: &'static [u8; 2usize] = b"X\x00";
+pub const __INT_FAST64_MAX__: ::std::os::raw::c_ulonglong =
+    9223372036854775807;
+pub const __INT_FAST64_FMTd__: &'static [u8; 3usize] = b"ld\x00";
+pub const __INT_FAST64_FMTi__: &'static [u8; 3usize] = b"li\x00";
+pub const __UINT_FAST64_MAX__: ::std::os::raw::c_int = -1;
+pub const __UINT_FAST64_FMTo__: &'static [u8; 3usize] = b"lo\x00";
+pub const __UINT_FAST64_FMTu__: &'static [u8; 3usize] = b"lu\x00";
+pub const __UINT_FAST64_FMTx__: &'static [u8; 3usize] = b"lx\x00";
+pub const __UINT_FAST64_FMTX__: &'static [u8; 3usize] = b"lX\x00";
+pub const __FINITE_MATH_ONLY__: ::std::os::raw::c_uint = 0;
+pub const __GNUC_STDC_INLINE__: ::std::os::raw::c_uint = 1;
+pub const __GCC_ATOMIC_TEST_AND_SET_TRUEVAL: ::std::os::raw::c_uint = 1;
+pub const __GCC_ATOMIC_BOOL_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __GCC_ATOMIC_CHAR_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __GCC_ATOMIC_CHAR16_T_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __GCC_ATOMIC_CHAR32_T_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __GCC_ATOMIC_WCHAR_T_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __GCC_ATOMIC_SHORT_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __GCC_ATOMIC_INT_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __GCC_ATOMIC_LONG_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __GCC_ATOMIC_LLONG_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __GCC_ATOMIC_POINTER_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __NO_INLINE__: ::std::os::raw::c_uint = 1;
+pub const __PIC__: ::std::os::raw::c_uint = 2;
+pub const __pic__: ::std::os::raw::c_uint = 2;
+pub const __FLT_EVAL_METHOD__: ::std::os::raw::c_uint = 0;
+pub const __FLT_RADIX__: ::std::os::raw::c_uint = 2;
+pub const __DECIMAL_DIG__: ::std::os::raw::c_uint = 21;
+pub const __SSP__: ::std::os::raw::c_uint = 1;
+pub const __amd64__: ::std::os::raw::c_uint = 1;
+pub const __amd64: ::std::os::raw::c_uint = 1;
+pub const __x86_64: ::std::os::raw::c_uint = 1;
+pub const __x86_64__: ::std::os::raw::c_uint = 1;
+pub const __core2: ::std::os::raw::c_uint = 1;
+pub const __core2__: ::std::os::raw::c_uint = 1;
+pub const __tune_core2__: ::std::os::raw::c_uint = 1;
+pub const __NO_MATH_INLINES: ::std::os::raw::c_uint = 1;
+pub const __FXSR__: ::std::os::raw::c_uint = 1;
+pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16: ::std::os::raw::c_uint = 1;
+pub const __SSSE3__: ::std::os::raw::c_uint = 1;
+pub const __SSE3__: ::std::os::raw::c_uint = 1;
+pub const __SSE2__: ::std::os::raw::c_uint = 1;
+pub const __SSE2_MATH__: ::std::os::raw::c_uint = 1;
+pub const __SSE__: ::std::os::raw::c_uint = 1;
+pub const __SSE_MATH__: ::std::os::raw::c_uint = 1;
+pub const __MMX__: ::std::os::raw::c_uint = 1;
+pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1: ::std::os::raw::c_uint = 1;
+pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2: ::std::os::raw::c_uint = 1;
+pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4: ::std::os::raw::c_uint = 1;
+pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8: ::std::os::raw::c_uint = 1;
+pub const __APPLE_CC__: ::std::os::raw::c_uint = 6000;
+pub const __APPLE__: ::std::os::raw::c_uint = 1;
+pub const OBJC_NEW_PROPERTIES: ::std::os::raw::c_uint = 1;
+pub const __apple_build_version__: ::std::os::raw::c_uint = 8020042;
+pub const __DYNAMIC__: ::std::os::raw::c_uint = 1;
+pub const __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__:
+          ::std::os::raw::c_uint =
+    1090;
+pub const __MACH__: ::std::os::raw::c_uint = 1;
+pub const __STDC__: ::std::os::raw::c_uint = 1;
+pub const __STDC_HOSTED__: ::std::os::raw::c_uint = 1;
+pub const __STDC_VERSION__: ::std::os::raw::c_uint = 201112;
+pub const __STDC_UTF_16__: ::std::os::raw::c_uint = 1;
+pub const __STDC_UTF_32__: ::std::os::raw::c_uint = 1;
 pub const __DARWIN_ONLY_64_BIT_INO_T: ::std::os::raw::c_uint = 0;
 pub const __DARWIN_ONLY_VERS_1050: ::std::os::raw::c_uint = 0;
 pub const __DARWIN_ONLY_UNIX_CONFORMANCE: ::std::os::raw::c_uint = 1;
@@ -61,6 +331,7 @@ pub const __MAC_10_11_4: ::std::os::raw::c_uint = 101104;
 pub const __MAC_10_12: ::std::os::raw::c_uint = 101200;
 pub const __MAC_10_12_1: ::std::os::raw::c_uint = 101201;
 pub const __MAC_10_12_2: ::std::os::raw::c_uint = 101202;
+pub const __MAC_10_12_4: ::std::os::raw::c_uint = 101204;
 pub const __IPHONE_2_0: ::std::os::raw::c_uint = 20000;
 pub const __IPHONE_2_1: ::std::os::raw::c_uint = 20100;
 pub const __IPHONE_2_2: ::std::os::raw::c_uint = 20200;
@@ -89,18 +360,24 @@ pub const __IPHONE_9_3: ::std::os::raw::c_uint = 90300;
 pub const __IPHONE_10_0: ::std::os::raw::c_uint = 100000;
 pub const __IPHONE_10_1: ::std::os::raw::c_uint = 100100;
 pub const __IPHONE_10_2: ::std::os::raw::c_uint = 100200;
+pub const __IPHONE_10_3: ::std::os::raw::c_uint = 100300;
 pub const __TVOS_9_0: ::std::os::raw::c_uint = 90000;
 pub const __TVOS_9_1: ::std::os::raw::c_uint = 90100;
 pub const __TVOS_9_2: ::std::os::raw::c_uint = 90200;
 pub const __TVOS_10_0: ::std::os::raw::c_uint = 100000;
 pub const __TVOS_10_0_1: ::std::os::raw::c_uint = 100001;
 pub const __TVOS_10_1: ::std::os::raw::c_uint = 100100;
+pub const __TVOS_10_2: ::std::os::raw::c_uint = 100200;
 pub const __WATCHOS_1_0: ::std::os::raw::c_uint = 10000;
 pub const __WATCHOS_2_0: ::std::os::raw::c_uint = 20000;
+pub const __WATCHOS_2_1: ::std::os::raw::c_uint = 20100;
+pub const __WATCHOS_2_2: ::std::os::raw::c_uint = 20200;
 pub const __WATCHOS_3_0: ::std::os::raw::c_uint = 30000;
 pub const __WATCHOS_3_1: ::std::os::raw::c_uint = 30100;
 pub const __WATCHOS_3_1_1: ::std::os::raw::c_uint = 30101;
-pub const __MAC_OS_X_VERSION_MAX_ALLOWED: ::std::os::raw::c_uint = 101202;
+pub const __WATCHOS_3_2: ::std::os::raw::c_uint = 30200;
+pub const __MAC_OS_X_VERSION_MIN_REQUIRED: ::std::os::raw::c_uint = 1090;
+pub const __MAC_OS_X_VERSION_MAX_ALLOWED: ::std::os::raw::c_uint = 101204;
 pub const __PTHREAD_SIZE__: ::std::os::raw::c_uint = 8176;
 pub const __PTHREAD_ATTR_SIZE__: ::std::os::raw::c_uint = 56;
 pub const __PTHREAD_MUTEXATTR_SIZE__: ::std::os::raw::c_uint = 8;
@@ -110,6 +387,7 @@ pub const __PTHREAD_COND_SIZE__: ::std::os::raw::c_uint = 40;
 pub const __PTHREAD_ONCE_SIZE__: ::std::os::raw::c_uint = 8;
 pub const __PTHREAD_RWLOCK_SIZE__: ::std::os::raw::c_uint = 192;
 pub const __PTHREAD_RWLOCKATTR_SIZE__: ::std::os::raw::c_uint = 16;
+pub const __DARWIN_WCHAR_MAX: ::std::os::raw::c_uint = 2147483647;
 pub const __DARWIN_WCHAR_MIN: ::std::os::raw::c_int = -2147483648;
 pub const _FORTIFY_SOURCE: ::std::os::raw::c_uint = 2;
 pub const RENAME_SECLUDE: ::std::os::raw::c_uint = 1;
@@ -353,6 +631,8 @@ pub const PTRDIFF_MIN: ::std::os::raw::c_longlong = -9223372036854775808;
 pub const PTRDIFF_MAX: ::std::os::raw::c_ulonglong = 9223372036854775807;
 pub const SIZE_MAX: ::std::os::raw::c_int = -1;
 pub const RSIZE_MAX: ::std::os::raw::c_int = -1;
+pub const WCHAR_MAX: ::std::os::raw::c_uint = 2147483647;
+pub const WCHAR_MIN: ::std::os::raw::c_int = -2147483648;
 pub const WINT_MIN: ::std::os::raw::c_int = -2147483648;
 pub const WINT_MAX: ::std::os::raw::c_uint = 2147483647;
 pub const SIG_ATOMIC_MIN: ::std::os::raw::c_int = -2147483648;
@@ -480,6 +760,7 @@ pub const SAE_ASSOCID_ANY: ::std::os::raw::c_uint = 0;
 pub const SAE_CONNID_ANY: ::std::os::raw::c_uint = 0;
 pub const CONNECT_RESUME_ON_READ_WRITE: ::std::os::raw::c_uint = 1;
 pub const CONNECT_DATA_IDEMPOTENT: ::std::os::raw::c_uint = 2;
+pub const CONNECT_DATA_AUTHENTICATED: ::std::os::raw::c_uint = 4;
 pub const SONPX_SETOPTSHUT: ::std::os::raw::c_uint = 1;
 pub const SOL_SOCKET: ::std::os::raw::c_uint = 65535;
 pub const AF_UNSPEC: ::std::os::raw::c_uint = 0;
@@ -599,7 +880,7 @@ pub const SHUT_RD: ::std::os::raw::c_uint = 0;
 pub const SHUT_WR: ::std::os::raw::c_uint = 1;
 pub const SHUT_RDWR: ::std::os::raw::c_uint = 2;
 pub const LIBRDKAFKA_TYPECHECKS: ::std::os::raw::c_uint = 1;
-pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 591359;
+pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 721097;
 pub const RD_KAFKA_DEBUG_CONTEXTS: &'static [u8; 81usize] =
     b"all,generic,broker,topic,metadata,queue,msg,protocol,cgrp,security,fetch,feature\x00";
 pub const RD_KAFKA_OFFSET_BEGINNING: ::std::os::raw::c_int = -2;
@@ -617,7 +898,8 @@ pub const RD_KAFKA_EVENT_LOG: ::std::os::raw::c_uint = 4;
 pub const RD_KAFKA_EVENT_ERROR: ::std::os::raw::c_uint = 8;
 pub const RD_KAFKA_EVENT_REBALANCE: ::std::os::raw::c_uint = 16;
 pub const RD_KAFKA_EVENT_OFFSET_COMMIT: ::std::os::raw::c_uint = 32;
-pub type __int8_t = ::std::os::raw::c_char;
+pub const RD_KAFKA_EVENT_STATS: ::std::os::raw::c_uint = 64;
+pub type __int8_t = ::std::os::raw::c_schar;
 pub type __uint8_t = ::std::os::raw::c_uchar;
 pub type __int16_t = ::std::os::raw::c_short;
 pub type __uint16_t = ::std::os::raw::c_ushort;
@@ -1034,7 +1316,9 @@ impl Clone for __sbuf {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct __sFILEX([u8; 0]);
+pub struct __sFILEX {
+    _unused: [u8; 0],
+}
 #[repr(C)]
 #[derive(Debug, Copy)]
 pub struct __sFILE {
@@ -2232,23 +2516,33 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct rd_kafka_s([u8; 0]);
+pub struct rd_kafka_s {
+    _unused: [u8; 0],
+}
 pub type rd_kafka_t = rd_kafka_s;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct rd_kafka_topic_s([u8; 0]);
+pub struct rd_kafka_topic_s {
+    _unused: [u8; 0],
+}
 pub type rd_kafka_topic_t = rd_kafka_topic_s;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct rd_kafka_conf_s([u8; 0]);
+pub struct rd_kafka_conf_s {
+    _unused: [u8; 0],
+}
 pub type rd_kafka_conf_t = rd_kafka_conf_s;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct rd_kafka_topic_conf_s([u8; 0]);
+pub struct rd_kafka_topic_conf_s {
+    _unused: [u8; 0],
+}
 pub type rd_kafka_topic_conf_t = rd_kafka_topic_conf_s;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct rd_kafka_queue_s([u8; 0]);
+pub struct rd_kafka_queue_s {
+    _unused: [u8; 0],
+}
 pub type rd_kafka_queue_t = rd_kafka_queue_s;
 #[repr(i32)]
 /**
@@ -2302,6 +2596,11 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__TIMED_OUT_QUEUE = -166,
     RD_KAFKA_RESP_ERR__UNSUPPORTED_FEATURE = -165,
     RD_KAFKA_RESP_ERR__WAIT_CACHE = -164,
+    RD_KAFKA_RESP_ERR__INTR = -163,
+    RD_KAFKA_RESP_ERR__KEY_SERIALIZATION = -162,
+    RD_KAFKA_RESP_ERR__VALUE_SERIALIZATION = -161,
+    RD_KAFKA_RESP_ERR__KEY_DESERIALIZATION = -160,
+    RD_KAFKA_RESP_ERR__VALUE_DESERIALIZATION = -159,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,
@@ -2348,7 +2647,19 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR_NOT_CONTROLLER = 41,
     RD_KAFKA_RESP_ERR_INVALID_REQUEST = 42,
     RD_KAFKA_RESP_ERR_UNSUPPORTED_FOR_MESSAGE_FORMAT = 43,
-    RD_KAFKA_RESP_ERR_END_ALL = 44,
+    RD_KAFKA_RESP_ERR_POLICY_VIOLATION = 44,
+    RD_KAFKA_RESP_ERR_OUT_OF_ORDER_SEQUENCE_NUMBER = 45,
+    RD_KAFKA_RESP_ERR_DUPLICATE_SEQUENCE_NUMBER = 46,
+    RD_KAFKA_RESP_ERR_INVALID_PRODUCER_EPOCH = 47,
+    RD_KAFKA_RESP_ERR_INVALID_TXN_STATE = 48,
+    RD_KAFKA_RESP_ERR_INVALID_PRODUCER_ID_MAPPING = 49,
+    RD_KAFKA_RESP_ERR_INVALID_TRANSACTION_TIMEOUT = 50,
+    RD_KAFKA_RESP_ERR_CONCURRENT_TRANSACTIONS = 51,
+    RD_KAFKA_RESP_ERR_TRANSACTION_COORDINATOR_FENCED = 52,
+    RD_KAFKA_RESP_ERR_TRANSACTIONAL_ID_AUTHORIZATION_FAILED = 53,
+    RD_KAFKA_RESP_ERR_SECURITY_DISABLED = 54,
+    RD_KAFKA_RESP_ERR_OPERATION_NOT_ATTEMPTED = 55,
+    RD_KAFKA_RESP_ERR_END_ALL = 56,
 }
 /**
  * @brief Error code value, name and description.
@@ -2437,6 +2748,9 @@ extern "C" {
  *         are used in the same application thread the developer needs to
  *         make sure rd_kafka_last_error() is called immediately after
  *         a failed API call.
+ *
+ * @remark errno propagation from librdkafka is not safe on Windows
+ *         and should not be used, use rd_kafka_last_error() instead.
  */
     pub fn rd_kafka_last_error() -> rd_kafka_resp_err_t;
 }
@@ -2460,6 +2774,9 @@ extern "C" {
  * @remark A better alternative is to call rd_kafka_last_error() immediately
  *         after any of the above functions return -1 or NULL.
  *
+ * @deprecated Use rd_kafka_last_error() to retrieve the last error code
+ *             set by the legacy librdkafka APIs.
+ *
  * @sa rd_kafka_last_error()
  */
     pub fn rd_kafka_errno2err(errnox: ::std::os::raw::c_int)
@@ -2471,9 +2788,12 @@ extern "C" {
  *
  * On most platforms this is the same as \p errno but in case of different
  * runtimes between library and application (e.g., Windows static DLLs)
- * this provides a means for expsing the errno librdkafka uses.
+ * this provides a means for exposing the errno librdkafka uses.
  *
  * @remark The value is local to the current calling thread.
+ *
+ * @deprecated Use rd_kafka_last_error() to retrieve the last error code
+ *             set by the legacy librdkafka APIs.
  */
     pub fn rd_kafka_errno() -> ::std::os::raw::c_int;
 }
@@ -2924,6 +3244,16 @@ extern "C" {
                                       tstype: *mut rd_kafka_timestamp_type_t)
      -> i64;
 }
+extern "C" {
+    /**
+ * @brief Returns the latency for a produced message measured from
+ *        the produce() call.
+ *
+ * @returns the latency in microseconds, or -1 if not available.
+ */
+    pub fn rd_kafka_message_latency(rkmessage: *const rd_kafka_message_t)
+     -> i64;
+}
 #[repr(i32)]
 /**
  * @enum rd_kafka_conf_res_t
@@ -2987,7 +3317,14 @@ extern "C" {
  *
  * \p conf must have been previously created with rd_kafka_conf_new().
  *
- * Returns \c rd_kafka_conf_res_t to indicate success or failure.
+ * Fallthrough:
+ * Topic-level configuration properties may be set using this interface
+ * in which case they are applied on the \c default_topic_conf.
+ * If no \c default_topic_conf has been set one will be created.
+ * Any sub-sequent rd_kafka_conf_set_default_topic_conf() calls will
+ * replace the current default topic configuration.
+ *
+ * @returns \c rd_kafka_conf_res_t to indicate success or failure.
  * In case of failure \p errstr is updated to contain a human readable
  * error string.
  */
@@ -3402,7 +3739,11 @@ extern "C" {
  *
  * If \p dest is NULL only the full length of the value is returned.
  *
- * Returns \p RD_KAFKA_CONF_OK if the property name matched, else
+ * Fallthrough:
+ * Topic-level configuration properties from the \c default_topic_conf
+ * may be retrieved using this interface.
+ *
+ * @returns \p RD_KAFKA_CONF_OK if the property name matched, else
  * \p RD_KAFKA_CONF_UNKNOWN.
  */
     pub fn rd_kafka_conf_get(conf: *const rd_kafka_conf_t,
@@ -3662,6 +4003,12 @@ extern "C" {
 }
 extern "C" {
     /**
+ * @brief Returns Kafka handle type.
+ */
+    pub fn rd_kafka_type(rk: *const rd_kafka_t) -> rd_kafka_type_t;
+}
+extern "C" {
+    /**
  * @brief Returns this client's broker-assigned group member id 
  *
  * @remark This currently requires the high-level KafkaConsumer
@@ -3672,6 +4019,28 @@ extern "C" {
  *          rd_kafka_mem_free()
  */
     pub fn rd_kafka_memberid(rk: *const rd_kafka_t)
+     -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    /**
+ * @brief Returns the ClusterId as reported in broker metadata.
+ *
+ * @param timeout_ms If there is no cached value from metadata retrieval
+ *                   then this specifies the maximum amount of time
+ *                   (in milliseconds) the call will block waiting
+ *                   for metadata to be retrieved.
+ *                   Use 0 for non-blocking calls.
+
+ * @remark Requires broker version >=0.10.0 and api.version.request=true.
+ *
+ * @remark The application must free the returned pointer
+ *         using rd_kafka_mem_free().
+ *
+ * @returns a newly allocated string containing the ClusterId, or NULL
+ *          if no ClusterId could be retrieved in the allotted timespan.
+ */
+    pub fn rd_kafka_clusterid(rk: *mut rd_kafka_t,
+                              timeout_ms: ::std::os::raw::c_int)
      -> *mut ::std::os::raw::c_char;
 }
 extern "C" {
@@ -3745,6 +4114,7 @@ extern "C" {
  *   - error callbacks (rd_kafka_conf_set_error_cb()) [all]
  *   - stats callbacks (rd_kafka_conf_set_stats_cb()) [all]
  *   - throttle callbacks (rd_kafka_conf_set_throttle_cb()) [all]
+ *   - on_acknowledgement() interceptors
  *
  * @returns the number of events served.
  */
@@ -4090,7 +4460,7 @@ extern "C" {
  * \p timeout_ms is maximum amount of time to wait for a message to be received.
  * Consumer must have been previously started with `rd_kafka_consume_start()`.
  *
- * Returns a message object on success or \c NULL on error.
+ * @returns a message object on success or \c NULL on error.
  * The message object must be destroyed with `rd_kafka_message_destroy()`
  * when the application is done with it.
  *
@@ -4104,6 +4474,9 @@ extern "C" {
  *       end of the partition has been reached, which should typically not be
  *       considered an error. The application should handle this case
  *       (e.g., ignore).
+ *
+ * @remark on_consume() interceptors may be called from this function prior to
+ *         passing message to application.
  */
     pub fn rd_kafka_consume(rkt: *mut rd_kafka_topic_t, partition: i32,
                             timeout_ms: ::std::os::raw::c_int)
@@ -4131,6 +4504,9 @@ extern "C" {
  * or -1 on error (same error codes as for `rd_kafka_consume()`.
  *
  * @sa rd_kafka_consume()
+ *
+ * @remark on_consume() interceptors may be called from this function prior to
+ *         passing message to application.
  */
     pub fn rd_kafka_consume_batch(rkt: *mut rd_kafka_topic_t, partition: i32,
                                   timeout_ms: ::std::os::raw::c_int,
@@ -4157,6 +4533,9 @@ extern "C" {
  * @returns the number of messages processed or -1 on error.
  *
  * @sa rd_kafka_consume()
+ *
+ * @remark on_consume() interceptors may be called from this function prior to
+ *         passing message to application.
  */
     pub fn rd_kafka_consume_callback(rkt: *mut rd_kafka_topic_t,
                                      partition: i32,
@@ -4213,14 +4592,34 @@ extern "C" {
  * @brief Store offset \p offset for topic \p rkt partition \p partition.
  *
  * The offset will be committed (written) to the offset store according
- * to \c `auto.commit.interval.ms`.
+ * to \c `auto.commit.interval.ms` or manual offset-less commit()
  *
- * @remark \c `auto.commit.enable` must be set to "false" when using this API.
+ * @remark \c `enable.auto.offset.store` must be set to "false" when using this API.
  *
  * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or an error code on error.
  */
     pub fn rd_kafka_offset_store(rkt: *mut rd_kafka_topic_t, partition: i32,
                                  offset: i64) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    /**
+ * @brief Store offsets for one or more partitions.
+ *
+ * The offset will be committed (written) to the offset store according
+ * to \c `auto.commit.interval.ms` or manual offset-less commit().
+ *
+ * Per-partition success/error status propagated through each partition's
+ * \c .err field.
+ *
+ * @remark \c `enable.auto.offset.store` must be set to "false" when using this API.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or an error code if
+ *          none of the offsets could be stored.
+ */
+    pub fn rd_kafka_offsets_store(rk: *mut rd_kafka_t,
+                                  offsets:
+                                      *mut rd_kafka_topic_partition_list_t)
+     -> rd_kafka_resp_err_t;
 }
 extern "C" {
     /**
@@ -4276,6 +4675,9 @@ extern "C" {
  * @returns A message object which is a proper message if \p ->err is
  *          RD_KAFKA_RESP_ERR_NO_ERROR, or an event or error for any other
  *          value.
+ *
+ * @remark on_consume() interceptors may be called from this function prior to
+ *         passing message to application.
  *
  * @sa rd_kafka_message_t
  */
@@ -4488,7 +4890,11 @@ extern "C" {
  * pointer that will provided in the delivery report callback (`dr_cb`) for
  * referencing this message.
  *
- * Returns 0 on success or -1 on error in which case errno is set accordingly:
+ * @remark on_send() and on_acknowledgement() interceptors may be called
+ *         from this function. on_acknowledgement() will only be called if the
+ *         message fails partitioning.
+ *
+ * @returns 0 on success or -1 on error in which case errno is set accordingly:
  *  - ENOBUFS  - maximum number of outstanding messages has been reached:
  *               "queue.buffering.max.messages"
  *               (RD_KAFKA_RESP_ERR__QUEUE_FULL)
@@ -5167,12 +5573,19 @@ extern "C" {
  *
  * Returns 0 if all kafka objects are now destroyed, or -1 if the
  * timeout was reached.
- * Since `rd_kafka_destroy()` is an asynch operation the 
- * `rd_kafka_wait_destroyed()` function can be used for applications where
- * a clean shutdown is required.
+ *
+ * @remark This function is deprecated.
  */
     pub fn rd_kafka_wait_destroyed(timeout_ms: ::std::os::raw::c_int)
      -> ::std::os::raw::c_int;
+}
+extern "C" {
+    /**
+ * @brief Run librdkafka's built-in unit-tests.
+ *
+ * @returns the number of failures, or 0 if all tests passed.
+ */
+    pub fn rd_kafka_unittest() -> ::std::os::raw::c_int;
 }
 extern "C" {
     /**
@@ -5191,7 +5604,9 @@ extern "C" {
 pub type rd_kafka_event_type_t = ::std::os::raw::c_int;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct rd_kafka_op_s([u8; 0]);
+pub struct rd_kafka_op_s {
+    _unused: [u8; 0],
+}
 pub type rd_kafka_event_t = rd_kafka_op_s;
 extern "C" {
     /**
@@ -5237,6 +5652,9 @@ extern "C" {
  *
  * @remark The returned message(s) MUST NOT be
  *         freed with rd_kafka_message_destroy().
+ *
+ * @remark on_consume() and on_acknowledgement() interceptors may be called
+ *         from this function prior to passing message to application.
  */
     pub fn rd_kafka_event_message_next(rkev: *mut rd_kafka_event_t)
      -> *const rd_kafka_message_t;
@@ -5251,6 +5669,9 @@ extern "C" {
  *  - RD_KAFKA_EVENT_DR     (>=1 message(s))
  *
  * @returns the number of messages extracted.
+ *
+ * @remark on_consume() and on_acknowledgement() interceptors may be called
+ *         from this function prior to passing message to application.
  */
     pub fn rd_kafka_event_message_array(rkev: *mut rd_kafka_event_t,
                                         rkmessages:
@@ -5316,6 +5737,21 @@ extern "C" {
 }
 extern "C" {
     /**
+ * @brief Extract stats from the event.
+ *
+ * Event types:
+ *  - RD_KAFKA_EVENT_STATS
+ *
+ * @returns stats json string.
+ *
+ * @remark the returned string will be freed automatically along with the event object
+ *
+ */
+    pub fn rd_kafka_event_stats(rkev: *mut rd_kafka_event_t)
+     -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    /**
  * @returns the topic partition list from the event.
  *
  * @remark The list MUST NOT be freed with rd_kafka_topic_partition_list_destroy()
@@ -5365,6 +5801,405 @@ extern "C" {
                                         timeout_ms: ::std::os::raw::c_int)
      -> ::std::os::raw::c_int;
 }
+/**
+ * @brief Plugin's configuration initializer method called each time the
+ *        library is referenced from configuration (even if previously loaded by
+ *        another client instance).
+ *
+ * @remark This method MUST be implemented by plugins and have the symbol name
+ *         \c conf_init
+ *
+ * @param conf Configuration set up to this point.
+ * @param plug_opaquep Plugin can set this pointer to a per-configuration
+ *                     opaque pointer.
+ * @param errstr String buffer of size \p errstr_size where plugin must write
+ *               a human readable error string in the case the initializer
+ *               fails (returns non-zero).
+ *
+ * @remark A plugin may add an on_conf_destroy() interceptor to clean up
+ *         plugin-specific resources created in the plugin's conf_init() method.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or an error code on error.
+ */
+pub type rd_kafka_plugin_f_conf_init_t =
+    ::std::option::Option<unsafe extern "C" fn(conf: *mut rd_kafka_conf_t,
+                                               plug_opaquep:
+                                                   *mut *mut ::std::os::raw::c_void,
+                                               errstr:
+                                                   *mut ::std::os::raw::c_char,
+                                               errstr_size: usize)
+                              -> rd_kafka_resp_err_t>;
+/**
+ * @brief on_conf_set() is called from rd_kafka_*_conf_set() in the order
+ *        the interceptors were added.
+ *
+ * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
+ * @param name The configuration property to set.
+ * @param val The configuration value to set, or NULL for reverting to default
+ *            in which case the previous value should be freed.
+ * @param errstr A human readable error string in case the interceptor fails.
+ * @param errstr_size Maximum space (including \0) in \p errstr.
+ *
+ * @returns RD_KAFKA_CONF_RES_OK if the property was known and successfully
+ *          handled by the interceptor, RD_KAFKA_CONF_RES_INVALID if the
+ *          property was handled by the interceptor but the value was invalid,
+ *          or RD_KAFKA_CONF_RES_UNKNOWN if the interceptor did not handle
+ *          this property, in which case the property is passed on on the
+ *          interceptor in the chain, finally ending up at the built-in
+ *          configuration handler.
+ */
+pub type rd_kafka_interceptor_f_on_conf_set_t =
+    ::std::option::Option<unsafe extern "C" fn(conf: *mut rd_kafka_conf_t,
+                                               name:
+                                                   *const ::std::os::raw::c_char,
+                                               val:
+                                                   *const ::std::os::raw::c_char,
+                                               errstr:
+                                                   *mut ::std::os::raw::c_char,
+                                               errstr_size: usize,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_conf_res_t>;
+/**
+ * @brief on_conf_dup() is called from rd_kafka_conf_dup() in the
+ *        order the interceptors were added and is used to let
+ *        an interceptor re-register its conf interecptors with a new
+ *        opaque value.
+ *
+ * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or an error code
+ *          on failure (which is logged but otherwise ignored).
+ *
+ * @remark No on_conf_* interceptors are copied to the new configuration
+ *         object on rd_kafka_conf_dup().
+ */
+pub type rd_kafka_interceptor_f_on_conf_dup_t =
+    ::std::option::Option<unsafe extern "C" fn(new_conf: *mut rd_kafka_conf_t,
+                                               old_conf:
+                                                   *const rd_kafka_conf_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+/**
+ * @brief on_conf_destroy() is called from rd_kafka_*_conf_destroy() in the
+ *        order the interceptors were added.
+ *
+ * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
+ */
+pub type rd_kafka_interceptor_f_on_conf_destroy_t =
+    ::std::option::Option<unsafe extern "C" fn(ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+/**
+ * @brief on_new() is called from rd_kafka_new() prior toreturning
+ *        the newly created client instance to the application.
+ *
+ * @param rk The client instance.
+ * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
+ * @param errstr A human readable error string in case the interceptor fails.
+ * @param errstr_size Maximum space (including \0) in \p errstr.
+ *
+ * @returns an error code on failure, the error is logged but otherwise ignored.
+ *
+ * @warning The \p rk client instance will not be fully set up when this
+ *          interceptor is called and the interceptor MUST NOT call any
+ *          other rk-specific APIs than rd_kafka_interceptor_add..().
+ *
+ */
+pub type rd_kafka_interceptor_f_on_new_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void,
+                                               errstr:
+                                                   *mut ::std::os::raw::c_char,
+                                               errstr_size: usize)
+                              -> rd_kafka_resp_err_t>;
+/**
+ * @brief on_destroy() is called from rd_kafka_destroy() or (rd_kafka_new()
+ *        if rd_kafka_new() fails during initialization).
+ *
+ * @param rk The client instance.
+ * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
+ */
+pub type rd_kafka_interceptor_f_on_destroy_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+/**
+ * @brief on_send() is called from rd_kafka_produce*() (et.al) prior to
+ *        the partitioner being called.
+ *
+ * @param rk The client instance.
+ * @param rkmessage The message being produced. Immutable.
+ * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
+ *
+ * @remark This interceptor is only used by producer instances.
+ *
+ * @remark The \p rkmessage object is NOT mutable and MUST NOT be modified
+ *         by the interceptor.
+ *
+ * @remark If the partitioner fails or an unknown partition was specified,
+ *         the on_acknowledgement() interceptor chain will be called from
+ *         within the rd_kafka_produce*() call to maintain send-acknowledgement
+ *         symmetry.
+ *
+ * @returns an error code on failure, the error is logged but otherwise ignored.
+ */
+pub type rd_kafka_interceptor_f_on_send_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               rkmessage:
+                                                   *mut rd_kafka_message_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+/**
+ * @brief on_acknowledgement() is called to inform interceptors that a message
+ *        was succesfully delivered or permanently failed delivery.
+ *        The interceptor chain is called from rd_kafka_poll(), the event
+ *        interface, internal librdkafka threads (if no dr_cb/dr_msg_cb or
+ *        RD_KAFKA_EVENT_DR has been registered), or rd_kafka_produce*() if
+ *        the partitioner failed.
+ *
+ * @param rk The client instance.
+ * @param rkmessage The message being produced. Immutable.
+ * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
+ *
+ * @remark This interceptor is only used by producer instances.
+ *
+ * @remark The \p rkmessage object is NOT mutable and MUST NOT be modified
+ *         by the interceptor.
+ *
+ * @warning If no delivery report callback or event has been configured
+ *         the on_acknowledgement() method may be called from internal
+ *         librdkafka threads. An on_acknowledgement() interceptor MUST NOT
+ *         call any librdkafka API's associated with the \p rk, or perform
+ *         any blocking or prolonged work.
+ *
+ * @returns an error code on failure, the error is logged but otherwise ignored.
+ */
+pub type rd_kafka_interceptor_f_on_acknowledgement_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               rkmessage:
+                                                   *mut rd_kafka_message_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+/**
+ * @brief on_consume() is called just prior to passing the message to the
+ *        application in rd_kafka_consumer_poll(), rd_kafka_consume*(),
+ *        the event interface, etc.
+ *
+ * @param rk The client instance.
+ * @param rkmessage The message being consumed. Immutable.
+ * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
+ *
+ * @remark This interceptor is only used by consumer instances.
+ *
+ * @remark The \p rkmessage object is NOT mutable and MUST NOT be modified
+ *         by the interceptor.
+ *
+ * @returns an error code on failure, the error is logged but otherwise ignored.
+ */
+pub type rd_kafka_interceptor_f_on_consume_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               rkmessage:
+                                                   *mut rd_kafka_message_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+/**
+ * @brief on_commit() is called on completed or failed offset commit.
+ *        It is called from internal librdkafka threads.
+ *
+ * @param rk The client instance.
+ * @param offsets List of topic+partition+offset+error that were committed.
+ *                The error message of each partition should be checked for
+ *                error.
+ * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
+ *
+ * @remark This interceptor is only used by consumer instances.
+ *
+ * @warning The on_commit() interceptor is called from internal
+ *          librdkafka threads. An on_commit() interceptor MUST NOT
+ *          call any librdkafka API's associated with the \p rk, or perform
+ *          any blocking or prolonged work.
+ *
+ *
+ * @returns an error code on failure, the error is logged but otherwise ignored.
+ */
+pub type rd_kafka_interceptor_f_on_commit_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               offsets:
+                                                   *const rd_kafka_topic_partition_list_t,
+                                               err: rd_kafka_resp_err_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
+extern "C" {
+    /**
+ * @brief Append an on_conf_set() interceptor.
+ *
+ * @param conf Configuration object.
+ * @param ic_name Interceptor name, used in logging.
+ * @param on_conf_set Function pointer.
+ * @param ic_opaque Opaque value that will be passed to the function.
+ */
+    pub fn rd_kafka_conf_interceptor_add_on_conf_set(conf:
+                                                         *mut rd_kafka_conf_t,
+                                                     ic_name:
+                                                         *const ::std::os::raw::c_char,
+                                                     on_conf_set:
+                                                         rd_kafka_interceptor_f_on_conf_set_t,
+                                                     ic_opaque:
+                                                         *mut ::std::os::raw::c_void);
+}
+extern "C" {
+    /**
+ * @brief Append an on_conf_dup() interceptor.
+ *
+ * @param conf Configuration object.
+ * @param ic_name Interceptor name, used in logging.
+ * @param on_conf_dup Function pointer.
+ * @param ic_opaque Opaque value that will be passed to the function.
+ */
+    pub fn rd_kafka_conf_interceptor_add_on_conf_dup(conf:
+                                                         *mut rd_kafka_conf_t,
+                                                     ic_name:
+                                                         *const ::std::os::raw::c_char,
+                                                     on_conf_dup:
+                                                         rd_kafka_interceptor_f_on_conf_dup_t,
+                                                     ic_opaque:
+                                                         *mut ::std::os::raw::c_void);
+}
+extern "C" {
+    /**
+ * @brief Append an on_conf_destroy() interceptor.
+ *
+ * @param conf Configuration object.
+ * @param ic_name Interceptor name, used in logging.
+ * @param on_conf_destroy Function pointer.
+ * @param ic_opaque Opaque value that will be passed to the function.
+ */
+    pub fn rd_kafka_conf_interceptor_add_on_conf_destroy(conf:
+                                                             *mut rd_kafka_conf_t,
+                                                         ic_name:
+                                                             *const ::std::os::raw::c_char,
+                                                         on_conf_destroy:
+                                                             rd_kafka_interceptor_f_on_conf_destroy_t,
+                                                         ic_opaque:
+                                                             *mut ::std::os::raw::c_void);
+}
+extern "C" {
+    /**
+ * @brief Append an on_new() interceptor.
+ *
+ * @param conf Configuration object.
+ * @param ic_name Interceptor name, used in logging.
+ * @param on_send Function pointer.
+ * @param ic_opaque Opaque value that will be passed to the function.
+  *
+ * @remark Since the on_new() interceptor is added to the configuration object
+ *         it may be copied by rd_kafka_conf_dup().
+ *         An interceptor implementation must thus be able to handle
+ *         the same interceptor,ic_opaque tuple to be used by multiple
+ *         client instances.
+ */
+    pub fn rd_kafka_conf_interceptor_add_on_new(conf: *mut rd_kafka_conf_t,
+                                                ic_name:
+                                                    *const ::std::os::raw::c_char,
+                                                on_new:
+                                                    rd_kafka_interceptor_f_on_new_t,
+                                                ic_opaque:
+                                                    *mut ::std::os::raw::c_void);
+}
+extern "C" {
+    /**
+ * @brief Append an on_destroy() interceptor.
+ *
+ * @param rk Client instance.
+ * @param ic_name Interceptor name, used in logging.
+ * @param on_destroy Function pointer.
+ * @param ic_opaque Opaque value that will be passed to the function.
+ */
+    pub fn rd_kafka_interceptor_add_on_destroy(rk: *mut rd_kafka_t,
+                                               ic_name:
+                                                   *const ::std::os::raw::c_char,
+                                               on_destroy:
+                                                   rd_kafka_interceptor_f_on_destroy_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void);
+}
+extern "C" {
+    /**
+ * @brief Append an on_send() interceptor.
+ *
+ * @param rk Client instance.
+ * @param ic_name Interceptor name, used in logging.
+ * @param on_send Function pointer.
+ * @param ic_opaque Opaque value that will be passed to the function.
+ */
+    pub fn rd_kafka_interceptor_add_on_send(rk: *mut rd_kafka_t,
+                                            ic_name:
+                                                *const ::std::os::raw::c_char,
+                                            on_send:
+                                                rd_kafka_interceptor_f_on_send_t,
+                                            ic_opaque:
+                                                *mut ::std::os::raw::c_void);
+}
+extern "C" {
+    /**
+ * @brief Append an on_acknowledgement() interceptor.
+ *
+ * @param rk Client instance.
+ * @param ic_name Interceptor name, used in logging.
+ * @param on_acknowledgement Function pointer.
+ * @param ic_opaque Opaque value that will be passed to the function.
+ */
+    pub fn rd_kafka_interceptor_add_on_acknowledgement(rk: *mut rd_kafka_t,
+                                                       ic_name:
+                                                           *const ::std::os::raw::c_char,
+                                                       on_acknowledgement:
+                                                           rd_kafka_interceptor_f_on_acknowledgement_t,
+                                                       ic_opaque:
+                                                           *mut ::std::os::raw::c_void);
+}
+extern "C" {
+    /**
+ * @brief Append an on_consume() interceptor.
+ *
+ * @param rk Client instance.
+ * @param ic_name Interceptor name, used in logging.
+ * @param on_consume Function pointer.
+ * @param ic_opaque Opaque value that will be passed to the function.
+ */
+    pub fn rd_kafka_interceptor_add_on_consume(rk: *mut rd_kafka_t,
+                                               ic_name:
+                                                   *const ::std::os::raw::c_char,
+                                               on_consume:
+                                                   rd_kafka_interceptor_f_on_consume_t,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void);
+}
+extern "C" {
+    /**
+ * @brief Append an on_commit() interceptor.
+ *
+ * @param rk Client instance.
+ * @param ic_name Interceptor name, used in logging.
+ * @param on_commit() Function pointer.
+ * @param ic_opaque Opaque value that will be passed to the function.
+ */
+    pub fn rd_kafka_interceptor_add_on_commit(rk: *mut rd_kafka_t,
+                                              ic_name:
+                                                  *const ::std::os::raw::c_char,
+                                              on_commit:
+                                                  rd_kafka_interceptor_f_on_commit_t,
+                                              ic_opaque:
+                                                  *mut ::std::os::raw::c_void);
+}
+pub type __builtin_va_list = [__va_list_tag; 1usize];
 #[repr(C)]
 #[derive(Debug, Copy)]
 pub struct __va_list_tag {
@@ -5403,4 +6238,3 @@ fn bindgen_test_layout___va_list_tag() {
 impl Clone for __va_list_tag {
     fn clone(&self) -> Self { *self }
 }
-pub type __builtin_va_list = [__va_list_tag; 1usize];
