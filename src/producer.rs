@@ -361,6 +361,12 @@ pub struct DeliveryFuture {
     rx: Oneshot<KafkaResult<DeliveryReport>>,
 }
 
+impl DeliveryFuture {
+    pub fn close(&mut self) {
+        self.rx.close();
+    }
+}
+
 impl Future for DeliveryFuture {
     type Item = DeliveryReport;
     type Error = KafkaError;
