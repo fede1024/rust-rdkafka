@@ -77,8 +77,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
 
     let futures = (0..count)
         .map(|id| {
-            let future = producer.send_copy(topic_name, partition, Some(&value_fn(id)), Some(&key_fn(id)), timestamp)
-                .expect("Production failed");
+            let future = producer.send_copy(topic_name, partition, Some(&value_fn(id)), Some(&key_fn(id)), timestamp);
             (id, future)
         }).collect::<Vec<_>>();
 
