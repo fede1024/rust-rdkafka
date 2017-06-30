@@ -154,6 +154,20 @@ In this case there is a broker expected to be running on `KAFKA_HOST`.
 The broker must be configured with default partition number 3 and topic autocreation in order
 for the tests to succeed.
 
+## Debugging
+
+rust-rdkafka uses the `log` and `env_logger` crates to handle logging. Logging can be enabled
+using the `RUST_LOG` environment variable, for example:
+
+```bash
+RUST_LOG="librdkafka=trace,rdkafka::client=debug" cargo test
+```
+
+This will configure the logging level of librdkafka to trace, and the level of the client
+module of the Rust client to debug. To actually receive logs from librdkafka, you also have to
+set the `debug` option in the producer or consumer configuration (see librdkafka
+[configuration](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md)).
+
 ## rdkafka-sys
 
 See [rdkafka-sys](https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys).

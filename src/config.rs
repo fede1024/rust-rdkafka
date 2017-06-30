@@ -169,11 +169,11 @@ impl ClientConfig {
 
 /// Return the log level
 fn log_level_from_global_config() -> RDKafkaLogLevel {
-    if log_enabled!(LogLevel::Debug) {
+    if log_enabled!(target: "librdkafka", LogLevel::Debug) {
         RDKafkaLogLevel::Debug
-    } else if log_enabled!(LogLevel::Info) {
+    } else if log_enabled!(target: "librdkafka", LogLevel::Info) {
         RDKafkaLogLevel::Info
-    } else if log_enabled!(LogLevel::Warn) {
+    } else if log_enabled!(target: "librdkafka", LogLevel::Warn) {
         RDKafkaLogLevel::Warning
     } else {
         RDKafkaLogLevel::Error
