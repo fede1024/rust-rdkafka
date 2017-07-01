@@ -90,10 +90,11 @@ impl NativeClient {
 
 impl Drop for NativeClient {
     fn drop(&mut self) {
-        trace!("Destroy librdkafka client {:p}", self.ptr);
+        trace!("Destroying client: {:p}", self.ptr);
         unsafe {
             rdsys::rd_kafka_destroy(self.ptr);
         }
+        trace!("Client destroyed: {:?}", self.ptr);
     }
 }
 
@@ -254,10 +255,11 @@ impl NativeTopic {
 
 impl Drop for NativeTopic {
     fn drop(&mut self) {
-        trace!("Destroy NativeTopic");
+        trace!("Destroying NativeTopic: {:?}", self.ptr);
         unsafe {
             rdsys::rd_kafka_topic_destroy(self.ptr);
         }
+        trace!("NativeTopic destroyed: {:?}", self.ptr);
     }
 }
 

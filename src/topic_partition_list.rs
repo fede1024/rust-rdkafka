@@ -57,6 +57,7 @@ impl Offset {
     }
 }
 
+// TODO: implement Debug
 /// One element of the topic partition list.
 pub struct TopicPartitionListElem<'a> {
     ptr: *mut RDKafkaTopicPartition,
@@ -267,7 +268,9 @@ impl TopicPartitionList {
 impl Drop for TopicPartitionList {
     fn drop(&mut self) {
         if !self.ptr.is_null() {
+            trace!("Destroying TPL: {:?}", self.ptr);
             unsafe { rdsys::rd_kafka_topic_partition_list_destroy(self.ptr) }
+            trace!("TPL destroyed: {:?}", self.ptr);
         }
     }
 }

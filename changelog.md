@@ -6,6 +6,9 @@
 #### Features
 * Update librdkafka to 0.11.0-RC1.
 
+#### Bugs
+* Fix flaky tests.
+
 <a name="0.11.0"></a>
 ## 0.11.0 (2017-06-20)
 

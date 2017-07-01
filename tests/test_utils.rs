@@ -7,7 +7,7 @@ use rand::Rng;
 use futures::*;
 
 use rdkafka::client::Context;
-use rdkafka::config::{ClientConfig, RDKafkaLogLevel, TopicConfig};
+use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::consumer::ConsumerContext;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
@@ -43,12 +43,7 @@ pub struct TestContext {
 }
 
 impl Context for TestContext {
-    fn log(&self, _level: RDKafkaLogLevel, fac: &str, log_message: &str) {
-        // log line received, calculate length
-        let _n = fac.len() + log_message.len();
-    }
-
-    fn stats(&self, _: Statistics) { }
+    fn stats(&self, _: Statistics) { }  // Don't print stats
 }
 
 impl ConsumerContext for TestContext {
@@ -72,6 +67,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
         .set("bootstrap.servers", get_bootstrap_server().as_str())
         .set("statistics.interval.ms", "500")
         .set("api.version.request", "true")
+        config.set("debug", "all");
         .set_default_topic_config(TopicConfig::new()
             .set("produce.offset.report", "true")
             .set("message.timeout.ms", "30000")
@@ -114,6 +110,7 @@ pub fn create_stream_consumer(group_id: &str, config_overrides: Option<HashMap<&
     config.set("enable.auto.commit", "false");
     config.set("statistics.interval.ms", "500");
     config.set("api.version.request", "true");
+    config.set("debug", "all");
     config.set_default_topic_config(
         TopicConfig::new()
             .set("auto.offset.reset", "earliest")

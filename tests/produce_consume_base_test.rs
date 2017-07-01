@@ -124,7 +124,7 @@ fn test_produce_consume_with_timestamp() {
     produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999999));
 
     // Lookup the offsets
-    let tpl = consumer.offsets_for_timestamp(999999, 100).unwrap();
+    let tpl = consumer.offsets_for_timestamp(999999, 10000).unwrap();
     let tp = tpl.find_partition(&topic_name, 0).unwrap();
     assert_eq!(tp.offset(), Offset::Offset(100));
 }
@@ -147,7 +147,7 @@ fn test_consume_with_no_message_error() {
                     first_poll_time = Some(Instant::now());
                 }
                 timeouts_count += 1;
-                if timeouts_count == 5 {
+                if timeouts_count == 26 {
                     break;
                 }
             }
@@ -156,10 +156,11 @@ fn test_consume_with_no_message_error() {
         };
     }
 
-    assert_eq!(timeouts_count, 5);
-    // It should take 800ms
-    assert!(Instant::now().duration_since(first_poll_time.unwrap()) < Duration::from_millis(1500));
-    assert!(Instant::now().duration_since(first_poll_time.unwrap()) > Duration::from_millis(600));
+    assert_eq!(timeouts_count, 26);
+    // It should take 5000ms
+    println!("Duration: {:?}", first_poll_time.unwrap().elapsed());
+    assert!(first_poll_time.unwrap().elapsed() < Duration::from_millis(7000));
+    assert!(first_poll_time.unwrap().elapsed() > Duration::from_millis(4500));
 }
 
 

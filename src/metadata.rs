@@ -45,6 +45,7 @@ impl MetadataPartition {
         self.0.leader
     }
 
+    // TODO: return result?
     /// Returns the metadata error for the partition, or None if there is no error.
     pub fn error(&self) -> Option<RDKafkaRespErr> {
         if self.0.err.is_error() {

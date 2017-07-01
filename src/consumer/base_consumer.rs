@@ -127,8 +127,10 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         if message_ptr.is_null() {
             return Ok(None);
         }
+        trace!("Received raw message pointer: {:?}", message_ptr);
         let error = unsafe { (*message_ptr).err };
         if error.is_error() {
+            // TODO: should we destroy the message here?
             return Err(
                 match error {
                     rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
@@ -286,7 +288,8 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
 impl<C: ConsumerContext> Drop for BaseConsumer<C> {
     fn drop(&mut self) {
-        trace!("Destroying consumer"); // TODO: fix me (multiple executions)
+        trace!("Destroying consumer: {:?}", self.client.native_ptr()); // TODO: fix me (multiple executions ?)
         unsafe { rdsys::rd_kafka_consumer_close(self.client.native_ptr()) };
+        trace!("Consumer destroyed: {:?}", self.client.native_ptr());
     }
 }
