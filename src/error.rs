@@ -46,6 +46,7 @@ pub enum KafkaError {
     TopicConfig(RDKafkaConfRes, String, String, String),
     TopicCreation(String),
     Global(RDKafkaError),
+    FutureCanceled
 }
 
 impl fmt::Debug for KafkaError {
@@ -68,6 +69,7 @@ impl fmt::Debug for KafkaError {
             KafkaError::TopicConfig(_, ref desc, ref key, ref value) => write!(f, "KafkaError (Topic config error: {} {} {})", desc, key, value),
             KafkaError::TopicCreation(ref err) => write!(f, "KafkaError (Topic creation error: {})", err),
             KafkaError::Global(err) => write!(f, "KafkaError (Global error: {})", err),
+            KafkaError::FutureCanceled => write!(f, "KafkaError (Future canceled)")
         }
     }
 }
@@ -92,6 +94,7 @@ impl fmt::Display for KafkaError {
             KafkaError::TopicConfig(_, ref desc, ref key, ref value) => write!(f, "Topic config error: {} {} {}", desc, key, value),
             KafkaError::TopicCreation(ref err) => write!(f, "Topic creation error: {}", err),
             KafkaError::Global(err) => write!(f, "Global error: {}", err),
+            KafkaError::FutureCanceled => write!(f, "Future canceled")
         }
     }
 }
@@ -116,6 +119,7 @@ impl error::Error for KafkaError {
             KafkaError::TopicConfig(_, _, _, _) => "Topic config error",
             KafkaError::TopicCreation(_) => "Topic creation error",
             KafkaError::Global(_) => "Global error",
+            KafkaError::FutureCanceled => "Future canceled"
         }
     }
 
@@ -137,7 +141,8 @@ impl error::Error for KafkaError {
             KafkaError::Subscription(_) => None,
             KafkaError::TopicConfig(_, _, _, _) => None,
             KafkaError::TopicCreation(_) => None,
-            KafkaError::Global(ref err) => Some(err)
+            KafkaError::Global(ref err) => Some(err),
+            KafkaError::FutureCanceled => None
         }
     }
 }
