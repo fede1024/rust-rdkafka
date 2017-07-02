@@ -4,7 +4,8 @@
 ## Master
 
 #### Features
-* Update librdkafka to 0.11.0-RC1.
+* Upgrade librdkafka to 0.11.0-RC1.
+* `FutureProducer::send_copy` will now return a `DeliveryFuture` direcly.
 
 #### Bugs
 * Fix flaky tests.
