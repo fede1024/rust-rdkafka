@@ -67,7 +67,7 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
         .set("bootstrap.servers", get_bootstrap_server().as_str())
         .set("statistics.interval.ms", "500")
         .set("api.version.request", "true")
-        config.set("debug", "all");
+        .set("debug", "all")
         .set_default_topic_config(TopicConfig::new()
             .set("produce.offset.report", "true")
             .set("message.timeout.ms", "30000")

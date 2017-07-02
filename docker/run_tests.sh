@@ -19,6 +19,10 @@ sed -i "/\/\/>alloc_system/ c\#![feature(alloc_system)]\nextern crate alloc_syst
 
 echo -e "${GREEN}*** Build tests ***${NC}"
 cargo test --no-run
+if [ "$?" != "0" ]; then
+    echo -e "${RED}*** Failure during compilation ***${NC}"
+    exit 1
+fi
 
 echo -e "${GREEN}*** Run unit tests ***${NC}"
 valgrind --error-exitcode=100 --leak-check=full target/debug/rdkafka-* --nocapture
