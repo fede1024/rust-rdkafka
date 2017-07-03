@@ -35,7 +35,7 @@ pub fn rand_test_group() -> String {
 }
 
 fn get_bootstrap_server() -> String {
-    env::var("KAFKA_HOST").unwrap_or("localhost:9092".to_owned())
+    env::var("KAFKA_HOST").unwrap_or_else(|_| "localhost:9092".to_owned())
 }
 
 pub struct TestContext {
@@ -116,13 +116,10 @@ pub fn create_stream_consumer(group_id: &str, config_overrides: Option<HashMap<&
             .finalize()
     );
 
-    match config_overrides {
-        Some(overrides) => {
-            for (key, value) in overrides {
-                config.set(key, value);
-            }
-        },
-        None => ()
+    if let Some(overrides) = config_overrides {
+        for (key, value) in overrides {
+            config.set(key, value);
+        }
     }
 
     config

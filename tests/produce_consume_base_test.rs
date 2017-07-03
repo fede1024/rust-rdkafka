@@ -40,20 +40,20 @@ fn test_produce_consume_base() {
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, None, None);
     let consumer = create_stream_consumer(&rand_test_group(), None);
-    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
         .take(100)
         .for_each(|message| {
             match message {
                 Ok(m) => {
-                    let id = message_map.get(&(m.partition(), m.offset())).unwrap();
+                    let id = message_map[&(m.partition(), m.offset())];
                     match m.timestamp() {
                         Timestamp::CreateTime(timestamp) => assert!(timestamp > 1489495183000),
                         _ => panic!("Expected createtime for message timestamp")
                     };
-                    assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
-                    assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
+                    assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(id));
+                    assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(id));
                     assert_eq!(m.topic(), topic_name.as_str());
                 },
                 Err(e) => panic!("Error receiving message: {:?}", e)
@@ -103,17 +103,17 @@ fn test_produce_consume_with_timestamp() {
     let topic_name = rand_test_topic();
     let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
     let consumer = create_stream_consumer(&rand_test_group(), None);
-    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
         .take(100)
         .for_each(|message| {
             match message {
                 Ok(m) => {
-                    let id = message_map.get(&(m.partition(), m.offset())).unwrap();
+                    let id = message_map[&(m.partition(), m.offset())];
                     assert_eq!(m.timestamp(), Timestamp::CreateTime(1111));
-                    assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(*id));
-                    assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(*id));
+                    assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(id));
+                    assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(id));
                 },
                 Err(e) => panic!("Error receiving message: {:?}", e)
             };
@@ -207,7 +207,7 @@ fn test_consumer_commit_message() {
     produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
     let consumer = create_stream_consumer(&rand_test_group(), None);
-    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
         .take(33)
@@ -258,7 +258,7 @@ fn test_consumer_store_offset_commit() {
     let mut config = HashMap::new();
     config.insert("enable.auto.offset.store", "false");
     let consumer = create_stream_consumer(&rand_test_group(), Some(config));
-    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
         .take(33)
@@ -308,7 +308,7 @@ fn test_subscription() {
     let topic_name = rand_test_topic();
     produce_messages(&topic_name, 10, &value_fn, &key_fn, None, None);
     let consumer = create_stream_consumer(&rand_test_group(), None);
-    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start().take(10).wait();
 
@@ -327,7 +327,7 @@ fn test_group_membership() {
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
     produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
     let consumer = create_stream_consumer(&group_name, None);
-    consumer.subscribe(&vec![topic_name.as_str()]).unwrap();
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group
     let _consumer_future = consumer.start()

@@ -110,7 +110,7 @@ impl Metadata {
     }
 
     /// Returns the hostname of the broker originating this metadata.
-    pub fn orig_broker_name<'a>(&'a self) -> &'a str {
+    pub fn orig_broker_name(&self) -> &str {
         unsafe {
             CStr::from_ptr((*self.0).orig_broker_name)
                 .to_str()

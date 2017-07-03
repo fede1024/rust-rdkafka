@@ -22,8 +22,7 @@ pub enum Timestamp {
 impl Timestamp {
     pub fn to_millis(&self) -> Option<i64> {
         match *self {
-            Timestamp::NotAvailable => None,
-            Timestamp::CreateTime(-1) | Timestamp::LogAppendTime(-1) => None,
+            Timestamp::NotAvailable | Timestamp::CreateTime(-1) | Timestamp::LogAppendTime(-1) => None,
             Timestamp::CreateTime(t) | Timestamp::LogAppendTime(t) => Some(t),
         }
     }

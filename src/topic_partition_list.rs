@@ -141,7 +141,7 @@ impl TopicPartitionList {
         topic_map.iter()
             .fold(TopicPartitionList::with_capacity(topic_map.len()),
                 |mut tpl, (&(ref topic_name, partition), offset)| {
-                    tpl.add_partition_offset(&topic_name, partition, *offset);
+                    tpl.add_partition_offset(topic_name, partition, *offset);
                     tpl
                 })
     }
@@ -235,7 +235,7 @@ impl TopicPartitionList {
     }
 
     /// Returns all the elements of the list.
-    pub fn elements<'a>(&'a self) -> Vec<TopicPartitionListElem<'a>> {
+    pub fn elements(&self) -> Vec<TopicPartitionListElem> {
         let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
         let mut vec = Vec::with_capacity(slice.len());
         for elem_ptr in slice {
@@ -288,6 +288,12 @@ impl PartialEq for TopicPartitionList {
                     false
                 }
             })
+    }
+}
+
+impl Default for TopicPartitionList {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

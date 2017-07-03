@@ -204,7 +204,7 @@ impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
 /// The `ProducerContext` used by the `FutureProducer`. This context will use a Future as its
 /// `DeliveryContext` and will complete the future when the message is delivered (or failed to).
 #[derive(Clone)]
-pub struct FutureProducerContext<C: Context + 'static> {
+struct FutureProducerContext<C: Context + 'static> {
     wrapped_context: C
 }
 
@@ -264,28 +264,22 @@ impl<C: Context + 'static> _FutureProducer<C> {
                  trace!("Polling thread loop terminated");
             })
             .expect("Failed to start polling thread");
-        match self.handle.write() {
-            Ok(mut handle_ref) => *handle_ref = Some(handle),
-            Err(_) => panic!("Poison error"),
-        };
+        let mut handle_store = self.handle.write().expect("poison error");
+        *handle_store = Some(handle);
     }
 
     // See documentation in FutureProducer
     fn stop(&self) {
-        match self.handle.write() {
-            Ok(mut handle) => {
-                if handle.is_some() {
-                    trace!("Stopping polling");
-                    self.should_stop.store(true, Ordering::Relaxed);
-                    trace!("Waiting for polling thread termination");
-                    match handle.take().expect("No handle present in producer context").join() {
-                        Ok(()) => trace!("Polling stopped"),
-                        Err(e) => warn!("Failure while terminating thread: {:?}", e),
-                    };
-                }
-            },
-            Err(_) => panic!("Poison error"),
-        };
+        let mut handle_store = self.handle.write().expect("poison error");
+        if (*handle_store).is_some() {
+            trace!("Stopping polling");
+            self.should_stop.store(true, Ordering::Relaxed);
+            trace!("Waiting for polling thread termination");
+            match (*handle_store).take().expect("No handle present in producer context").join() {
+                Ok(()) => trace!("Polling stopped"),
+                Err(e) => warn!("Failure while terminating thread: {:?}", e),
+            };
+        }
     }
 
     // See documentation in FutureProducer

@@ -123,6 +123,7 @@ impl error::Error for KafkaError {
         }
     }
 
+    #[cfg_attr(feature = "cargo-clippy", allow(match_same_arms))]
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             KafkaError::ClientConfig(_, _, _, _) => None,

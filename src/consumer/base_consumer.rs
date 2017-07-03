@@ -122,7 +122,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     }
 
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
-    pub fn poll_raw<'a>(&'a self, timeout_ms: i32) -> KafkaResult<Option<*mut RDKafkaMessage>> {
+    pub fn poll_raw(&self, timeout_ms: i32) -> KafkaResult<Option<*mut RDKafkaMessage>> {
         let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
         if message_ptr.is_null() {
             return Ok(None);
@@ -144,7 +144,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     }
 
     /// Polls the consumer for events. It won't block more than the specified timeout.
-    pub fn poll<'a>(&'a self, timeout_ms: i32) -> KafkaResult<Option<BorrowedMessage<'a>>> {
+    pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<BorrowedMessage>> {
         self.poll_raw(timeout_ms)
             .map(|opt_ptr| opt_ptr.map(|ptr| BorrowedMessage::new(ptr, self)))
     }
@@ -189,13 +189,11 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         let mut tpl_ptr = ptr::null_mut();
         let error = unsafe { rdsys::rd_kafka_subscription(self.client.native_ptr(), &mut tpl_ptr) };
 
-        let result = if error.is_error() {
+        if error.is_error() {
             Err(KafkaError::MetadataFetch(error.into()))
         } else {
             Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
-        };
-
-        result
+        }
     }
 
     /// Returns the current partition assignment.

@@ -18,7 +18,9 @@ pub fn duration_to_millis(duration: Duration) -> u64 {
 }
 
 pub fn millis_to_epoch(time: SystemTime) -> i64 {
-    duration_to_millis(time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0))) as i64
+    let duration_since_epoch = time.duration_since(UNIX_EPOCH)
+        .unwrap_or_else(|_| Duration::from_secs(0));
+    duration_to_millis(duration_since_epoch) as i64
 }
 
 

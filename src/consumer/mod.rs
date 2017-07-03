@@ -60,11 +60,8 @@ pub trait ConsumerContext: Context {
             match err {
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
                     rdsys::rd_kafka_assign(native_client.ptr(), tpl.ptr());
-                }
-                RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => {
-                    rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
-                }
-                _ => {
+                },
+                _ => {  // Also for RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS
                     rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
                 }
             }
@@ -112,7 +109,7 @@ pub trait Consumer<C: ConsumerContext> {
     // Default implementations
 
     /// Subscribe the consumer to a list of topics.
-    fn subscribe(&self, topics: &Vec<&str>) -> KafkaResult<()> {
+    fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
         self.get_base_consumer().subscribe(topics)
     }
 

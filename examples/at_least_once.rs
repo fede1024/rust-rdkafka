@@ -72,7 +72,7 @@ fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsume
         .create_with_context::<_, LoggingConsumer>(context)
         .expect("Consumer creation failed");
 
-    consumer.subscribe(&vec![topic]).expect("Can't subscribe to specified topic");
+    consumer.subscribe(&[topic]).expect("Can't subscribe to specified topic");
 
     consumer
 }

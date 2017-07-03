@@ -40,7 +40,7 @@ impl PolledMessagePtr {
 
     /// Transforms the `PolledMessagePtr` into a message, that will be bound to the lifetime
     /// of the provided consumer.
-    fn into_message_of<'a, C: ConsumerContext>(mut self, consumer: &'a StreamConsumer<C>) -> BorrowedMessage<'a> {
+    fn into_message_of<C: ConsumerContext>(mut self, consumer: &StreamConsumer<C>) -> BorrowedMessage {
         BorrowedMessage::new(self.message_ptr.take().unwrap(), consumer)
     }
 }

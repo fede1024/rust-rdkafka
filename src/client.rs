@@ -165,7 +165,7 @@ impl<C: Context> Client<C> {
             rdsys::rd_kafka_metadata(
                 self.native_ptr(),
                 flag,
-                native_topic.map(|t| t.ptr()).unwrap_or(NativeTopic::null()),
+                native_topic.map(|t| t.ptr()).unwrap_or_else(NativeTopic::null),
                 &mut metadata_ptr as *mut *const RDKafkaMetadata,
                 timeout_ms)
         };

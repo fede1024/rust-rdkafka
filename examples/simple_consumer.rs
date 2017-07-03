@@ -42,7 +42,7 @@ impl ConsumerContext for ConsumerContextExample {
 // A type alias with your custom consumer can be created for convenience.
 type LoggingConsumer = StreamConsumer<ConsumerContextExample>;
 
-fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
+fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
     let context = ConsumerContextExample;
 
     let consumer = ClientConfig::new()
@@ -59,7 +59,8 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &Vec<&str>) {
         .create_with_context::<_, LoggingConsumer>(context)
         .expect("Consumer creation failed");
 
-    consumer.subscribe(topics).expect("Can't subscribe to specified topics");
+    consumer.subscribe(&topics.to_vec())
+        .expect("Can't subscribe to specified topics");
 
     // consumer.start() returns a stream. The stream can be used ot chain together expensive steps,
     // such as complex computations on a thread pool or asynchronous IO.

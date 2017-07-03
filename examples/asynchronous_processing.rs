@@ -27,14 +27,14 @@ use example_utils::setup_logger;
 
 // Emulates an expensive, synchronous computation. This function returns a string with the length
 // of the message payload, if any.
-fn _expensive_computation(msg: BorrowedMessage) -> String {
+fn _expensive_computation(msg: &BorrowedMessage) -> String {
     info!("Starting expensive computation on message");
     thread::sleep(Duration::from_millis(rand::random::<u64>() % 5000));
     info!("Expensive computation completed");
     match msg.payload_view::<str>() {
         Some(Ok(payload)) => format!("Payload len for {} is {}", payload, payload.len()),
-        Some(Err(_)) => format!("Error processing message payload"),
-        None => format!("No payload"),
+        Some(Err(_)) => "Error processing message payload".to_owned(),
+        None => "No payload".to_owned(),
     }
 }
 
@@ -66,7 +66,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
         .create::<StreamConsumer<_>>()
         .expect("Consumer creation failed");
 
-    consumer.subscribe(&vec![input_topic]).expect("Can't subscribe to specified topic");
+    consumer.subscribe(&[input_topic]).expect("Can't subscribe to specified topic");
 
     // Create the `FutureProducer` to produce asynchronously.
     let producer = ClientConfig::new()
