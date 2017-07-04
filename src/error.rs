@@ -27,26 +27,29 @@ impl IsError for RDKafkaConfRes {
     }
 }
 
+// TODO: consider using macro
+
 /// Represents all Kafka errors. Check the underlying `RDKafkaError` to get details.
+#[derive(Clone, PartialEq, Eq)]
 pub enum KafkaError {
     ClientConfig(RDKafkaConfRes, String, String, String),
     ClientCreation(String),
     ConsumerCommit(RDKafkaError),
-    StoreOffset(RDKafkaError),
     ConsumerCreation(String),
+    FutureCanceled,
+    Global(RDKafkaError),
     GroupListFetch(RDKafkaError),
     MessageConsumption(RDKafkaError),
     MessageProduction(RDKafkaError),
     MetadataFetch(RDKafkaError),
     NoMessageReceived,
     Nul(ffi::NulError),
+    OffsetFetch(RDKafkaError),
     PartitionEOF(i32),
     SetPartitionOffset(RDKafkaError),
+    StoreOffset(RDKafkaError),
     Subscription(String),
     TopicConfig(RDKafkaConfRes, String, String, String),
-    TopicCreation(String),
-    Global(RDKafkaError),
-    FutureCanceled
 }
 
 impl fmt::Debug for KafkaError {
@@ -55,21 +58,21 @@ impl fmt::Debug for KafkaError {
             KafkaError::ClientConfig(_, ref desc, ref key, ref value) => write!(f, "KafkaError (Client config error: {} {} {})", desc, key, value),
             KafkaError::ClientCreation(ref err) => write!(f, "KafkaError (Client creation error: {})", err),
             KafkaError::ConsumerCommit(err) => write!(f, "KafkaError (Consumer commit error: {})", err),
-            KafkaError::StoreOffset(err) => write!(f, "KafkaError (Store offset error: {})", err),
             KafkaError::ConsumerCreation(ref err) => write!(f, "KafkaError (Consumer creation error: {})", err),
+            KafkaError::FutureCanceled => write!(f, "Future canceled"),
+            KafkaError::Global(err) => write!(f, "KafkaError (Global error: {})", err),
             KafkaError::GroupListFetch(err) => write!(f, "KafkaError (Group list fetch error: {})", err),
             KafkaError::MessageConsumption(err) => write!(f, "KafkaError (Message consumption error: {})", err),
             KafkaError::MessageProduction(err) => write!(f, "KafkaError (Message production error: {})", err),
             KafkaError::MetadataFetch(err) => write!(f, "KafkaError (Metadata fetch error: {})", err),
             KafkaError::NoMessageReceived => write!(f, "No message received within the given poll interval"),
-            KafkaError::Nul(_) => write!(f, "KafkaError (FFI nul error)"),
+            KafkaError::Nul(_) => write!(f, "FFI null error"),
+            KafkaError::OffsetFetch(err) => write!(f, "KafkaError (Offset fetch error: {})", err),
             KafkaError::PartitionEOF(part_n) => write!(f, "KafkaError (Partition EOF: {})", part_n),
             KafkaError::SetPartitionOffset(err) => write!(f, "KafkaError (Set partition offset error: {})", err),
+            KafkaError::StoreOffset(err) => write!(f, "KafkaError (Store offset error: {})", err),
             KafkaError::Subscription(ref err) => write!(f, "KafkaError (Subscription error: {})", err),
             KafkaError::TopicConfig(_, ref desc, ref key, ref value) => write!(f, "KafkaError (Topic config error: {} {} {})", desc, key, value),
-            KafkaError::TopicCreation(ref err) => write!(f, "KafkaError (Topic creation error: {})", err),
-            KafkaError::Global(err) => write!(f, "KafkaError (Global error: {})", err),
-            KafkaError::FutureCanceled => write!(f, "KafkaError (Future canceled)")
         }
     }
 }
@@ -80,21 +83,21 @@ impl fmt::Display for KafkaError {
             KafkaError::ClientConfig(_, ref desc, ref key, ref value) => write!(f, "Client config error: {} {} {}", desc, key, value),
             KafkaError::ClientCreation(ref err) => write!(f, "Client creation error: {}", err),
             KafkaError::ConsumerCommit(err) => write!(f, "Consumer commit error: {}", err),
-            KafkaError::StoreOffset(err) => write!(f, "Store offset error: {}", err),
             KafkaError::ConsumerCreation(ref err) => write!(f, "Consumer creation error: {}", err),
+            KafkaError::FutureCanceled => write!(f, "Future canceled"),
+            KafkaError::Global(err) => write!(f, "Global error: {}", err),
             KafkaError::GroupListFetch(err) => write!(f, "Group list fetch error: {}", err),
             KafkaError::MessageConsumption(err) => write!(f, "Message consumption error: {}", err),
             KafkaError::MessageProduction(err) => write!(f, "Message production error: {}", err),
             KafkaError::MetadataFetch(err) => write!(f, "Meta data fetch error: {}", err),
             KafkaError::NoMessageReceived => write!(f, "No message received within the given poll interval"),
             KafkaError::Nul(_) => write!(f, "FFI nul error"),
+            KafkaError::OffsetFetch(err) => write!(f, "Offset fetch error: {}", err),
             KafkaError::PartitionEOF(part_n) => write!(f, "Partition EOF: {}", part_n),
             KafkaError::SetPartitionOffset(err) => write!(f, "Set partition offset error: {}", err),
+            KafkaError::StoreOffset(err) => write!(f, "Store offset error: {}", err),
             KafkaError::Subscription(ref err) => write!(f, "Subscription error: {}", err),
             KafkaError::TopicConfig(_, ref desc, ref key, ref value) => write!(f, "Topic config error: {} {} {}", desc, key, value),
-            KafkaError::TopicCreation(ref err) => write!(f, "Topic creation error: {}", err),
-            KafkaError::Global(err) => write!(f, "Global error: {}", err),
-            KafkaError::FutureCanceled => write!(f, "Future canceled")
         }
     }
 }
@@ -105,21 +108,21 @@ impl error::Error for KafkaError {
             KafkaError::ClientConfig(_, _, _, _) => "Client config error",
             KafkaError::ClientCreation(_) => "Client creation error",
             KafkaError::ConsumerCommit(_) => "Consumer commit error",
-            KafkaError::StoreOffset(_) => "Store offset error",
             KafkaError::ConsumerCreation(_) => "Consumer creation error",
+            KafkaError::FutureCanceled => "Future canceled",
+            KafkaError::Global(_) => "Global error",
             KafkaError::GroupListFetch(_) => "Group list fetch error",
             KafkaError::MessageConsumption(_) => "Message consumption error",
             KafkaError::MessageProduction(_) => "Message production error",
             KafkaError::MetadataFetch(_) => "Meta data fetch error",
             KafkaError::NoMessageReceived => "No message received within the given poll interval",
             KafkaError::Nul(_) => "FFI nul error",
+            KafkaError::OffsetFetch(_) => "Offset fetch error",
             KafkaError::PartitionEOF(_) => "Partition EOF error",
             KafkaError::SetPartitionOffset(_) => "Set partition offset error",
+            KafkaError::StoreOffset(_) => "Store offset error",
             KafkaError::Subscription(_) => "Subscription error",
             KafkaError::TopicConfig(_, _, _, _) => "Topic config error",
-            KafkaError::TopicCreation(_) => "Topic creation error",
-            KafkaError::Global(_) => "Global error",
-            KafkaError::FutureCanceled => "Future canceled"
         }
     }
 
@@ -129,21 +132,21 @@ impl error::Error for KafkaError {
             KafkaError::ClientConfig(_, _, _, _) => None,
             KafkaError::ClientCreation(_) => None,
             KafkaError::ConsumerCommit(ref err) => Some(err),
-            KafkaError::StoreOffset(ref err) => Some(err),
             KafkaError::ConsumerCreation(_) => None,
+            KafkaError::FutureCanceled => None,
+            KafkaError::Global(ref err) => Some(err),
             KafkaError::GroupListFetch(ref err) => Some(err),
             KafkaError::MessageConsumption(ref err) => Some(err),
             KafkaError::MessageProduction(ref err) => Some(err),
             KafkaError::MetadataFetch(ref err) => Some(err),
             KafkaError::NoMessageReceived => None,
             KafkaError::Nul(_) => None,
+            KafkaError::OffsetFetch(ref err) => Some(err),
             KafkaError::PartitionEOF(_) => None,
             KafkaError::SetPartitionOffset(ref err) => Some(err),
+            KafkaError::StoreOffset(ref err) => Some(err),
             KafkaError::Subscription(_) => None,
             KafkaError::TopicConfig(_, _, _, _) => None,
-            KafkaError::TopicCreation(_) => None,
-            KafkaError::Global(ref err) => Some(err),
-            KafkaError::FutureCanceled => None
         }
     }
 }

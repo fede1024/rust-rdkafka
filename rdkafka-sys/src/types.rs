@@ -60,13 +60,21 @@ pub use bindings::rd_kafka_type_t as RDKafkaType;
 /// Configuration result
 pub use bindings::rd_kafka_conf_res_t as RDKafkaConfRes;
 
+impl PartialEq for RDKafkaConfRes {
+    fn eq(&self, other: &RDKafkaConfRes) -> bool {
+        self == other
+    }
+}
+
+impl Eq for RDKafkaConfRes {}
+
 /// Response error
 pub use bindings::rd_kafka_resp_err_t as RDKafkaRespErr;
 
 /// Errors enum
 
 /// Error from the underlying rdkafka library.
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RDKafkaError {
     #[doc(hidden)]
     Begin = -200,

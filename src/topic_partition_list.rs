@@ -80,6 +80,16 @@ impl<'a> TopicPartitionListElem<'a> {
         }
     }
 
+    /// Returns the optional error associated to the specific entry in the TPL.
+    pub fn error(&self) -> KafkaResult<()> {
+        let kafka_err = unsafe { (*self.ptr).err };
+        if kafka_err.is_error() {
+            Err(KafkaError::OffsetFetch(kafka_err.into()))
+        } else {
+            Ok(())
+        }
+    }
+
     /// Returns the partition number.
     pub fn partition(&self) -> i32 {
         unsafe { (*self.ptr).partition }

@@ -6,6 +6,8 @@
 #### Features
 * Upgrade librdkafka to 0.11.0-RC1.
 * `FutureProducer::send_copy` will now return a `DeliveryFuture` direcly.
+* TPL entries now also export errors.
+* `KafkaError` is now Clone and Eq.
 
 #### Bugs
 * Fix flaky tests.
