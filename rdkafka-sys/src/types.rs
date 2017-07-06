@@ -60,12 +60,14 @@ pub use bindings::rd_kafka_type_t as RDKafkaType;
 /// Configuration result
 pub use bindings::rd_kafka_conf_res_t as RDKafkaConfRes;
 
+#[cfg(not(target_os = "macos"))]
 impl PartialEq for RDKafkaConfRes {
     fn eq(&self, other: &RDKafkaConfRes) -> bool {
         self == other
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 impl Eq for RDKafkaConfRes {}
 
 /// Response error

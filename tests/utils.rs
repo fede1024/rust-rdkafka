@@ -99,6 +99,15 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
 // Create consumer
 pub fn create_stream_consumer(group_id: &str, config_overrides: Option<HashMap<&'static str, &'static str>>) -> StreamConsumer<TestContext> {
     let cons_context = TestContext { _some_data: 64 };
+
+    create_stream_consumer_with_context(group_id, config_overrides, cons_context)
+}
+
+pub fn create_stream_consumer_with_context<C: ConsumerContext>(
+    group_id: &str,
+    config_overrides: Option<HashMap<&'static str, &'static str>>,
+    context: C,
+) -> StreamConsumer<C> {
     let mut config = ClientConfig::new();
 
     config.set("group.id", group_id);
@@ -123,7 +132,7 @@ pub fn create_stream_consumer(group_id: &str, config_overrides: Option<HashMap<&
     }
 
     config
-        .create_with_context::<TestContext, StreamConsumer<_>>(cons_context)
+        .create_with_context::<C, StreamConsumer<C>>(context)
         .expect("Consumer creation failed")
 }
 
