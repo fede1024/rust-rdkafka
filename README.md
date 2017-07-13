@@ -32,6 +32,16 @@ The main features provided at the moment are:
 
 [librdkafka documentation]: https://github.com/edenhill/librdkafka/wiki/Broker-version-compatibility
 
+### Users
+
+Here are some of the projects using rust-rdkafka:
+
+- [kafka-view]: a web interface for Kafka clusters.
+
+*If you are using rust-rdkafka, please let me know!*
+
+[kafka-view]: https://github.com/fede1024/kafka-view
+
 ### Client types
 
 `rust-rdkafka` provides low level and high level consumers and producers. Low level:
