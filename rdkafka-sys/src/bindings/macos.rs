@@ -880,7 +880,7 @@ pub const SHUT_RD: ::std::os::raw::c_uint = 0;
 pub const SHUT_WR: ::std::os::raw::c_uint = 1;
 pub const SHUT_RDWR: ::std::os::raw::c_uint = 2;
 pub const LIBRDKAFKA_TYPECHECKS: ::std::os::raw::c_uint = 1;
-pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 721097;
+pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 721151;
 pub const RD_KAFKA_DEBUG_CONTEXTS: &'static [u8; 81usize] =
     b"all,generic,broker,topic,metadata,queue,msg,protocol,cgrp,security,fetch,feature\x00";
 pub const RD_KAFKA_OFFSET_BEGINNING: ::std::os::raw::c_int = -2;
@@ -3307,8 +3307,22 @@ extern "C" {
 extern "C" {
     /**
  * @brief Creates a copy/duplicate of configuration object \p conf
+ *
+ * @remark Interceptors are NOT copied to the new configuration object.
+ * @sa rd_kafka_interceptor_f_on_conf_dup
  */
     pub fn rd_kafka_conf_dup(conf: *const rd_kafka_conf_t)
+     -> *mut rd_kafka_conf_t;
+}
+extern "C" {
+    /**
+ * @brief Same as rd_kafka_conf_dup() but with an array of property name
+ *        prefixes to filter out (ignore) when copying.
+ */
+    pub fn rd_kafka_conf_dup_filter(conf: *const rd_kafka_conf_t,
+                                    filter_cnt: usize,
+                                    filter:
+                                        *mut *const ::std::os::raw::c_char)
      -> *mut rd_kafka_conf_t;
 }
 extern "C" {
@@ -4114,7 +4128,6 @@ extern "C" {
  *   - error callbacks (rd_kafka_conf_set_error_cb()) [all]
  *   - stats callbacks (rd_kafka_conf_set_stats_cb()) [all]
  *   - throttle callbacks (rd_kafka_conf_set_throttle_cb()) [all]
- *   - on_acknowledgement() interceptors
  *
  * @returns the number of events served.
  */
@@ -5653,7 +5666,7 @@ extern "C" {
  * @remark The returned message(s) MUST NOT be
  *         freed with rd_kafka_message_destroy().
  *
- * @remark on_consume() and on_acknowledgement() interceptors may be called
+ * @remark on_consume() interceptor may be called
  *         from this function prior to passing message to application.
  */
     pub fn rd_kafka_event_message_next(rkev: *mut rd_kafka_event_t)
@@ -5670,7 +5683,7 @@ extern "C" {
  *
  * @returns the number of messages extracted.
  *
- * @remark on_consume() and on_acknowledgement() interceptors may be called
+ * @remark on_consume() interceptor may be called
  *         from this function prior to passing message to application.
  */
     pub fn rd_kafka_event_message_array(rkev: *mut rd_kafka_event_t,
@@ -5865,6 +5878,8 @@ pub type rd_kafka_interceptor_f_on_conf_set_t =
  *        order the interceptors were added and is used to let
  *        an interceptor re-register its conf interecptors with a new
  *        opaque value.
+ *        The on_conf_dup() method is called prior to the configuration from
+ *        \p old_conf being copied to \p new_conf.
  *
  * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
  *
@@ -5878,6 +5893,9 @@ pub type rd_kafka_interceptor_f_on_conf_dup_t =
     ::std::option::Option<unsafe extern "C" fn(new_conf: *mut rd_kafka_conf_t,
                                                old_conf:
                                                    *const rd_kafka_conf_t,
+                                               filter_cnt: usize,
+                                               filter:
+                                                   *mut *const ::std::os::raw::c_char,
                                                ic_opaque:
                                                    *mut ::std::os::raw::c_void)
                               -> rd_kafka_resp_err_t>;
@@ -5896,6 +5914,7 @@ pub type rd_kafka_interceptor_f_on_conf_destroy_t =
  *        the newly created client instance to the application.
  *
  * @param rk The client instance.
+ * @param conf The client instance's final configuration.
  * @param ic_opaque The interceptor's opaque pointer specified in ..add..().
  * @param errstr A human readable error string in case the interceptor fails.
  * @param errstr_size Maximum space (including \0) in \p errstr.
@@ -5909,6 +5928,7 @@ pub type rd_kafka_interceptor_f_on_conf_destroy_t =
  */
 pub type rd_kafka_interceptor_f_on_new_t =
     ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               conf: *const rd_kafka_conf_t,
                                                ic_opaque:
                                                    *mut ::std::os::raw::c_void,
                                                errstr:
@@ -5957,10 +5977,8 @@ pub type rd_kafka_interceptor_f_on_send_t =
 /**
  * @brief on_acknowledgement() is called to inform interceptors that a message
  *        was succesfully delivered or permanently failed delivery.
- *        The interceptor chain is called from rd_kafka_poll(), the event
- *        interface, internal librdkafka threads (if no dr_cb/dr_msg_cb or
- *        RD_KAFKA_EVENT_DR has been registered), or rd_kafka_produce*() if
- *        the partitioner failed.
+ *        The interceptor chain is called from internal librdkafka background
+ *        threads, or rd_kafka_produce*() if the partitioner failed.
  *
  * @param rk The client instance.
  * @param rkmessage The message being produced. Immutable.
@@ -5971,8 +5989,7 @@ pub type rd_kafka_interceptor_f_on_send_t =
  * @remark The \p rkmessage object is NOT mutable and MUST NOT be modified
  *         by the interceptor.
  *
- * @warning If no delivery report callback or event has been configured
- *         the on_acknowledgement() method may be called from internal
+ * @warning The on_acknowledgement() method may be called from internal
  *         librdkafka threads. An on_acknowledgement() interceptor MUST NOT
  *         call any librdkafka API's associated with the \p rk, or perform
  *         any blocking or prolonged work.
@@ -6045,6 +6062,10 @@ extern "C" {
  * @param ic_name Interceptor name, used in logging.
  * @param on_conf_set Function pointer.
  * @param ic_opaque Opaque value that will be passed to the function.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or RD_KAFKA_RESP_ERR__CONFLICT
+ *          if an existing intercepted with the same \p ic_name and function
+ *          has already been added to \p conf.
  */
     pub fn rd_kafka_conf_interceptor_add_on_conf_set(conf:
                                                          *mut rd_kafka_conf_t,
@@ -6053,7 +6074,8 @@ extern "C" {
                                                      on_conf_set:
                                                          rd_kafka_interceptor_f_on_conf_set_t,
                                                      ic_opaque:
-                                                         *mut ::std::os::raw::c_void);
+                                                         *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
 }
 extern "C" {
     /**
@@ -6063,6 +6085,10 @@ extern "C" {
  * @param ic_name Interceptor name, used in logging.
  * @param on_conf_dup Function pointer.
  * @param ic_opaque Opaque value that will be passed to the function.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or RD_KAFKA_RESP_ERR__CONFLICT
+ *          if an existing intercepted with the same \p ic_name and function
+ *          has already been added to \p conf.
  */
     pub fn rd_kafka_conf_interceptor_add_on_conf_dup(conf:
                                                          *mut rd_kafka_conf_t,
@@ -6071,7 +6097,8 @@ extern "C" {
                                                      on_conf_dup:
                                                          rd_kafka_interceptor_f_on_conf_dup_t,
                                                      ic_opaque:
-                                                         *mut ::std::os::raw::c_void);
+                                                         *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
 }
 extern "C" {
     /**
@@ -6081,6 +6108,11 @@ extern "C" {
  * @param ic_name Interceptor name, used in logging.
  * @param on_conf_destroy Function pointer.
  * @param ic_opaque Opaque value that will be passed to the function.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR
+ *
+ * @remark Multiple on_conf_destroy() interceptors are allowed to be added
+ *         to the same configuration object.
  */
     pub fn rd_kafka_conf_interceptor_add_on_conf_destroy(conf:
                                                              *mut rd_kafka_conf_t,
@@ -6089,7 +6121,8 @@ extern "C" {
                                                          on_conf_destroy:
                                                              rd_kafka_interceptor_f_on_conf_destroy_t,
                                                          ic_opaque:
-                                                             *mut ::std::os::raw::c_void);
+                                                             *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
 }
 extern "C" {
     /**
@@ -6105,6 +6138,13 @@ extern "C" {
  *         An interceptor implementation must thus be able to handle
  *         the same interceptor,ic_opaque tuple to be used by multiple
  *         client instances.
+ *
+ * @remark An interceptor plugin should check the return value to make sure it
+ *         has not already been added.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or RD_KAFKA_RESP_ERR__CONFLICT
+ *          if an existing intercepted with the same \p ic_name and function
+ *          has already been added to \p conf.
  */
     pub fn rd_kafka_conf_interceptor_add_on_new(conf: *mut rd_kafka_conf_t,
                                                 ic_name:
@@ -6112,7 +6152,8 @@ extern "C" {
                                                 on_new:
                                                     rd_kafka_interceptor_f_on_new_t,
                                                 ic_opaque:
-                                                    *mut ::std::os::raw::c_void);
+                                                    *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
 }
 extern "C" {
     /**
@@ -6122,6 +6163,10 @@ extern "C" {
  * @param ic_name Interceptor name, used in logging.
  * @param on_destroy Function pointer.
  * @param ic_opaque Opaque value that will be passed to the function.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or RD_KAFKA_RESP_ERR__CONFLICT
+ *          if an existing intercepted with the same \p ic_name and function
+ *          has already been added to \p conf.
  */
     pub fn rd_kafka_interceptor_add_on_destroy(rk: *mut rd_kafka_t,
                                                ic_name:
@@ -6129,7 +6174,8 @@ extern "C" {
                                                on_destroy:
                                                    rd_kafka_interceptor_f_on_destroy_t,
                                                ic_opaque:
-                                                   *mut ::std::os::raw::c_void);
+                                                   *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
 }
 extern "C" {
     /**
@@ -6139,6 +6185,10 @@ extern "C" {
  * @param ic_name Interceptor name, used in logging.
  * @param on_send Function pointer.
  * @param ic_opaque Opaque value that will be passed to the function.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or RD_KAFKA_RESP_ERR__CONFLICT
+ *          if an existing intercepted with the same \p ic_name and function
+ *          has already been added to \p conf.
  */
     pub fn rd_kafka_interceptor_add_on_send(rk: *mut rd_kafka_t,
                                             ic_name:
@@ -6146,7 +6196,8 @@ extern "C" {
                                             on_send:
                                                 rd_kafka_interceptor_f_on_send_t,
                                             ic_opaque:
-                                                *mut ::std::os::raw::c_void);
+                                                *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
 }
 extern "C" {
     /**
@@ -6156,6 +6207,10 @@ extern "C" {
  * @param ic_name Interceptor name, used in logging.
  * @param on_acknowledgement Function pointer.
  * @param ic_opaque Opaque value that will be passed to the function.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or RD_KAFKA_RESP_ERR__CONFLICT
+ *          if an existing intercepted with the same \p ic_name and function
+ *          has already been added to \p conf.
  */
     pub fn rd_kafka_interceptor_add_on_acknowledgement(rk: *mut rd_kafka_t,
                                                        ic_name:
@@ -6163,7 +6218,8 @@ extern "C" {
                                                        on_acknowledgement:
                                                            rd_kafka_interceptor_f_on_acknowledgement_t,
                                                        ic_opaque:
-                                                           *mut ::std::os::raw::c_void);
+                                                           *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
 }
 extern "C" {
     /**
@@ -6173,6 +6229,10 @@ extern "C" {
  * @param ic_name Interceptor name, used in logging.
  * @param on_consume Function pointer.
  * @param ic_opaque Opaque value that will be passed to the function.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or RD_KAFKA_RESP_ERR__CONFLICT
+ *          if an existing intercepted with the same \p ic_name and function
+ *          has already been added to \p conf.
  */
     pub fn rd_kafka_interceptor_add_on_consume(rk: *mut rd_kafka_t,
                                                ic_name:
@@ -6180,7 +6240,8 @@ extern "C" {
                                                on_consume:
                                                    rd_kafka_interceptor_f_on_consume_t,
                                                ic_opaque:
-                                                   *mut ::std::os::raw::c_void);
+                                                   *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
 }
 extern "C" {
     /**
@@ -6190,6 +6251,10 @@ extern "C" {
  * @param ic_name Interceptor name, used in logging.
  * @param on_commit() Function pointer.
  * @param ic_opaque Opaque value that will be passed to the function.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success or RD_KAFKA_RESP_ERR__CONFLICT
+ *          if an existing intercepted with the same \p ic_name and function
+ *          has already been added to \p conf.
  */
     pub fn rd_kafka_interceptor_add_on_commit(rk: *mut rd_kafka_t,
                                               ic_name:
@@ -6197,7 +6262,8 @@ extern "C" {
                                               on_commit:
                                                   rd_kafka_interceptor_f_on_commit_t,
                                               ic_opaque:
-                                                  *mut ::std::os::raw::c_void);
+                                                  *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
 }
 pub type __builtin_va_list = [__va_list_tag; 1usize];
 #[repr(C)]
