@@ -4,13 +4,20 @@
 ## Master
 
 #### Features
-* Upgrade librdkafka to 0.11.0-RC1.
+* Upgrade librdkafka to 0.11.0.
 * `FutureProducer::send_copy` will now return a `DeliveryFuture` direcly.
 * TPL entries now also export errors.
 * `KafkaError` is now Clone and Eq.
 
 #### Bugs
 * Fix flaky tests.
+
+<a name="0.11.1"></a>
+## 0.11.0 (2017-06-25)
+
+#### Features
+
+* Support direct creation of OwnedMessages.
 
 <a name="0.11.0"></a>
 ## 0.11.0 (2017-06-20)

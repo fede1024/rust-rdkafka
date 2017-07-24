@@ -202,6 +202,27 @@ pub struct OwnedMessage {
     offset: i64
 }
 
+impl OwnedMessage {
+    /// Create a new message with the specified content. Mainly useful for writing tests.
+    pub fn new(
+        payload: Option<Vec<u8>>,
+        key: Option<Vec<u8>>,
+        topic: String,
+        timestamp: Timestamp,
+        partition: i32,
+        offset: i64
+    ) -> OwnedMessage {
+        OwnedMessage {
+            payload: payload,
+            key: key,
+            topic: topic,
+            timestamp: timestamp,
+            partition: partition,
+            offset: offset
+        }
+    }
+}
+
 impl Message for OwnedMessage {
     fn key(&self) -> Option<&[u8]> {
         match self.key {
