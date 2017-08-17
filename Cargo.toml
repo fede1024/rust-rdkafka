@@ -32,3 +32,4 @@ default = []
 
 ssl = ["rdkafka-sys/ssl"]
 sasl = ["rdkafka-sys/sasl", "ssl"]
+dynamic_linking = ["rdkafka-sys/dynamic_linking"]

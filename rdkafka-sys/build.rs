@@ -2,7 +2,7 @@ extern crate num_cpus;
 extern crate pkg_config;
 
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, self};
 use std::io::Write;
 use std::env;
 
@@ -30,22 +30,29 @@ fn main() {
         .next()
         .expect("Crate version is not valid");
 
-    let pkg_probe = pkg_config::Config::new()
-        .cargo_metadata(true)
-        .atleast_version(librdkafka_version)
-        .probe("rdkafka");
+    if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
+        println_stderr!("Librdkafka will be liked dynamically");
+        let pkg_probe = pkg_config::Config::new()
+            .cargo_metadata(true)
+            .atleast_version(librdkafka_version)
+            .probe("rdkafka");
 
-    match pkg_probe {
-        Ok(library) => {
-            println_stderr!("librdkafka found on the system:");
-            println_stderr!("  Name: {:?}", library.libs);
-            println_stderr!("  Path: {:?}", library.link_paths);
-            println_stderr!("  Version: {}", library.version);
+        match pkg_probe {
+            Ok(library) => {
+                println_stderr!("librdkafka found on the system:");
+                println_stderr!("  Name: {:?}", library.libs);
+                println_stderr!("  Path: {:?}", library.link_paths);
+                println_stderr!("  Version: {}", library.version);
+            }
+            Err(_) => {
+                println_stderr!("librdkafka {} cannot be found on the system", librdkafka_version);
+                println_stderr!("Dynamic linking failed. Exiting.");
+                process::exit(1);
+            }
         }
-        Err(_) => {
-            println_stderr!("librdkafka not found, building");
-            build_librdkafka();
-        }
+    } else {
+        println_stderr!("Building and linking librdkafka statically");
+        build_librdkafka();
     }
 }
 

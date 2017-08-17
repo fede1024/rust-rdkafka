@@ -28,3 +28,4 @@ default = []
 
 ssl = ["openssl-sys"]
 sasl = ["ssl"]
+dynamic_linking = []

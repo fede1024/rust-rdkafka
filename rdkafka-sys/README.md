@@ -8,7 +8,7 @@ To regenerate the bindings:
 
 ``` bash
 git submodule update --init
-bindgen --builtins --convert-macros librdkafka/src/rdkafka.h > src/bindings/{platform}.rs
+bindgen --builtins --no-doc-comments librdkafka/src/rdkafka.h > src/bindings/{platform}.rs
 ```
 
 ## Version
@@ -19,13 +19,13 @@ rust bindings.
 
 ## Build
 
-This crate will first check if there is an installed version of librdkafka on
-the system using `pkg-config`. If the library is found and the version is the
-one targeted by rdkafka-sys, rdkafka-sys will build using a dynamic link to the
-installed library.
+By default a submodule with the librdkafka sources pinned to a specific commit will
+be used to compile and statically link the library.
 
-If those conditions are not met, a submodule with the librdkafka sourced pinned
-to a specific commit will be used to compile and statically link the library.
+The `dynamic_linking` feature can be used to link rdkafka-sys to a locally installed
+version of librdkafka: the build script will use `pkg-config` to check if the library
+is installed and if right version is present, then it will configure the compiler to
+use dynamic linking.
 
 The build process is defined in [`build.rs`].
 

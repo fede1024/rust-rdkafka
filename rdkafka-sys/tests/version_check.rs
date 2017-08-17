@@ -7,7 +7,7 @@ const PKG_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 fn remove_pre(version: &str) -> &str {
     version.split('-')
         .next()
-        .expect("Crate version is not valid")
+        .expect("Version format is not valid")
 }
 
 #[test]
