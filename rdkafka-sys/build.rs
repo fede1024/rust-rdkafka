@@ -31,7 +31,7 @@ fn main() {
         .expect("Crate version is not valid");
 
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
-        println_stderr!("Librdkafka will be liked dynamically");
+        println_stderr!("Librdkafka will be linked dynamically");
         let pkg_probe = pkg_config::Config::new()
             .cargo_metadata(true)
             .atleast_version(librdkafka_version)

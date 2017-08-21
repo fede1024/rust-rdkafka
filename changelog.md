@@ -1,5 +1,11 @@
 # Changelog
 
+<a name="master"></a>
+## master
+
+#### Features
+* Enable dynamic linking via feature
+
 <a name="0.12.0"></a>
 ## 0.12.0 (2017-07-25)
 
