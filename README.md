@@ -110,6 +110,14 @@ version = "^0.12.0"
 features = ["ssl", "sasl"]
 ```
 
+By default a submodule with the librdkafka sources pinned to a specific commit will
+be used to compile and statically link the library.
+
+The `dynamic_linking` feature can be used to link rdkafka to a locally installed
+version of librdkafka: if the feature is enabled, the build script will use `pkg-config`
+to check the version of the library installed in the system, and it will configure the
+compiler to use dynamic linking.
+
 ## Compiling from sources
 
 To compile from sources, you'll have to update the submodule containing librdkafka:
