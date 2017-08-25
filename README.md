@@ -186,6 +186,15 @@ module of the Rust client to debug. To actually receive logs from librdkafka, yo
 set the `debug` option in the producer or consumer configuration (see librdkafka
 [configuration](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md)).
 
+To enable debugging in your project, make sure you initialize the logger with:
+
+```rust
+env_logger::init();
+```
+
+or equivalent.
+
+
 ## rdkafka-sys
 
 See [rdkafka-sys](https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys).

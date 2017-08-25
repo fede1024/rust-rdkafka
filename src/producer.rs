@@ -103,8 +103,7 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
 
 /// Simple Kafka producer. This producer needs to be `poll`ed at regular intervals in order to
 /// serve queued delivery report callbacks. This producer can be cheaply cloned to
-/// create a new reference to the same underlying producer. Data production should be done using the
-/// `BaseProducerTopic`, that can be created from this producer.
+/// create a new reference to the same underlying producer.
 pub struct BaseProducer<C: ProducerContext> {
     client_arc: Arc<Client<C>>,
 }

@@ -248,7 +248,7 @@ fn test_consumer_store_offset_commit() {
         .wait();
 
     // Commit the whole current state
-    consumer.commit(None, CommitMode::Sync).unwrap();
+    consumer.commit_consumer_state(CommitMode::Sync).unwrap();
 
     assert_eq!(consumer.fetch_watermarks(&topic_name, 0, 5000).unwrap(), (0, 10));
     assert_eq!(consumer.fetch_watermarks(&topic_name, 1, 5000).unwrap(), (0, 11));

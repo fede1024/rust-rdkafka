@@ -63,12 +63,6 @@ pub struct BaseConsumer<C: ConsumerContext> {
     client: Client<C>,
 }
 
-impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
-    fn get_base_consumer(&self) -> &BaseConsumer<C> {
-        self
-    }
-}
-
 impl FromClientConfig for BaseConsumer<EmptyConsumerContext> {
     fn from_config(config: &ClientConfig) -> KafkaResult<BaseConsumer<EmptyConsumerContext>> {
         BaseConsumer::from_config_and_context(config, EmptyConsumerContext)
@@ -90,38 +84,8 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
 }
 
 impl<C: ConsumerContext> BaseConsumer<C> {
-    /// Subscribes the consumer to a list of topics and/or topic sets (using regex).
-    /// Strings starting with `^` will be regex-matched to the full list of topics in
-    /// the cluster and matching topics will be added to the subscription list.
-    pub fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
-        let mut tpl = TopicPartitionList::new();
-        for topic in topics {
-            tpl.add_topic_unassigned(topic);
-        }
-        let ret_code = unsafe { rdsys::rd_kafka_subscribe(self.client.native_ptr(), tpl.ptr()) };
-        if ret_code.is_error() {
-            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
-            return Err(KafkaError::Subscription(error));
-        };
-        Ok(())
-    }
-
-    /// Unsubscribe from previous subscription list.
-    pub fn unsubscribe(&self) {
-        unsafe { rdsys::rd_kafka_unsubscribe(self.client.native_ptr()) };
-    }
-
-    /// Manually assign topics and partitions to consume.
-    pub fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
-        let ret_code = unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), assignment.ptr()) };
-        if ret_code.is_error() {
-            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
-            return Err(KafkaError::Subscription(error));
-        };
-        Ok(())
-    }
-
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
+    /// This method is for internal use only.
     pub fn poll_raw(&self, timeout_ms: i32) -> KafkaResult<Option<*mut RDKafkaMessage>> {
         let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
         if message_ptr.is_null() {
@@ -143,18 +107,53 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         Ok(Some(message_ptr))
     }
 
-    /// Polls the consumer for events. It won't block more than the specified timeout.
+    /// Polls the consumer for new messages. It won't block more than the specified timeout.
+    /// Set the timeout to 0 to make the call non-blocking, or to -1 to block until
+    /// an event is received. This method should be called at regular intervals, even if
+    /// no message is expected, to serve any queued callbacks waiting to be called. This is
+    /// especially important for automatic consumer rebalance, as the rebalance function
+    /// will be executed by the thread calling the poll() function.
     pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<BorrowedMessage>> {
         self.poll_raw(timeout_ms)
             .map(|opt_ptr| opt_ptr.map(|ptr| BorrowedMessage::new(ptr, self)))
     }
 
-    /// Commits the provided list of partitions, or the underlying consumers state if `None`.
-    /// The commit can be sync (blocking), or async.
-    pub fn commit(&self, topic_partition_list: Option<&TopicPartitionList>, mode: CommitMode) -> KafkaResult<()> {
-        let tpl_ptr = topic_partition_list.map(|tpl| tpl.ptr()).unwrap_or(ptr::null_mut());
+}
+
+impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
+    fn get_base_consumer(&self) -> &BaseConsumer<C> {
+        self
+    }
+
+    fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
+        let mut tpl = TopicPartitionList::new();
+        for topic in topics {
+            tpl.add_topic_unassigned(topic);
+        }
+        let ret_code = unsafe { rdsys::rd_kafka_subscribe(self.client.native_ptr(), tpl.ptr()) };
+        if ret_code.is_error() {
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
+            return Err(KafkaError::Subscription(error));
+        };
+        Ok(())
+    }
+
+    fn unsubscribe(&self) {
+        unsafe { rdsys::rd_kafka_unsubscribe(self.client.native_ptr()) };
+    }
+
+    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+        let ret_code = unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), assignment.ptr()) };
+        if ret_code.is_error() {
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
+            return Err(KafkaError::Subscription(error));
+        };
+        Ok(())
+    }
+
+    fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) -> KafkaResult<()> {
         let error = unsafe {
-            rdsys::rd_kafka_commit(self.client.native_ptr(), tpl_ptr, mode as i32)
+            rdsys::rd_kafka_commit(self.client.native_ptr(), topic_partition_list.ptr(), mode as i32)
         };
         if error.is_error() {
             Err(KafkaError::ConsumerCommit(error.into()))
@@ -163,8 +162,18 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
-    /// Commits the specified message. The commit can be sync (blocking), or async.
-    pub fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
+    fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()> {
+        let error = unsafe {
+            rdsys::rd_kafka_commit(self.client.native_ptr(), ptr::null_mut(), mode as i32)
+        };
+        if error.is_error() {
+            Err(KafkaError::ConsumerCommit(error.into()))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
         let error = unsafe { rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
         if error.is_error() {
             Err(KafkaError::ConsumerCommit(error.into()))
@@ -173,9 +182,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
-    /// Store offset for this message to be used on the next (auto)commit.
-    /// When using this function, `enable.auto.offset.store` must be set to `false`.
-    pub fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
+    fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
         let error = unsafe { rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset()) };
         if error.is_error() {
             Err(KafkaError::StoreOffset(error.into()))
@@ -184,8 +191,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
-    /// Returns the current topic subscription.
-    pub fn subscription(&self) -> KafkaResult<TopicPartitionList> {
+    fn subscription(&self) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
         let error = unsafe { rdsys::rd_kafka_subscription(self.client.native_ptr(), &mut tpl_ptr) };
 
@@ -196,8 +202,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
-    /// Returns the current partition assignment.
-    pub fn assignment(&self) -> KafkaResult<TopicPartitionList> {
+    fn assignment(&self) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
         let error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
 
@@ -208,9 +213,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
-    /// Retrieve committed offsets for topics and partitions currently assigned to the
-    /// consumer
-    pub fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
+    fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
         let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
         if assignment_error.is_error() {
@@ -226,8 +229,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
-    /// Lookup the offsets for this consumer's partitions by timestamp.
-    pub fn offsets_for_timestamp(&self, timestamp: i64, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
+    fn offsets_for_timestamp(&self, timestamp: i64, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
         let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
         if assignment_error.is_error() {
@@ -249,8 +251,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
-    /// Retrieve current positions (offsets) for topics and partitions.
-    pub fn position(&self) -> KafkaResult<TopicPartitionList> {
+    fn position(&self) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
         let error = unsafe {
             // TODO: improve error handling
@@ -265,21 +266,16 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
-    /// Returns the metadata information for the specified topic, or for all topics in the cluster
-    /// if no topic is specified.
-    pub fn fetch_metadata(&self, topic: Option<&str>, timeout_ms: i32) -> KafkaResult<Metadata> {
+    fn fetch_metadata(&self, topic: Option<&str>, timeout_ms: i32) -> KafkaResult<Metadata> {
         self.client.fetch_metadata(topic, timeout_ms)
     }
 
-    /// Returns high and low watermark for the specified topic and partition.
-    pub fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
+    fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
         self.client
             .fetch_watermarks(topic, partition, timeout_ms)
     }
 
-    /// Returns the group membership information for the given group. If no group is
-    /// specified, all groups will be returned.
-    pub fn fetch_group_list(&self, group: Option<&str>, timeout_ms: i32) -> KafkaResult<GroupList> {
+    fn fetch_group_list(&self, group: Option<&str>, timeout_ms: i32) -> KafkaResult<GroupList> {
         self.client.fetch_group_list(group, timeout_ms)
     }
 }

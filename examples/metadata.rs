@@ -4,7 +4,7 @@ extern crate rdkafka;
 
 use clap::{App, Arg};
 
-use rdkafka::consumer::BaseConsumer;
+use rdkafka::consumer::{BaseConsumer, Consumer};
 use rdkafka::config::ClientConfig;
 
 mod example_utils;

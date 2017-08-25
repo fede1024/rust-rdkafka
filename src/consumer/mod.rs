@@ -53,8 +53,10 @@ pub trait ConsumerContext: Context {
             }
         };
 
+        trace!("Running pre-rebalance with {:?}", rebalance);
         self.pre_rebalance(&rebalance);
 
+        trace!("Running rebalance with {:?}", rebalance);
         // Execute rebalance
         unsafe {
             match err {
@@ -66,6 +68,7 @@ pub trait ConsumerContext: Context {
                 }
             }
         }
+        trace!("Running post-rebalance with {:?}", rebalance);
         self.post_rebalance(&rebalance);
     }
 
@@ -113,22 +116,30 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().subscribe(topics)
     }
 
+    fn unsubscribe(&self) {
+        self.get_base_consumer().unsubscribe();
+    }
+
     /// Manually assign topics and partitions to the consumer.
     fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
         self.get_base_consumer().assign(assignment)
     }
 
-    /// Commit offsets on broker for the provided list of partitions, or the underlying consumers state if `None`.
-    /// If mode is set to CommitMode::Sync, the call will block until
-    /// the message has been successfully committed.
-    fn commit(&self, topic_partition_list: Option<&TopicPartitionList>, mode: CommitMode) -> KafkaResult<()> {
-        self.get_base_consumer()
-            .commit(topic_partition_list, mode)
+    /// Commits the offset of the specified message. The commit can be sync (blocking), or async.
+    /// Notice that when a specific offset is committed, all the previous offsets are considered
+    /// committed as well. Use this method only if you are processing messages in order.
+    fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) -> KafkaResult<()> {
+        self.get_base_consumer().commit(topic_partition_list, mode)
     }
 
-    /// Commit a specific message. If mode is set to CommitMode::Sync,
-    /// the call will block until the message has been successfully
-    /// committed.
+    /// Commit the current consumer state. Notice that if the consumer fails after a message
+    /// has been received, but before the message has been processed by the user code,
+    /// this might lead to data loss. Check the "at-least-once delivery" section in the readme
+    /// for more information.
+    fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()> {
+        self.get_base_consumer().commit_consumer_state(mode)
+    }
+
     fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
         self.get_base_consumer().commit_message(message, mode)
     }
