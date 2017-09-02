@@ -161,7 +161,6 @@ impl<'a> Message for BorrowedMessage<'a> {
         unsafe { (*self.ptr).offset }
     }
 
-    // TODO: -1 should be "Not available"
     fn timestamp(&self) -> Timestamp {
         let mut timestamp_type = rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_NOT_AVAILABLE;
         let timestamp = unsafe {
@@ -169,12 +168,15 @@ impl<'a> Message for BorrowedMessage<'a> {
                 self.ptr,
                 &mut timestamp_type
             )
-
         };
-        match timestamp_type {
-            rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_NOT_AVAILABLE => Timestamp::NotAvailable,
-            rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_CREATE_TIME => Timestamp::CreateTime(timestamp),
-            rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_LOG_APPEND_TIME => Timestamp::LogAppendTime(timestamp)
+        if timestamp == -1 {
+            Timestamp::NotAvailable
+        } else {
+            match timestamp_type {
+                rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_NOT_AVAILABLE => Timestamp::NotAvailable,
+                rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_CREATE_TIME => Timestamp::CreateTime(timestamp),
+                rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_LOG_APPEND_TIME => Timestamp::LogAppendTime(timestamp)
+            }
         }
     }
 }

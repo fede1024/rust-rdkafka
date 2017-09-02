@@ -127,7 +127,9 @@ impl<C: ProducerContext> BaseProducer<C> {
 
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key. If no key is
-    /// specified, a random partition will be used.
+    /// specified, a random partition will be used. Note that some errors will cause an error to be
+    /// returned straight-away, such as partition not defined, while others will be returned in the
+    /// delivery callback. To correctly handle errors, the delivery callback should be implemented.
     pub fn send_copy<P, K>(
         &self,
         topic_name: &str,
@@ -227,7 +229,7 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
     type DeliveryContext = Complete<KafkaResult<DeliveryReport>>;
 
     fn delivery(&self, status: DeliveryReport, tx: Complete<KafkaResult<DeliveryReport>>) {
-        let _ = tx.send(Ok(status));
+        let _ = tx.send(Ok(status));   // TODO: handle error
     }
 }
 

@@ -169,7 +169,7 @@ fn test_consume_with_no_message_error() {
 
 
 
-// todo: add check that commit cb gets called correctly
+// TODO: add check that commit cb gets called correctly
 #[test]
 fn test_consumer_commit_message() {
     let _r = env_logger::init();
