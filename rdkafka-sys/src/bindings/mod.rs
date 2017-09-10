@@ -1,19 +1,21 @@
-#[cfg(target_os = "linux")]
-#[allow(non_camel_case_types)]
-#[allow(non_upper_case_globals)]
-mod linux;
-
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "linux", target_pointer_width = "64"))]
 #[allow(non_camel_case_types)]
 #[allow(non_upper_case_globals)]
 #[allow(non_snake_case)]
-mod macos;
+mod linux_64;
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
-panic!("Your platform is not yet supported.");
+#[cfg(all(target_os = "linux", target_pointer_width = "64"))]
+pub use self::linux_64::*;
 
-#[cfg(target_os = "linux")]
-pub use self::linux::*;
+#[cfg(all(target_os = "macos", target_pointer_width = "64"))]
+#[allow(non_camel_case_types)]
+#[allow(non_upper_case_globals)]
+#[allow(non_snake_case)]
+mod macos_64;
 
-#[cfg(target_os = "macos")]
-pub use self::macos::*;
+#[cfg(all(target_os = "macos", target_pointer_width = "64"))]
+pub use self::macos_64::*;
+
+#[cfg(not(any(all(target_os = "linux", target_pointer_width = "64"),
+              all(target_os = "macos", target_pointer_width = "64"))))]
+compile_error!("Your platform is not yet supported. Build your rdkafka-sys bindings manually");
