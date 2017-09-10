@@ -1,0 +1,4 @@
+rdkafka-sys/src/bindings/linux.rs linguist-generated=true
+rdkafka-sys/src/bindings/macos.rs linguist-generated=true
+rdkafka-sys/src/bindings/linux_64.rs linguist-generated=true
+rdkafka-sys/src/bindings/macos_64.rs linguist-generated=true
