@@ -7,7 +7,7 @@
 * Enable dynamic linking via feature
 * Refactor BaseConsumer, which now implements the Consumer trait directly
 * A negative timestamp will now automatically be reported as NonAvailable timestamp
-
+* Point rdkafka-sys to latest librdkafka master branch
 
 <a name="0.12.0"></a>
 ## 0.12.0 (2017-07-25)

@@ -81,10 +81,6 @@ fn build_librdkafka() {
     println!("Configuring librdkafka");
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
 
-    // Undo changes to the CONFIGURATION.md file to remove the "-dirty" suffix from
-    // the librdkafka version.
-    run_command_or_fail("librdkafka", "git", &vec!["checkout", "--", "CONFIGURATION.md"]);
-
     println!("Compiling librdkafka");
     run_command_or_fail("librdkafka", "make", &["-j", &num_cpus::get().to_string()]);
 
