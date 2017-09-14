@@ -209,6 +209,7 @@ pub mod topic_partition_list;
 pub mod util;
 
 // Re-export
+pub use config::{ClientConfig, TopicConfig};
 pub use client::Context;
 pub use message::{Message, Timestamp};
 pub use topic_partition_list::{Offset, TopicPartitionList};

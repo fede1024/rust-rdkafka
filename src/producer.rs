@@ -65,6 +65,11 @@ impl DeliveryReport {
         }
     }
 
+    /// Returns true if the message was correctly produced, false otherwise.
+    pub fn success(&self) -> bool {
+        !self.error.is_error()
+    }
+
     /// Returns the result of the production of the message.
     pub fn result(&self) -> KafkaResult<(i32, i64)> {
         if self.error.is_error() {
@@ -114,7 +119,7 @@ impl<C: ProducerContext> BaseProducer<C> {
         BaseProducer { client_arc: Arc::new(client) }
     }
 
-    /// Polls the producer. Regular calls to `poll` are required to process the evens
+    /// Polls the producer. Regular calls to `poll` are required to process the events
     /// and execute the message delivery callbacks.
     pub fn poll(&self, timeout_ms: i32) -> i32 {
         unsafe { rdsys::rd_kafka_poll(self.native_ptr(), timeout_ms) }
@@ -172,6 +177,11 @@ impl<C: ProducerContext> BaseProducer<C> {
         } else {
             Ok(())
         }
+    }
+
+    /// Flushes the producer. Should be called before termination.
+    pub fn flush(&self, timeout_ms: i32) {
+        unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout_ms) };
     }
 }
 
