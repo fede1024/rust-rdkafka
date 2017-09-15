@@ -32,15 +32,19 @@ The main features provided at the moment are:
 
 [librdkafka documentation]: https://github.com/edenhill/librdkafka/wiki/Broker-version-compatibility
 
-### Users
+### One million messages per second
 
-Here are some of the projects using rust-rdkafka:
+`rust-rdkafka` is designed to be easy and safe to use thanks to the abstraction layer written in Rust, while at the same time being extremely fast thanks to librdkafka C library.
 
-- [kafka-view]: a web interface for Kafka clusters.
+Here are some benchmark results using the rust-rdkafka BaseProducer, sending data to a single Kafka 0.11 process running in localhost (default configurations, 3 partitions). Hardware: Dell laptop, with Intel Core i7-4712HQ @ 2.30GHz.
 
-*If you are using rust-rdkafka, please let me know!*
+- Scenario: produce 5 million messages, 10 bytes each, wait for all of them to be acked
+  - 1045413 messages/s, 9.970 MB/s  (average over 5 runs)
 
-[kafka-view]: https://github.com/fede1024/kafka-view
+- Scenario: produce 100000 messages, 10 KB each, wait for all of them to be acked
+  - 24623 messages/s, 234.826 MB/s  (average over 5 runs)
+
+For more numbers, check out the [kafka-benchmark](https://github.com/fede1024/kafka-benchmark) project.
 
 ### Client types
 
@@ -83,6 +87,18 @@ To see how to implement at-least-once delivery with `rdkafka`, check out the [at
 
 [at-least-once delivery example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/at_least_once.rs
 [message delivery semantics]: https://kafka.apache.org/0101/documentation.html#semantics
+
+### Users
+
+Here are some of the projects using rust-rdkafka:
+
+- [kafka-view]: a web interface for Kafka clusters.
+- [kafka-benchmark]: a high performance benchmarking tool for Kafka.
+
+*If you are using rust-rdkafka, please let me know!*
+
+[kafka-view]: https://github.com/fede1024/kafka-view
+[kafka-benchmark]: https://github.com/fede1024/kafka-benchmark
 
 ## Installation
 
