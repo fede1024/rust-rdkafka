@@ -1,5 +1,6 @@
 //! Producer implementations.
 use futures::{self, Canceled, Complete, Future, Poll, Oneshot, Async};
+use futures::future::{self, FutureResult};
 use rdsys::rd_kafka_vtype_t::*;
 use rdsys::types::*;
 use rdsys;
@@ -315,6 +316,25 @@ impl<C: Context + 'static> _FutureProducer<C> {
             }
         }
     }
+
+    // See documentation in FutureProducer
+    fn send_copy2<P, K>(
+        &self,
+        topic_name: &str,
+        partition: Option<i32>,
+        payload: Option<&P>,
+        key: Option<&K>,
+        timestamp: Option<i64>
+    ) -> FutureResult<DeliveryFuture, KafkaError>
+        where K: ToBytes + ?Sized,
+              P: ToBytes + ?Sized {
+        let (tx, rx) = futures::oneshot();
+
+        match self.producer.send_copy(topic_name, partition, payload, key, Some(Box::new(tx)), timestamp) {
+            Ok(_) => future::ok(DeliveryFuture{ rx }),
+            Err(e) => future::err(e),
+        }
+    }
 }
 
 impl<C: Context + 'static> Drop for _FutureProducer<C> {
@@ -402,6 +422,19 @@ impl<C: Context + 'static> FutureProducer<C> {
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
         self.inner.send_copy(topic_name, partition, payload, key, timestamp)
+    }
+
+    pub fn send_copy2<P, K>(
+        &self,
+        topic_name: &str,
+        partition: Option<i32>,
+        payload: Option<&P>,
+        key: Option<&K>,
+        timestamp: Option<i64>
+    ) -> FutureResult<DeliveryFuture, KafkaError>
+        where K: ToBytes + ?Sized,
+              P: ToBytes + ?Sized {
+        self.inner.send_copy2(topic_name, partition, payload, key, timestamp)
     }
 
     /// Stops the internal polling thread. The thread can also be stopped by moving
