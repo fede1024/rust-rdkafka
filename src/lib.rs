@@ -28,9 +28,9 @@
 //!
 //! ### One million messages per second
 //!
-//! `rust-rdkafka` is designed to be easy and safe to use thanks to the abstraction layer written in Rust, while at the same time being extremely fast thanks to librdkafka C library.
+//! `rust-rdkafka` is designed to be easy and safe to use thanks to the abstraction layer written in Rust, while at the same time being extremely fast thanks to the librdkafka C library.
 //!
-//! Here are some benchmark results using the rust-rdkafka BaseProducer, sending data to a single Kafka 0.11 process running in localhost (default configurations, 3 partitions). Hardware: Dell laptop, with Intel Core i7-4712HQ @ 2.30GHz.
+//! Here are some benchmark results using the rust-rdkafka BaseProducer, sending data to a single Kafka 0.11 process running in localhost (default configuration, 3 partitions). Hardware: Dell laptop, with Intel Core i7-4712HQ @ 2.30GHz.
 //!
 //! - Scenario: produce 5 million messages, 10 bytes each, wait for all of them to be acked
 //!   - 1045413 messages/s, 9.970 MB/s  (average over 5 runs)

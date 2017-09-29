@@ -85,27 +85,15 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
 
 impl<C: ConsumerContext> BaseConsumer<C> {
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
-    /// This method is for internal use only.
-    pub fn poll_raw(&self, timeout_ms: i32) -> KafkaResult<Option<*mut RDKafkaMessage>> {
+    /// This method is for internal use only. If the received librdkafka message represents
+    /// an error, the error will be wrapped in KafkaError.
+    // TODO: update doc
+    pub fn poll_raw(&self, timeout_ms: i32) -> Option<*mut RDKafkaMessage> {
         let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
         if message_ptr.is_null() {
-            return Ok(None);
-        }
-        trace!("Received raw message pointer: {:?}", message_ptr);
-        let error = unsafe { (*message_ptr).err };
-        if error.is_error() {
-            let err = Err(
-                match error {
-                    rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
-                        KafkaError::PartitionEOF(unsafe { (*message_ptr).partition })
-                    }
-                    e => KafkaError::MessageConsumption(e.into()),
-                },
-            );
-            unsafe { rdsys::rd_kafka_message_destroy(message_ptr) };
-            err
+            None
         } else {
-            Ok(Some(message_ptr))
+            Some(message_ptr)
         }
     }
 
@@ -115,9 +103,10 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// no message is expected, to serve any queued callbacks waiting to be called. This is
     /// especially important for automatic consumer rebalance, as the rebalance function
     /// will be executed by the thread calling the poll() function.
-    pub fn poll(&self, timeout_ms: i32) -> KafkaResult<Option<BorrowedMessage>> {
+    // TODO: update doc
+    pub fn poll(&self, timeout_ms: i32) -> Option<KafkaResult<BorrowedMessage>> {
         self.poll_raw(timeout_ms)
-            .map(|opt_ptr| opt_ptr.map(|ptr| BorrowedMessage::new(ptr, self)))
+            .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
     }
 
 }

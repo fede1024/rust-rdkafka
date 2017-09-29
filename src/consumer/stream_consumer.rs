@@ -40,8 +40,9 @@ impl PolledMessagePtr {
 
     /// Transforms the `PolledMessagePtr` into a message, that will be bound to the lifetime
     /// of the provided consumer.
-    fn into_message_of<C: ConsumerContext>(mut self, consumer: &StreamConsumer<C>) -> BorrowedMessage {
-        BorrowedMessage::new(self.message_ptr.take().unwrap(), consumer)
+    // TODO: update doc
+    fn into_message_of<C: ConsumerContext>(mut self, consumer: &StreamConsumer<C>) -> KafkaResult<BorrowedMessage> {
+        unsafe { BorrowedMessage::from_consumer(self.message_ptr.take().unwrap(), consumer) }
     }
 }
 
@@ -66,15 +67,12 @@ unsafe impl Send for PolledMessagePtr {}
 /// by the internal Kafka consumer but not processed.
 pub struct MessageStream<'a, C: ConsumerContext + 'static> {
     consumer: &'a StreamConsumer<C>,
-    receiver: mpsc::Receiver<KafkaResult<PolledMessagePtr>>,
+    receiver: mpsc::Receiver<Option<PolledMessagePtr>>,
 }
 
 impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
-    fn new(consumer: &'a StreamConsumer<C>, receiver: mpsc::Receiver<KafkaResult<PolledMessagePtr>>) -> MessageStream<'a, C> {
-        MessageStream {
-            consumer: consumer,
-            receiver: receiver,
-        }
+    fn new(consumer: &'a StreamConsumer<C>, receiver: mpsc::Receiver<Option<PolledMessagePtr>>) -> MessageStream<'a, C> {
+        MessageStream { consumer, receiver }
     }
 }
 
@@ -83,19 +81,22 @@ impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
     type Error = ();
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        self.receiver.poll()  // There has to be a better way
+        self.receiver.poll()
             .map(|ready|
                 ready.map(|option|
-                    option.map(|result|
-                        result.map(|polled_ptr| polled_ptr.into_message_of(self.consumer)))))
+                    option.map(|polled_ptr_opt|
+                        polled_ptr_opt.map_or(
+                            Err(KafkaError::NoMessageReceived),
+                            |polled_ptr| polled_ptr.into_message_of(self.consumer)))))
     }
 }
 
 /// Internal consumer loop. This is the main body of the thread that will drive the
 /// stream consumer.
+// TODO: add doc
 fn poll_loop<C: ConsumerContext>(
     consumer: Arc<BaseConsumer<C>>,
-    sender: mpsc::Sender<KafkaResult<PolledMessagePtr>>,
+    sender: mpsc::Sender<Option<PolledMessagePtr>>,
     should_stop: Arc<AtomicBool>,
     poll_interval: Duration,
     no_message_error: bool,
@@ -106,15 +107,14 @@ fn poll_loop<C: ConsumerContext>(
     while !should_stop.load(Ordering::Relaxed) {
         trace!("Polling base consumer");
         let future_sender = match consumer.poll_raw(poll_interval_ms) {
-            Ok(None) => {
+            None => {
                 if no_message_error {
-                    curr_sender.send(Err(KafkaError::NoMessageReceived))
+                    curr_sender.send(None)
                 } else {
                     continue // TODO: check stream closed
                 }
             },
-            Ok(Some(m_ptr)) => curr_sender.send(Ok(PolledMessagePtr::new(m_ptr))),
-            Err(e) => curr_sender.send(Err(e)),
+            Some(m_ptr) => curr_sender.send(Some(PolledMessagePtr::new(m_ptr))),
         };
         match future_sender.wait() {
             Ok(new_sender) => curr_sender = new_sender,
@@ -176,6 +176,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     /// `KafkaError::NoMessageReceived` every time the poll interval is reached and no message
     /// has been received.
     pub fn start_with(&self, poll_interval: Duration, no_message_error: bool) -> MessageStream<C> {
+        // TODO: verify called once
         let (sender, receiver) = mpsc::channel(0);
         let consumer = self.consumer.clone();
         let should_stop = self.should_stop.clone();

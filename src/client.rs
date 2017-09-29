@@ -313,7 +313,6 @@ mod tests {
     // Just call everything to test there no panics by default, behavior
     // is tested in the integrations tests.
 
-    extern crate rdkafka_sys as rdsys;
     use rdsys::types::*;
     use config::ClientConfig;
     use super::*;

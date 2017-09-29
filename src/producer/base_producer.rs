@@ -5,13 +5,15 @@ use rdsys;
 use client::{Client, Context};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use error::{KafkaError, KafkaResult, IsError};
-use message::ToBytes;
+use message::{BorrowedMessage, ToBytes};
 
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::mem;
 use std::ptr;
 use std::sync::Arc;
+
+pub use message::DeliveryResult;
 
 //
 // ********** PRODUCER CONTEXT **********
@@ -27,7 +29,7 @@ pub trait ProducerContext: Context {
 
     /// This method will be called once the message has been delivered (or failed to). The
     /// `DeliveryContext` will be the one provided by the user when calling send.
-    fn delivery(&self, DeliveryReport, Self::DeliveryContext);
+    fn delivery(&self, &DeliveryResult, Self::DeliveryContext);
 }
 
 /// Simple empty producer context that can be use when the producer context is not required.
@@ -38,63 +40,25 @@ impl Context for EmptyProducerContext { }
 impl ProducerContext for EmptyProducerContext {
     type DeliveryContext = ();
 
-    fn delivery(&self, _: DeliveryReport, _: Self::DeliveryContext) { }
-}
-
-#[derive(Debug)]
-/// Information returned by the producer after a message has been delivered
-/// or failed to be delivered.
-pub struct DeliveryReport {
-    error: RDKafkaRespErr,
-    partition: i32,
-    offset: i64,
-}
-
-impl DeliveryReport {
-    /// Creates a new `DeliveryReport`. This should only be used in the delivery_cb.
-    fn new(err: RDKafkaRespErr, partition: i32, offset: i64) -> DeliveryReport {
-        DeliveryReport {
-            error: err,
-            partition: partition,
-            offset: offset,
-        }
-    }
-
-    /// Returns true if the message was correctly produced, false otherwise.
-    pub fn success(&self) -> bool {
-        !self.error.is_error()
-    }
-
-    /// Returns the result of the production of the message.
-    pub fn result(&self) -> KafkaResult<(i32, i64)> {
-        if self.error.is_error() {
-            Err(KafkaError::MessageProduction(self.error.into()))
-        } else {
-            Ok((self.partition, self.offset))
-        }
-    }
-
-    /// Returns the partition of the message.
-    pub fn partition(&self) -> i32 {
-        self.partition
-    }
-
-    /// Returns the offset of the message.
-    pub fn offset(&self) -> i64 {
-        self.offset
-    }
+    fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryContext) { }
 }
 
 /// Callback that gets called from librdkafka every time a message succeeds
 /// or fails to be delivered.
+// TODO: grep for DeliveryReport and remove
 unsafe extern "C" fn delivery_cb<C: ProducerContext>(
         _client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
-    let context = Box::from_raw(_opaque as *mut C);
+    let producer_context = Box::from_raw(_opaque as *mut C);
     let delivery_context = Box::from_raw((*msg)._private as *mut C::DeliveryContext);
-    let delivery_status = DeliveryReport::new((*msg).err, (*msg).partition, (*msg).offset);
-    trace!("Delivery event received: {:?}", delivery_status);
-    (*context).delivery(delivery_status, (*delivery_context));
-    mem::forget(context);   // Do not free the context
+    let owner: u8 = 42;
+    let delivery_result = BorrowedMessage::from_producer(msg as *mut RDKafkaMessage, &owner);
+    trace!("Delivery event received: {:?}", delivery_result);
+    (*producer_context).delivery(&delivery_result, (*delivery_context));
+    mem::forget(producer_context); // Do not free the producer context
+    match delivery_result {  // Do not free the message, librdkafka will do it for us
+        Ok(message) => mem::forget(message),
+        Err((_, message)) => mem::forget(message),
+    }
 }
 
 //
@@ -203,3 +167,17 @@ impl<C: ProducerContext> Clone for BaseProducer<C> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    // Just test that there are no panics, and that each struct implements the expected
+    // traits (Clone, Send, Sync etc.). Behavior is tested in the integrations tests.
+    use super::*;
+    use config::ClientConfig;
+
+    // Verify that the producer is clone, according to documentation.
+    #[test]
+    fn test_base_producer_clone() {
+        let producer = ClientConfig::new().create::<BaseProducer<_>>().unwrap();
+        let _producer_clone = producer.clone();
+    }
+}

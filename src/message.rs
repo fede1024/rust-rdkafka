@@ -8,11 +8,11 @@ use std::marker::PhantomData;
 use std::slice;
 use std::str;
 
-use consumer::{Consumer, ConsumerContext};
+use error::{IsError, KafkaError, KafkaResult};
 
 
 /// Timestamp of a message
-#[derive(Debug,PartialEq,Eq,Clone,Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Timestamp {
     NotAvailable,
     CreateTime(i64),
@@ -67,10 +67,14 @@ pub trait Message {
 /// `BorrowedMessage`s are removed from the consumer buffer once they are dropped. Holding
 /// references to many messages might cause the memory of the consumer to fill up and stop.
 /// To transform a `BorrowedMessage` into a `OwnedMessage`, use the `detach` method.
+// TODO: mention that this is returned by the consumer or the producer, and that the conversion
+// method change depending on them.
 pub struct BorrowedMessage<'a> {
     ptr: *mut RDKafkaMessage,
-    _p: PhantomData<&'a u8>,
+    _owner: PhantomData<&'a u8>,
 }
+
+pub type DeliveryResult<'a> = Result<BorrowedMessage<'a>, (KafkaError, BorrowedMessage<'a>)>;
 
 impl<'a> fmt::Debug for BorrowedMessage<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -78,15 +82,37 @@ impl<'a> fmt::Debug for BorrowedMessage<'a> {
     }
 }
 
+unsafe fn err_field_to_kafka_error(ptr: *mut RDKafkaMessage) -> KafkaError {
+    match (*ptr).err {
+        rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
+            KafkaError::PartitionEOF((*ptr).partition)
+        }
+        e => KafkaError::MessageConsumption(e.into()),
+    }
+}
+
 impl<'a> BorrowedMessage<'a> {
-    /// Creates a new `BorrowedMessage` that wraps the native Kafka message pointer. The lifetime of the
-    /// message will be bound to the lifetime of the consumer passed as parameter.
-    pub fn new<C, X>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> BorrowedMessage<'a>
-        where X: ConsumerContext,
-              C: Consumer<X> {
-        BorrowedMessage {
-            ptr: ptr,
-            _p: PhantomData,
+    /// Creates a new `BorrowedMessage` that wraps the native Kafka message pointer. The lifetime of
+    /// the message will be bound to the lifetime of the owner passed as parameter.
+    // TODO: update doc
+    // In case of messages coming from the consumer, the payload and key fields have different values.
+    pub unsafe fn from_consumer<C>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> KafkaResult<BorrowedMessage<'a>> {
+        if (*ptr).err.is_error() {
+            let err = Err(err_field_to_kafka_error(ptr));
+            rdsys::rd_kafka_message_destroy(ptr);
+            err
+        } else {
+            Ok(BorrowedMessage { ptr, _owner: PhantomData })
+        }
+    }
+
+    // TODO: doc
+    pub unsafe fn from_producer<P>(ptr: *mut RDKafkaMessage, _producer: &'a P) -> DeliveryResult<'a> {
+        let borrowed_message = BorrowedMessage { ptr, _owner: PhantomData };
+        if (*ptr).err.is_error() {
+            Err((err_field_to_kafka_error(ptr), borrowed_message))
+        } else {
+            Ok(borrowed_message)
         }
     }
 
@@ -195,6 +221,7 @@ impl<'a> Drop for BorrowedMessage<'a> {
 /// An `OwnedMessage` can be created from a `BorrowedMessage` using the `detach` method.
 /// `OwnedMessage`s don't hold any reference to the consumer, and don't use any memory inside the
 /// consumer buffer.
+#[derive(Debug)]
 pub struct OwnedMessage {
     payload: Option<Vec<u8>>,
     key: Option<Vec<u8>>,
@@ -214,14 +241,7 @@ impl OwnedMessage {
         partition: i32,
         offset: i64
     ) -> OwnedMessage {
-        OwnedMessage {
-            payload: payload,
-            key: key,
-            topic: topic,
-            timestamp: timestamp,
-            partition: partition,
-            offset: offset
-        }
+        OwnedMessage { payload, key, topic, timestamp, partition, offset }
     }
 }
 
