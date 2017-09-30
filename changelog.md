@@ -10,6 +10,10 @@
 * Point rdkafka-sys to latest librdkafka master branch
 * Add producer.flush
 
+#### Bugs
+
+* Fix memory leak during consumer error reporting
+
 <a name="0.12.0"></a>
 ## 0.12.0 (2017-07-25)
 

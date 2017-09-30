@@ -94,8 +94,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         trace!("Received raw message pointer: {:?}", message_ptr);
         let error = unsafe { (*message_ptr).err };
         if error.is_error() {
-            // TODO: should we destroy the message here?
-            return Err(
+            let err = Err(
                 match error {
                     rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
                         KafkaError::PartitionEOF(unsafe { (*message_ptr).partition })
@@ -103,8 +102,11 @@ impl<C: ConsumerContext> BaseConsumer<C> {
                     e => KafkaError::MessageConsumption(e.into()),
                 },
             );
+            unsafe { rdsys::rd_kafka_message_destroy(message_ptr) };
+            err
+        } else {
+            Ok(Some(message_ptr))
         }
-        Ok(Some(message_ptr))
     }
 
     /// Polls the consumer for new messages. It won't block more than the specified timeout.
