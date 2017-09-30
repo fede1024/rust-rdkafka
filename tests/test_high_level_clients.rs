@@ -229,11 +229,12 @@ fn test_consumer_store_offset_commit() {
     produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
     let mut config = HashMap::new();
     config.insert("enable.auto.offset.store", "false");
+    config.insert("enable.partition.eof", "true");
     let consumer = create_stream_consumer(&rand_test_group(), Some(config));
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start()
-        .take(33)
+        .take(36)
         .for_each(|message| {
             match message {
                 Ok(m) => {
@@ -241,6 +242,7 @@ fn test_consumer_store_offset_commit() {
                         consumer.store_offset(&m).unwrap();
                     }
                 },
+                Err(KafkaError::PartitionEOF(_)) => {},
                 Err(e) => panic!("Error receiving message: {:?}", e)
             };
             Ok(())
