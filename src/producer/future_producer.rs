@@ -116,7 +116,11 @@ struct FutureProducerContext<C: Context + 'static> {
     wrapped_context: C
 }
 
-// TODO: documentation
+/// Represents the result of message production as performed from the `FutureProducer`.
+///
+/// If message production was successful, `OwnedDeliveryResult` will return the partition and offset
+/// of the message. If the message failed to be produced an error will be returned, together with
+/// an owned copy of the original message.
 type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
 
 // Delegates all the methods calls to the wrapped context.
@@ -258,7 +262,7 @@ mod tests {
     impl ProducerContext for TestContext {
         type DeliveryContext = i32;
 
-        fn delivery(&self, _: DeliveryResult, _: Self::DeliveryContext) {
+        fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryContext) {
             unimplemented!()
         }
     }

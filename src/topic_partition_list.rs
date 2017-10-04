@@ -319,7 +319,6 @@ impl fmt::Debug for TopicPartitionList {
 
 #[cfg(test)]
 mod tests {
-    extern crate rdkafka_sys as rdkafka;
     use super::*;
 
     use std::collections::HashMap;

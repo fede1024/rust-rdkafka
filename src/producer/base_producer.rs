@@ -19,10 +19,10 @@ pub use message::DeliveryResult;
 // ********** PRODUCER CONTEXT **********
 //
 
-/// A `ProducerContext` is a `Context` specific for producers. It can be used to store user-specified
-/// callbacks, such as `delivery`.
+/// A `ProducerContext` is a `Context` specific for producers. It can be used to store
+/// user-specified callbacks, such as `delivery`.
 pub trait ProducerContext: Context {
-    /// A DeliveryContext is a user-defined structure that will be passed to the producer when
+    /// A `DeliveryContext` is a user-defined structure that will be passed to the producer when
     /// producing a message, and returned to the `delivery` method once the message has been
     /// delivered, or failed to.
     type DeliveryContext: Send + Sync;
@@ -43,19 +43,20 @@ impl ProducerContext for EmptyProducerContext {
     fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryContext) { }
 }
 
-/// Callback that gets called from librdkafka every time a message succeeds
-/// or fails to be delivered.
-// TODO: grep for DeliveryReport and remove
+/// Callback that gets called from librdkafka every time a message succeeds or fails to be
+/// delivered.
 unsafe extern "C" fn delivery_cb<C: ProducerContext>(
         _client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
     let producer_context = Box::from_raw(_opaque as *mut C);
     let delivery_context = Box::from_raw((*msg)._private as *mut C::DeliveryContext);
-    let owner: u8 = 42;
-    let delivery_result = BorrowedMessage::from_producer(msg as *mut RDKafkaMessage, &owner);
+    let owner = 42u8;
+    // Wrap the message pointer into a BorrowedMessage that will only live for the body of this
+    // function.
+    let delivery_result = BorrowedMessage::from_dr_callback(msg as *mut RDKafkaMessage, &owner);
     trace!("Delivery event received: {:?}", delivery_result);
     (*producer_context).delivery(&delivery_result, (*delivery_context));
     mem::forget(producer_context); // Do not free the producer context
-    match delivery_result {  // Do not free the message, librdkafka will do it for us
+    match delivery_result {        // Do not free the message, librdkafka will do it for us
         Ok(message) => mem::forget(message),
         Err((_, message)) => mem::forget(message),
     }

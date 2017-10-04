@@ -12,6 +12,7 @@ use message::BorrowedMessage;
 use util::duration_to_millis;
 
 use std::cell::Cell;
+use std::ptr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
@@ -20,29 +21,29 @@ use std::time::Duration;
 
 /// A small wrapper for a message pointer. This wrapper is only used to
 /// pass a message between the polling thread and the thread consuming the stream,
-/// and transform it from pointer to `BorrowedMessage` with a lifetime that derives from the
+/// and to transform it from pointer to `BorrowedMessage` with a lifetime that derives from the
 /// lifetime of the stream consumer. In general is not safe to pass a struct with an internal
 /// reference across threads. However the `StreamConsumer` guarantees that the polling thread
-/// will be terminated before the consumer is actually dropped, ensuring that the messages
+/// is terminated before the consumer is actually dropped, ensuring that the messages
 /// are safe to be used for their entire lifetime.
 struct PolledMessagePtr {
-    message_ptr: Option<*mut RDKafkaMessage>,
+    message_ptr: *mut RDKafkaMessage,
 }
 
 impl PolledMessagePtr {
-    /// Creates a new PolledPtr from a message pointer.
+    /// Creates a new PolledPtr from a message pointer. It takes the ownership of the message.
     fn new(message_ptr: *mut RDKafkaMessage) -> PolledMessagePtr {
         trace!("New polled ptr {:?}", message_ptr);
-        PolledMessagePtr {
-            message_ptr: Some(message_ptr)
-        }
+        PolledMessagePtr { message_ptr }
     }
 
-    /// Transforms the `PolledMessagePtr` into a message, that will be bound to the lifetime
-    /// of the provided consumer.
-    // TODO: update doc
+    /// Transforms the `PolledMessagePtr` into a message whose lifetime will be bound to the
+    /// lifetime of the provided consumer. If the librdkafka message represents an error, the error
+    /// will be returned instead.
     fn into_message_of<C: ConsumerContext>(mut self, consumer: &StreamConsumer<C>) -> KafkaResult<BorrowedMessage> {
-        unsafe { BorrowedMessage::from_consumer(self.message_ptr.take().unwrap(), consumer) }
+        let msg = unsafe { BorrowedMessage::from_consumer(self.message_ptr, consumer) };
+        self.message_ptr = ptr::null_mut();
+        msg
     }
 }
 
@@ -50,9 +51,9 @@ impl Drop for PolledMessagePtr {
     /// If the `PolledMessagePtr` is hasn't been transformed into a message and the pointer is
     /// still available, it will free the underlying resources.
     fn drop(&mut self) {
-        if let Some(ptr) = self.message_ptr {
-            trace!("Destroy PolledPtr {:?}", ptr);
-            unsafe { rdsys::rd_kafka_message_destroy(ptr) };
+        if !self.message_ptr.is_null() {
+            trace!("Destroy PolledPtr {:?}", self.message_ptr);
+            unsafe { rdsys::rd_kafka_message_destroy(self.message_ptr) };
         }
     }
 }
@@ -60,11 +61,13 @@ impl Drop for PolledMessagePtr {
 /// Allow message pointer to be moved across threads.
 unsafe impl Send for PolledMessagePtr {}
 
-
-/// A Stream of Kafka messages. It can be used to receive messages as they are consumed from Kafka.
-/// Note: there might be buffering between the actual Kafka consumer and the receiving end of this
-/// stream, so it is not advised to use automatic commit, as some messages might have been consumed
-/// by the internal Kafka consumer but not processed.
+/// A Kafka consumer implementing Stream.
+///
+/// It can be used to receive messages as they are consumed from Kafka. Note: there might be
+/// buffering between the actual Kafka consumer and the receiving end of this stream, so it is not
+/// advised to use automatic commit, as some messages might have been consumed by the internal Kafka
+/// consumer but not processed. Manual offset storing should be used, see the `store_offset`
+/// function on `Consumer`.
 pub struct MessageStream<'a, C: ConsumerContext + 'static> {
     consumer: &'a StreamConsumer<C>,
     receiver: mpsc::Receiver<Option<PolledMessagePtr>>,
@@ -91,15 +94,14 @@ impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
     }
 }
 
-/// Internal consumer loop. This is the main body of the thread that will drive the
-/// stream consumer.
-// TODO: add doc
+/// Internal consumer loop. This is the main body of the thread that will drive the stream consumer.
+/// If `send_none` is true, the loop will send a None into the sender every time the poll times out.
 fn poll_loop<C: ConsumerContext>(
     consumer: Arc<BaseConsumer<C>>,
     sender: mpsc::Sender<Option<PolledMessagePtr>>,
     should_stop: Arc<AtomicBool>,
     poll_interval: Duration,
-    no_message_error: bool,
+    send_none: bool,
 ) {
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
@@ -108,7 +110,7 @@ fn poll_loop<C: ConsumerContext>(
         trace!("Polling base consumer");
         let future_sender = match consumer.poll_raw(poll_interval_ms) {
             None => {
-                if no_message_error {
+                if send_none {
                     curr_sender.send(None)
                 } else {
                     continue // TODO: check stream closed
@@ -127,12 +129,13 @@ fn poll_loop<C: ConsumerContext>(
     trace!("Polling thread loop terminated");
 }
 
-/// A Consumer with an associated polling thread. This consumer doesn't need to
-/// be polled and it will return all consumed messages as a `Stream`.
-/// Due to the asynchronous nature of the stream, some messages might be consumed by the consumer
-/// without being processed on the other end of the stream. If auto commit is used, it might cause
-/// message loss after consumer restart. Manual offset storing should be used, see the `store_offset`
-/// function on `Consumer`.
+/// A Kafka Consumer providing a `futures::Stream` interface.
+///
+/// This consumer doesn't need to be polled since it has a separate polling thread. Due to the
+/// asynchronous nature of the stream, some messages might be consumed by the consumer without being
+/// processed on the other end of the stream. If auto commit is used, it might cause message loss
+/// after consumer restart. Manual offset storing should be used, see the `store_offset` function on
+/// `Consumer`.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct StreamConsumer<C: ConsumerContext + 'static> {
     consumer: Arc<BaseConsumer<C>>,
@@ -152,7 +155,7 @@ impl FromClientConfig for StreamConsumer<EmptyConsumerContext> {
     }
 }
 
-/// Creates a new `Consumer` starting from a `ClientConfig`.
+/// Creates a new `StreamConsumer` starting from a `ClientConfig`.
 impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<StreamConsumer<C>> {
         let stream_consumer = StreamConsumer {
@@ -173,8 +176,8 @@ impl<C: ConsumerContext> StreamConsumer<C> {
 
     /// Starts the StreamConsumer with the specified poll interval. Additionally, if
     /// `no_message_error` is set to true, it will return an error of type
-    /// `KafkaError::NoMessageReceived` every time the poll interval is reached and no message
-    /// has been received.
+    /// `KafkaError::NoMessageReceived` every time the poll interval is reached and no message has
+    /// been received.
     pub fn start_with(&self, poll_interval: Duration, no_message_error: bool) -> MessageStream<C> {
         // TODO: verify called once
         let (sender, receiver) = mpsc::channel(0);
@@ -190,8 +193,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         MessageStream::new(self, receiver)
     }
 
-    /// Stops the StreamConsumer, blocking the caller until the internal consumer
-    /// has been stopped.
+    /// Stops the StreamConsumer, blocking the caller until the internal consumer has been stopped.
     pub fn stop(&self) {
         if let Some(handle) = self.handle.take() {
             trace!("Stopping polling");

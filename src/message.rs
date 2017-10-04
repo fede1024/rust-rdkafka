@@ -61,19 +61,30 @@ pub trait Message {
     }
 }
 
-/// A native librdkafka message. The content of the message is stored in the receiving buffer of
-/// the consumer, to avoid memory allocations. As such, `BorrowedMessage` cannot outlive the
-/// consumer it is received from.
-/// `BorrowedMessage`s are removed from the consumer buffer once they are dropped. Holding
-/// references to many messages might cause the memory of the consumer to fill up and stop.
+/// A zero-copy Kafka message.
+///
+/// The content of the message is stored in the receiving buffer of the consumer or the producer. As
+/// such, `BorrowedMessage` cannot outlive the consumer or producer it belongs to.
+/// ## Consumers
+/// `BorrowedMessage`s coming from consumers are removed from the consumer buffer once they are
+/// dropped. Holding references to too many messages will cause the memory of the consumer to fill
+/// up and the consumer to block until some of the `BorrowedMessage`s are dropped.
+/// ## Conversion to owned
 /// To transform a `BorrowedMessage` into a `OwnedMessage`, use the `detach` method.
-// TODO: mention that this is returned by the consumer or the producer, and that the conversion
-// method change depending on them.
 pub struct BorrowedMessage<'a> {
     ptr: *mut RDKafkaMessage,
     _owner: PhantomData<&'a u8>,
 }
 
+/// The result of a message production.
+///
+/// If message production is successful `DeliveryResult` will contain the sent message, that can be
+/// used to find which partition and offset the message was sent to. If message production is not
+/// successful, the `DeliveryReport` will contain an error and the message that failed to be sent.
+/// The partition and offset, in this case, will default to -1 and 0 respectively.
+/// ## Lifetimes
+/// In both success or failure scenarios, the payload of the message resides in the buffer of the
+/// producer and will be automatically removed once the `delivery` callback finishes.
 pub type DeliveryResult<'a> = Result<BorrowedMessage<'a>, (KafkaError, BorrowedMessage<'a>)>;
 
 impl<'a> fmt::Debug for BorrowedMessage<'a> {
@@ -92,10 +103,10 @@ unsafe fn err_field_to_kafka_error(ptr: *mut RDKafkaMessage) -> KafkaError {
 }
 
 impl<'a> BorrowedMessage<'a> {
-    /// Creates a new `BorrowedMessage` that wraps the native Kafka message pointer. The lifetime of
-    /// the message will be bound to the lifetime of the owner passed as parameter.
-    // TODO: update doc
-    // In case of messages coming from the consumer, the payload and key fields have different values.
+    /// Creates a new `BorrowedMessage` that wraps the native Kafka message pointer returned by a
+    /// consumer. The lifetime of the message will be bound to the lifetime of the consumer passed
+    /// as parameter. This method should only be used with messages coming from consumers. If the
+    /// message contains an error, only the error is returned and the message structure is freed.
     pub unsafe fn from_consumer<C>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> KafkaResult<BorrowedMessage<'a>> {
         if (*ptr).err.is_error() {
             let err = Err(err_field_to_kafka_error(ptr));
@@ -106,8 +117,11 @@ impl<'a> BorrowedMessage<'a> {
         }
     }
 
-    // TODO: doc
-    pub unsafe fn from_producer<P>(ptr: *mut RDKafkaMessage, _producer: &'a P) -> DeliveryResult<'a> {
+    /// Creates a new `BorrowedMessage` that wraps the native Kafka message pointer returned by the
+    /// delivery callback of a producer. The lifetime of the message will be bound to the lifetime
+    /// of the reference passed as parameter. This method should only be used with messages coming
+    /// from the delivery callback. The message will not be freed in any circumstance.
+    pub unsafe fn from_dr_callback<O>(ptr: *mut RDKafkaMessage, _owner: &'a O) -> DeliveryResult<'a> {
         let borrowed_message = BorrowedMessage { ptr, _owner: PhantomData };
         if (*ptr).err.is_error() {
             Err((err_field_to_kafka_error(ptr), borrowed_message))

@@ -19,6 +19,7 @@ fn produce(brokers: &str, topic_name: &str) {
         .set("bootstrap.servers", brokers)
         .set_default_topic_config(TopicConfig::new()
             .set("produce.offset.report", "true")
+            .set("message.timeout.ms", "5000")
             .finalize())
         .create::<FutureProducer<_>>()
         .expect("Producer creation error");

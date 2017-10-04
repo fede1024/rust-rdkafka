@@ -84,10 +84,8 @@ pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, 
     let mut message_map = HashMap::new();
     for (id, future) in futures {
         match future.wait() {
-            Ok(report) => match report.result() {
-                Err(e) => panic!("Delivery failed: {}", e),
-                Ok((partition, offset)) => message_map.insert((partition, offset), id),
-            },
+            Ok(Ok((partition, offset))) => message_map.insert((partition, offset), id),
+            Ok(Err((kafka_error, _message))) => panic!("Delivery failed: {}", kafka_error),
             Err(e) => panic!("Waiting for future failed: {}", e)
         };
     }

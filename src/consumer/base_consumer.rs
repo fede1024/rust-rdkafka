@@ -79,15 +79,13 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
         }
         let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context)?;
         unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
-        Ok(BaseConsumer { client: client })
+        Ok(BaseConsumer { client })
     }
 }
 
 impl<C: ConsumerContext> BaseConsumer<C> {
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
-    /// This method is for internal use only. If the received librdkafka message represents
-    /// an error, the error will be wrapped in KafkaError.
-    // TODO: update doc
+    /// This method is for internal use only. Use poll instead.
     pub fn poll_raw(&self, timeout_ms: i32) -> Option<*mut RDKafkaMessage> {
         let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
         if message_ptr.is_null() {
@@ -97,18 +95,18 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         }
     }
 
-    /// Polls the consumer for new messages. It won't block more than the specified timeout.
-    /// Set the timeout to 0 to make the call non-blocking, or to -1 to block until
-    /// an event is received. This method should be called at regular intervals, even if
-    /// no message is expected, to serve any queued callbacks waiting to be called. This is
-    /// especially important for automatic consumer rebalance, as the rebalance function
-    /// will be executed by the thread calling the poll() function.
-    // TODO: update doc
+    /// Polls the consumer for new messages. It won't block for more than the specified timeout. Set
+    /// the timeout to 0 to make the call non-blocking, or to -1 to block until an event is
+    /// received. This method should be called at regular intervals, even if no message is expected,
+    /// to serve any queued callbacks waiting to be called. This is especially important for
+    /// automatic consumer rebalance, as the rebalance function will be executed by the thread
+    /// calling the poll() function.
+    /// ## Lifetime
+    /// The returned message lives in the memory of the consumer and cannot outlive it.
     pub fn poll(&self, timeout_ms: i32) -> Option<KafkaResult<BorrowedMessage>> {
         self.poll_raw(timeout_ms)
             .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
     }
-
 }
 
 impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
