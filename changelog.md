@@ -3,6 +3,11 @@
 <a name="master"></a>
 ## master
 
+#### Refactoring
+* Split producer.rs into multiple files
+* Both producers now return the original message after failure
+* BaseConsumer returns an Option\<Result\> instead of Result\<Option\>
+
 #### Features
 * Enable dynamic linking via feature
 * Refactor BaseConsumer, which now implements the Consumer trait directly
