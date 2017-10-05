@@ -180,7 +180,7 @@ impl<C: Context + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
     }
 }
 
-/// A future that will receive a `DeliveryResult` containing information on the
+/// A future that will return a `DeliveryResult` containing information on the
 /// delivery status of the message.
 pub struct DeliveryFuture {
     rx: Oneshot<OwnedDeliveryResult>,

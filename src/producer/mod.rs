@@ -1,5 +1,5 @@
-mod base_producer;
-mod future_producer;
+pub mod base_producer;
+pub mod future_producer;
 
 pub use self::base_producer::{
     BaseProducer,
