@@ -15,6 +15,11 @@ use std::thread::{self, JoinHandle};
 // ********** POLLING PRODUCER **********
 //
 
+/// A producer with a separate thread for event handling.
+///
+/// The `PollingProducer` is a `BaseProducer` with a separate thread dedicated to calling `poll` at
+/// regular intervals, in order to execute any queued event, such as delivery notifications. The
+/// thread will be automatically stopped when the producer is dropped.
 #[must_use = "The polling producer will stop immediately if unused"]
 pub struct PollingProducer<C: ProducerContext + 'static> {
     producer: BaseProducer<C>,
@@ -68,7 +73,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
         *handle_store = Some(handle);
     }
 
-    // See documentation in FutureProducer
+    /// Stops the polling thread.
     fn stop(&self) {
         let mut handle_store = self.handle.write().expect("poison error");
         if (*handle_store).is_some() {
@@ -82,6 +87,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
         }
     }
 
+    /// Sends a message to Kafka. See the documentation in `BaseProducer`.
     fn send_copy<P, K>(
         &self,
         topic: &str,
@@ -118,8 +124,8 @@ struct FutureProducerContext<C: Context + 'static> {
 
 /// Represents the result of message production as performed from the `FutureProducer`.
 ///
-/// If message production was successful, `OwnedDeliveryResult` will return the partition and offset
-/// of the message. If the message failed to be produced an error will be returned, together with
+/// If message delivery was successful, `OwnedDeliveryResult` will return the partition and offset
+/// of the message. If the message failed to be delivered an error will be returned, together with
 /// an owned copy of the original message.
 type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
 
@@ -151,10 +157,14 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
 }
 
 
-/// A producer with an internal running thread. This producer doesn't need to be polled.
-/// It can be cheaply cloned to get a reference to the same underlying producer.
-/// The internal thread can be terminated with the `stop` method or moving the
-/// `FutureProducer` out of scope.
+/// A producer that returns a `Future` for every message being produced.
+///
+/// Since message production in rdkafka is asynchronous, the called cannot immediately know if the
+/// delivery of the message was successful or not. The `FutureProducer` provides this information in
+/// a `Future`, that will be completed once the information becomes available. This producer has an
+/// internal polling thread and as such it doesn't need to be polled. It can be cheaply cloned to
+/// get a reference to the same underlying producer. The internal thread can be terminated with the
+/// `stop` method or moving the `FutureProducer` out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
 pub struct FutureProducer<C: Context + 'static> {
     inner: Arc<PollingProducer<FutureProducerContext<C>>>,
@@ -180,12 +190,15 @@ impl<C: Context + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
     }
 }
 
-/// A future that will return a `DeliveryResult` containing information on the
+/// A `Future` wrapping the result of the message production.
+///
+/// Once completed, the future will contain an `OwnedDeliveryResult` with information on the
 /// delivery status of the message.
 pub struct DeliveryFuture {
     rx: Oneshot<OwnedDeliveryResult>,
 }
 
+// TODO: remove?
 impl DeliveryFuture {
     pub fn close(&mut self) {
         self.rx.close();
@@ -208,7 +221,7 @@ impl Future for DeliveryFuture {
 impl<C: Context + 'static> FutureProducer<C> {
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key.
-    /// Returns a `DeliveryFuture` or an error.
+    /// Returns a `DeliveryFuture`.
     pub fn send_copy<P, K>(
         &self,
         topic: &str,
