@@ -1,3 +1,29 @@
+//! Low level Kafka producer.
+//!
+//! For more information about the producers provided in rdkafka, refer to the module level documentation.
+//!
+//! ## BaseProducer
+//!
+//! The `BaseProducer` is a low level Kafka producer designed to be as similar as possible to
+//! the underlying C librdkafka producer, while maintaining a safe Rust interface.
+//!
+//! Production of messages is fully asynchronous. The librdkafka producer will take care of buffering
+//! requests together according to configuration, and to send them efficiently. Once a message has
+//! been produced, or the retry count reached, a callback function called delivery callback will be
+//! called.
+//!
+//! The `BaseProducer` requires a `ProducerContext` which will be used to specify the delivery callback
+//! and the `DeliveryContext`. The `DeliveryContext` is a user-defined type that the user can pass to the
+//! `send` method of the producer, and that the producer will then forward to the delivery
+//! callback of the corresponding message. The `DeliveryContext` is useful in case the delivery
+//! callback requires additional information about the message (such as message id for example).
+//!
+//! ### Calling poll
+//!
+//! To execute delivery callbacks the `poll` method of the producer should be called regularly.
+//! If `poll` is not called, or not often enough, a RDKafkaError::QueueFull error will be returned.
+//!
+
 use rdsys::rd_kafka_vtype_t::*;
 use rdsys::types::*;
 use rdsys;
@@ -29,7 +55,7 @@ pub trait ProducerContext: Context {
 
     /// This method will be called once the message has been delivered (or failed to). The
     /// `DeliveryContext` will be the one provided by the user when calling send.
-    fn delivery(&self, &DeliveryResult, Self::DeliveryContext);
+    fn delivery(&self, delivery_result: &DeliveryResult, delivery_context: Self::DeliveryContext);
 }
 
 /// Simple empty producer context that can be use when the producer context is not required.

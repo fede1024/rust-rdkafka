@@ -1,6 +1,6 @@
-//! This module contains all the rust-rdkafka producers.
+//! Low level and high level rdkafka producers.
 //!
-//! ## The librdkafka producer
+//! ## The C librdkafka producer
 //! Rust-rdkafka relies on the C librdkafka producer to communicate with Kafka, so in order to understand how
 //! the Rust producers work it is important to understand the basics of the C one as well.
 //!
@@ -11,9 +11,9 @@
 //! event with the appropriate delivery result into an internal event queue.
 //!
 //! The librdkafka user is responsible for calling the `poll` function at regular intervals to
-//! process those events; in particular the thread calling `poll` will be the one executing
+//! process those events; the thread calling `poll` will be the one executing
 //! the delivery callback for every delivery event. If `poll` is not called, or not frequently
-//! enough, the producer will return a "queue full" error and it won't be able to send any other
+//! enough, the producer will return a RDKafkaError::QueueFull error and it won't be able to send any other
 //! message until more delivery event are processed via `poll`.
 //!
 //! ### Error reporting
@@ -37,8 +37,37 @@
 //! `base_producer` module.
 //!
 //! ### High level producer
+//! At the moment the only high level producer implemented is the `FutureProducer`. The
+//! `FutureProducer` doesn't rely on user-defined callbacks to notify the delivery or failure of
+//! a message; instead, this information will be returned in a Future. The `FutureProducer` also
+//! uses an internal thread that is used for polling, which makes calling poll explicitly not necessary.
+//! The returned future will contain information about the delivered message in case of success,
+//! or a copy of the original message in case of failure. Additional computation can be chained
+//! to the returned future, and it will executed by the future executor once the value is available
+//! (for more information, check the documentation of the futures crate).
 //!
-//! TODO (see `FutureProducer`).
+//! ## Configuration
+//!
+//! ### Producer configuration
+//!
+//! For the configuration parameters common to both producers and consumers, refer to the
+//! documentation of the `config` module. Here are listed the most commonly used producer
+//! configuration. Click [here](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md) for the full list.
+//!
+//! - `queue.buffering.max.messages` (100000): Maximum number of messages allowed on the producer queue.
+//! - `queue.buffering.max.kbytes` (4000000): Maximum total message size sum allowed on the producer queue. This property has higher priority than queue.buffering.max.messages.
+//! - `queue.buffering.max.ms` (0): Delay in milliseconds to wait for messages in the producer queue to accumulate before sending a request to the brokers. A higher value allows larger and more effective (less overhead, improved compression) batches of messages to accumulate at the expense of increased message delivery latency.
+//! - `message.send.max.retries` (2): How many times to retry sending a failing MessageSet. Note: retrying may cause reordering.
+//! - `compression.codec` (none): Compression codec to use for compressing message sets.
+//!
+//! ### Topic configurations
+//!
+//! Some configuration parameters are specified via the `TopicConfig` structure. The most common parameters for the producer are:
+//!
+//! - `request.required.acks` (1): This field indicates how many acknowledgements the leader broker must receive from ISR brokers before responding to the request: 0=Broker does not send any response/ack to client, 1=Only the leader broker will need to ack the message, -1 or all=broker will block until message is committed by all in sync replicas (ISRs) or broker's in.sync.replicas setting before sending response.
+//! - `request.timeout.ms` (5000): The ack timeout of the producer request in milliseconds. This value is only enforced by the broker and relies on request.required.acks being != 0.
+//! - `message.timeout.ms` (300000): Local message timeout. This value is only enforced locally and limits the time a produced message waits for successful delivery. A time of 0 is infinite.
+//! - `produce.offset.report` (false): Report offset of produced message back to application.
 //!
 
 pub mod base_producer;

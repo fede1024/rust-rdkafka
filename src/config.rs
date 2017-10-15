@@ -1,4 +1,23 @@
-//! Configuration to create a Consumer or Producer.
+//! Producer and consumer configuration.
+//!
+//! ## C library configuration
+//!
+//! The Rust library will forward all the configuration to the C library. The most frequently
+//! used parameters are listed here.
+//!
+//! ### Frequently used parameters
+//!
+//! For producer-specific and consumer-specific parameters check the producer and consumer modules
+//! documentation. The full list of available parameters is available in the  [librdkafka
+//! documentation](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md).
+//!
+//! - `client.id` (rdkafka): Client identifier.
+//! - `bootstrap.servers`: Initial list of brokers as a CSV list of broker host or host:port.
+//! - `message.max.bytes` (1000000): Maximum message size.
+//! - `debug`: A comma-separated list of debug contexts to enable. Use 'all' to print all the debugging information.
+//! - `statistics.interval.ms` (0 - disabled): how often the statistic callback specified in the `Context` will be called.
+//!
+
 use log::LogLevel;
 use rdsys::types::*;
 use rdsys;
@@ -194,26 +213,21 @@ pub trait FromClientConfigAndContext<C: Context>: Sized {
 // ********** TOPIC CONFIG **********
 //
 
-/// A native rdkafka-sys client config.
-pub struct NativeTopicConfig {
+/// A native rdkafka-sys topic config.
+struct NativeTopicConfig {
     ptr: *mut RDKafkaTopicConf,
 }
 
 impl NativeTopicConfig {
     /// Wraps a pointer to an `RDKafkaTopicConf` object and returns a new `NativeTopicConfig`.
-    pub fn from_ptr(ptr: *mut RDKafkaTopicConf) -> NativeTopicConfig {
-        NativeTopicConfig {ptr: ptr}
-    }
-
-    /// Returns the pointer to the librdkafka RDKafkaTopicConf structure.
-    pub fn ptr(&self) -> *mut RDKafkaTopicConf {
-        self.ptr
+    fn from_ptr(ptr: *mut RDKafkaTopicConf) -> NativeTopicConfig {
+        NativeTopicConfig {ptr }
     }
 
     /// Returns the pointer to the librdkafka RDKafkaTopicConf structure. This method should be used
     /// when the native pointer is intended to be moved. The destructor won't be executed
     /// automatically; the caller should take care of deallocating the resource when no longer needed.
-    pub fn ptr_move(self) -> *mut RDKafkaTopicConf {
+    fn ptr_move(self) -> *mut RDKafkaTopicConf {
         let ptr = self.ptr;
         mem::forget(self);
         ptr
@@ -254,7 +268,7 @@ impl TopicConfig {
     }
 
     /// Creates a native rdkafka-sys topic configuration.
-    pub fn create_native_config(&self) -> KafkaResult<NativeTopicConfig> {
+    fn create_native_config(&self) -> KafkaResult<NativeTopicConfig> {
         let config_ptr = unsafe { rdsys::rd_kafka_topic_conf_new() };
         let errstr = [0; ERR_LEN];
         for (name, value) in &self.conf_map {
