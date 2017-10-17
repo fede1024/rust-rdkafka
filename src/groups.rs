@@ -33,6 +33,28 @@ impl GroupMemberInfo {
                 .expect("Member host is not a valid UTF-8 string")
         }
     }
+
+    /// Return the metadata of the member
+    pub fn metadata(&self) -> Option<&[u8]> {
+        unsafe {
+            if self.0.member_metadata.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts::<u8>(self.0.member_metadata as *const u8, self.0.member_metadata_size as usize))
+            }
+        }
+    }
+
+    /// Return the assignment of the member
+    pub fn assignment(&self) -> Option<&[u8]> {
+        unsafe {
+            if self.0.member_assignment.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts::<u8>(self.0.member_assignment as *const u8, self.0.member_assignment_size as usize))
+            }
+        }
+    }
 }
 
 /// Group information container.
