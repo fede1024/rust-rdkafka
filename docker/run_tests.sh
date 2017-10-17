@@ -28,8 +28,10 @@ fi
 
 # UNIT TESTS
 
+V_SUPP="rdkafka.suppressions"
+
 echo -e "${GREEN}*** Run unit tests ***${NC}"
-valgrind --error-exitcode=100 --leak-check=full target/debug/rdkafka-* --nocapture
+valgrind --error-exitcode=100 --suppressions="$V_SUPP" --leak-check=full target/debug/rdkafka-* --nocapture
 
 if [ "$?" != "0" ]; then
     echo -e "${RED}*** Failure in unit tests ***${NC}"
@@ -42,7 +44,7 @@ echo -e "${GREEN}*** Unit tests succeeded ***${NC}"
 for test_file in `ls "$INTEGRATION_TESTS"*`
 do
     echo -e "${GREEN}Executing "$test_file"${NC}"
-    valgrind --error-exitcode=100 --leak-check=full "$test_file" --nocapture
+    valgrind --error-exitcode=100 --suppressions="$V_SUPP" --leak-check=full "$test_file" --nocapture
     if [ "$?" != "0" ]; then
         echo -e "${RED}*** Failure in integration tests ***${NC}"
         exit 1

@@ -1,0 +1,11 @@
+# Valgrind suppression file
+{
+   thrd_tls_alloc_stack
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:allocate_stack
+   fun:pthread_create@@GLIBC_2.2.5
+}
