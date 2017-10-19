@@ -176,6 +176,9 @@ impl<C: ProducerContext> BaseProducer<C> {
             )
         };
         if produce_error.is_error() {
+            if !delivery_context_ptr.is_null() {  // Drop delivery context if provided
+                 unsafe { Box::from_raw(delivery_context_ptr as *mut C::DeliveryContext) };
+            }
             Err(KafkaError::MessageProduction(produce_error.into()))
         } else {
             Ok(())

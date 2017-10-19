@@ -120,7 +120,8 @@ pub trait Consumer<C: ConsumerContext> {
         self.get_base_consumer().unsubscribe();
     }
 
-    /// Manually assign topics and partitions to the consumer.
+    /// Manually assign topics and partitions to the consumer. If used, automatic consumer
+    /// rebalance won't be activated.
     fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
         self.get_base_consumer().assign(assignment)
     }
