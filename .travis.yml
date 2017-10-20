@@ -14,7 +14,7 @@ os:
   - osx
 
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly"  ]]; then ./test_suite.sh; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly"  ]]; then ./test_suite.sh; else cargo build --verbose; fi
 
 notifications:
   webhooks:
