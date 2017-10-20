@@ -1,10 +1,20 @@
+language: rust
+
+rust:
+  - stable
+  - nightly
+
 sudo: required
 
 services:
   - docker
 
+os:
+  - linux
+  - osx
+
 script:
-  - ./test_suite.sh
+  - if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly"  ]]; then ./test_suite.sh; fi
 
 notifications:
   webhooks:
