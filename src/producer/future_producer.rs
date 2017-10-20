@@ -2,7 +2,7 @@ use client::{Context, EmptyContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use producer::{BaseProducer, DeliveryResult, EmptyProducerContext, ProducerContext};
 use statistics::Statistics;
-use error::{KafkaError, KafkaResult};
+use error::{KafkaError, KafkaResult, RDKafkaError};
 use message::{Message, OwnedMessage, Timestamp, ToBytes};
 
 use futures::{self, Canceled, Complete, Future, Poll, Oneshot, Async};
@@ -10,6 +10,7 @@ use futures::{self, Canceled, Complete, Future, Poll, Oneshot, Async};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
 
 //
 // ********** POLLING PRODUCER **********
@@ -100,6 +101,12 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
         self.producer.send_copy(topic, partition, payload, key, delivery_context, timestamp)
+    }
+
+    /// Polls the internal producer. This is not normally required since the `PollingProducer` had
+    /// a thread dedicated to calling `poll` regularly.
+    fn poll(&self, timeout_ms: i32) {
+        self.producer.poll(timeout_ms);
     }
 }
 
@@ -228,27 +235,38 @@ impl<C: Context + 'static> FutureProducer<C> {
         partition: Option<i32>,
         payload: Option<&P>,
         key: Option<&K>,
-        timestamp: Option<i64>
+        timestamp: Option<i64>,
+        block_ms: i64,
     ) -> DeliveryFuture
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
-        let (tx, rx) = futures::oneshot();
+        let start_time = Instant::now();
 
-        // TODO: catch and retry on QueueFull
-        match self.inner.send_copy(topic, partition, payload, key, timestamp, Some(Box::new(tx))) {
-            Ok(_) => DeliveryFuture{ rx },
-            Err(e) => {
-                let (tx, rx) = futures::oneshot();
-                let owned_message = OwnedMessage::new(
-                    payload.map(|p| p.to_bytes().to_vec()),
-                    key.map(|k| k.to_bytes().to_vec()),
-                    topic.to_owned(),
-                    timestamp.map(|millis| Timestamp::CreateTime(millis)).unwrap_or(Timestamp::NotAvailable),
-                    -1,
-                    0
-                );
-                let _ = tx.send(Err((e, owned_message)));
-                DeliveryFuture { rx }
+        loop {
+            let (tx, rx) = futures::oneshot();
+            match self.inner.send_copy(topic, partition, payload, key, timestamp, Some(Box::new(tx))) {
+                Ok(_) => break DeliveryFuture{ rx },
+                Err(e) => {
+                    if let KafkaError::MessageProduction(RDKafkaError::QueueFull) = e {
+                        if block_ms == -1 {
+                            continue;
+                        } else if block_ms > 0 && start_time.elapsed() < Duration::from_millis(block_ms as u64) {
+                            self.inner.poll(100);
+                            continue;
+                        }
+                    }
+                    let (tx, rx) = futures::oneshot();
+                    let owned_message = OwnedMessage::new(
+                        payload.map(|p| p.to_bytes().to_vec()),
+                        key.map(|k| k.to_bytes().to_vec()),
+                        topic.to_owned(),
+                        timestamp.map_or(Timestamp::NotAvailable, |millis| Timestamp::CreateTime(millis)),
+                        partition.unwrap_or(-1),
+                        0
+                    );
+                    let _ = tx.send(Err((e, owned_message)));
+                    break DeliveryFuture { rx };
+                }
             }
         }
     }

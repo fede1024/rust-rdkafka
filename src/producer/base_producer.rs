@@ -189,6 +189,11 @@ impl<C: ProducerContext> BaseProducer<C> {
     pub fn flush(&self, timeout_ms: i32) {
         unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout_ms) };
     }
+
+    /// Return the number of messages waiting to be sent, or send but not acknowledged yet.
+    pub fn in_flight_count(&self) -> i32 {
+        unsafe { rdsys::rd_kafka_outq_len(self.native_ptr()) }
+    }
 }
 
 impl<C: ProducerContext> Clone for BaseProducer<C> {

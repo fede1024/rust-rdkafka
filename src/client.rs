@@ -90,11 +90,11 @@ impl NativeClient {
 
 impl Drop for NativeClient {
     fn drop(&mut self) {
-        trace!("Destroying client: {:p}", self.ptr);
+        info!("Destroying client: {:p}", self.ptr);
         unsafe {
             rdsys::rd_kafka_destroy(self.ptr);
         }
-        trace!("Client destroyed: {:?}", self.ptr);
+        info!("Client destroyed: {:?}", self.ptr);
     }
 }
 

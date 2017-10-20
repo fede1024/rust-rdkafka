@@ -148,7 +148,7 @@ fn main() {
                 join_all(
                     output_topics.iter()
                         .map(|output_topic|
-                            producer.send_copy(output_topic, None, m.payload(), m.key(), None)))
+                            producer.send_copy(output_topic, None, m.payload(), m.key(), None, 1000)))
                     .wait()
                     .expect("Message delivery failed for some topic");
                 // Now that the message is completely processed, add it's position to the offset

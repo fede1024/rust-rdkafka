@@ -17,6 +17,7 @@ use example_utils::setup_logger;
 fn produce(brokers: &str, topic_name: &str) {
     let producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
+        .set("queue.buffering.max.messages", "1")
         .set_default_topic_config(TopicConfig::new()
             .set("produce.offset.report", "true")
             .set("message.timeout.ms", "5000")
@@ -26,12 +27,13 @@ fn produce(brokers: &str, topic_name: &str) {
 
     // This loop is non blocking: all messages will be sent one after the other, without waiting
     // for the results.
-    let futures = (0..5)
+    let futures = (0..3)
         .map(|i| {
             let value = format!("Message {}", i);
             // The send operation on the topic returns a future, that will be completed once the
             // result or failure from Kafka will be received.
-            producer.send_copy(topic_name, None, Some(&value), Some(&vec![0, 1, 2, 3]), None)
+            info!("Going for message {}", i);
+            producer.send_copy(topic_name, None, Some(&value), Some(&vec![0, 1, 2, 3]), None, 0)
                 .map(move |delivery_status| {   // This will be executed onw the result is received
                     info!("Delivery status for message {} received", i);
                     delivery_status
