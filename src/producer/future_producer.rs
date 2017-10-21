@@ -108,6 +108,16 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
     fn poll(&self, timeout_ms: i32) {
         self.producer.poll(timeout_ms);
     }
+
+    /// Flushes the producer. Should be called before termination.
+    pub fn flush(&self, timeout_ms: i32) {
+        self.producer.flush(timeout_ms);
+    }
+
+    /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.
+    pub fn in_flight_count(&self) -> i32 {
+        self.producer.in_flight_count()
+    }
 }
 
 impl<C: ProducerContext + 'static> Drop for PollingProducer<C> {
@@ -174,12 +184,12 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
 /// `stop` method or moving the `FutureProducer` out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
 pub struct FutureProducer<C: Context + 'static> {
-    inner: Arc<PollingProducer<FutureProducerContext<C>>>,
+    producer: Arc<PollingProducer<FutureProducerContext<C>>>,
 }
 
 impl<C: Context + 'static> Clone for FutureProducer<C> {
     fn clone(&self) -> FutureProducer<C> {
-        FutureProducer { inner: self.inner.clone() }
+        FutureProducer { producer: self.producer.clone() }
     }
 }
 
@@ -193,7 +203,7 @@ impl<C: Context + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
         let future_context = FutureProducerContext { wrapped_context: context};
         let polling_producer = PollingProducer::from_config_and_context(config, future_context)?;
-        Ok(FutureProducer { inner: Arc::new(polling_producer) })
+        Ok(FutureProducer { producer: Arc::new(polling_producer) })
     }
 }
 
@@ -244,14 +254,14 @@ impl<C: Context + 'static> FutureProducer<C> {
 
         loop {
             let (tx, rx) = futures::oneshot();
-            match self.inner.send_copy(topic, partition, payload, key, timestamp, Some(Box::new(tx))) {
+            match self.producer.send_copy(topic, partition, payload, key, timestamp, Some(Box::new(tx))) {
                 Ok(_) => break DeliveryFuture{ rx },
                 Err(e) => {
                     if let KafkaError::MessageProduction(RDKafkaError::QueueFull) = e {
                         if block_ms == -1 {
                             continue;
                         } else if block_ms > 0 && start_time.elapsed() < Duration::from_millis(block_ms as u64) {
-                            self.inner.poll(100);
+                            self.poll(100);
                             continue;
                         }
                     }
@@ -274,10 +284,24 @@ impl<C: Context + 'static> FutureProducer<C> {
     /// Stops the internal polling thread. The thread can also be stopped by moving
     /// the `FutureProducer` out of scope.
     pub fn stop(&self) {
-        self.inner.stop();
+        self.producer.stop();
     }
 
-    // TODO: add poll and flush
+    /// Polls the internal producer. This is not normally required since the `PollingProducer` had
+    /// a thread dedicated to calling `poll` regularly.
+    pub fn poll(&self, timeout_ms: i32) {
+        self.producer.poll(timeout_ms);
+    }
+
+    /// Flushes the producer. Should be called before termination.
+    pub fn flush(&self, timeout_ms: i32) {
+        self.producer.flush(timeout_ms);
+    }
+
+    /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.
+    pub fn in_flight_count(&self) -> i32 {
+        self.producer.in_flight_count()
+    }
 }
 
 #[cfg(test)]

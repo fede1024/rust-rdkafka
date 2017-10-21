@@ -18,21 +18,34 @@ fn test_metadata() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
-    produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
-    produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
-    produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
     let consumer = create_stream_consumer(&rand_test_group(), None);
 
     let metadata = consumer.fetch_metadata(None, 5000).unwrap();
+    assert_eq!(metadata.orig_broker_id(), -1);
+    assert_eq!(metadata.orig_broker_name(), "localhost:9092/bootstrap");
+
+    let broker_metadata = metadata.brokers();
+    assert_eq!(broker_metadata.len(), 1);
+    assert_eq!(broker_metadata[0].id(), 0);
+    assert!(broker_metadata[0].host().len() > 0);
+    assert_eq!(broker_metadata[0].port(), 9092);
 
     let topic_metadata = metadata.topics().iter()
         .find(|m| m.name() == topic_name).unwrap();
 
-    let mut ids = topic_metadata.partitions().iter().map(|p| p.id()).collect::<Vec<_>>();
+    let mut ids = topic_metadata.partitions().iter()
+        .map(|p| {
+            assert_eq!(p.error(), None);
+            p.id()
+        })
+        .collect::<Vec<_>>();
     ids.sort();
 
     assert_eq!(ids, vec![0, 1, 2]);
-    // assert_eq!(topic_metadata.error(), None);
+    assert_eq!(topic_metadata.error(), None);
     assert_eq!(topic_metadata.partitions().len(), 3);
     assert_eq!(topic_metadata.partitions()[0].leader(), 0);
     assert_eq!(topic_metadata.partitions()[1].leader(), 0);
@@ -49,7 +62,7 @@ fn test_subscription() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
-    produce_messages(&topic_name, 10, &value_fn, &key_fn, None, None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None);
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -66,9 +79,9 @@ fn test_group_membership() {
 
     let topic_name = rand_test_topic();
     let group_name = rand_test_group();
-    produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
-    produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
-    produce_messages(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
     let consumer = create_stream_consumer(&group_name, None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 

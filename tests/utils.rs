@@ -52,7 +52,10 @@ impl ConsumerContext for TestContext {
     }
 }
 
-pub fn produce_messages<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K,
+/// Produce the specified count of messages to the topic and partition specified. A map
+/// of (partition, offset) -> message_id will be returned. It panics if any error is encountered
+/// while populating the topic.
+pub fn populate_topic<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K,
                                     partition: Option<i32>, timestamp: Option<i64>)
         -> HashMap<(i32, i64), i32>
     where P: Fn(i32) -> J,
@@ -140,4 +143,26 @@ pub fn value_fn(id: i32) -> String {
 
 pub fn key_fn(id: i32) -> String {
     format!("Key {}", id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_populate_topic() {
+        let topic_name = rand_test_topic();
+        let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None);
+
+        let total_messages = message_map.iter()
+            .filter(|&(&(partition, _), _)| partition == 0)
+            .count();
+        assert_eq!(total_messages, 100);
+
+        let mut ids = message_map.iter()
+            .map(|(_, id)| *id)
+            .collect::<Vec<_>>();
+        ids.sort();
+        assert_eq!(ids, (0..100).collect::<Vec<_>>());
+    }
 }

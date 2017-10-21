@@ -24,7 +24,7 @@ fn test_produce_partition() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
-    let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0), None);
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None);
 
     let res = message_map.iter()
         .filter(|&(&(partition, _), _)| partition == 0)
@@ -39,7 +39,7 @@ fn test_produce_consume_base() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
-    let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, None, None);
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None);
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -70,9 +70,9 @@ fn test_produce_consume_base_assign() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
-    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
-    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(1), None);
-    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None);
     let consumer = create_stream_consumer(&rand_test_group(), None);
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
@@ -102,7 +102,7 @@ fn test_produce_consume_with_timestamp() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
-    let message_map = produce_messages(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -122,7 +122,7 @@ fn test_produce_consume_with_timestamp() {
         })
         .wait();
 
-    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999999));
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999999));
 
     // Lookup the offsets
     let tpl = consumer.offsets_for_timestamp(999999, 10000).unwrap();
@@ -175,9 +175,9 @@ fn test_consumer_commit_message() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
-    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
-    produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
-    produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
+    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
+    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -224,9 +224,9 @@ fn test_consumer_store_offset_commit() {
     let _r = env_logger::init();
 
     let topic_name = rand_test_topic();
-    produce_messages(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
-    produce_messages(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
-    produce_messages(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
+    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
+    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
     let mut config = HashMap::new();
     config.insert("enable.auto.offset.store", "false");
     config.insert("enable.partition.eof", "true");

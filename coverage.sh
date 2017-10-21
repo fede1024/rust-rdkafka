@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -27,7 +25,16 @@ pushd rdkafka-sys && cargo test --no-run && popd
 
 echo -e "${GREEN}*** Run coverage on unit tests ***${NC}"
 kcov --exclude-pattern="$EXCLUDE" --verify "$TARGET" "$RDKAFKA_UNIT_TESTS"*
+if [ "$?" != "0" ]; then
+    echo -e "${RED}*** Failure during unit test converage ***${NC}"
+    exit 1
+fi
+
 kcov --exclude-pattern="$EXCLUDE" --verify "$TARGET" "$RDKAFKASYS_UNIT_TESTS"*
+if [ "$?" != "0" ]; then
+    echo -e "${RED}*** Failure during rdkafka-sys unit test converage ***${NC}"
+    exit 1
+fi
 
 echo -e "${GREEN}*** Run coverage on integration tests ***${NC}"
 
@@ -41,9 +48,4 @@ do
     fi
 done
 
-if [ "$?" != "0" ]; then
-    echo -e "${RED}*** Coverage failed :( ***${NC}"
-    exit 1
-else
-    echo -e "${GREEN}*** Coverage completed successfully ***${NC}"
-fi
+echo -e "${GREEN}*** Coverage completed successfully ***${NC}"
