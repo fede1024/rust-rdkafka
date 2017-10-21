@@ -25,7 +25,7 @@ fn test_metadata() {
 
     let metadata = consumer.fetch_metadata(None, 5000).unwrap();
     assert_eq!(metadata.orig_broker_id(), -1);
-    assert_eq!(metadata.orig_broker_name(), "localhost:9092/bootstrap");
+    assert!(metadata.orig_broker_name().len() > 0);
 
     let broker_metadata = metadata.brokers();
     assert_eq!(broker_metadata.len(), 1);
