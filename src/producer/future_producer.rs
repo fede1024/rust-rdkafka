@@ -237,8 +237,12 @@ impl Future for DeliveryFuture {
 
 impl<C: Context + 'static> FutureProducer<C> {
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
-    /// specified the underlying Kafka library picks a partition based on the key.
-    /// Returns a `DeliveryFuture`.
+    /// specified the underlying Kafka library picks a partition based on the key, or a random one
+    /// if the key is not specified. Returns a `DeliveryFuture` that will eventually contain the
+    /// result of the send. The `block_ms` parameter will control for how long the producer
+    /// is allowed to block if the queue is full. Set it to -1 to block forever, or 0 to never block.
+    /// If `block_ms` is reached and the queue is still full, a `RDKafkaError::QueueFull` will be
+    /// reported in the `DeliveryFuture`.
     pub fn send_copy<P, K>(
         &self,
         topic: &str,

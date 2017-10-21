@@ -1,5 +1,4 @@
-//! Test data production and consumption using high
-//! level clients (StreamConsumer and FutureProducer).
+//! Test data consumption using low level and high level consumers.
 extern crate env_logger;
 extern crate futures;
 extern crate rand;
@@ -17,21 +16,6 @@ use utils::*;
 
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
-
-// All messages should go to the same partition.
-#[test]
-fn test_produce_partition() {
-    let _r = env_logger::init();
-
-    let topic_name = rand_test_topic();
-    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None);
-
-    let res = message_map.iter()
-        .filter(|&(&(partition, _), _)| partition == 0)
-        .count();
-
-    assert_eq!(res, 100);
-}
 
 // All produced messages should be consumed.
 #[test]

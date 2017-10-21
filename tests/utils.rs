@@ -43,7 +43,7 @@ pub struct TestContext {
 }
 
 impl Context for TestContext {
-    fn stats(&self, _: Statistics) { }  // Don't print stats
+    fn stats(&self, _: Statistics) {} // Don't print stats
 }
 
 impl ConsumerContext for TestContext {
@@ -55,14 +55,20 @@ impl ConsumerContext for TestContext {
 /// Produce the specified count of messages to the topic and partition specified. A map
 /// of (partition, offset) -> message_id will be returned. It panics if any error is encountered
 /// while populating the topic.
-pub fn populate_topic<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, key_fn: &K,
-                                    partition: Option<i32>, timestamp: Option<i64>)
-        -> HashMap<(i32, i64), i32>
-    where P: Fn(i32) -> J,
-          K: Fn(i32) -> Q,
-          J: ToBytes,
-          Q: ToBytes {
-
+pub fn populate_topic<P, K, J, Q>(
+    topic_name: &str,
+    count: i32,
+    value_fn: &P,
+    key_fn: &K,
+    partition: Option<i32>,
+    timestamp: Option<i64>,
+) -> HashMap<(i32, i64), i32>
+where
+    P: Fn(i32) -> J,
+    K: Fn(i32) -> Q,
+    J: ToBytes,
+    Q: ToBytes,
+{
     let prod_context = TestContext { _some_data: 1234 };
 
     // Produce some messages
@@ -71,25 +77,29 @@ pub fn populate_topic<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, ke
         .set("statistics.interval.ms", "500")
         .set("api.version.request", "true")
         .set("debug", "all")
-        .set_default_topic_config(TopicConfig::new()
-            .set("produce.offset.report", "true")
-            .set("message.timeout.ms", "30000")
-            .finalize())
+        .set_default_topic_config(
+            TopicConfig::new()
+                .set("produce.offset.report", "true")
+                .set("message.timeout.ms", "30000")
+                .finalize(),
+        )
         .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 
     let futures = (0..count)
         .map(|id| {
-            let future = producer.send_copy(topic_name, partition, Some(&value_fn(id)), Some(&key_fn(id)), timestamp, 1000);
+            let future =
+                producer.send_copy(topic_name, partition, Some(&value_fn(id)), Some(&key_fn(id)), timestamp, 1000);
             (id, future)
-        }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
     let mut message_map = HashMap::new();
     for (id, future) in futures {
         match future.wait() {
             Ok(Ok((partition, offset))) => message_map.insert((partition, offset), id),
             Ok(Err((kafka_error, _message))) => panic!("Delivery failed: {}", kafka_error),
-            Err(e) => panic!("Waiting for future failed: {}", e)
+            Err(e) => panic!("Waiting for future failed: {}", e),
         };
     }
 
@@ -98,7 +108,10 @@ pub fn populate_topic<P, K, J, Q>(topic_name: &str, count: i32, value_fn: &P, ke
 
 
 // Create consumer
-pub fn create_stream_consumer(group_id: &str, config_overrides: Option<HashMap<&'static str, &'static str>>) -> StreamConsumer<TestContext> {
+pub fn create_stream_consumer(
+    group_id: &str,
+    config_overrides: Option<HashMap<&'static str, &'static str>>,
+) -> StreamConsumer<TestContext> {
     let cons_context = TestContext { _some_data: 64 };
 
     create_stream_consumer_with_context(group_id, config_overrides, cons_context)
@@ -123,7 +136,7 @@ pub fn create_stream_consumer_with_context<C: ConsumerContext>(
     config.set_default_topic_config(
         TopicConfig::new()
             .set("auto.offset.reset", "earliest")
-            .finalize()
+            .finalize(),
     );
 
     if let Some(overrides) = config_overrides {
@@ -154,14 +167,13 @@ mod tests {
         let topic_name = rand_test_topic();
         let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None);
 
-        let total_messages = message_map.iter()
+        let total_messages = message_map
+            .iter()
             .filter(|&(&(partition, _), _)| partition == 0)
             .count();
         assert_eq!(total_messages, 100);
 
-        let mut ids = message_map.iter()
-            .map(|(_, id)| *id)
-            .collect::<Vec<_>>();
+        let mut ids = message_map.iter().map(|(_, id)| *id).collect::<Vec<_>>();
         ids.sort();
         assert_eq!(ids, (0..100).collect::<Vec<_>>());
     }
