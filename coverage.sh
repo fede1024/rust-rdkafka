@@ -4,8 +4,11 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-EXCLUDE="/.cargo,/usr/lib,/usr/include,rdkafka-sys/librdkafka,rdkafka-sys/src/bindings,tests"
+INCLUDE="/src"
+EXCLUDE="/.cargo,rdkafka-sys/librdkafka,rdkafka-sys/src/bindings"
 TARGET="target/cov"
+
+KCOV_ARGS="--include-pattern=$INCLUDE --exclude-pattern=$EXCLUDE --verify $TARGET"
 
 RDKAFKA_UNIT_TESTS="target/debug/rdkafka-"
 RDKAFKASYS_UNIT_TESTS="rdkafka-sys/target/debug/rdkafka_sys-"
@@ -24,13 +27,13 @@ cargo test --no-run
 pushd rdkafka-sys && cargo test --no-run && popd
 
 echo -e "${GREEN}*** Run coverage on unit tests ***${NC}"
-kcov --exclude-pattern="$EXCLUDE" --verify "$TARGET" "$RDKAFKA_UNIT_TESTS"*
+kcov $KCOV_ARGS "$RDKAFKA_UNIT_TESTS"*
 if [ "$?" != "0" ]; then
     echo -e "${RED}*** Failure during unit test converage ***${NC}"
     exit 1
 fi
 
-kcov --exclude-pattern="$EXCLUDE" --verify "$TARGET" "$RDKAFKASYS_UNIT_TESTS"*
+kcov $KCOV_ARGS "$RDKAFKASYS_UNIT_TESTS"*
 if [ "$?" != "0" ]; then
     echo -e "${RED}*** Failure during rdkafka-sys unit test converage ***${NC}"
     exit 1
@@ -41,7 +44,7 @@ echo -e "${GREEN}*** Run coverage on integration tests ***${NC}"
 for test_file in `ls "$INTEGRATION_TESTS"*`
 do
     echo -e "${GREEN}Executing "$test_file"${NC}"
-    kcov --exclude-pattern="$EXCLUDE" --verify "$TARGET" "$test_file"
+    kcov $KCOV_ARGS "$test_file"
     if [ "$?" != "0" ]; then
         echo -e "${RED}*** Failure during integration converage ***${NC}"
         exit 1
