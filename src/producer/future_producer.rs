@@ -61,7 +61,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
                         if should_stop.load(Ordering::Relaxed) {
                             // We received nothing and the thread should
                             // stop, so break the loop.
-                            break
+                            break;
                         }
                     } else {
                         trace!("Received {} events", n);
@@ -81,7 +81,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
             trace!("Stopping polling");
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
-            match (*handle_store).take().expect("No handle present in producer context").join() {
+            match (*handle_store).take().unwrap().join() {
                 Ok(()) => trace!("Polling stopped"),
                 Err(e) => warn!("Failure while terminating thread: {:?}", e),
             };
@@ -98,8 +98,8 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
         timestamp: Option<i64>,
         delivery_context: Option<Box<C::DeliveryContext>>,
     ) -> KafkaResult<()>
-        where K: ToBytes + ?Sized,
-              P: ToBytes + ?Sized {
+    where K: ToBytes + ?Sized,
+          P: ToBytes + ?Sized {
         self.producer.send_copy(topic, partition, payload, key, delivery_context, timestamp)
     }
 
@@ -136,7 +136,7 @@ impl<C: ProducerContext + 'static> Drop for PollingProducer<C> {
 /// `DeliveryContext` and will complete the future when the message is delivered (or failed to).
 #[derive(Clone)]
 struct FutureProducerContext<C: Context + 'static> {
-    wrapped_context: C
+    wrapped_context: C,
 }
 
 /// Represents the result of message production as performed from the `FutureProducer`.
@@ -169,7 +169,7 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
             &Ok(ref message) => Ok((message.partition(), message.offset())),
             &Err((ref error, ref message)) => Err((error.clone(), message.detach())),
         };
-        let _ = tx.send(owned_delivery_result);   // TODO: handle error
+        let _ = tx.send(owned_delivery_result); // TODO: handle error
     }
 }
 
@@ -201,7 +201,7 @@ impl FromClientConfig for FutureProducer<EmptyContext> {
 
 impl<C: Context + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
-        let future_context = FutureProducerContext { wrapped_context: context};
+        let future_context = FutureProducerContext { wrapped_context: context };
         let polling_producer = PollingProducer::from_config_and_context(config, future_context)?;
         Ok(FutureProducer { producer: Arc::new(polling_producer) })
     }
@@ -252,8 +252,8 @@ impl<C: Context + 'static> FutureProducer<C> {
         timestamp: Option<i64>,
         block_ms: i64,
     ) -> DeliveryFuture
-        where K: ToBytes + ?Sized,
-              P: ToBytes + ?Sized {
+    where K: ToBytes + ?Sized,
+          P: ToBytes + ?Sized {
         let start_time = Instant::now();
 
         loop {
@@ -338,7 +338,8 @@ mod tests {
     fn test_base_future_topic_send_sync() {
         let test_context = TestContext;
         let producer = ClientConfig::new()
-            .create_with_context::<TestContext, FutureProducer<_>>(test_context).unwrap();
+            .create_with_context::<TestContext, FutureProducer<_>>(test_context)
+            .unwrap();
         let _producer_clone = producer.clone();
     }
 }

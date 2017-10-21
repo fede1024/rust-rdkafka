@@ -62,17 +62,20 @@ pub trait ProducerContext: Context {
 #[derive(Clone)]
 pub struct EmptyProducerContext;
 
-impl Context for EmptyProducerContext { }
+impl Context for EmptyProducerContext {}
 impl ProducerContext for EmptyProducerContext {
     type DeliveryContext = ();
 
-    fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryContext) { }
+    fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryContext) {}
 }
 
 /// Callback that gets called from librdkafka every time a message succeeds or fails to be
 /// delivered.
 unsafe extern "C" fn delivery_cb<C: ProducerContext>(
-        _client: *mut RDKafka, msg: *const RDKafkaMessage, _opaque: *mut c_void) {
+    _client: *mut RDKafka,
+    msg: *const RDKafkaMessage,
+    _opaque: *mut c_void,
+) {
     let producer_context = Box::from_raw(_opaque as *mut C);
     let delivery_context = Box::from_raw((*msg)._private as *mut C::DeliveryContext);
     let owner = 42u8;
@@ -145,10 +148,10 @@ impl<C: ProducerContext> BaseProducer<C> {
         payload: Option<&P>,
         key: Option<&K>,
         delivery_context: Option<Box<C::DeliveryContext>>,
-        timestamp: Option<i64>
+        timestamp: Option<i64>,
     ) -> KafkaResult<()>
-        where K: ToBytes + ?Sized,
-              P: ToBytes + ?Sized {
+    where K: ToBytes + ?Sized,
+          P: ToBytes + ?Sized {
         let (payload_ptr, payload_len) = match payload.map(P::to_bytes) {
             None => (ptr::null_mut(), 0),
             Some(p) => (p.as_ptr() as *mut c_void, p.len()),
@@ -176,8 +179,8 @@ impl<C: ProducerContext> BaseProducer<C> {
             )
         };
         if produce_error.is_error() {
-            if !delivery_context_ptr.is_null() {  // Drop delivery context if provided
-                 unsafe { Box::from_raw(delivery_context_ptr as *mut C::DeliveryContext) };
+            if !delivery_context_ptr.is_null() { // Drop delivery context if provided
+                unsafe { Box::from_raw(delivery_context_ptr as *mut C::DeliveryContext) };
             }
             Err(KafkaError::MessageProduction(produce_error.into()))
         } else {
