@@ -9,7 +9,7 @@
 A fully asynchronous, [futures]-based Kafka client library for Rust based on [librdkafka].
 
 ## The library
-`rust-rdkafka` provides a safe Rust interface to librdkafka. The master branch is currently based on librdkafka 0.11.0.
+`rust-rdkafka` provides a safe Rust interface to librdkafka. The master branch is currently based on librdkafka 0.11.1.
 
 ### Documentation
 
@@ -107,7 +107,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdkafka = "^0.12.0"
+rdkafka = "^0.13.0"
 ```
 
 This crate will compile librdkafka from sources and link it statically to your executable. To compile librdkafka you'll need:
@@ -123,7 +123,7 @@ To enable ssl and sasl, use the `features` field in `Cargo.toml`. Example:
 
 ```toml
 [dependencies.rdkafka]
-version = "^0.12.0"
+version = "^0.13.0"
 features = ["ssl", "sasl"]
 ```
 

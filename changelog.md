@@ -1,7 +1,8 @@
 # Changelog
 
-<a name="master"></a>
-## master
+<a name="0.13.0"></a>
+## 0.13.0 (2017-10-22)
+
 
 #### Refactoring
 * Split producer.rs into multiple files
