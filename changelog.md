@@ -9,15 +9,18 @@
 * BaseConsumer returns an Option\<Result\> instead of Result\<Option\>
 
 #### Features
+* Upgrade to librdkafka 0.11.1
 * Enable dynamic linking via feature
 * Refactor BaseConsumer, which now implements the Consumer trait directly
 * A negative timestamp will now automatically be reported as NonAvailable timestamp
 * Point rdkafka-sys to latest librdkafka master branch
-* Add producer.flush
+* Add producer.flush and producer.in\_flight\_count
+* Add max block time for FutureProducer
 
 #### Bugs
 
 * Fix memory leak during consumer error reporting
+* Fix memory leak during producer error reporting
 
 <a name="0.12.0"></a>
 ## 0.12.0 (2017-07-25)
