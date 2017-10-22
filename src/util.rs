@@ -17,12 +17,17 @@ pub fn duration_to_millis(duration: Duration) -> u64 {
     duration.as_secs() * 1000 + nanos/1_000_000
 }
 
+/// Converts the given time to milliseconds since unix epoch.
 pub fn millis_to_epoch(time: SystemTime) -> i64 {
     let duration_since_epoch = time.duration_since(UNIX_EPOCH)
         .unwrap_or_else(|_| Duration::from_secs(0));
     duration_to_millis(duration_since_epoch) as i64
 }
 
+/// Returns the current time in millis since unix epoch.
+pub fn current_time_millis() -> i64 {
+    millis_to_epoch(SystemTime::now())
+}
 
 // TODO: check if the implementation returns a copy of the data and update the documentation
 /// Converts a byte array representing a C string into a String.

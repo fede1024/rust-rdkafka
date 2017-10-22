@@ -6,12 +6,25 @@ extern crate rdkafka;
 
 use futures::*;
 
-use rdkafka::consumer::Consumer;
+use rdkafka::consumer::{Consumer, EmptyConsumerContext, StreamConsumer};
 use rdkafka::topic_partition_list::TopicPartitionList;
+use rdkafka::config::ClientConfig;
 
 mod utils;
 use utils::*;
 
+
+fn create_consumer(group_id: &str) -> StreamConsumer<EmptyConsumerContext> {
+    ClientConfig::new()
+        .set("group.id", group_id)
+        .set("client.id", "rdkafka_integration_test_client")
+        .set("bootstrap.servers", get_bootstrap_server().as_str())
+        .set("session.timeout.ms", "6000")
+        .set("api.version.request", "true")
+        .set("debug", "all")
+        .create::<StreamConsumer<_>>()
+        .unwrap()
+}
 
 #[test]
 fn test_metadata() {
@@ -21,7 +34,7 @@ fn test_metadata() {
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_consumer(&rand_test_group());
 
     let metadata = consumer.fetch_metadata(None, 5000).unwrap();
     assert_eq!(metadata.orig_broker_id(), -1);
@@ -63,7 +76,7 @@ fn test_subscription() {
 
     let topic_name = rand_test_topic();
     populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None);
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_consumer(&rand_test_group());
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer.start().take(10).wait();
@@ -82,7 +95,7 @@ fn test_group_membership() {
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
-    let consumer = create_stream_consumer(&group_name, None);
+    let consumer = create_consumer(&group_name);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group

@@ -3,19 +3,82 @@ extern crate env_logger;
 extern crate futures;
 extern crate rand;
 extern crate rdkafka;
+extern crate rdkafka_sys;
 
 use futures::*;
 
-use rdkafka::{Message, Timestamp};
-use rdkafka::consumer::{Consumer, CommitMode};
+use rdkafka::{Context, Message, Statistics, Timestamp};
+use rdkafka::config::{ClientConfig, TopicConfig};
+use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, StreamConsumer};
+use rdkafka::error::{KafkaError, KafkaResult};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
-use rdkafka::error::KafkaError;
 
 mod utils;
 use utils::*;
 
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
+
+struct TestContext {
+    _n: i64, // Add data for memory access validation
+}
+
+impl Context for TestContext {
+    // Access stats
+    fn stats(&self, stats: Statistics) {
+        let stats_str = format!("{:?}", stats);
+        println!("Stats received: {} bytes", stats_str.len());
+    }
+}
+
+impl ConsumerContext for TestContext {
+    fn commit_callback(&self, result: KafkaResult<()>, _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList) {
+        println!("Committing offsets: {:?}", result);
+    }
+}
+
+// Create stream consumer for tests
+fn create_stream_consumer(
+    group_id: &str,
+    config_overrides: Option<HashMap<&str, &str>>,
+) -> StreamConsumer<TestContext> {
+    let cons_context = TestContext { _n: 64 };
+    create_stream_consumer_with_context(group_id, config_overrides, cons_context)
+}
+
+fn create_stream_consumer_with_context<C: ConsumerContext>(
+    group_id: &str,
+    config_overrides: Option<HashMap<&str, &str>>,
+    context: C,
+) -> StreamConsumer<C> {
+    let mut config = ClientConfig::new();
+
+    config.set("group.id", group_id);
+    config.set("client.id", "rdkafka_integration_test_client");
+    config.set("bootstrap.servers", get_bootstrap_server().as_str());
+    config.set("enable.partition.eof", "false");
+    config.set("session.timeout.ms", "6000");
+    config.set("enable.auto.commit", "false");
+    config.set("statistics.interval.ms", "500");
+    config.set("api.version.request", "true");
+    config.set("debug", "all");
+    config.set_default_topic_config(
+        TopicConfig::new()
+            .set("auto.offset.reset", "earliest")
+            .finalize(),
+    );
+
+    if let Some(overrides) = config_overrides {
+        for (key, value) in overrides {
+            config.set(key, value);
+        }
+    }
+
+    config
+        .create_with_context::<C, StreamConsumer<C>>(context)
+        .expect("Consumer creation failed")
+}
+
 
 // All produced messages should be consumed.
 #[test]

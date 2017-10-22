@@ -7,8 +7,10 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::slice;
 use std::str;
+use std::time::SystemTime;
 
 use error::{IsError, KafkaError, KafkaResult};
+use util::millis_to_epoch;
 
 
 /// Timestamp of a message
@@ -20,13 +22,37 @@ pub enum Timestamp {
 }
 
 impl Timestamp {
+    /// Convert the timestamp to milliseconds since epoch.
     pub fn to_millis(&self) -> Option<i64> {
         match *self {
             Timestamp::NotAvailable | Timestamp::CreateTime(-1) | Timestamp::LogAppendTime(-1) => None,
             Timestamp::CreateTime(t) | Timestamp::LogAppendTime(t) => Some(t),
         }
     }
+
+    /// Creates a new `Timestamp::CreateTime` representing the provided system time.
+    pub fn from_system_time(system_time: SystemTime) -> Timestamp {
+        Timestamp::CreateTime(millis_to_epoch(system_time))
+    }
+
+    /// Creates a new `Timestamp::CreateTime` representing the current time.
+    pub fn now() -> Timestamp {
+        Timestamp::from_system_time(SystemTime::now())
+    }
 }
+
+impl From<i64> for Timestamp {
+    fn from(system_time: i64) -> Timestamp {
+        Timestamp::CreateTime(system_time)
+    }
+}
+
+// Use TryFrom when stable
+//impl From<Timestamp> for i64 {
+//    fn from(timestamp: Timestamp) -> i64 {
+//        timestamp.to_millis().unwrap()
+//    }
+//}
 
 /// The `Message` trait provides access to the fields of a generic Kafka message.
 pub trait Message {
@@ -352,5 +378,37 @@ impl<'a, T: ToBytes> ToBytes for &'a T {
 impl ToBytes for () {
     fn to_bytes(&self) -> &[u8] {
         &[]
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+    use util::duration_to_millis;
+
+    #[test]
+    fn test_timestamp_creation() {
+        let now = SystemTime::now();
+        let t1 = Timestamp::now();
+        let t2 = Timestamp::from_system_time(now);
+        let expected = Timestamp::CreateTime(
+            duration_to_millis(now.duration_since(UNIX_EPOCH).unwrap()) as i64
+        );
+
+        assert_eq!(t2, expected);
+        assert!(t1.to_millis().unwrap() - t2.to_millis().unwrap() < 10);
+    }
+
+    #[test]
+    fn test_timestamp_conversion() {
+        assert_eq!(Timestamp::CreateTime(100).to_millis(), Some(100));
+        assert_eq!(Timestamp::LogAppendTime(100).to_millis(), Some(100));
+        assert_eq!(Timestamp::CreateTime(-1).to_millis(), None);
+        assert_eq!(Timestamp::LogAppendTime(-1).to_millis(), None);
+        assert_eq!(Timestamp::NotAvailable.to_millis(), None);
+        let t: Timestamp = 100.into();
+        assert_eq!(t, Timestamp::CreateTime(100));
     }
 }

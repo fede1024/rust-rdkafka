@@ -1,5 +1,4 @@
 extern crate rdkafka;
-extern crate rdkafka_sys;
 extern crate rand;
 extern crate futures;
 
@@ -8,15 +7,23 @@ use futures::*;
 
 use rdkafka::client::Context;
 use rdkafka::config::{ClientConfig, TopicConfig};
-use rdkafka::consumer::ConsumerContext;
-use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::producer::FutureProducer;
 use rdkafka::message::ToBytes;
 use rdkafka::statistics::Statistics;
-use rdkafka::error::KafkaResult;
 
 use std::collections::HashMap;
 use std::env;
+
+#[macro_export]
+macro_rules! map(
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = HashMap::new();
+            $( m.insert($key, $value); )+
+            m
+        }
+    };
+);
 
 pub fn rand_test_topic() -> String {
     let id = rand::thread_rng()
@@ -34,7 +41,7 @@ pub fn rand_test_group() -> String {
     format!("__test_{}", id)
 }
 
-fn get_bootstrap_server() -> String {
+pub fn get_bootstrap_server() -> String {
     env::var("KAFKA_HOST").unwrap_or_else(|_| "localhost:9092".to_owned())
 }
 
@@ -44,12 +51,6 @@ pub struct TestContext {
 
 impl Context for TestContext {
     fn stats(&self, _: Statistics) {} // Don't print stats
-}
-
-impl ConsumerContext for TestContext {
-    fn commit_callback(&self, result: KafkaResult<()>, _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList) {
-        println!("Committing offsets: {:?}", result);
-    }
 }
 
 /// Produce the specified count of messages to the topic and partition specified. A map
@@ -106,49 +107,6 @@ where
     message_map
 }
 
-
-// Create consumer
-pub fn create_stream_consumer(
-    group_id: &str,
-    config_overrides: Option<HashMap<&'static str, &'static str>>,
-) -> StreamConsumer<TestContext> {
-    let cons_context = TestContext { _some_data: 64 };
-
-    create_stream_consumer_with_context(group_id, config_overrides, cons_context)
-}
-
-pub fn create_stream_consumer_with_context<C: ConsumerContext>(
-    group_id: &str,
-    config_overrides: Option<HashMap<&'static str, &'static str>>,
-    context: C,
-) -> StreamConsumer<C> {
-    let mut config = ClientConfig::new();
-
-    config.set("group.id", group_id);
-    config.set("client.id", "rdkafka_integration_test_client");
-    config.set("bootstrap.servers", get_bootstrap_server().as_str());
-    config.set("enable.partition.eof", "false");
-    config.set("session.timeout.ms", "6000");
-    config.set("enable.auto.commit", "false");
-    config.set("statistics.interval.ms", "500");
-    config.set("api.version.request", "true");
-    config.set("debug", "all");
-    config.set_default_topic_config(
-        TopicConfig::new()
-            .set("auto.offset.reset", "earliest")
-            .finalize(),
-    );
-
-    if let Some(overrides) = config_overrides {
-        for (key, value) in overrides {
-            config.set(key, value);
-        }
-    }
-
-    config
-        .create_with_context::<C, StreamConsumer<C>>(context)
-        .expect("Consumer creation failed")
-}
 
 pub fn value_fn(id: i32) -> String {
     format!("Message {}", id)
