@@ -3,7 +3,7 @@ extern crate futures;
 extern crate rand;
 extern crate rdkafka;
 
-use rdkafka::{Context, Statistics, Timestamp};
+use rdkafka::{Context, Statistics};
 use rdkafka::config::{ClientConfig, TopicConfig};
 use rdkafka::error::{KafkaError, RDKafkaError};
 use rdkafka::producer::DeliveryResult;

@@ -124,7 +124,7 @@ unsafe fn err_field_to_kafka_error(ptr: *mut RDKafkaMessage) -> KafkaError {
         rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
             KafkaError::PartitionEOF((*ptr).partition)
         }
-        e => KafkaError::MessageConsumption(e.into()),
+        e => KafkaError::MessageConsumption(e.into()),  // TODO: could be used in production as well
     }
 }
 

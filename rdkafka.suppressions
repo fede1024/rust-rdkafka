@@ -20,3 +20,11 @@
    fun:rd_kafka_topic_new0
    fun:rd_kafka_producev
 }
+{
+   producev_leak_issue_1478
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:rd_kafka_topic_new0
+   fun:rd_kafka_producev
+}
