@@ -119,14 +119,6 @@ impl<'a> fmt::Debug for BorrowedMessage<'a> {
     }
 }
 
-unsafe fn err_field_to_kafka_error(ptr: *mut RDKafkaMessage) -> KafkaError {
-    match (*ptr).err {
-        rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
-            KafkaError::PartitionEOF((*ptr).partition)
-        }
-        e => KafkaError::MessageConsumption(e.into()),  // TODO: could be used in production as well
-    }
-}
 
 impl<'a> BorrowedMessage<'a> {
     /// Creates a new `BorrowedMessage` that wraps the native Kafka message pointer returned by a
@@ -135,9 +127,14 @@ impl<'a> BorrowedMessage<'a> {
     /// message contains an error, only the error is returned and the message structure is freed.
     pub unsafe fn from_consumer<C>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> KafkaResult<BorrowedMessage<'a>> {
         if (*ptr).err.is_error() {
-            let err = Err(err_field_to_kafka_error(ptr));
+            let err = match (*ptr).err {
+                    rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
+                        KafkaError::PartitionEOF((*ptr).partition)
+                    }
+                    e => KafkaError::MessageConsumption(e.into()),
+                };
             rdsys::rd_kafka_message_destroy(ptr);
-            err
+            Err(err)
         } else {
             Ok(BorrowedMessage { ptr, _owner: PhantomData })
         }
@@ -150,7 +147,7 @@ impl<'a> BorrowedMessage<'a> {
     pub unsafe fn from_dr_callback<O>(ptr: *mut RDKafkaMessage, _owner: &'a O) -> DeliveryResult<'a> {
         let borrowed_message = BorrowedMessage { ptr, _owner: PhantomData };
         if (*ptr).err.is_error() {
-            Err((err_field_to_kafka_error(ptr), borrowed_message))
+            Err((KafkaError::MessageProduction((*ptr).err.into()), borrowed_message))
         } else {
             Ok(borrowed_message)
         }
