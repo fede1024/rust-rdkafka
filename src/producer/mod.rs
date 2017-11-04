@@ -59,11 +59,6 @@
 //! - `queue.buffering.max.ms` (0): Delay in milliseconds to wait for messages in the producer queue to accumulate before sending a request to the brokers. A higher value allows larger and more effective (less overhead, improved compression) batches of messages to accumulate at the expense of increased message delivery latency.
 //! - `message.send.max.retries` (2): How many times to retry sending a failing MessageSet. Note: retrying may cause reordering.
 //! - `compression.codec` (none): Compression codec to use for compressing message sets.
-//!
-//! ### Topic configurations
-//!
-//! Some configuration parameters are specified via the `TopicConfig` structure. The most common parameters for the producer are:
-//!
 //! - `request.required.acks` (1): This field indicates how many acknowledgements the leader broker must receive from ISR brokers before responding to the request: 0=Broker does not send any response/ack to client, 1=Only the leader broker will need to ack the message, -1 or all=broker will block until message is committed by all in sync replicas (ISRs) or broker's in.sync.replicas setting before sending response.
 //! - `request.timeout.ms` (5000): The ack timeout of the producer request in milliseconds. This value is only enforced by the broker and relies on request.required.acks being != 0.
 //! - `message.timeout.ms` (300000): Local message timeout. This value is only enforced locally and limits the time a produced message waits for successful delivery. A time of 0 is infinite.

@@ -6,7 +6,7 @@ extern crate rdkafka;
 use clap::{App, Arg};
 use futures::*;
 
-use rdkafka::config::{ClientConfig, TopicConfig};
+use rdkafka::config::ClientConfig;
 use rdkafka::producer::FutureProducer;
 use rdkafka::util::get_rdkafka_version;
 
@@ -17,10 +17,8 @@ use example_utils::setup_logger;
 fn produce(brokers: &str, topic_name: &str) {
     let producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
-        .set_default_topic_config(TopicConfig::new()
-            .set("produce.offset.report", "true")
-            .set("message.timeout.ms", "5000")
-            .finalize())
+        .set("produce.offset.report", "true")
+        .set("message.timeout.ms", "5000")
         .create::<FutureProducer<_>>()
         .expect("Producer creation error");
 

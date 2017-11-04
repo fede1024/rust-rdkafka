@@ -24,7 +24,7 @@ use futures::stream::Stream;
 
 use rdkafka::Message;
 use rdkafka::client::{Context, EmptyContext};
-use rdkafka::config::{ClientConfig, TopicConfig, RDKafkaLogLevel};
+use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::error::KafkaResult;
@@ -66,8 +66,6 @@ fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsume
         .set("auto.commit.interval.ms", "5000")
         // but only commit the offsets explicitly stored via `consumer.store_offset`.
         .set("enable.auto.offset.store", "false")
-        .set_default_topic_config(TopicConfig::new()
-            .finalize())
         .set_log_level(RDKafkaLogLevel::Debug)
         .create_with_context::<_, LoggingConsumer>(context)
         .expect("Consumer creation failed");
@@ -82,8 +80,6 @@ fn create_producer(brokers: &str) -> FutureProducer<EmptyContext> {
     ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .set("queue.buffering.max.ms", "0")  // Do not buffer
-        .set_default_topic_config(TopicConfig::new()
-            .finalize())
         .create::<FutureProducer<EmptyContext>>()
         .expect("Producer creation failed")
 }

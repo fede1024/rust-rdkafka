@@ -231,7 +231,7 @@ pub mod util;
 
 // Re-export
 pub use client::Context;
-pub use config::{ClientConfig, TopicConfig};
+pub use config::ClientConfig;
 pub use message::{Message, Timestamp};
 pub use statistics::Statistics;
 pub use topic_partition_list::{Offset, TopicPartitionList};

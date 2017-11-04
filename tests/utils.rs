@@ -6,7 +6,7 @@ use rand::Rng;
 use futures::*;
 
 use rdkafka::client::Context;
-use rdkafka::config::{ClientConfig, TopicConfig};
+use rdkafka::config::ClientConfig;
 use rdkafka::producer::FutureProducer;
 use rdkafka::message::ToBytes;
 use rdkafka::statistics::Statistics;
@@ -78,12 +78,8 @@ where
         .set("statistics.interval.ms", "500")
         .set("api.version.request", "true")
         .set("debug", "all")
-        .set_default_topic_config(
-            TopicConfig::new()
-                .set("produce.offset.report", "true")
-                .set("message.timeout.ms", "30000")
-                .finalize(),
-        )
+        .set("produce.offset.report", "true")
+        .set("message.timeout.ms", "5000")
         .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 

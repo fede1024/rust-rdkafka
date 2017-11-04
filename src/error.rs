@@ -49,7 +49,6 @@ pub enum KafkaError {
     SetPartitionOffset(RDKafkaError),
     StoreOffset(RDKafkaError),
     Subscription(String),
-    TopicConfig(RDKafkaConfRes, String, String, String),
 }
 
 impl fmt::Debug for KafkaError {
@@ -72,7 +71,6 @@ impl fmt::Debug for KafkaError {
             KafkaError::SetPartitionOffset(err) => write!(f, "KafkaError (Set partition offset error: {})", err),
             KafkaError::StoreOffset(err) => write!(f, "KafkaError (Store offset error: {})", err),
             KafkaError::Subscription(ref err) => write!(f, "KafkaError (Subscription error: {})", err),
-            KafkaError::TopicConfig(_, ref desc, ref key, ref value) => write!(f, "KafkaError (Topic config error: {} {} {})", desc, key, value),
         }
     }
 }
@@ -97,7 +95,6 @@ impl fmt::Display for KafkaError {
             KafkaError::SetPartitionOffset(err) => write!(f, "Set partition offset error: {}", err),
             KafkaError::StoreOffset(err) => write!(f, "Store offset error: {}", err),
             KafkaError::Subscription(ref err) => write!(f, "Subscription error: {}", err),
-            KafkaError::TopicConfig(_, ref desc, ref key, ref value) => write!(f, "Topic config error: {} {} {}", desc, key, value),
         }
     }
 }
@@ -122,7 +119,6 @@ impl error::Error for KafkaError {
             KafkaError::SetPartitionOffset(_) => "Set partition offset error",
             KafkaError::StoreOffset(_) => "Store offset error",
             KafkaError::Subscription(_) => "Subscription error",
-            KafkaError::TopicConfig(_, _, _, _) => "Topic config error",
         }
     }
 
@@ -146,7 +142,6 @@ impl error::Error for KafkaError {
             KafkaError::SetPartitionOffset(ref err) => Some(err),
             KafkaError::StoreOffset(ref err) => Some(err),
             KafkaError::Subscription(_) => None,
-            KafkaError::TopicConfig(_, _, _, _) => None,
         }
     }
 }

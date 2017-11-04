@@ -15,7 +15,7 @@ use tokio_core::reactor::Core;
 use rdkafka::Message;
 use rdkafka::consumer::Consumer;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::config::{ClientConfig, TopicConfig};
+use rdkafka::config::ClientConfig;
 use rdkafka::message::OwnedMessage;
 use rdkafka::producer::FutureProducer;
 
@@ -60,9 +60,6 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
-        .set_default_topic_config(TopicConfig::new()
-            // .set("auto.offset.reset", "smallest")
-            .finalize())
         .create::<StreamConsumer<_>>()
         .expect("Consumer creation failed");
 
@@ -71,9 +68,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     // Create the `FutureProducer` to produce asynchronously.
     let producer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
-        .set_default_topic_config(TopicConfig::new()
-            .set("produce.offset.report", "true")
-            .finalize())
+        .set("produce.offset.report", "true")
         .create::<FutureProducer<_>>()
         .expect("Producer creation error");
 

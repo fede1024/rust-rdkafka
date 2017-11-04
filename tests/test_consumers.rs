@@ -7,8 +7,7 @@ extern crate rdkafka_sys;
 
 use futures::*;
 
-use rdkafka::{Context, Message, Statistics, Timestamp};
-use rdkafka::config::{ClientConfig, TopicConfig};
+use rdkafka::{ClientConfig, Context, Message, Statistics, Timestamp};
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, StreamConsumer};
 use rdkafka::error::{KafkaError, KafkaResult};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
@@ -62,11 +61,7 @@ fn create_stream_consumer_with_context<C: ConsumerContext>(
     config.set("statistics.interval.ms", "500");
     config.set("api.version.request", "true");
     config.set("debug", "all");
-    config.set_default_topic_config(
-        TopicConfig::new()
-            .set("auto.offset.reset", "earliest")
-            .finalize(),
-    );
+    config.set("auto.offset.reset", "earliest");
 
     if let Some(overrides) = config_overrides {
         for (key, value) in overrides {

@@ -1,8 +1,20 @@
 # Changelog
 
+<a name="master"></a>
+## Master branch
+
+#### Features
+* Make `PollingProducer` methods public
+
+#### Refactoring
+* Remove `TopicConfig` since librdkafka supports default topic configuration
+  directly in the top level configuration
+
+#### Bugs
+* Fix regression in producer error reporting (#65)
+
 <a name="0.13.0"></a>
 ## 0.13.0 (2017-10-22)
-
 
 #### Refactoring
 * Split producer.rs into multiple files
@@ -19,7 +31,6 @@
 * Add max block time for FutureProducer
 
 #### Bugs
-
 * Fix memory leak during consumer error reporting
 * Fix memory leak during producer error reporting
 

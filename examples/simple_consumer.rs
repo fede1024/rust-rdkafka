@@ -11,7 +11,7 @@ use rdkafka::Message;
 use rdkafka::client::{Context};
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::config::{ClientConfig, TopicConfig, RDKafkaLogLevel};
+use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::util::get_rdkafka_version;
 use rdkafka::error::KafkaResult;
 
@@ -52,9 +52,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "true")
         .set("statistics.interval.ms", "30000")
-        .set_default_topic_config(TopicConfig::new()
-            //.set("auto.offset.reset", "smallest")
-            .finalize())
+        //.set("auto.offset.reset", "smallest")
         .set_log_level(RDKafkaLogLevel::Debug)
         .create_with_context::<_, LoggingConsumer>(context)
         .expect("Consumer creation failed");
@@ -72,14 +70,6 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
                 warn!("Error while reading from stream.");
             },
             Ok(Ok(m)) => {
-                let key = match m.key_view::<[u8]>() {
-                    None => &[],
-                    Some(Ok(s)) => s,
-                    Some(Err(e)) => {
-                        warn!("Error while deserializing message key: {:?}", e);
-                        &[]
-                    },
-                };
                 let payload = match m.payload_view::<str>() {
                     None => "",
                     Some(Ok(s)) => s,
@@ -89,7 +79,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
                     },
                 };
                 info!("key: '{:?}', payload: '{}', topic: {}, partition: {}, offset: {}",
-                      key, payload, m.topic(), m.partition(), m.offset());
+                      m.key(), payload, m.topic(), m.partition(), m.offset());
                 consumer.commit_message(&m, CommitMode::Async).unwrap();
             },
             Ok(Err(e)) => {
