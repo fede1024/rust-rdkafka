@@ -48,7 +48,7 @@ impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for PollingProd
 
 impl<C: ProducerContext + 'static> PollingProducer<C> {
     /// Starts the polling thread that will drive the producer.
-    fn start(&self) {
+    pub fn start(&self) {
         let producer_clone = self.producer.clone();
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
@@ -75,7 +75,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
     }
 
     /// Stops the polling thread.
-    fn stop(&self) {
+    pub fn stop(&self) {
         let mut handle_store = self.handle.write().expect("poison error");
         if (*handle_store).is_some() {
             trace!("Stopping polling");
@@ -89,7 +89,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
     }
 
     /// Sends a message to Kafka. See the documentation in `BaseProducer`.
-    fn send_copy<P, K>(
+    pub fn send_copy<P, K>(
         &self,
         topic: &str,
         partition: Option<i32>,
@@ -105,7 +105,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
 
     /// Polls the internal producer. This is not normally required since the `PollingProducer` had
     /// a thread dedicated to calling `poll` regularly.
-    fn poll(&self, timeout_ms: i32) {
+    pub fn poll(&self, timeout_ms: i32) {
         self.producer.poll(timeout_ms);
     }
 
