@@ -9,6 +9,8 @@
 #### Refactoring
 * Remove `TopicConfig` since librdkafka supports default topic configuration
   directly in the top level configuration
+* Rename `DeliveryContext` into `DeliveryOpaque`
+* Add `IntoOpaque` trait to support different opaque types.
 
 #### Bugs
 * Fix regression in producer error reporting (#65)
