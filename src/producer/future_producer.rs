@@ -96,7 +96,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
         payload: Option<&P>,
         key: Option<&K>,
         timestamp: Option<i64>,
-        delivery_context: C::DeliveryContext,
+        delivery_context: C::DeliveryOpaque,
     ) -> KafkaResult<()>
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {
@@ -133,7 +133,7 @@ impl<C: ProducerContext + 'static> Drop for PollingProducer<C> {
 //
 
 /// The `ProducerContext` used by the `FutureProducer`. This context will use a Future as its
-/// `DeliveryContext` and will complete the future when the message is delivered (or failed to).
+/// `DeliveryOpaque` and will complete the future when the message is delivered (or failed to).
 #[derive(Clone)]
 struct FutureProducerContext<C: Context + 'static> {
     wrapped_context: C,
@@ -162,7 +162,7 @@ impl<C: Context + 'static> Context for FutureProducerContext<C> {
 }
 
 impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
-    type DeliveryContext = Box<Complete<OwnedDeliveryResult>>;
+    type DeliveryOpaque = Box<Complete<OwnedDeliveryResult>>;
 
     fn delivery(&self, delivery_result: &DeliveryResult, tx: Box<Complete<OwnedDeliveryResult>>) {
         let owned_delivery_result = match delivery_result {
@@ -319,9 +319,9 @@ mod tests {
 
     impl Context for TestContext {}
     impl ProducerContext for TestContext {
-        type DeliveryContext = Box<i32>;
+        type DeliveryOpaque = Box<i32>;
 
-        fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryContext) {
+        fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryOpaque) {
             unimplemented!()
         }
     }

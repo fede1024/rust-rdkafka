@@ -235,3 +235,4 @@ pub use config::ClientConfig;
 pub use message::{Message, Timestamp};
 pub use statistics::Statistics;
 pub use topic_partition_list::{Offset, TopicPartitionList};
+pub use util::IntoOpaque;

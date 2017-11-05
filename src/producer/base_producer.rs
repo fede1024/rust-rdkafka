@@ -13,9 +13,9 @@
 //! called.
 //!
 //! The `BaseProducer` requires a `ProducerContext` which will be used to specify the delivery callback
-//! and the `DeliveryContext`. The `DeliveryContext` is a user-defined type that the user can pass to the
+//! and the `DeliveryOpaque`. The `DeliveryOpaque` is a user-defined type that the user can pass to the
 //! `send` method of the producer, and that the producer will then forward to the delivery
-//! callback of the corresponding message. The `DeliveryContext` is useful in case the delivery
+//! callback of the corresponding message. The `DeliveryOpaque` is useful in case the delivery
 //! callback requires additional information about the message (such as message id for example).
 //!
 //! ### Calling poll
@@ -32,6 +32,7 @@ use client::{Client, Context};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use error::{KafkaError, KafkaResult, IsError};
 use message::{BorrowedMessage, ToBytes};
+use util::IntoOpaque;
 
 use std::ffi::CString;
 use std::os::raw::c_void;
@@ -48,67 +49,16 @@ pub use message::DeliveryResult;
 /// A `ProducerContext` is a `Context` specific for producers. It can be used to store
 /// user-specified callbacks, such as `delivery`.
 pub trait ProducerContext: Context {
-    /// A `DeliveryContext` is a user-defined structure that will be passed to the producer when
+    /// A `DeliveryOpaque` is a user-defined structure that will be passed to the producer when
     /// producing a message, and returned to the `delivery` method once the message has been
     /// delivered, or failed to.
-    type DeliveryContext: IntoPtr;
+    type DeliveryOpaque: IntoOpaque;
 
     /// This method will be called once the message has been delivered (or failed to). The
-    /// `DeliveryContext` will be the one provided by the user when calling send.
-    fn delivery(&self, delivery_result: &DeliveryResult, delivery_context: Self::DeliveryContext);
+    /// `DeliveryOpaque` will be the one provided by the user when calling send.
+    fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque);
 }
 
-pub trait IntoPtr: Send + Sync {
-    fn into_ptr(self) -> *mut c_void;
-    unsafe fn from_ptr(*mut c_void) -> Self;
-}
-
-impl IntoPtr for () {
-    fn into_ptr(self) -> *mut c_void {
-        ptr::null_mut()
-    }
-
-    unsafe fn from_ptr(_: *mut c_void) -> Self {
-        ()
-    }
-}
-
-impl IntoPtr for usize {
-    fn into_ptr(self) -> *mut c_void {
-        self as *mut c_void
-    }
-
-    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
-        ptr as usize
-    }
-}
-
-impl<T: Send + Sync> IntoPtr for Box<T> {
-    fn into_ptr(self) -> *mut c_void {
-        Box::into_raw(self) as *mut c_void
-    }
-
-    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
-        Box::from_raw(ptr as *mut T)
-    }
-}
-
-impl<T: IntoPtr> IntoPtr for Option<T> {
-    fn into_ptr(self) -> *mut c_void {
-        match self {
-            Some(x) => x.into_ptr(),
-            None => ptr::null_mut(),
-        }
-    }
-
-    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(T::from_ptr(ptr))
-        }
-    }
-}
 
 /// Simple empty producer context that can be use when the producer context is not required.
 #[derive(Clone)]
@@ -116,9 +66,9 @@ pub struct EmptyProducerContext;
 
 impl Context for EmptyProducerContext {}
 impl ProducerContext for EmptyProducerContext {
-    type DeliveryContext = ();
+    type DeliveryOpaque = ();
 
-    fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryContext) {}
+    fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryOpaque) {}
 }
 
 /// Callback that gets called from librdkafka every time a message succeeds or fails to be
@@ -129,13 +79,13 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
     _opaque: *mut c_void,
 ) {
     let producer_context = Box::from_raw(_opaque as *mut C);
-    let delivery_context = C::DeliveryContext::from_ptr((*msg)._private);
+    let delivery_opaque = C::DeliveryOpaque::from_ptr((*msg)._private);
     let owner = 42u8;
     // Wrap the message pointer into a BorrowedMessage that will only live for the body of this
     // function.
     let delivery_result = BorrowedMessage::from_dr_callback(msg as *mut RDKafkaMessage, &owner);
     trace!("Delivery event received: {:?}", delivery_result);
-    (*producer_context).delivery(&delivery_result, delivery_context);
+    (*producer_context).delivery(&delivery_result, delivery_opaque);
     mem::forget(producer_context); // Do not free the producer context
     match delivery_result {        // Do not free the message, librdkafka will do it for us
         Ok(message) => mem::forget(message),
@@ -199,7 +149,7 @@ impl<C: ProducerContext> BaseProducer<C> {
         partition: Option<i32>,
         payload: Option<&P>,
         key: Option<&K>,
-        delivery_context: C::DeliveryContext,
+        delivery_opaque: C::DeliveryOpaque,
         timestamp: Option<i64>,
     ) -> KafkaResult<()>
     where K: ToBytes + ?Sized,
@@ -212,7 +162,7 @@ impl<C: ProducerContext> BaseProducer<C> {
             None => (ptr::null_mut(), 0),
             Some(k) => (k.as_ptr() as *mut c_void, k.len()),
         };
-        let delivery_context_ptr = delivery_context.into_ptr();
+        let delivery_opaque_ptr = delivery_opaque.into_ptr();
         let topic_name_c = CString::new(topic_name.to_owned())?;
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
@@ -222,14 +172,14 @@ impl<C: ProducerContext> BaseProducer<C> {
                 RD_KAFKA_VTYPE_MSGFLAGS, rdsys::RD_KAFKA_MSG_F_COPY as i32,
                 RD_KAFKA_VTYPE_VALUE, payload_ptr, payload_len,
                 RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
-                RD_KAFKA_VTYPE_OPAQUE, delivery_context_ptr,
+                RD_KAFKA_VTYPE_OPAQUE, delivery_opaque_ptr,
                 RD_KAFKA_VTYPE_TIMESTAMP, timestamp.unwrap_or(0),
                 RD_KAFKA_VTYPE_END
             )
         };
         if produce_error.is_error() {
-            if !delivery_context_ptr.is_null() { // Drop delivery context if provided
-                unsafe { C::DeliveryContext::from_ptr(delivery_context_ptr) };
+            if !delivery_opaque_ptr.is_null() { // Drop delivery opaque if provided
+                unsafe { C::DeliveryOpaque::from_ptr(delivery_opaque_ptr) };
             }
             Err(KafkaError::MessageProduction(produce_error.into()))
         } else {

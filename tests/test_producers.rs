@@ -32,10 +32,10 @@ impl Context for PrintingContext {
 }
 
 impl ProducerContext for PrintingContext {
-    type DeliveryContext = usize;
+    type DeliveryOpaque = usize;
 
-    fn delivery(&self, delivery_result: &DeliveryResult, delivery_context: Self::DeliveryContext) {
-        println!("Delivery: {:?} {:?}", delivery_result, delivery_context);
+    fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
+        println!("Delivery: {:?} {:?}", delivery_result, delivery_opaque);
     }
 }
 
@@ -64,13 +64,13 @@ impl Context for CollectingContext {
 }
 
 impl ProducerContext for CollectingContext {
-    type DeliveryContext = usize;
+    type DeliveryOpaque = usize;
 
-    fn delivery(&self, delivery_result: &DeliveryResult, delivery_context: Self::DeliveryContext) {
+    fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
         let mut results = self.results.lock().unwrap();
         match delivery_result {
-            &Ok(ref message) => (*results).push((message.detach(), None, delivery_context)),
-            &Err((ref err, ref message)) => (*results).push((message.detach(), Some(err.clone()), delivery_context)),
+            &Ok(ref message) => (*results).push((message.detach(), None, delivery_opaque)),
+            &Err((ref err, ref message)) => (*results).push((message.detach(), Some(err.clone()), delivery_opaque)),
         }
     }
 }

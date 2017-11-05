@@ -1,6 +1,8 @@
 use rdsys;
 
 use std::ffi::CStr;
+use std::os::raw::c_void;
+use std::ptr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Return a tuple representing the version of `librdkafka` in
@@ -28,6 +30,64 @@ pub fn millis_to_epoch(time: SystemTime) -> i64 {
 pub fn current_time_millis() -> i64 {
     millis_to_epoch(SystemTime::now())
 }
+
+
+/// A trait for the conversion of Rust data to raw pointers. This conversion is used
+/// to pass opaque objects to the C library and vice versa.
+pub trait IntoOpaque: Send + Sync {
+    /// Converts the object into a raw pointer.
+    fn into_ptr(self) -> *mut c_void;
+    /// Converts the raw pointer back to the original Rust object.
+    unsafe fn from_ptr(*mut c_void) -> Self;
+}
+
+impl IntoOpaque for () {
+    fn into_ptr(self) -> *mut c_void {
+        ptr::null_mut()
+    }
+
+    unsafe fn from_ptr(_: *mut c_void) -> Self {
+        ()
+    }
+}
+
+impl IntoOpaque for usize {
+    fn into_ptr(self) -> *mut c_void {
+        self as *mut c_void
+    }
+
+    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
+        ptr as usize
+    }
+}
+
+impl<T: Send + Sync> IntoOpaque for Box<T> {
+    fn into_ptr(self) -> *mut c_void {
+        Box::into_raw(self) as *mut c_void
+    }
+
+    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
+        Box::from_raw(ptr as *mut T)
+    }
+}
+
+impl<T: IntoOpaque> IntoOpaque for Option<T> {
+    fn into_ptr(self) -> *mut c_void {
+        match self {
+            Some(x) => x.into_ptr(),
+            None => ptr::null_mut(),
+        }
+    }
+
+    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(T::from_ptr(ptr))
+        }
+    }
+}
+
 
 // TODO: check if the implementation returns a copy of the data and update the documentation
 /// Converts a byte array representing a C string into a String.
