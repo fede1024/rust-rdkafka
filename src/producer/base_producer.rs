@@ -51,11 +51,63 @@ pub trait ProducerContext: Context {
     /// A `DeliveryContext` is a user-defined structure that will be passed to the producer when
     /// producing a message, and returned to the `delivery` method once the message has been
     /// delivered, or failed to.
-    type DeliveryContext: Send + Sync;
+    type DeliveryContext: IntoPtr;
 
     /// This method will be called once the message has been delivered (or failed to). The
     /// `DeliveryContext` will be the one provided by the user when calling send.
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_context: Self::DeliveryContext);
+}
+
+pub trait IntoPtr: Send + Sync {
+    fn into_ptr(self) -> *mut c_void;
+    unsafe fn from_ptr(*mut c_void) -> Self;
+}
+
+impl IntoPtr for () {
+    fn into_ptr(self) -> *mut c_void {
+        ptr::null_mut()
+    }
+
+    unsafe fn from_ptr(_: *mut c_void) -> Self {
+        ()
+    }
+}
+
+impl IntoPtr for usize {
+    fn into_ptr(self) -> *mut c_void {
+        self as *mut c_void
+    }
+
+    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
+        ptr as usize
+    }
+}
+
+impl<T: Send + Sync> IntoPtr for Box<T> {
+    fn into_ptr(self) -> *mut c_void {
+        Box::into_raw(self) as *mut c_void
+    }
+
+    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
+        Box::from_raw(ptr as *mut T)
+    }
+}
+
+impl<T: IntoPtr> IntoPtr for Option<T> {
+    fn into_ptr(self) -> *mut c_void {
+        match self {
+            Some(x) => x.into_ptr(),
+            None => ptr::null_mut(),
+        }
+    }
+
+    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(T::from_ptr(ptr))
+        }
+    }
 }
 
 /// Simple empty producer context that can be use when the producer context is not required.
@@ -77,13 +129,13 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
     _opaque: *mut c_void,
 ) {
     let producer_context = Box::from_raw(_opaque as *mut C);
-    let delivery_context = Box::from_raw((*msg)._private as *mut C::DeliveryContext);
+    let delivery_context = C::DeliveryContext::from_ptr((*msg)._private);
     let owner = 42u8;
     // Wrap the message pointer into a BorrowedMessage that will only live for the body of this
     // function.
     let delivery_result = BorrowedMessage::from_dr_callback(msg as *mut RDKafkaMessage, &owner);
     trace!("Delivery event received: {:?}", delivery_result);
-    (*producer_context).delivery(&delivery_result, (*delivery_context));
+    (*producer_context).delivery(&delivery_result, delivery_context);
     mem::forget(producer_context); // Do not free the producer context
     match delivery_result {        // Do not free the message, librdkafka will do it for us
         Ok(message) => mem::forget(message),
@@ -147,7 +199,7 @@ impl<C: ProducerContext> BaseProducer<C> {
         partition: Option<i32>,
         payload: Option<&P>,
         key: Option<&K>,
-        delivery_context: Option<Box<C::DeliveryContext>>,
+        delivery_context: C::DeliveryContext,
         timestamp: Option<i64>,
     ) -> KafkaResult<()>
     where K: ToBytes + ?Sized,
@@ -160,10 +212,7 @@ impl<C: ProducerContext> BaseProducer<C> {
             None => (ptr::null_mut(), 0),
             Some(k) => (k.as_ptr() as *mut c_void, k.len()),
         };
-        let delivery_context_ptr = match delivery_context {
-            Some(context) => Box::into_raw(context) as *mut c_void,
-            None => ptr::null_mut(),
-        };
+        let delivery_context_ptr = delivery_context.into_ptr();
         let topic_name_c = CString::new(topic_name.to_owned())?;
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
@@ -180,7 +229,7 @@ impl<C: ProducerContext> BaseProducer<C> {
         };
         if produce_error.is_error() {
             if !delivery_context_ptr.is_null() { // Drop delivery context if provided
-                unsafe { Box::from_raw(delivery_context_ptr as *mut C::DeliveryContext) };
+                unsafe { C::DeliveryContext::from_ptr(delivery_context_ptr) };
             }
             Err(KafkaError::MessageProduction(produce_error.into()))
         } else {

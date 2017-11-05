@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 extern crate rdkafka;
 extern crate rand;
 extern crate futures;
@@ -79,7 +80,7 @@ where
         .set("api.version.request", "true")
         .set("debug", "all")
         .set("produce.offset.report", "true")
-        .set("message.timeout.ms", "5000")
+        .set("message.timeout.ms", "30000")
         .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 

@@ -32,7 +32,7 @@ impl Context for PrintingContext {
 }
 
 impl ProducerContext for PrintingContext {
-    type DeliveryContext = u32;
+    type DeliveryContext = usize;
 
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_context: Self::DeliveryContext) {
         println!("Delivery: {:?} {:?}", delivery_result, delivery_context);
@@ -43,7 +43,7 @@ impl ProducerContext for PrintingContext {
 #[derive(Clone)]
 struct CollectingContext {
     stats: Arc<Mutex<Vec<Statistics>>>,
-    results: Arc<Mutex<Vec<(OwnedMessage, Option<KafkaError>, u32)>>>,
+    results: Arc<Mutex<Vec<(OwnedMessage, Option<KafkaError>, usize)>>>,
 }
 
 impl CollectingContext {
@@ -64,7 +64,7 @@ impl Context for CollectingContext {
 }
 
 impl ProducerContext for CollectingContext {
-    type DeliveryContext = u32;
+    type DeliveryContext = usize;
 
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_context: Self::DeliveryContext) {
         let mut results = self.results.lock().unwrap();
@@ -100,14 +100,14 @@ fn test_produce_queue_full() {
     let producer = base_producer(map!("queue.buffering.max.messages" => "10"));
     let topic_name = rand_test_topic();
 
-    let results = (0..30u32)
+    let results = (0..30)
         .map(|id| {
             producer.send_copy(
                &topic_name,
                None,
                Some(&format!("Message {}", id)),
                Some(&format!("Key {}", id)),
-               Some(Box::new(id)),
+               id,
                Some(current_time_millis()),
             )
         }).collect::<Vec<_>>();
@@ -137,8 +137,8 @@ fn test_producer_timeout() {
              "bootstrap.servers" => "1.2.3.4"));
     let topic_name = rand_test_topic();
 
-    let results_count = (0..10u32)
-        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), Some(Box::new(id)), None))
+    let results_count = (0..10)
+        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), id, None))
         .filter(|r| r == &Ok(()))
         .count();
 

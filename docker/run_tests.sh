@@ -20,6 +20,7 @@ echo -e "${GREEN}*** Inject system allocator ***${NC}"
 sed -i "/\/\/>alloc_system/ c\#![feature(alloc_system, global_allocator, allocator_api)]\nextern crate alloc_system;\nuse alloc_system::System;\n\#[global_allocator]\nstatic A: System = System;\n" src/lib.rs
 
 echo -e "${GREEN}*** Build tests ***${NC}"
+echo "Rust version: $(rustc --version)"
 cargo test --no-run
 if [ "$?" != "0" ]; then
     echo -e "${RED}*** Failure during compilation ***${NC}"

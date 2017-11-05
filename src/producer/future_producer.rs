@@ -96,7 +96,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
         payload: Option<&P>,
         key: Option<&K>,
         timestamp: Option<i64>,
-        delivery_context: Option<Box<C::DeliveryContext>>,
+        delivery_context: C::DeliveryContext,
     ) -> KafkaResult<()>
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {
@@ -162,9 +162,9 @@ impl<C: Context + 'static> Context for FutureProducerContext<C> {
 }
 
 impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
-    type DeliveryContext = Complete<OwnedDeliveryResult>;
+    type DeliveryContext = Box<Complete<OwnedDeliveryResult>>;
 
-    fn delivery(&self, delivery_result: &DeliveryResult, tx: Complete<OwnedDeliveryResult>) {
+    fn delivery(&self, delivery_result: &DeliveryResult, tx: Box<Complete<OwnedDeliveryResult>>) {
         let owned_delivery_result = match delivery_result {
             &Ok(ref message) => Ok((message.partition(), message.offset())),
             &Err((ref error, ref message)) => Err((error.clone(), message.detach())),
@@ -258,7 +258,7 @@ impl<C: Context + 'static> FutureProducer<C> {
 
         loop {
             let (tx, rx) = futures::oneshot();
-            match self.producer.send_copy(topic, partition, payload, key, timestamp, Some(Box::new(tx))) {
+            match self.producer.send_copy(topic, partition, payload, key, timestamp, Box::new(tx)) {
                 Ok(_) => break DeliveryFuture{ rx },
                 Err(e) => {
                     if let KafkaError::MessageProduction(RDKafkaError::QueueFull) = e {
@@ -319,7 +319,7 @@ mod tests {
 
     impl Context for TestContext {}
     impl ProducerContext for TestContext {
-        type DeliveryContext = i32;
+        type DeliveryContext = Box<i32>;
 
         fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryContext) {
             unimplemented!()
