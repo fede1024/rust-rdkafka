@@ -35,10 +35,12 @@ use message::{BorrowedMessage, ToBytes};
 use util::IntoOpaque;
 
 use std::ffi::CString;
-use std::os::raw::c_void;
 use std::mem;
+use std::os::raw::c_void;
 use std::ptr;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, RwLock};
+use std::thread::{self, JoinHandle};
 
 pub use message::DeliveryResult;
 
@@ -203,6 +205,123 @@ impl<C: ProducerContext> Clone for BaseProducer<C> {
         BaseProducer { client_arc: self.client_arc.clone() }
     }
 }
+
+//
+// ********** POLLING PRODUCER **********
+//
+
+/// A producer with a separate thread for event handling.
+///
+/// The `PollingProducer` is a `BaseProducer` with a separate thread dedicated to calling `poll` at
+/// regular intervals, in order to execute any queued event, such as delivery notifications. The
+/// thread will be automatically stopped when the producer is dropped.
+#[must_use = "The polling producer will stop immediately if unused"]
+pub struct PollingProducer<C: ProducerContext + 'static> {
+    producer: BaseProducer<C>,
+    should_stop: Arc<AtomicBool>,
+    handle: RwLock<Option<JoinHandle<()>>>,
+}
+
+impl FromClientConfig for PollingProducer<EmptyProducerContext> {
+    fn from_config(config: &ClientConfig) -> KafkaResult<PollingProducer<EmptyProducerContext>> {
+        PollingProducer::from_config_and_context(config, EmptyProducerContext)
+    }
+}
+
+impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for PollingProducer<C> {
+    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<PollingProducer<C>> {
+        let polling_producer = PollingProducer {
+            producer: BaseProducer::from_config_and_context(config, context)?,
+            should_stop: Arc::new(AtomicBool::new(false)),
+            handle: RwLock::new(None),
+        };
+        polling_producer.start();
+        Ok(polling_producer)
+    }
+}
+
+impl<C: ProducerContext + 'static> PollingProducer<C> {
+    /// Starts the polling thread that will drive the producer.
+    pub fn start(&self) {
+        let producer_clone = self.producer.clone();
+        let should_stop = self.should_stop.clone();
+        let handle = thread::Builder::new()
+            .name("polling thread".to_string())
+            .spawn(move || {
+                trace!("Polling thread loop started");
+                loop {
+                    let n = producer_clone.poll(100);
+                    if n == 0 {
+                        if should_stop.load(Ordering::Relaxed) {
+                            // We received nothing and the thread should
+                            // stop, so break the loop.
+                            break;
+                        }
+                    } else {
+                        trace!("Received {} events", n);
+                    }
+                }
+                trace!("Polling thread loop terminated");
+            })
+            .expect("Failed to start polling thread");
+        let mut handle_store = self.handle.write().expect("poison error");
+        *handle_store = Some(handle);
+    }
+
+    /// Stops the polling thread.
+    pub fn stop(&self) {
+        let mut handle_store = self.handle.write().expect("poison error");
+        if (*handle_store).is_some() {
+            trace!("Stopping polling");
+            self.should_stop.store(true, Ordering::Relaxed);
+            trace!("Waiting for polling thread termination");
+            match (*handle_store).take().unwrap().join() {
+                Ok(()) => trace!("Polling stopped"),
+                Err(e) => warn!("Failure while terminating thread: {:?}", e),
+            };
+        }
+    }
+
+    /// Sends a message to Kafka. See the documentation in `BaseProducer`.
+    pub fn send_copy<P, K>(
+        &self,
+        topic: &str,
+        partition: Option<i32>,
+        payload: Option<&P>,
+        key: Option<&K>,
+        timestamp: Option<i64>,
+        delivery_context: Option<Box<C::DeliveryContext>>,
+    ) -> KafkaResult<()>
+        where K: ToBytes + ?Sized,
+              P: ToBytes + ?Sized {
+        self.producer.send_copy(topic, partition, payload, key, delivery_context, timestamp)
+    }
+
+    /// Polls the internal producer. This is not normally required since the `PollingProducer` had
+    /// a thread dedicated to calling `poll` regularly.
+    pub fn poll(&self, timeout_ms: i32) {
+        self.producer.poll(timeout_ms);
+    }
+
+    /// Flushes the producer. Should be called before termination.
+    pub fn flush(&self, timeout_ms: i32) {
+        self.producer.flush(timeout_ms);
+    }
+
+    /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.
+    pub fn in_flight_count(&self) -> i32 {
+        self.producer.in_flight_count()
+    }
+}
+
+impl<C: ProducerContext + 'static> Drop for PollingProducer<C> {
+    fn drop(&mut self) {
+        trace!("Destroy PollingProducer");
+        self.stop();
+    }
+}
+
+
 
 #[cfg(test)]
 mod tests {

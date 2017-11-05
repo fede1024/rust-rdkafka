@@ -73,5 +73,6 @@ pub use self::base_producer::{
     DeliveryResult,
     EmptyProducerContext,
     ProducerContext,
+    PollingProducer
 };
 pub use self::future_producer::FutureProducer;
