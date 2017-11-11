@@ -62,8 +62,8 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
 /// delivery of the message was successful or not. The `FutureProducer` provides this information in
 /// a `Future`, that will be completed once the information becomes available. This producer has an
 /// internal polling thread and as such it doesn't need to be polled. It can be cheaply cloned to
-/// get a reference to the same underlying producer. The internal thread can be terminated with the
-/// `stop` method or moving the `FutureProducer` out of scope.
+/// get a reference to the same underlying producer. The internal will be terminated once the
+/// the `FutureProducer` goes out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
 pub struct FutureProducer<C: Context + 'static> {
     producer: Arc<PollingProducer<FutureProducerContext<C>>>,
@@ -165,12 +165,6 @@ impl<C: Context + 'static> FutureProducer<C> {
                 }
             }
         }
-    }
-
-    /// Stops the internal polling thread. The thread can also be stopped by moving
-    /// the `FutureProducer` out of scope.
-    pub fn stop(&self) {
-        self.producer.stop();
     }
 
     /// Polls the internal producer. This is not normally required since the `PollingProducer` had

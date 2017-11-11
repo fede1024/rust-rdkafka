@@ -213,7 +213,7 @@ impl<C: ProducerContext> Clone for BaseProducer<C> {
 /// A producer with a separate thread for event handling.
 ///
 /// The `PollingProducer` is a `BaseProducer` with a separate thread dedicated to calling `poll` at
-/// regular intervals, in order to execute any queued event, such as delivery notifications. The
+/// regular intervals in order to execute any queued event, such as delivery notifications. The
 /// thread will be automatically stopped when the producer is dropped.
 #[must_use = "The polling producer will stop immediately if unused"]
 pub struct PollingProducer<C: ProducerContext + 'static> {
@@ -241,8 +241,9 @@ impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for PollingProd
 }
 
 impl<C: ProducerContext + 'static> PollingProducer<C> {
-    /// Starts the polling thread that will drive the producer.
-    pub fn start(&self) {
+    /// Starts the polling thread that will drive the producer. The thread is already started by
+    /// default.
+    fn start(&self) {
         let producer_clone = self.producer.clone();
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
@@ -268,8 +269,8 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
         *handle_store = Some(handle);
     }
 
-    /// Stops the polling thread.
-    pub fn stop(&self) {
+    /// Stops the polling thread. This method will be called during destruction.
+    fn stop(&self) {
         let mut handle_store = self.handle.write().expect("poison error");
         if (*handle_store).is_some() {
             trace!("Stopping polling");
@@ -290,11 +291,11 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
         payload: Option<&P>,
         key: Option<&K>,
         timestamp: Option<i64>,
-        delivery_context: Option<Box<C::DeliveryContext>>,
+        delivery_opaque: C::DeliveryOpaque,
     ) -> KafkaResult<()>
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
-        self.producer.send_copy(topic, partition, payload, key, delivery_context, timestamp)
+        self.producer.send_copy(topic, partition, payload, key, delivery_opaque, timestamp)
     }
 
     /// Polls the internal producer. This is not normally required since the `PollingProducer` had
@@ -318,6 +319,7 @@ impl<C: ProducerContext + 'static> Drop for PollingProducer<C> {
     fn drop(&mut self) {
         trace!("Destroy PollingProducer");
         self.stop();
+        trace!("PollingProducer destroyed");
     }
 }
 
