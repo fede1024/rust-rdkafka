@@ -1,132 +1,14 @@
 use client::{Context, EmptyContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
-use producer::{BaseProducer, DeliveryResult, EmptyProducerContext, ProducerContext};
+use producer::{DeliveryResult, ThreadedProducer, ProducerContext};
 use statistics::Statistics;
 use error::{KafkaError, KafkaResult, RDKafkaError};
 use message::{Message, OwnedMessage, Timestamp, ToBytes};
 
 use futures::{self, Canceled, Complete, Future, Poll, Oneshot, Async};
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, RwLock};
-use std::thread::{self, JoinHandle};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
-
-//
-// ********** POLLING PRODUCER **********
-//
-
-/// A producer with a separate thread for event handling.
-///
-/// The `PollingProducer` is a `BaseProducer` with a separate thread dedicated to calling `poll` at
-/// regular intervals, in order to execute any queued event, such as delivery notifications. The
-/// thread will be automatically stopped when the producer is dropped.
-#[must_use = "The polling producer will stop immediately if unused"]
-pub struct PollingProducer<C: ProducerContext + 'static> {
-    producer: BaseProducer<C>,
-    should_stop: Arc<AtomicBool>,
-    handle: RwLock<Option<JoinHandle<()>>>,
-}
-
-impl FromClientConfig for PollingProducer<EmptyProducerContext> {
-    fn from_config(config: &ClientConfig) -> KafkaResult<PollingProducer<EmptyProducerContext>> {
-        PollingProducer::from_config_and_context(config, EmptyProducerContext)
-    }
-}
-
-impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for PollingProducer<C> {
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<PollingProducer<C>> {
-        let polling_producer = PollingProducer {
-            producer: BaseProducer::from_config_and_context(config, context)?,
-            should_stop: Arc::new(AtomicBool::new(false)),
-            handle: RwLock::new(None),
-        };
-        polling_producer.start();
-        Ok(polling_producer)
-    }
-}
-
-impl<C: ProducerContext + 'static> PollingProducer<C> {
-    /// Starts the polling thread that will drive the producer.
-    pub fn start(&self) {
-        let producer_clone = self.producer.clone();
-        let should_stop = self.should_stop.clone();
-        let handle = thread::Builder::new()
-            .name("polling thread".to_string())
-            .spawn(move || {
-                trace!("Polling thread loop started");
-                loop {
-                    let n = producer_clone.poll(100);
-                    if n == 0 {
-                        if should_stop.load(Ordering::Relaxed) {
-                            // We received nothing and the thread should
-                            // stop, so break the loop.
-                            break;
-                        }
-                    } else {
-                        trace!("Received {} events", n);
-                    }
-                }
-                trace!("Polling thread loop terminated");
-            })
-            .expect("Failed to start polling thread");
-        let mut handle_store = self.handle.write().expect("poison error");
-        *handle_store = Some(handle);
-    }
-
-    /// Stops the polling thread.
-    pub fn stop(&self) {
-        let mut handle_store = self.handle.write().expect("poison error");
-        if (*handle_store).is_some() {
-            trace!("Stopping polling");
-            self.should_stop.store(true, Ordering::Relaxed);
-            trace!("Waiting for polling thread termination");
-            match (*handle_store).take().unwrap().join() {
-                Ok(()) => trace!("Polling stopped"),
-                Err(e) => warn!("Failure while terminating thread: {:?}", e),
-            };
-        }
-    }
-
-    /// Sends a message to Kafka. See the documentation in `BaseProducer`.
-    pub fn send_copy<P, K>(
-        &self,
-        topic: &str,
-        partition: Option<i32>,
-        payload: Option<&P>,
-        key: Option<&K>,
-        timestamp: Option<i64>,
-        delivery_context: C::DeliveryOpaque,
-    ) -> KafkaResult<()>
-    where K: ToBytes + ?Sized,
-          P: ToBytes + ?Sized {
-        self.producer.send_copy(topic, partition, payload, key, delivery_context, timestamp)
-    }
-
-    /// Polls the internal producer. This is not normally required since the `PollingProducer` had
-    /// a thread dedicated to calling `poll` regularly.
-    pub fn poll(&self, timeout_ms: i32) {
-        self.producer.poll(timeout_ms);
-    }
-
-    /// Flushes the producer. Should be called before termination.
-    pub fn flush(&self, timeout_ms: i32) {
-        self.producer.flush(timeout_ms);
-    }
-
-    /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.
-    pub fn in_flight_count(&self) -> i32 {
-        self.producer.in_flight_count()
-    }
-}
-
-impl<C: ProducerContext + 'static> Drop for PollingProducer<C> {
-    fn drop(&mut self) {
-        trace!("Destroy PollingProducer");
-        self.stop();
-    }
-}
-
 
 //
 // ********** FUTURE PRODUCER **********
@@ -180,11 +62,11 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
 /// delivery of the message was successful or not. The `FutureProducer` provides this information in
 /// a `Future`, that will be completed once the information becomes available. This producer has an
 /// internal polling thread and as such it doesn't need to be polled. It can be cheaply cloned to
-/// get a reference to the same underlying producer. The internal thread can be terminated with the
-/// `stop` method or moving the `FutureProducer` out of scope.
+/// get a reference to the same underlying producer. The internal will be terminated once the
+/// the `FutureProducer` goes out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
 pub struct FutureProducer<C: Context + 'static> {
-    producer: Arc<PollingProducer<FutureProducerContext<C>>>,
+    producer: Arc<ThreadedProducer<FutureProducerContext<C>>>,
 }
 
 impl<C: Context + 'static> Clone for FutureProducer<C> {
@@ -202,8 +84,8 @@ impl FromClientConfig for FutureProducer<EmptyContext> {
 impl<C: Context + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
         let future_context = FutureProducerContext { wrapped_context: context };
-        let polling_producer = PollingProducer::from_config_and_context(config, future_context)?;
-        Ok(FutureProducer { producer: Arc::new(polling_producer) })
+        let threaded_producer = ThreadedProducer::from_config_and_context(config, future_context)?;
+        Ok(FutureProducer { producer: Arc::new(threaded_producer) })
     }
 }
 
@@ -285,13 +167,7 @@ impl<C: Context + 'static> FutureProducer<C> {
         }
     }
 
-    /// Stops the internal polling thread. The thread can also be stopped by moving
-    /// the `FutureProducer` out of scope.
-    pub fn stop(&self) {
-        self.producer.stop();
-    }
-
-    /// Polls the internal producer. This is not normally required since the `PollingProducer` had
+    /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
     /// a thread dedicated to calling `poll` regularly.
     pub fn poll(&self, timeout_ms: i32) {
         self.producer.poll(timeout_ms);

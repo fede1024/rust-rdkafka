@@ -5,6 +5,7 @@
 
 #### Features
 * Make `PollingProducer` methods public
+* Rename `PollingProducer` to `ThreadedProducer`
 
 #### Refactoring
 * Remove `TopicConfig` since librdkafka supports default topic configuration

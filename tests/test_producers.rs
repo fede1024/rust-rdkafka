@@ -7,8 +7,7 @@ use rdkafka::{Context, Statistics};
 use rdkafka::message::{Message, OwnedMessage};
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
-use rdkafka::producer::DeliveryResult;
-use rdkafka::producer::{BaseProducer, ProducerContext};
+use rdkafka::producer::{BaseProducer, DeliveryResult, ThreadedProducer, ProducerContext};
 use rdkafka::util::current_time_millis;
 
 #[macro_use] mod utils;
@@ -75,11 +74,7 @@ impl ProducerContext for CollectingContext {
     }
 }
 
-fn base_producer(config_overrides: HashMap<&str, &str>) -> BaseProducer<PrintingContext> {
-    base_producer_with_context(PrintingContext { _n: 123 }, config_overrides)
-}
-
-fn base_producer_with_context<C: ProducerContext>(context: C, config_overrides: HashMap<&str, &str>) -> BaseProducer<C> {
+fn default_config(config_overrides: HashMap<&str, &str>) -> ClientConfig {
     let mut config = ClientConfig::new();
     config.set("bootstrap.servers", &get_bootstrap_server())
         .set("produce.offset.report", "true")
@@ -88,15 +83,32 @@ fn base_producer_with_context<C: ProducerContext>(context: C, config_overrides: 
     for (key, value) in config_overrides {
         config.set(key, value);
     }
-
-    config.create_with_context::<C, BaseProducer<_>>(context).unwrap()
+    config
 }
 
+fn base_producer(config_overrides: HashMap<&str, &str>) -> BaseProducer<PrintingContext> {
+    base_producer_with_context(PrintingContext { _n: 123 }, config_overrides)
+}
+
+fn base_producer_with_context<C: ProducerContext>(context: C, config_overrides: HashMap<&str, &str>) -> BaseProducer<C> {
+    default_config(config_overrides)
+        .create_with_context::<C, BaseProducer<_>>(context).unwrap()
+}
+
+#[allow(dead_code)]
+fn threaded_producer(config_overrides: HashMap<&str, &str>) -> ThreadedProducer<PrintingContext> {
+    threaded_producer_with_context(PrintingContext { _n: 123 }, config_overrides)
+}
+
+fn threaded_producer_with_context<C: ProducerContext>(context: C, config_overrides: HashMap<&str, &str>) -> ThreadedProducer<C> {
+    default_config(config_overrides)
+        .create_with_context::<C, ThreadedProducer<_>>(context).unwrap()
+}
 
 // TESTS
 
 #[test]
-fn test_produce_queue_full() {
+fn test_base_producer_queue_full() {
     let producer = base_producer(map!("queue.buffering.max.messages" => "10"));
     let topic_name = rand_test_topic();
 
@@ -129,7 +141,7 @@ fn test_produce_queue_full() {
 }
 
 #[test]
-fn test_producer_timeout() {
+fn test_base_producer_timeout() {
     let context = CollectingContext::new();
     let producer = base_producer_with_context(
         context.clone(),
@@ -155,4 +167,28 @@ fn test_producer_timeout() {
         ids.insert(id);
     }
     assert_eq!(ids.len(), 10);
+}
+
+#[test]
+fn test_threaded_producer_send() {
+    let context = CollectingContext::new();
+    let producer = threaded_producer_with_context(context.clone(), HashMap::new());
+    let topic_name = rand_test_topic();
+
+    let results_count = (0..10)
+        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), None, id))
+        .filter(|r| r == &Ok(()))
+        .count();
+
+    assert_eq!(results_count, 10);
+    producer.flush(10000);
+
+    let delivery_results = context.results.lock().unwrap();
+    let mut ids = HashSet::new();
+    for &(ref message, ref error, id) in &(*delivery_results) {
+        assert_eq!(message.payload_view::<str>(), Some(Ok("A")));
+        assert_eq!(message.key_view::<str>(), Some(Ok("B")));
+        assert_eq!(error, &None);
+        ids.insert(id);
+    }
 }
