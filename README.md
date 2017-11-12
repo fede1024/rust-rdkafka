@@ -53,16 +53,20 @@ For more numbers, check out the [kafka-benchmark](https://github.com/fede1024/ka
 
 * [`BaseConsumer`]: simple wrapper around the librdkafka consumer. It requires to be periodically `poll()`ed in order to execute callbacks, rebalances and to receive messages.
 * [`BaseProducer`]: simple wrapper around the librdkafka producer. As in the consumer case, the user must call `poll()` periodically to execute delivery callbacks.
+* [`ThreadedProducer`]: `BaseProducer` with a separate thread dedicated to polling the producer.
 
 High level:
 
  * [`StreamConsumer`]: it returns a [`stream`] of messages and takes care of polling the consumer internally.
  * [`FutureProducer`]: it returns a [`future`] that will be completed once the message is delivered to Kafka (or failed).
 
+For more information about consumers and producers, refer to their module-level documentation.
+
 [`BaseConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/base_consumer/struct.BaseConsumer.html
-[`BaseProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/struct.BaseProducer.html
+[`BaseProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.BaseProducer.html
+[`ThreadedProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.ThreadedProducer.html
 [`StreamConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html
-[`FutureProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/struct.FutureProducer.html
+[`FutureProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/future_producer/struct.FutureProducer.html
 [librdkafka]: https://github.com/edenhill/librdkafka
 [futures]: https://github.com/alexcrichton/futures-rs
 [`future`]: https://docs.rs/futures/0.1.3/futures/trait.Future.html
@@ -71,7 +75,7 @@ High level:
 *Warning*: the library is under active development and the APIs are likely to change.
 
 ### Asynchronous data processing with tokio-rs
-[tokio-rs] is a platform for fast processing of asynchronous events in Rust. The interfaces exposed by the `StreamConsumer` and the `FutureProducer` allow rust-rdkafka users to easily integrate Kafka consumers and producers within the tokio-rs platform, and write asynchronous message processing code. Note that rust-rdkafka can be used without tokio-rs.
+[tokio-rs] is a platform for fast processing of asynchronous events in Rust. The interfaces exposed by the [`StreamConsumer`] and the [`FutureProducer`] allow rust-rdkafka users to easily integrate Kafka consumers and producers within the tokio-rs platform, and write asynchronous message processing code. Note that rust-rdkafka can be used without tokio-rs.
 
 To see rust-rdkafka in action with tokio-rs, check out the [asynchronous processing example] in the examples folder.
 

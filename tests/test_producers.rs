@@ -7,7 +7,7 @@ use rdkafka::{Context, Statistics};
 use rdkafka::message::{Message, OwnedMessage};
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
-use rdkafka::producer::{BaseProducer, DeliveryResult, PollingProducer, ProducerContext};
+use rdkafka::producer::{BaseProducer, DeliveryResult, ThreadedProducer, ProducerContext};
 use rdkafka::util::current_time_millis;
 
 #[macro_use] mod utils;
@@ -96,13 +96,13 @@ fn base_producer_with_context<C: ProducerContext>(context: C, config_overrides: 
 }
 
 #[allow(dead_code)]
-fn polling_producer(config_overrides: HashMap<&str, &str>) -> PollingProducer<PrintingContext> {
-    polling_producer_with_context(PrintingContext { _n: 123 }, config_overrides)
+fn threaded_producer(config_overrides: HashMap<&str, &str>) -> ThreadedProducer<PrintingContext> {
+    threaded_producer_with_context(PrintingContext { _n: 123 }, config_overrides)
 }
 
-fn polling_producer_with_context<C: ProducerContext>(context: C, config_overrides: HashMap<&str, &str>) -> PollingProducer<C> {
+fn threaded_producer_with_context<C: ProducerContext>(context: C, config_overrides: HashMap<&str, &str>) -> ThreadedProducer<C> {
     default_config(config_overrides)
-        .create_with_context::<C, PollingProducer<_>>(context).unwrap()
+        .create_with_context::<C, ThreadedProducer<_>>(context).unwrap()
 }
 
 // TESTS
@@ -170,9 +170,9 @@ fn test_base_producer_timeout() {
 }
 
 #[test]
-fn test_polling_producer_send() {
+fn test_threaded_producer_send() {
     let context = CollectingContext::new();
-    let producer = polling_producer_with_context(context.clone(), HashMap::new());
+    let producer = threaded_producer_with_context(context.clone(), HashMap::new());
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)

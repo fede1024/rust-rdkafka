@@ -11,10 +11,11 @@
 //! event with the appropriate delivery result into an internal event queue.
 //!
 //! The librdkafka user is responsible for calling the `poll` function at regular intervals to
-//! process those events; the thread calling `poll` will be the one executing
-//! the delivery callback for every delivery event. If `poll` is not called, or not frequently
+//! process those events; the thread calling `poll` will be the one executing the user-specified
+//! delivery callback for every delivery event. If `poll` is not called, or not frequently
 //! enough, the producer will return a RDKafkaError::QueueFull error and it won't be able to send any other
-//! message until more delivery event are processed via `poll`.
+//! message until more delivery event are processed via `poll`. The QueueFull error can also be
+//! returned if Kafka is not able to receive the messages quickly enough.
 //!
 //! ### Error reporting
 //! The C library will try deal with all the transient errors such as broker disconnection,
@@ -27,11 +28,14 @@
 //! ## Rust-rdkafka producers
 //! Rust-rdkafka (rdkafka for brevity) provides two sets of producers: low level and high level.
 //!
-//! ### Low level producer
-//! The low level producer provided by rdkafka is called `BaseProducer`. The goal of the
+//! ### Low level producers
+//! The lowest level producer provided by rdkafka is called `BaseProducer`. The goal of the
 //! `BaseProducer` is to be as close as possible to the C one while maintaining a safe Rust interface.
-//! In particular, the `BaseProducer` needs to be polled at regular intervals to execute the
+//! In particular, the `BaseProducer` needs to be polled at regular intervals to execute
 //! any delivery callback that might be waiting and to make sure the queue doesn't fill up.
+//!
+//! Another low lever producer is the `ThreadedProducer`, which is a `BaseProducer` with
+//! a dedicated thread for polling.
 //!
 //! The delivery callback can be defined using a `ProducerContext`. More information in the
 //! `base_producer` module.
@@ -51,7 +55,7 @@
 //! ### Producer configuration
 //!
 //! For the configuration parameters common to both producers and consumers, refer to the
-//! documentation of the `config` module. Here are listed the most commonly used producer
+//! documentation in the `config` module. Here are listed the most commonly used producer
 //! configuration. Click [here](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md) for the full list.
 //!
 //! - `queue.buffering.max.messages` (100000): Maximum number of messages allowed on the producer queue.
@@ -73,6 +77,6 @@ pub use self::base_producer::{
     DeliveryResult,
     EmptyProducerContext,
     ProducerContext,
-    PollingProducer
+    ThreadedProducer
 };
 pub use self::future_producer::FutureProducer;

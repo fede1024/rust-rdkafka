@@ -1,6 +1,6 @@
 use client::{Context, EmptyContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
-use producer::{DeliveryResult, PollingProducer, ProducerContext};
+use producer::{DeliveryResult, ThreadedProducer, ProducerContext};
 use statistics::Statistics;
 use error::{KafkaError, KafkaResult, RDKafkaError};
 use message::{Message, OwnedMessage, Timestamp, ToBytes};
@@ -66,7 +66,7 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
 /// the `FutureProducer` goes out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
 pub struct FutureProducer<C: Context + 'static> {
-    producer: Arc<PollingProducer<FutureProducerContext<C>>>,
+    producer: Arc<ThreadedProducer<FutureProducerContext<C>>>,
 }
 
 impl<C: Context + 'static> Clone for FutureProducer<C> {
@@ -84,8 +84,8 @@ impl FromClientConfig for FutureProducer<EmptyContext> {
 impl<C: Context + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
         let future_context = FutureProducerContext { wrapped_context: context };
-        let polling_producer = PollingProducer::from_config_and_context(config, future_context)?;
-        Ok(FutureProducer { producer: Arc::new(polling_producer) })
+        let threaded_producer = ThreadedProducer::from_config_and_context(config, future_context)?;
+        Ok(FutureProducer { producer: Arc::new(threaded_producer) })
     }
 }
 
@@ -167,7 +167,7 @@ impl<C: Context + 'static> FutureProducer<C> {
         }
     }
 
-    /// Polls the internal producer. This is not normally required since the `PollingProducer` had
+    /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
     /// a thread dedicated to calling `poll` regularly.
     pub fn poll(&self, timeout_ms: i32) {
         self.producer.poll(timeout_ms);

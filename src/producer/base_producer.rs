@@ -1,4 +1,4 @@
-//! Low level Kafka producer.
+//! Low level Kafka producers.
 //!
 //! For more information about the producers provided in rdkafka, refer to the module level documentation.
 //!
@@ -22,6 +22,16 @@
 //!
 //! To execute delivery callbacks the `poll` method of the producer should be called regularly.
 //! If `poll` is not called, or not often enough, a RDKafkaError::QueueFull error will be returned.
+//!
+//! ## ThreadedProducer
+//! The `ThreadedProducer` is a wrapper around the `BaseProducer` which spawns a thread
+//! dedicated to calling `poll` on the producer at regular intervals, so that the user doesn't
+//! have to. The thread is started when the producer is created, and it will be terminated
+//! once the producer goes out of scope.
+//!
+//! A `RDKafkaError::QueueFull` error can still be returned in case the polling thread is not
+//! fast enough or Kafka is not able to receive data and acknowledge messages quickly enough.
+//! If this error is returned, the producer should wait and try again.
 //!
 
 use rdsys::rd_kafka_vtype_t::*;
@@ -116,9 +126,12 @@ impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
     }
 }
 
-/// Simple Kafka producer. This producer needs to be `poll`ed at regular intervals in order to
-/// serve queued delivery report callbacks. This producer can be cheaply cloned to
-/// create a new reference to the same underlying producer.
+/// Low level Kafka producer.
+///
+/// The `BaseProducer` needs to be `poll`ed at regular intervals in order to
+/// serve queued delivery report callbacks (for more information, refer to the module-level
+/// documentation. This producer can be cheaply cloned to create a new reference to the same
+/// underlying producer.
 pub struct BaseProducer<C: ProducerContext> {
     client_arc: Arc<Client<C>>,
 }
@@ -207,47 +220,47 @@ impl<C: ProducerContext> Clone for BaseProducer<C> {
 }
 
 //
-// ********** POLLING PRODUCER **********
+// ********** THREADED PRODUCER **********
 //
 
 /// A producer with a separate thread for event handling.
 ///
-/// The `PollingProducer` is a `BaseProducer` with a separate thread dedicated to calling `poll` at
+/// The `ThreadedProducer` is a `BaseProducer` with a separate thread dedicated to calling `poll` at
 /// regular intervals in order to execute any queued event, such as delivery notifications. The
 /// thread will be automatically stopped when the producer is dropped.
-#[must_use = "The polling producer will stop immediately if unused"]
-pub struct PollingProducer<C: ProducerContext + 'static> {
+#[must_use = "The threaded producer will stop immediately if unused"]
+pub struct ThreadedProducer<C: ProducerContext + 'static> {
     producer: BaseProducer<C>,
     should_stop: Arc<AtomicBool>,
     handle: RwLock<Option<JoinHandle<()>>>,
 }
 
-impl FromClientConfig for PollingProducer<EmptyProducerContext> {
-    fn from_config(config: &ClientConfig) -> KafkaResult<PollingProducer<EmptyProducerContext>> {
-        PollingProducer::from_config_and_context(config, EmptyProducerContext)
+impl FromClientConfig for ThreadedProducer<EmptyProducerContext> {
+    fn from_config(config: &ClientConfig) -> KafkaResult<ThreadedProducer<EmptyProducerContext>> {
+        ThreadedProducer::from_config_and_context(config, EmptyProducerContext)
     }
 }
 
-impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for PollingProducer<C> {
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<PollingProducer<C>> {
-        let polling_producer = PollingProducer {
+impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for ThreadedProducer<C> {
+    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<ThreadedProducer<C>> {
+        let threaded_producer = ThreadedProducer {
             producer: BaseProducer::from_config_and_context(config, context)?,
             should_stop: Arc::new(AtomicBool::new(false)),
             handle: RwLock::new(None),
         };
-        polling_producer.start();
-        Ok(polling_producer)
+        threaded_producer.start();
+        Ok(threaded_producer)
     }
 }
 
-impl<C: ProducerContext + 'static> PollingProducer<C> {
+impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     /// Starts the polling thread that will drive the producer. The thread is already started by
     /// default.
     fn start(&self) {
         let producer_clone = self.producer.clone();
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()
-            .name("polling thread".to_string())
+            .name("producer polling thread".to_string())
             .spawn(move || {
                 trace!("Polling thread loop started");
                 loop {
@@ -298,7 +311,7 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
         self.producer.send_copy(topic, partition, payload, key, delivery_opaque, timestamp)
     }
 
-    /// Polls the internal producer. This is not normally required since the `PollingProducer` had
+    /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
     /// a thread dedicated to calling `poll` regularly.
     pub fn poll(&self, timeout_ms: i32) {
         self.producer.poll(timeout_ms);
@@ -315,11 +328,11 @@ impl<C: ProducerContext + 'static> PollingProducer<C> {
     }
 }
 
-impl<C: ProducerContext + 'static> Drop for PollingProducer<C> {
+impl<C: ProducerContext + 'static> Drop for ThreadedProducer<C> {
     fn drop(&mut self) {
-        trace!("Destroy PollingProducer");
+        trace!("Destroy ThreadedProducer");
         self.stop();
-        trace!("PollingProducer destroyed");
+        trace!("ThreadedProducer destroyed");
     }
 }
 
