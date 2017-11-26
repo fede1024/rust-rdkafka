@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     jq \
     coreutils
-ENV KAFKA_VERSION="0.11.0.0"
+ENV KAFKA_VERSION="0.11.0.2"
 ENV SCALA_VERSION="2.12"
 ENV KAFKA_HOME /opt/kafka_${SCALA_VERSION}-${KAFKA_VERSION}
 COPY download-kafka.sh /tmp/download-kafka.sh
