@@ -1,7 +1,7 @@
 # Changelog
 
-<a name="master"></a>
-## Master branch
+<a name="0.14.0"></a>
+## 0.14.0 (2017-11-26)
 
 #### Features
 * Make `PollingProducer` methods public
