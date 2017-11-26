@@ -97,11 +97,13 @@ To see how to implement at-least-once delivery with `rdkafka`, check out the [at
 
 Here are some of the projects using rust-rdkafka:
 
+- [timely-dataflow]: a modular implementation of timely dataflow in Rust.
 - [kafka-view]: a web interface for Kafka clusters.
 - [kafka-benchmark]: a high performance benchmarking tool for Kafka.
 
 *If you are using rust-rdkafka, please let me know!*
 
+[timely-dataflow]: https://github.com/frankmcsherry/timely-dataflow
 [kafka-view]: https://github.com/fede1024/kafka-view
 [kafka-benchmark]: https://github.com/fede1024/kafka-benchmark
 
