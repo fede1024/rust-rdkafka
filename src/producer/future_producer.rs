@@ -167,6 +167,23 @@ impl<C: Context + 'static> FutureProducer<C> {
         }
     }
 
+    /// Sends a copy of the payload and key provided to the specified topic. This works the same
+    /// way as `send_copy`, the only difference is that it returns an error if enqueuing fails.
+    pub fn send_copy_result<P, K>(
+        &self,
+        topic: &str,
+        partition: Option<i32>,
+        payload: Option<&P>,
+        key: Option<&K>,
+        timestamp: Option<i64>
+    ) -> KafkaResult<DeliveryFuture>
+    where K: ToBytes + ?Sized,
+          P: ToBytes + ?Sized {
+        let (tx, rx) = futures::oneshot();
+        self.producer.send_copy(topic, partition, payload, key, timestamp, Box::new(tx))?;
+        Ok(DeliveryFuture { rx })
+    }
+
     /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
     /// a thread dedicated to calling `poll` regularly.
     pub fn poll(&self, timeout_ms: i32) {
