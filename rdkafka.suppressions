@@ -9,22 +9,3 @@
    fun:allocate_stack
    fun:pthread_create@@GLIBC_2.2.5
 }
-
-# librdkafka issue #1478
-{
-   producev_leak_issue_1478
-   Memcheck:Leak
-   match-leak-kinds: definite
-   fun:calloc
-   fun:rd_calloc
-   fun:rd_kafka_topic_new0
-   fun:rd_kafka_producev
-}
-{
-   producev_leak_issue_1478
-   Memcheck:Leak
-   match-leak-kinds: definite
-   fun:calloc
-   fun:rd_kafka_topic_new0
-   fun:rd_kafka_producev
-}

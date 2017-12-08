@@ -811,7 +811,7 @@ pub const SO_INCOMING_CPU: ::std::os::raw::c_uint = 49;
 pub const SO_ATTACH_BPF: ::std::os::raw::c_uint = 50;
 pub const SO_DETACH_BPF: ::std::os::raw::c_uint = 27;
 pub const LIBRDKAFKA_TYPECHECKS: ::std::os::raw::c_uint = 1;
-pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 721407;
+pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 721919;
 pub const RD_KAFKA_DEBUG_CONTEXTS: &'static [u8; 81usize] =
     b"all,generic,broker,topic,metadata,queue,msg,protocol,cgrp,security,fetch,feature\x00";
 pub const RD_KAFKA_OFFSET_BEGINNING: ::std::os::raw::c_int = -2;
@@ -2982,6 +2982,7 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__VALUE_SERIALIZATION = -161,
     RD_KAFKA_RESP_ERR__KEY_DESERIALIZATION = -160,
     RD_KAFKA_RESP_ERR__VALUE_DESERIALIZATION = -159,
+    RD_KAFKA_RESP_ERR__PARTIAL = -158,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,

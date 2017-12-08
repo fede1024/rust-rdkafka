@@ -152,6 +152,8 @@ pub enum RDKafkaError {
     KeyDeserialization = -160,
     /// Value deserialization error
     ValueDeserialization = -159,
+    /// Partial response
+    Partial = -158,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error
