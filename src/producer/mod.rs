@@ -13,7 +13,7 @@
 //! The librdkafka user is responsible for calling the `poll` function at regular intervals to
 //! process those events; the thread calling `poll` will be the one executing the user-specified
 //! delivery callback for every delivery event. If `poll` is not called, or not frequently
-//! enough, the producer will return a RDKafkaError::QueueFull error and it won't be able to send any other
+//! enough, the producer will return a `RDKafkaError::QueueFull` error and it won't be able to send any other
 //! message until more delivery event are processed via `poll`. The QueueFull error can also be
 //! returned if Kafka is not able to receive the messages quickly enough.
 //!
@@ -24,6 +24,12 @@
 //! To see the logs, make sure you initialize the logger.
 //!
 //! As mentioned earlier, errors specific to message production will be reported in the delivery callback.
+//!
+//! ### Buffering
+//! Buffering is done automatically by librdkafka. When `send` is called, the message is enqueued
+//! internally and once enough messages have been enqueued, or when enough time has passed, they will be
+//! sent to Kafka as a single batch. You can control the behavior of the buffer by configuring the
+//! the `queue.buffering.max.*` parameters listed below.
 //!
 //! ## Rust-rdkafka producers
 //! Rust-rdkafka (rdkafka for brevity) provides two sets of producers: low level and high level.
