@@ -26,23 +26,38 @@ echo -e "${GREEN}*** Rebuilding tests ***${NC}"
 cargo test --no-run
 pushd rdkafka-sys && cargo test --no-run && popd
 
-echo -e "${GREEN}*** Run coverage on unit tests ***${NC}"
-kcov $KCOV_ARGS "$RDKAFKA_UNIT_TESTS"*
-if [ "$?" != "0" ]; then
-    echo -e "${RED}*** Failure during unit test converage ***${NC}"
-    exit 1
-fi
+echo -e "${GREEN}*** Run coverage on rdkafka unit tests ***${NC}"
+for test_file in `ls "$RDKAFKA_UNIT_TESTS"*`
+do
+    if [[ ! -x "$test_file" ]]; then
+        continue
+    fi
+    kcov $KCOV_ARGS "$test_file"
+    if [ "$?" != "0" ]; then
+        echo -e "${RED}*** Failure during unit test converage ***${NC}"
+        exit 1
+    fi
+done
 
-kcov $KCOV_ARGS "$RDKAFKASYS_UNIT_TESTS"*
-if [ "$?" != "0" ]; then
-    echo -e "${RED}*** Failure during rdkafka-sys unit test converage ***${NC}"
-    exit 1
-fi
+echo -e "${GREEN}*** Run coverage on rdkafka-sys unit tests ***${NC}"
+for test_file in `ls "$RDKAFKASYS_UNIT_TESTS"*`
+do
+    if [[ ! -x "$test_file" ]]; then
+        continue
+    fi
+    kcov $KCOV_ARGS "$test_file"
+    if [ "$?" != "0" ]; then
+        echo -e "${RED}*** Failure during rdkafka-sys unit test converage ***${NC}"
+        exit 1
+    fi
+done
 
-echo -e "${GREEN}*** Run coverage on integration tests ***${NC}"
-
+echo -e "${GREEN}*** Run coverage on rdkafka integration tests ***${NC}"
 for test_file in `ls "$INTEGRATION_TESTS"*`
 do
+    if [[ ! -x "$test_file" ]]; then
+        continue
+    fi
     echo -e "${GREEN}Executing "$test_file"${NC}"
     kcov $KCOV_ARGS "$test_file"
     if [ "$?" != "0" ]; then
