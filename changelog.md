@@ -1,8 +1,8 @@
 # Changelog
 
-<a name="master"></a>
+<a name="0.14.1"></a>
+## 0.14.1 (2017-12-30)
 
-## master
 * Upgrade to librdkafka 0.11.3
 * Add `send_copy_result` method to `FutureProducer`
 

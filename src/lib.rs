@@ -14,7 +14,7 @@
 //!
 //! The main features provided at the moment are:
 //!
-//! - Support for Kafka 0.8.x to 0.11.x. For more information about broker compatibility options, check the [librdkafka documentation].
+//! - Support for all Kafka versions since 0.8.x. For more information about broker compatibility options, check the [librdkafka documentation].
 //! - Consume from single or multiple topics.
 //! - Automatic consumer rebalancing.
 //! - Customizable rebalance, with pre and post rebalance callbacks.
@@ -106,7 +106,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rdkafka = "^0.13.0"
+//! rdkafka = "0.14.0"
 //! ```
 //!
 //! This crate will compile librdkafka from sources and link it statically to your executable. To compile librdkafka you'll need:
@@ -122,7 +122,7 @@
 //!
 //! ```toml
 //! [dependencies.rdkafka]
-//! version = "^0.13.0"
+//! version = "0.14.0"
 //! features = ["ssl", "sasl"]
 //! ```
 //!
