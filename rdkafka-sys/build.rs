@@ -71,6 +71,18 @@ fn build_librdkafka() {
         configure_flags.push("--disable-ssl");
     }
 
+    if env::var("CARGO_FEATURE_SSL").is_ok() {
+        configure_flags.push("--enable-ssl");
+    } else {
+        configure_flags.push("--disable-ssl");
+    }
+
+    if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
+        configure_flags.push("--enable-lz4");
+    } else {
+        configure_flags.push("--disable-lz4");
+    }
+
     configure_flags.push("--enable-static");
 
     if !Path::new("librdkafka/LICENSE").exists() {

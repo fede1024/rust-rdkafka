@@ -29,6 +29,12 @@ tokio-core = "^0.1.4"
 [features]
 default = []
 
+# Enable ssl and sasl support
 ssl = ["rdkafka-sys/ssl"]
 sasl = ["rdkafka-sys/sasl", "ssl"]
+
+# Use dynamic linking instead of static. Will fail if librdkafka is not installed.
 dynamic_linking = ["rdkafka-sys/dynamic_linking"]
+
+# Use external library for lz4. Use internal if not enabled.
+external_lz4 = ["rdkafka-sys/external_lz4"]
