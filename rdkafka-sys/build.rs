@@ -89,6 +89,11 @@ fn build_librdkafka() {
     let mut config = cmake::Config::new("librdkafka");
     config.define("RDKAFKA_BUILD_STATIC", "1")
           .build_target("rdkafka");
+    if env::var("CARGO_FEATURE_SSL").is_ok() {
+        config.define("WITH_SSL", "1");
+    } else {
+        config.define("WITH_SSL", "0");
+    }
     if env::var("CARGO_FEATURE_SASL").is_ok() {
         config.define("WITH_SASL", "1");
     } else {
