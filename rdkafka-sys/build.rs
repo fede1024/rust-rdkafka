@@ -91,6 +91,8 @@ fn build_librdkafka() {
           .build_target("rdkafka");
     if env::var("CARGO_FEATURE_SASL").is_ok() {
         config.define("WITH_SASL", "1");
+    } else {
+        config.define("WITH_SASL", "0");
     }
     let dst = config.build();
     println!("cargo:rustc-link-search=native={}/build/src", dst.display());
