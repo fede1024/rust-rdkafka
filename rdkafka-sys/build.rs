@@ -1,5 +1,6 @@
 extern crate num_cpus;
 extern crate pkg_config;
+extern crate cmake;
 
 use std::path::Path;
 use std::process::{Command, self};
@@ -31,7 +32,7 @@ fn main() {
         .expect("Crate version is not valid");
 
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
-        println_stderr!("Librdkafka will be linked dynamically");
+        println_stderr!("librdkafka will be linked dynamically");
         let pkg_probe = pkg_config::Config::new()
             .cargo_metadata(true)
             .atleast_version(librdkafka_version)
@@ -84,13 +85,14 @@ fn build_librdkafka() {
         run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
     }
 
-    println!("Configuring librdkafka");
-    run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
-
-    println!("Compiling librdkafka");
-    run_command_or_fail("librdkafka", "make", &["-j", &num_cpus::get().to_string(), "libs"]);
-
-    println!("cargo:rustc-link-search=native={}/librdkafka/src",
-             env::current_dir().expect("Can't find current dir").display());
+    env::set_var("NUM_JOBS", num_cpus::get().to_string());
+    let mut config = cmake::Config::new("librdkafka");
+    config.define("RDKAFKA_BUILD_STATIC", "1")
+          .build_target("rdkafka");
+    if env::var("CARGO_FEATURE_SASL").is_ok() {
+        config.define("WITH_SASL", "1");
+    }
+    let dst = config.build();
+    println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
