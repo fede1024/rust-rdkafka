@@ -8,6 +8,7 @@ RUN apt-get install -y pkg-config
 RUN apt-get install -y valgrind
 RUN apt-get install -y zlib1g-dev
 RUN apt-get install -y python
+RUN apt-get install -y cmake
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
 ENV PATH /root/.cargo/bin/:$PATH
