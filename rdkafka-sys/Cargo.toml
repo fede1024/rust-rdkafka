@@ -17,7 +17,7 @@ openssl-sys = { version = "~ 0.9.0", optional = true }
 [build-dependencies]
 num_cpus = "0.2.0"
 pkg-config = "0.3.9"
-cmake = "^0.1"
+cmake = { version = "^0.1", optional = true }
 
 [lib]
 name = "rdkafka_sys"
@@ -35,3 +35,5 @@ dynamic_linking = []
 
 # Use external library for lz4. Use internal if not enabled.
 external_lz4 = []
+
+cmake_build = ["cmake"]

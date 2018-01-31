@@ -1,5 +1,6 @@
 extern crate num_cpus;
 extern crate pkg_config;
+#[cfg(feature = "cmake_build")]
 extern crate cmake;
 
 use std::path::Path;
@@ -52,11 +53,16 @@ fn main() {
             }
         }
     } else {
+        if !Path::new("librdkafka/LICENSE").exists() {
+            println_stderr!("Setting up submodules");
+            run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
+        }
         println_stderr!("Building and linking librdkafka statically");
         build_librdkafka();
     }
 }
 
+#[cfg(not(feature = "cmake_build"))]
 fn build_librdkafka() {
     let mut configure_flags = Vec::new();
 
@@ -80,11 +86,19 @@ fn build_librdkafka() {
 
     configure_flags.push("--enable-static");
 
-    if !Path::new("librdkafka/LICENSE").exists() {
-        println_stderr!("Setting up submodules");
-        run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
-    }
+    println!("Configuring librdkafka");
+    run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
 
+    println!("Compiling librdkafka");
+    run_command_or_fail("librdkafka", "make", &["-j", &num_cpus::get().to_string(), "libs"]);
+
+    println!("cargo:rustc-link-search=native={}/librdkafka/src",
+             env::current_dir().expect("Can't find current dir").display());
+    println!("cargo:rustc-link-lib=static=rdkafka");
+}
+
+#[cfg(feature = "cmake_build")]
+fn build_librdkafka() {
     env::set_var("NUM_JOBS", num_cpus::get().to_string());
     let mut config = cmake::Config::new("librdkafka");
     config.define("RDKAFKA_BUILD_STATIC", "1")
