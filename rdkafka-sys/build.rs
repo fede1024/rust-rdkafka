@@ -1,5 +1,7 @@
 extern crate num_cpus;
 extern crate pkg_config;
+#[cfg(feature = "cmake_build")]
+extern crate cmake;
 
 use std::path::Path;
 use std::process::{Command, self};
@@ -31,7 +33,7 @@ fn main() {
         .expect("Crate version is not valid");
 
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
-        println_stderr!("Librdkafka will be linked dynamically");
+        println_stderr!("librdkafka will be linked dynamically");
         let pkg_probe = pkg_config::Config::new()
             .cargo_metadata(true)
             .atleast_version(librdkafka_version)
@@ -51,11 +53,16 @@ fn main() {
             }
         }
     } else {
+        if !Path::new("librdkafka/LICENSE").exists() {
+            println_stderr!("Setting up submodules");
+            run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
+        }
         println_stderr!("Building and linking librdkafka statically");
         build_librdkafka();
     }
 }
 
+#[cfg(not(feature = "cmake_build"))]
 fn build_librdkafka() {
     let mut configure_flags = Vec::new();
 
@@ -79,11 +86,6 @@ fn build_librdkafka() {
 
     configure_flags.push("--enable-static");
 
-    if !Path::new("librdkafka/LICENSE").exists() {
-        println_stderr!("Setting up submodules");
-        run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
-    }
-
     println!("Configuring librdkafka");
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
 
@@ -92,5 +94,26 @@ fn build_librdkafka() {
 
     println!("cargo:rustc-link-search=native={}/librdkafka/src",
              env::current_dir().expect("Can't find current dir").display());
+    println!("cargo:rustc-link-lib=static=rdkafka");
+}
+
+#[cfg(feature = "cmake_build")]
+fn build_librdkafka() {
+    env::set_var("NUM_JOBS", num_cpus::get().to_string());
+    let mut config = cmake::Config::new("librdkafka");
+    config.define("RDKAFKA_BUILD_STATIC", "1")
+          .build_target("rdkafka");
+    if env::var("CARGO_FEATURE_SSL").is_ok() {
+        config.define("WITH_SSL", "1");
+    } else {
+        config.define("WITH_SSL", "0");
+    }
+    if env::var("CARGO_FEATURE_SASL").is_ok() {
+        config.define("WITH_SASL", "1");
+    } else {
+        config.define("WITH_SASL", "0");
+    }
+    let dst = config.build();
+    println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
