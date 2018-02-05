@@ -90,7 +90,7 @@
 //!
 //! Here are some of the projects using rust-rdkafka:
 //!
-//! - [timely-dataflow]: a modular implementation of timely dataflow in Rust.
+//! - [timely-dataflow]: a modular implementation of timely dataflow in Rust (you can also check the [blog post]).
 //! - [kafka-view]: a web interface for Kafka clusters.
 //! - [kafka-benchmark]: a high performance benchmarking tool for Kafka.
 //!
@@ -99,6 +99,7 @@
 //! [timely-dataflow]: https://github.com/frankmcsherry/timely-dataflow
 //! [kafka-view]: https://github.com/fede1024/kafka-view
 //! [kafka-benchmark]: https://github.com/fede1024/kafka-benchmark
+//! [blog post]: https://github.com/frankmcsherry/blog/blob/master/posts/2017-11-08.md
 //!
 //! ## Installation
 //!
