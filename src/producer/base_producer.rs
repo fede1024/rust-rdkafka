@@ -42,7 +42,7 @@ use client::{Client, Context};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use error::{KafkaError, KafkaResult, IsError};
 use message::{BorrowedMessage, ToBytes};
-use util::IntoOpaque;
+use util::{timeout_to_ms, IntoOpaque};
 
 use std::ffi::CString;
 use std::mem;
@@ -50,6 +50,7 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use std::thread::{self, JoinHandle};
 
 pub use message::DeliveryResult;
@@ -143,8 +144,8 @@ impl<C: ProducerContext> BaseProducer<C> {
 
     /// Polls the producer. Regular calls to `poll` are required to process the events
     /// and execute the message delivery callbacks.
-    pub fn poll(&self, timeout_ms: i32) -> i32 {
-        unsafe { rdsys::rd_kafka_poll(self.native_ptr(), timeout_ms) }
+    pub fn poll<T: Into<Option<Duration>>>(&self, timeout: T) -> i32 {
+        unsafe { rdsys::rd_kafka_poll(self.native_ptr(), timeout_to_ms(timeout)) }
     }
 
     /// Returns a pointer to the native Kafka client.
@@ -202,8 +203,8 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 
     /// Flushes the producer. Should be called before termination.
-    pub fn flush(&self, timeout_ms: i32) {
-        unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout_ms) };
+    pub fn flush<T: Into<Option<Duration>>>(&self, timeout: T) {
+        unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout_to_ms(timeout)) };
     }
 
     /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.
@@ -263,7 +264,7 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
             .spawn(move || {
                 trace!("Polling thread loop started");
                 loop {
-                    let n = producer_clone.poll(100);
+                    let n = producer_clone.poll(Duration::from_millis(100));
                     if n == 0 {
                         if should_stop.load(Ordering::Relaxed) {
                             // We received nothing and the thread should
@@ -312,13 +313,13 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
 
     /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
     /// a thread dedicated to calling `poll` regularly.
-    pub fn poll(&self, timeout_ms: i32) {
-        self.producer.poll(timeout_ms);
+    pub fn poll<T: Into<Option<Duration>>>(&self, timeout: T) {
+        self.producer.poll(timeout);
     }
 
     /// Flushes the producer. Should be called before termination.
-    pub fn flush(&self, timeout_ms: i32) {
-        self.producer.flush(timeout_ms);
+    pub fn flush<T: Into<Option<Duration>>>(&self, timeout: T) {
+        self.producer.flush(timeout);
     }
 
     /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.

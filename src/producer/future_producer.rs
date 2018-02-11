@@ -147,7 +147,7 @@ impl<C: Context + 'static> FutureProducer<C> {
                         if block_ms == -1 {
                             continue;
                         } else if block_ms > 0 && start_time.elapsed() < Duration::from_millis(block_ms as u64) {
-                            self.poll(100);
+                            self.poll(Duration::from_millis(100));
                             continue;
                         }
                     }
@@ -186,13 +186,13 @@ impl<C: Context + 'static> FutureProducer<C> {
 
     /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
     /// a thread dedicated to calling `poll` regularly.
-    pub fn poll(&self, timeout_ms: i32) {
-        self.producer.poll(timeout_ms);
+    pub fn poll<T: Into<Option<Duration>>>(&self, timeout: T) {
+        self.producer.poll(timeout);
     }
 
     /// Flushes the producer. Should be called before termination.
-    pub fn flush(&self, timeout_ms: i32) {
-        self.producer.flush(timeout_ms);
+    pub fn flush<T: Into<Option<Duration>>>(&self, timeout: T) {
+        self.producer.flush(timeout);
     }
 
     /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.

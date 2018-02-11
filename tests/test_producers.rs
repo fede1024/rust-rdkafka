@@ -16,6 +16,7 @@ use utils::*;
 use std::sync::Mutex;
 use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 
 
 struct PrintingContext {
@@ -126,7 +127,7 @@ fn test_base_producer_queue_full() {
             )
         }).collect::<Vec<_>>();
     while producer.in_flight_count() > 0 {
-        producer.poll(100);
+        producer.poll(Duration::from_millis(100));
     }
 
     let errors = results.iter()
@@ -156,7 +157,7 @@ fn test_base_producer_timeout() {
         .filter(|r| r == &Ok(()))
         .count();
 
-    producer.flush(10_000);
+    producer.flush(Duration::from_secs(10));
 
     assert_eq!(results_count, 10);
 
@@ -183,7 +184,7 @@ fn test_threaded_producer_send() {
         .count();
 
     assert_eq!(results_count, 10);
-    producer.flush(10_000);
+    producer.flush(Duration::from_secs(10));
 
     let delivery_results = context.results.lock().unwrap();
     let mut ids = HashSet::new();
