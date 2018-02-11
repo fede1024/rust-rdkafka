@@ -143,7 +143,7 @@ impl TopicPartitionList {
     /// Transforms a pointer to the native librdkafka RDTopicPartitionList into a
     /// managed `TopicPartitionList` instance.
     pub unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList {
-        TopicPartitionList { ptr: ptr }
+        TopicPartitionList { ptr }
     }
 
     /// Given a topic map, generates a new `TopicPartitionList`.

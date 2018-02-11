@@ -111,7 +111,7 @@ pub struct GroupList(*const RDKafkaGroupList);
 
 impl GroupList {
     /// Creates a new group list given a pointer to the native rdkafka-sys group list structure.
-    pub fn from_ptr(ptr: *const RDKafkaGroupList) -> GroupList {
+    pub unsafe fn from_ptr(ptr: *const RDKafkaGroupList) -> GroupList {
         GroupList(ptr)
     }
 

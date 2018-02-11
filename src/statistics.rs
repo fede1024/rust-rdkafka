@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+/// Statistics from librdkafka. Refer to the [librdkafka documentation](https://github.com/edenhill/librdkafka/wiki/Statistics)
+/// for details.
 #[derive(Deserialize,Debug)]
 pub struct Statistics {
     pub name: String,

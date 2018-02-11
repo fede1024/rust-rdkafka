@@ -78,8 +78,8 @@ unsafe impl Send for NativeClient {}
 
 impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
-    pub fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
-        NativeClient {ptr: ptr}
+    pub unsafe fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
+        NativeClient { ptr }
     }
 
     /// Returns the wrapped pointer to RDKafka.
@@ -131,7 +131,7 @@ impl<C: Context> Client<C> {
         unsafe { rdsys::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
 
         Ok(Client {
-            native: NativeClient::from_ptr(client_ptr),
+            native: unsafe { NativeClient::from_ptr(client_ptr) },
             context: boxed_context,
         })
     }
@@ -174,7 +174,7 @@ impl<C: Context> Client<C> {
             return Err(KafkaError::MetadataFetch(ret.into()));
         }
 
-        Ok(Metadata::from_ptr(metadata_ptr))
+        Ok(unsafe { Metadata::from_ptr(metadata_ptr) })
     }
 
     /// Returns high and low watermark for the specified topic and partition.
@@ -216,16 +216,18 @@ impl<C: Context> Client<C> {
             return Err(KafkaError::GroupListFetch(ret.into()));
         }
 
-        Ok(GroupList::from_ptr(group_list_ptr))
+        Ok(unsafe { GroupList::from_ptr(group_list_ptr) })
     }
 
     /// Returns a NativeTopic from the current client. The NativeTopic shouldn't outlive the client
     /// it was generated from.
     fn native_topic(&self, topic: &str) -> KafkaResult<NativeTopic> {
         let topic_c = CString::new(topic.to_string())?;
-        let native_topic_ptr = unsafe {
-            rdsys::rd_kafka_topic_new(self.native_ptr(), topic_c.as_ptr(), ptr::null_mut()) };
-        Ok(NativeTopic::from_ptr(native_topic_ptr))
+        Ok(unsafe {
+            NativeTopic::from_ptr(
+                rdsys::rd_kafka_topic_new(self.native_ptr(), topic_c.as_ptr(), ptr::null_mut())
+            )}
+        )
     }
 }
 
@@ -237,9 +239,9 @@ unsafe impl Send for NativeTopic {}
 unsafe impl Sync for NativeTopic {}
 
 impl NativeTopic {
-    /// Wraps a pointer to an `RDKafkaTopic` object and returns a new `Native `.
-    fn from_ptr(ptr: *mut RDKafkaTopic) -> NativeTopic {
-        NativeTopic { ptr: ptr }
+    /// Wraps a pointer to an `RDKafkaTopic` object and returns a new `NativeTopic`.
+    unsafe fn from_ptr(ptr: *mut RDKafkaTopic) -> NativeTopic {
+        NativeTopic { ptr }
     }
 
     /// Returns the pointer to the librdkafka RDKafkaTopic structure.

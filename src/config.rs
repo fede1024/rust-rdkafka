@@ -80,8 +80,8 @@ pub struct NativeClientConfig {
 
 impl NativeClientConfig {
     /// Wraps a pointer to an `RDKafkaConfig` object and returns a new `NativeClientConfig`.
-    pub fn from_ptr(ptr: *mut RDKafkaConf) -> NativeClientConfig {
-        NativeClientConfig {ptr: ptr}
+    pub unsafe fn from_ptr(ptr: *mut RDKafkaConf) -> NativeClientConfig {
+        NativeClientConfig { ptr }
     }
 
     /// Returns the pointer to the librdkafka RDKafkaConf structure.
@@ -157,7 +157,7 @@ impl ClientConfig {
                 return Err(KafkaError::ClientConfig(ret, descr, key.to_string(), value.to_string()));
             }
         }
-        Ok(NativeClientConfig::from_ptr(conf))
+        Ok(unsafe {NativeClientConfig::from_ptr(conf)})
     }
 
     /// Uses the current configuration to create a new Consumer or Producer.
