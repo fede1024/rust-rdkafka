@@ -4,6 +4,7 @@
 
 * Add `external_lz4` feature to use external lz4 library instead of
   the one one built in librdkafka. Disable by default.
+* Mark all `from_ptr` methods as unsafe.
 
 <a name="0.14.1"></a>
 ## 0.14.1 (2017-12-30)
