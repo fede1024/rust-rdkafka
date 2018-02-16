@@ -15,15 +15,14 @@ pub fn get_rdkafka_version() -> (u16, String) {
 
 /// Converts a Duration into milliseconds
 pub fn duration_to_millis(duration: Duration) -> u64 {
-    let nanos = duration.subsec_nanos() as u64;
-    duration.as_secs() * 1000 + nanos/1_000_000
+    duration.as_secs() * 1000 + u64::from(duration.subsec_nanos()) / 1_000_000
 }
 
 /// Converts the given time to milliseconds since unix epoch.
 pub fn millis_to_epoch(time: SystemTime) -> i64 {
-    let duration_since_epoch = time.duration_since(UNIX_EPOCH)
-        .unwrap_or_else(|_| Duration::from_secs(0));
-    duration_to_millis(duration_since_epoch) as i64
+    duration_to_millis(
+        time.duration_since(UNIX_EPOCH)
+            .unwrap_or_else(|_| Duration::from_secs(0))) as i64
 }
 
 /// Returns the current time in millis since unix epoch.

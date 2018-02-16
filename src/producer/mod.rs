@@ -14,7 +14,7 @@
 //! process those events; the thread calling `poll` will be the one executing the user-specified
 //! delivery callback for every delivery event. If `poll` is not called, or not frequently
 //! enough, the producer will return a `RDKafkaError::QueueFull` error and it won't be able to send any other
-//! message until more delivery event are processed via `poll`. The QueueFull error can also be
+//! message until more delivery event are processed via `poll`. The `QueueFull` error can also be
 //! returned if Kafka is not able to receive the messages quickly enough.
 //!
 //! ### Error reporting
@@ -67,7 +67,7 @@
 //! - `queue.buffering.max.messages` (100000): Maximum number of messages allowed on the producer queue.
 //! - `queue.buffering.max.kbytes` (4000000): Maximum total message size sum allowed on the producer queue. This property has higher priority than queue.buffering.max.messages.
 //! - `queue.buffering.max.ms` (0): Delay in milliseconds to wait for messages in the producer queue to accumulate before sending a request to the brokers. A higher value allows larger and more effective (less overhead, improved compression) batches of messages to accumulate at the expense of increased message delivery latency.
-//! - `message.send.max.retries` (2): How many times to retry sending a failing MessageSet. Note: retrying may cause reordering.
+//! - `message.send.max.retries` (2): How many times to retry sending a failing batch. Note: retrying may cause reordering.
 //! - `compression.codec` (none): Compression codec to use for compressing message sets.
 //! - `request.required.acks` (1): This field indicates how many acknowledgements the leader broker must receive from ISR brokers before responding to the request: 0=Broker does not send any response/ack to client, 1=Only the leader broker will need to ack the message, -1 or all=broker will block until message is committed by all in sync replicas (ISRs) or broker's in.sync.replicas setting before sending response.
 //! - `request.timeout.ms` (5000): The ack timeout of the producer request in milliseconds. This value is only enforced by the broker and relies on request.required.acks being != 0.

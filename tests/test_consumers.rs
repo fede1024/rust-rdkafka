@@ -11,6 +11,7 @@ use rdkafka::{ClientConfig, Context, Message, Statistics, Timestamp};
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, StreamConsumer};
 use rdkafka::error::{KafkaError, KafkaResult};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
+use rdkafka::util::current_time_millis;
 
 mod utils;
 use utils::*;
@@ -80,6 +81,7 @@ fn create_stream_consumer_with_context<C: ConsumerContext>(
 fn test_produce_consume_base() {
     let _r = env_logger::init();
 
+    let start_time = current_time_millis();
     let topic_name = rand_test_topic();
     let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None);
     let consumer = create_stream_consumer(&rand_test_group(), None);
@@ -92,7 +94,7 @@ fn test_produce_consume_base() {
                 Ok(m) => {
                     let id = message_map[&(m.partition(), m.offset())];
                     match m.timestamp() {
-                        Timestamp::CreateTime(timestamp) => assert!(timestamp > 1489495183000),
+                        Timestamp::CreateTime(timestamp) => assert!(timestamp >= start_time),
                         _ => panic!("Expected createtime for message timestamp")
                     };
                     assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(id));
@@ -164,10 +166,10 @@ fn test_produce_consume_with_timestamp() {
         })
         .wait();
 
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999999));
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999_999));
 
     // Lookup the offsets
-    let tpl = consumer.offsets_for_timestamp(999999, 10000).unwrap();
+    let tpl = consumer.offsets_for_timestamp(999_999, 10_000).unwrap();
     let tp = tpl.find_partition(&topic_name, 0).unwrap();
     assert_eq!(tp.topic(), topic_name);
     assert_eq!(tp.offset(), Offset::Offset(100));

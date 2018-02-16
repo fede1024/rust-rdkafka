@@ -47,9 +47,9 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
     type DeliveryOpaque = Box<Complete<OwnedDeliveryResult>>;
 
     fn delivery(&self, delivery_result: &DeliveryResult, tx: Box<Complete<OwnedDeliveryResult>>) {
-        let owned_delivery_result = match delivery_result {
-            &Ok(ref message) => Ok((message.partition(), message.offset())),
-            &Err((ref error, ref message)) => Err((error.clone(), message.detach())),
+        let owned_delivery_result = match *delivery_result {
+            Ok(ref message) => Ok((message.partition(), message.offset())),
+            Err((ref error, ref message)) => Err((error.clone(), message.detach())),
         };
         let _ = tx.send(owned_delivery_result); // TODO: handle error
     }
@@ -156,7 +156,7 @@ impl<C: Context + 'static> FutureProducer<C> {
                         payload.map(|p| p.to_bytes().to_vec()),
                         key.map(|k| k.to_bytes().to_vec()),
                         topic.to_owned(),
-                        timestamp.map_or(Timestamp::NotAvailable, |millis| Timestamp::CreateTime(millis)),
+                        timestamp.map_or(Timestamp::NotAvailable, Timestamp::CreateTime),
                         partition.unwrap_or(-1),
                         0
                     );

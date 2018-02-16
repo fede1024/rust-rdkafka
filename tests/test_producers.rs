@@ -39,10 +39,12 @@ impl ProducerContext for PrintingContext {
 }
 
 
+type TestProducerDeliveryResult = (OwnedMessage, Option<KafkaError>, usize);
+
 #[derive(Clone)]
 struct CollectingContext {
     stats: Arc<Mutex<Vec<Statistics>>>,
-    results: Arc<Mutex<Vec<(OwnedMessage, Option<KafkaError>, usize)>>>,
+    results: Arc<Mutex<Vec<TestProducerDeliveryResult>>>,
 }
 
 impl CollectingContext {
@@ -67,9 +69,9 @@ impl ProducerContext for CollectingContext {
 
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
         let mut results = self.results.lock().unwrap();
-        match delivery_result {
-            &Ok(ref message) => (*results).push((message.detach(), None, delivery_opaque)),
-            &Err((ref err, ref message)) => (*results).push((message.detach(), Some(err.clone()), delivery_opaque)),
+        match *delivery_result {
+            Ok(ref message) => (*results).push((message.detach(), None, delivery_opaque)),
+            Err((ref err, ref message)) => (*results).push((message.detach(), Some(err.clone()), delivery_opaque)),
         }
     }
 }
@@ -154,7 +156,7 @@ fn test_base_producer_timeout() {
         .filter(|r| r == &Ok(()))
         .count();
 
-    producer.flush(10000);
+    producer.flush(10_000);
 
     assert_eq!(results_count, 10);
 
@@ -181,7 +183,7 @@ fn test_threaded_producer_send() {
         .count();
 
     assert_eq!(results_count, 10);
-    producer.flush(10000);
+    producer.flush(10_000);
 
     let delivery_results = context.results.lock().unwrap();
     let mut ids = HashSet::new();

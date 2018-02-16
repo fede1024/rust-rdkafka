@@ -55,7 +55,7 @@ impl Context for TestContext {
 }
 
 /// Produce the specified count of messages to the topic and partition specified. A map
-/// of (partition, offset) -> message_id will be returned. It panics if any error is encountered
+/// of (partition, offset) -> message id will be returned. It panics if any error is encountered
 /// while populating the topic.
 pub fn populate_topic<P, K, J, Q>(
     topic_name: &str,

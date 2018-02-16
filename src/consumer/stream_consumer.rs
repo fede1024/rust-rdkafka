@@ -97,9 +97,9 @@ impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
 /// Internal consumer loop. This is the main body of the thread that will drive the stream consumer.
 /// If `send_none` is true, the loop will send a None into the sender every time the poll times out.
 fn poll_loop<C: ConsumerContext>(
-    consumer: Arc<BaseConsumer<C>>,
+    consumer: &BaseConsumer<C>,
     sender: mpsc::Sender<Option<PolledMessagePtr>>,
-    should_stop: Arc<AtomicBool>,
+    should_stop: &AtomicBool,
     poll_interval: Duration,
     send_none: bool,
 ) {
@@ -186,7 +186,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         let handle = thread::Builder::new()
             .name("poll".to_string())
             .spawn(move || {
-                poll_loop(consumer, sender, should_stop, poll_interval, no_message_error);
+                poll_loop(consumer.as_ref(), sender, should_stop.as_ref(), poll_interval, no_message_error);
             })
             .expect("Failed to start polling thread");
         self.handle.set(Some(handle));

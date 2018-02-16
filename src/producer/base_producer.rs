@@ -2,7 +2,7 @@
 //!
 //! For more information about the producers provided in rdkafka, refer to the module level documentation.
 //!
-//! ## BaseProducer
+//! ## `BaseProducer`
 //!
 //! The `BaseProducer` is a low level Kafka producer designed to be as similar as possible to
 //! the underlying C librdkafka producer, while maintaining a safe Rust interface.
@@ -21,9 +21,9 @@
 //! ### Calling poll
 //!
 //! To execute delivery callbacks the `poll` method of the producer should be called regularly.
-//! If `poll` is not called, or not often enough, a RDKafkaError::QueueFull error will be returned.
+//! If `poll` is not called, or not often enough, a `RDKafkaError::QueueFull` error will be returned.
 //!
-//! ## ThreadedProducer
+//! ## `ThreadedProducer`
 //! The `ThreadedProducer` is a wrapper around the `BaseProducer` which spawns a thread
 //! dedicated to calling `poll` on the producer at regular intervals, so that the user doesn't
 //! have to. The thread is started when the producer is created, and it will be terminated
@@ -100,8 +100,7 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
     (*producer_context).delivery(&delivery_result, delivery_opaque);
     mem::forget(producer_context); // Do not free the producer context
     match delivery_result {        // Do not free the message, librdkafka will do it for us
-        Ok(message) => mem::forget(message),
-        Err((_, message)) => mem::forget(message),
+        Ok(message) | Err((_, message)) => mem::forget(message),
     }
 }
 

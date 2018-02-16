@@ -38,12 +38,12 @@ fn test_metadata() {
 
     let metadata = consumer.fetch_metadata(None, 5000).unwrap();
     assert_eq!(metadata.orig_broker_id(), -1);
-    assert!(metadata.orig_broker_name().len() > 0);
+    assert!(!metadata.orig_broker_name().is_empty());
 
     let broker_metadata = metadata.brokers();
     assert_eq!(broker_metadata.len(), 1);
     assert_eq!(broker_metadata[0].id(), 0);
-    assert!(broker_metadata[0].host().len() > 0);
+    assert!(!broker_metadata[0].host().is_empty());
     assert_eq!(broker_metadata[0].port(), 9092);
 
     let topic_metadata = metadata.topics().iter()
