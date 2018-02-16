@@ -70,6 +70,7 @@ impl<T: Send + Sync> IntoOpaque for Box<T> {
     }
 }
 
+// This might cause information loss, since `into_ptr(None) == into_ptr(Some(()))`.
 impl<T: IntoOpaque> IntoOpaque for Option<T> {
     fn into_ptr(self) -> *mut c_void {
         match self {

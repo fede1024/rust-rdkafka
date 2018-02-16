@@ -67,7 +67,7 @@ pub struct TopicPartitionListElem<'a> {
 impl<'a> TopicPartitionListElem<'a> {
     unsafe fn from_ptr(list: &'a TopicPartitionList, ptr: *mut RDKafkaTopicPartition) -> TopicPartitionListElem {
         TopicPartitionListElem {
-            ptr: ptr,
+            ptr,
             _owner_list: list,
         }
     }

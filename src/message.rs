@@ -30,20 +30,21 @@ impl Timestamp {
         }
     }
 
-    /// Creates a new `Timestamp::CreateTime` representing the provided system time.
-    pub fn from_system_time(system_time: SystemTime) -> Timestamp {
-        Timestamp::CreateTime(millis_to_epoch(system_time))
-    }
-
     /// Creates a new `Timestamp::CreateTime` representing the current time.
     pub fn now() -> Timestamp {
-        Timestamp::from_system_time(SystemTime::now())
+        Timestamp::from(SystemTime::now())
     }
 }
 
 impl From<i64> for Timestamp {
     fn from(system_time: i64) -> Timestamp {
         Timestamp::CreateTime(system_time)
+    }
+}
+
+impl From<SystemTime> for Timestamp {
+    fn from(system_time: SystemTime) -> Timestamp {
+        Timestamp::CreateTime(millis_to_epoch(system_time))
     }
 }
 
@@ -389,7 +390,7 @@ mod test {
     fn test_timestamp_creation() {
         let now = SystemTime::now();
         let t1 = Timestamp::now();
-        let t2 = Timestamp::from_system_time(now);
+        let t2 = Timestamp::from(now);
         let expected = Timestamp::CreateTime(
             duration_to_millis(now.duration_since(UNIX_EPOCH).unwrap()) as i64
         );
