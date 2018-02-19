@@ -7,7 +7,7 @@ extern crate rdkafka_sys;
 
 use futures::*;
 
-use rdkafka::{ClientConfig, Context, Message, Statistics, Timestamp};
+use rdkafka::{ClientConfig, ClientContext, Message, Statistics, Timestamp};
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, StreamConsumer};
 use rdkafka::error::{KafkaError, KafkaResult};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
@@ -23,7 +23,7 @@ struct TestContext {
     _n: i64, // Add data for memory access validation
 }
 
-impl Context for TestContext {
+impl ClientContext for TestContext {
     // Access stats
     fn stats(&self, stats: Statistics) {
         let stats_str = format!("{:?}", stats);
@@ -71,7 +71,7 @@ fn create_stream_consumer_with_context<C: ConsumerContext>(
     }
 
     config
-        .create_with_context::<C, StreamConsumer<C>>(context)
+        .create_with_context(context)
         .expect("Consumer creation failed")
 }
 

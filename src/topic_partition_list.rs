@@ -217,7 +217,7 @@ impl TopicPartitionList {
     }
 
     /// Adds a topic and partition to the list, with the specified offset.
-    pub fn add_partition_offset<'a>(&'a mut self, topic: &str, partition: i32, offset: Offset) {
+    pub fn add_partition_offset(&mut self, topic: &str, partition: i32, offset: Offset) {
         self.add_partition(topic, partition);
         self.set_partition_offset(topic, partition, offset).expect("Should never fail");
     }

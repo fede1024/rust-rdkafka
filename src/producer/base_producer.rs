@@ -38,7 +38,7 @@ use rdsys::rd_kafka_vtype_t::*;
 use rdsys::types::*;
 use rdsys;
 
-use client::{Client, Context};
+use client::{Client, ClientContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use error::{KafkaError, KafkaResult, IsError};
 use message::{BorrowedMessage, ToBytes};
@@ -60,7 +60,7 @@ pub use message::DeliveryResult;
 
 /// A `ProducerContext` is a `Context` specific for producers. It can be used to store
 /// user-specified callbacks, such as `delivery`.
-pub trait ProducerContext: Context {
+pub trait ProducerContext: ClientContext {
     /// A `DeliveryOpaque` is a user-defined structure that will be passed to the producer when
     /// producing a message, and returned to the `delivery` method once the message has been
     /// delivered, or failed to.
@@ -72,12 +72,12 @@ pub trait ProducerContext: Context {
 }
 
 
-/// Simple empty producer context that can be use when the producer context is not required.
+/// Default producer context that can be use when a custom context is not required.
 #[derive(Clone)]
-pub struct EmptyProducerContext;
+pub struct DefaultProducerContext;
 
-impl Context for EmptyProducerContext {}
-impl ProducerContext for EmptyProducerContext {
+impl ClientContext for DefaultProducerContext {}
+impl ProducerContext for DefaultProducerContext {
     type DeliveryOpaque = ();
 
     fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryOpaque) {}
@@ -108,10 +108,10 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
 // ********** BASE PRODUCER **********
 //
 
-impl FromClientConfig for BaseProducer<EmptyProducerContext> {
+impl FromClientConfig for BaseProducer<DefaultProducerContext> {
     /// Creates a new `BaseProducer` starting from a configuration.
-    fn from_config(config: &ClientConfig) -> KafkaResult<BaseProducer<EmptyProducerContext>> {
-        BaseProducer::from_config_and_context(config, EmptyProducerContext)
+    fn from_config(config: &ClientConfig) -> KafkaResult<BaseProducer<DefaultProducerContext>> {
+        BaseProducer::from_config_and_context(config, DefaultProducerContext)
     }
 }
 
@@ -234,9 +234,9 @@ pub struct ThreadedProducer<C: ProducerContext + 'static> {
     handle: RwLock<Option<JoinHandle<()>>>,
 }
 
-impl FromClientConfig for ThreadedProducer<EmptyProducerContext> {
-    fn from_config(config: &ClientConfig) -> KafkaResult<ThreadedProducer<EmptyProducerContext>> {
-        ThreadedProducer::from_config_and_context(config, EmptyProducerContext)
+impl FromClientConfig for ThreadedProducer<DefaultProducerContext> {
+    fn from_config(config: &ClientConfig) -> KafkaResult<ThreadedProducer<DefaultProducerContext>> {
+        ThreadedProducer::from_config_and_context(config, DefaultProducerContext)
     }
 }
 

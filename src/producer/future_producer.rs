@@ -1,4 +1,4 @@
-use client::{Context, EmptyContext};
+use client::{ClientContext, DefaultClientContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use producer::{DeliveryResult, ThreadedProducer, ProducerContext};
 use statistics::Statistics;
@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 /// The `ProducerContext` used by the `FutureProducer`. This context will use a Future as its
 /// `DeliveryOpaque` and will complete the future when the message is delivered (or failed to).
 #[derive(Clone)]
-struct FutureProducerContext<C: Context + 'static> {
+struct FutureProducerContext<C: ClientContext + 'static> {
     wrapped_context: C,
 }
 
@@ -29,7 +29,7 @@ struct FutureProducerContext<C: Context + 'static> {
 type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
 
 // Delegates all the methods calls to the wrapped context.
-impl<C: Context + 'static> Context for FutureProducerContext<C> {
+impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
     fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
         self.wrapped_context.log(level, fac, log_message);
     }
@@ -43,7 +43,7 @@ impl<C: Context + 'static> Context for FutureProducerContext<C> {
     }
 }
 
-impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
+impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
     type DeliveryOpaque = Box<Complete<OwnedDeliveryResult>>;
 
     fn delivery(&self, delivery_result: &DeliveryResult, tx: Box<Complete<OwnedDeliveryResult>>) {
@@ -65,23 +65,23 @@ impl<C: Context + 'static> ProducerContext for FutureProducerContext<C> {
 /// get a reference to the same underlying producer. The internal will be terminated once the
 /// the `FutureProducer` goes out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-pub struct FutureProducer<C: Context + 'static> {
+pub struct FutureProducer<C: ClientContext + 'static = DefaultClientContext> {
     producer: Arc<ThreadedProducer<FutureProducerContext<C>>>,
 }
 
-impl<C: Context + 'static> Clone for FutureProducer<C> {
+impl<C: ClientContext + 'static> Clone for FutureProducer<C> {
     fn clone(&self) -> FutureProducer<C> {
         FutureProducer { producer: self.producer.clone() }
     }
 }
 
-impl FromClientConfig for FutureProducer<EmptyContext> {
-    fn from_config(config: &ClientConfig) -> KafkaResult<FutureProducer<EmptyContext>> {
-        FutureProducer::from_config_and_context(config, EmptyContext)
+impl FromClientConfig for FutureProducer {
+    fn from_config(config: &ClientConfig) -> KafkaResult<FutureProducer> {
+        FutureProducer::from_config_and_context(config, DefaultClientContext)
     }
 }
 
-impl<C: Context + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
+impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
         let future_context = FutureProducerContext { wrapped_context: context };
         let threaded_producer = ThreadedProducer::from_config_and_context(config, future_context)?;
@@ -117,7 +117,7 @@ impl Future for DeliveryFuture {
     }
 }
 
-impl<C: Context + 'static> FutureProducer<C> {
+impl<C: ClientContext + 'static> FutureProducer<C> {
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key, or a random one
     /// if the key is not specified. Returns a `DeliveryFuture` that will eventually contain the
@@ -210,7 +210,7 @@ mod tests {
 
     struct TestContext;
 
-    impl Context for TestContext {}
+    impl ClientContext for TestContext {}
     impl ProducerContext for TestContext {
         type DeliveryOpaque = Box<i32>;
 
@@ -222,7 +222,7 @@ mod tests {
     // Verify that the future producer is clone, according to documentation.
     #[test]
     fn test_future_producer_clone() {
-        let producer = ClientConfig::new().create::<FutureProducer<_>>().unwrap();
+        let producer = ClientConfig::new().create::<FutureProducer>().unwrap();
         let _producer_clone = producer.clone();
     }
 
@@ -231,7 +231,7 @@ mod tests {
     fn test_base_future_topic_send_sync() {
         let test_context = TestContext;
         let producer = ClientConfig::new()
-            .create_with_context::<TestContext, FutureProducer<_>>(test_context)
+            .create_with_context::<_, FutureProducer<TestContext>>(test_context)
             .unwrap();
         let _producer_clone = producer.clone();
     }

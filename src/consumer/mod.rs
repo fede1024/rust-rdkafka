@@ -9,7 +9,7 @@ pub use self::stream_consumer::{MessageStream, StreamConsumer};
 use rdsys;
 use rdsys::types::*;
 
-use client::{Context, NativeClient};
+use client::{ClientContext, NativeClient};
 use error::KafkaResult;
 use groups::GroupList;
 use message::BorrowedMessage;
@@ -30,7 +30,7 @@ pub enum Rebalance<'a> {
 
 /// Consumer specific Context. This user-defined object can be used to provide custom callbacks to
 /// consumer events. Refer to the list of methods to check which callbacks can be specified.
-pub trait ConsumerContext: Context {
+pub trait ConsumerContext: ClientContext {
     /// Implements the default rebalancing strategy and calls the `pre_rebalance` and
     /// `post_rebalance` methods. If this method is overridden, it will be responsibility
     /// of the user to call them if needed.
@@ -90,10 +90,10 @@ pub trait ConsumerContext: Context {
 
 /// An empty consumer context that can be user when no context is needed.
 #[derive(Clone)]
-pub struct EmptyConsumerContext;
+pub struct DefaultConsumerContext;
 
-impl Context for EmptyConsumerContext {}
-impl ConsumerContext for EmptyConsumerContext {}
+impl ClientContext for DefaultConsumerContext {}
+impl ConsumerContext for DefaultConsumerContext {}
 
 /// Specifies if the commit should be performed synchronously
 /// or asynchronously.
@@ -105,7 +105,7 @@ pub enum CommitMode {
 }
 
 /// Common trait for all consumers.
-pub trait Consumer<C: ConsumerContext> {
+pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     /// Returns a reference to the BaseConsumer.
     fn get_base_consumer(&self) -> &BaseConsumer<C>;
 

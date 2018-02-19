@@ -6,7 +6,7 @@ extern crate futures;
 use rand::Rng;
 use futures::*;
 
-use rdkafka::client::Context;
+use rdkafka::client::ClientContext;
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::FutureProducer;
 use rdkafka::message::ToBytes;
@@ -50,7 +50,7 @@ pub struct TestContext {
     _some_data: i64, // Add some data so that valgrind can check proper allocation
 }
 
-impl Context for TestContext {
+impl ClientContext for TestContext {
     fn stats(&self, _: Statistics) {} // Don't print stats
 }
 

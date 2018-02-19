@@ -237,7 +237,7 @@ pub mod topic_partition_list;
 pub mod util;
 
 // Re-export
-pub use client::Context;
+pub use client::ClientContext;
 pub use config::ClientConfig;
 pub use message::{Message, Timestamp};
 pub use statistics::Statistics;

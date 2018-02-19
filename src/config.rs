@@ -22,7 +22,7 @@ use log::LogLevel;
 use rdsys::types::*;
 use rdsys;
 
-use client::Context;
+use client::ClientContext;
 use error::{KafkaError, KafkaResult, IsError};
 use util::bytes_cstr_to_owned;
 
@@ -167,7 +167,7 @@ impl ClientConfig {
 
     /// Uses the current configuration and the provided context to create a new Consumer or Producer.
     pub fn create_with_context<C, T>(&self, context: C) -> KafkaResult<T>
-            where C: Context,
+            where C: ClientContext,
                   T: FromClientConfigAndContext<C> {
         T::from_config_and_context(self, context)
     }
@@ -192,6 +192,6 @@ pub trait FromClientConfig: Sized {
 }
 
 /// Create a new client based on the provided configuration and context.
-pub trait FromClientConfigAndContext<C: Context>: Sized {
+pub trait FromClientConfigAndContext<C: ClientContext>: Sized {
     fn from_config_and_context(&ClientConfig, C) -> KafkaResult<Self>;
 }

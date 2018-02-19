@@ -6,7 +6,7 @@ use rdsys;
 
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
 use consumer::base_consumer::BaseConsumer;
-use consumer::{Consumer, ConsumerContext, EmptyConsumerContext};
+use consumer::{Consumer, ConsumerContext, DefaultConsumerContext};
 use error::{KafkaError, KafkaResult};
 use message::BorrowedMessage;
 use util::duration_to_millis;
@@ -137,7 +137,7 @@ fn poll_loop<C: ConsumerContext>(
 /// after consumer restart. Manual offset storing should be used, see the `store_offset` function on
 /// `Consumer`.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
-pub struct StreamConsumer<C: ConsumerContext + 'static> {
+pub struct StreamConsumer<C: ConsumerContext + 'static = DefaultConsumerContext> {
     consumer: Arc<BaseConsumer<C>>,
     should_stop: Arc<AtomicBool>,
     handle: Cell<Option<JoinHandle<()>>>,
@@ -149,9 +149,9 @@ impl<C: ConsumerContext> Consumer<C> for StreamConsumer<C> {
     }
 }
 
-impl FromClientConfig for StreamConsumer<EmptyConsumerContext> {
-    fn from_config(config: &ClientConfig) -> KafkaResult<StreamConsumer<EmptyConsumerContext>> {
-        StreamConsumer::from_config_and_context(config, EmptyConsumerContext)
+impl FromClientConfig for StreamConsumer {
+    fn from_config(config: &ClientConfig) -> KafkaResult<StreamConsumer> {
+        StreamConsumer::from_config_and_context(config, DefaultConsumerContext)
     }
 }
 

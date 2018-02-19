@@ -4,7 +4,7 @@ use rdsys::types::*;
 
 use client::{Client, NativeClient};
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
-use consumer::{Consumer, ConsumerContext, CommitMode, EmptyConsumerContext};
+use consumer::{Consumer, ConsumerContext, CommitMode, DefaultConsumerContext};
 use error::{KafkaError, KafkaResult, IsError};
 use groups::GroupList;
 use message::{Message, BorrowedMessage};
@@ -59,13 +59,13 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.
-pub struct BaseConsumer<C: ConsumerContext> {
+pub struct BaseConsumer<C: ConsumerContext= DefaultConsumerContext> {
     client: Client<C>,
 }
 
-impl FromClientConfig for BaseConsumer<EmptyConsumerContext> {
-    fn from_config(config: &ClientConfig) -> KafkaResult<BaseConsumer<EmptyConsumerContext>> {
-        BaseConsumer::from_config_and_context(config, EmptyConsumerContext)
+impl FromClientConfig for BaseConsumer {
+    fn from_config(config: &ClientConfig) -> KafkaResult<BaseConsumer> {
+        BaseConsumer::from_config_and_context(config, DefaultConsumerContext)
     }
 }
 

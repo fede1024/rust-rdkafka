@@ -8,7 +8,7 @@ use clap::{App, Arg};
 use futures::stream::Stream;
 
 use rdkafka::Message;
-use rdkafka::client::{Context};
+use rdkafka::client::ClientContext;
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
@@ -18,14 +18,14 @@ use rdkafka::error::KafkaResult;
 mod example_utils;
 use example_utils::setup_logger;
 
-// The Context can be used to change the behavior of producers and consumers by adding callbacks
+// A context can be used to change the behavior of producers and consumers by adding callbacks
 // that will be executed by librdkafka.
-// This particular ConsumerContext sets up custom callbacks to log rebalancing events.
-struct ConsumerContextExample;
+// This particular context sets up custom callbacks to log rebalancing events.
+struct CustomContext;
 
-impl Context for ConsumerContextExample {}
+impl ClientContext for CustomContext {}
 
-impl ConsumerContext for ConsumerContextExample {
+impl ConsumerContext for CustomContext {
     fn pre_rebalance(&self, rebalance: &Rebalance) {
         info!("Pre rebalance {:?}", rebalance);
     }
@@ -40,12 +40,12 @@ impl ConsumerContext for ConsumerContextExample {
 }
 
 // A type alias with your custom consumer can be created for convenience.
-type LoggingConsumer = StreamConsumer<ConsumerContextExample>;
+type LoggingConsumer = StreamConsumer<CustomContext>;
 
 fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
-    let context = ConsumerContextExample;
+    let context = CustomContext;
 
-    let consumer = ClientConfig::new()
+    let consumer: LoggingConsumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
@@ -54,7 +54,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
         .set("statistics.interval.ms", "30000")
         //.set("auto.offset.reset", "smallest")
         .set_log_level(RDKafkaLogLevel::Debug)
-        .create_with_context::<_, LoggingConsumer>(context)
+        .create_with_context(context)
         .expect("Consumer creation failed");
 
     consumer.subscribe(&topics.to_vec())

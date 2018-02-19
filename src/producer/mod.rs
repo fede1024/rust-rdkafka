@@ -81,7 +81,7 @@ pub mod future_producer;
 pub use self::base_producer::{
     BaseProducer,
     DeliveryResult,
-    EmptyProducerContext,
+    DefaultProducerContext,
     ProducerContext,
     ThreadedProducer
 };

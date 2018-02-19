@@ -6,7 +6,7 @@ extern crate rdkafka;
 
 use futures::*;
 
-use rdkafka::consumer::{Consumer, EmptyConsumerContext, StreamConsumer};
+use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::config::ClientConfig;
 
@@ -14,7 +14,7 @@ mod utils;
 use utils::*;
 
 
-fn create_consumer(group_id: &str) -> StreamConsumer<EmptyConsumerContext> {
+fn create_consumer(group_id: &str) -> StreamConsumer {
     ClientConfig::new()
         .set("group.id", group_id)
         .set("client.id", "rdkafka_integration_test_client")
@@ -22,8 +22,8 @@ fn create_consumer(group_id: &str) -> StreamConsumer<EmptyConsumerContext> {
         .set("session.timeout.ms", "6000")
         .set("api.version.request", "true")
         .set("debug", "all")
-        .create::<StreamConsumer<_>>()
-        .unwrap()
+        .create()
+        .expect("Failed to create StreamConsumer")
 }
 
 #[test]
