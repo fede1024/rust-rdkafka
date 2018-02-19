@@ -7,10 +7,12 @@ use clap::{App, Arg};
 use rdkafka::consumer::{BaseConsumer, Consumer};
 use rdkafka::config::ClientConfig;
 
+use std::time::Duration;
+
 mod example_utils;
 use example_utils::setup_logger;
 
-fn print_metadata(brokers: &str, topic: Option<&str>, timeout_ms: i32, fetch_offsets: bool) {
+fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_offsets: bool) {
     let consumer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create::<BaseConsumer<_>>()
@@ -18,7 +20,7 @@ fn print_metadata(brokers: &str, topic: Option<&str>, timeout_ms: i32, fetch_off
 
     trace!("Consumer created");
 
-    let metadata = consumer.fetch_metadata(topic, timeout_ms)
+    let metadata = consumer.fetch_metadata(topic, timeout)
         .expect("Failed to fetch metadata");
 
     println!("Cluster information:");
@@ -43,7 +45,7 @@ fn print_metadata(brokers: &str, topic: Option<&str>, timeout_ms: i32, fetch_off
                      partition.isr(),
                      partition.error());
             if fetch_offsets {
-                let (low, high) = consumer.fetch_watermarks(topic.name(), partition.id(), 1000)
+                let (low, high) = consumer.fetch_watermarks(topic.name(), partition.id(), Duration::from_secs(1))
                     .unwrap_or((-1, -1));
                 println!("       Low watermark: {}  High watermark: {}", low, high);
             }
@@ -74,17 +76,20 @@ fn main() {
              .takes_value(true))
         .arg(Arg::with_name("timeout")
              .long("timeout")
-             .help("Metadata fetch timeout in seconds")
+             .help("Metadata fetch timeout in milliseconds")
              .takes_value(true)
-             .default_value("60.0"))
+             .default_value("60000"))
         .get_matches();
 
     setup_logger(true, matches.value_of("log-conf"));
 
     let brokers = matches.value_of("brokers").unwrap();
-    let timeout = value_t!(matches, "timeout", f32).unwrap();
+    let timeout = value_t!(matches, "timeout", u64).unwrap();
     let topic = matches.value_of("topic");
     let fetch_offsets = matches.is_present("offsets");
 
-    print_metadata(brokers, topic, (timeout * 1000f32) as i32, fetch_offsets);
+    print_metadata(brokers,
+                   topic,
+                   Duration::from_millis(timeout),
+                   fetch_offsets);
 }

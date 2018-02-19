@@ -2,6 +2,7 @@
 
 ## master
 
+* Change timeout to more rust-idiomatic `Option<Duration>`.
 * Add `external_lz4` feature to use external lz4 library instead of
   the one one built in librdkafka. Disable by default.
 * Mark all `from_ptr` methods as unsafe.

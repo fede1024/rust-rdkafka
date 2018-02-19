@@ -17,6 +17,7 @@ use metadata::Metadata;
 use util::cstr_to_owned;
 
 use std::ptr;
+use std::time::Duration;
 
 use topic_partition_list::TopicPartitionList;
 
@@ -105,6 +106,15 @@ pub enum CommitMode {
 }
 
 /// Common trait for all consumers.
+///
+/// # Note about object safety
+///
+/// Doing type erasure on consumers is expected to be rare (eg. `Box<Consumer>`). Therefore, the
+/// API is optimised for the case where a concrete type is available. As a result, some methods are
+/// not available on trait objects, since they are generic.
+///
+/// If there's still the need to erase the type, the generic methods can still be reached through
+/// the [`get_base_consumer`](#method.get_base_consumer) method.
 pub trait Consumer<C: ConsumerContext> {
     /// Returns a reference to the BaseConsumer.
     fn get_base_consumer(&self) -> &BaseConsumer<C>;
@@ -162,14 +172,23 @@ pub trait Consumer<C: ConsumerContext> {
     }
 
     /// Retrieve committed offsets for topics and partitions.
-    fn committed(&self, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
-        self.get_base_consumer().committed(timeout_ms)
+    fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
+    where
+        T: Into<Option<Duration>>,
+        Self: Sized,
+    {
+        self.get_base_consumer().committed(timeout)
     }
 
     /// Lookup the offsets for this consumer's partitions by timestamp.
-    fn offsets_for_timestamp(&self, timestamp: i64, timeout_ms: i32) -> KafkaResult<TopicPartitionList> {
+    fn offsets_for_timestamp<T>(&self, timestamp: i64, timeout: T)
+        -> KafkaResult<TopicPartitionList>
+    where
+        T: Into<Option<Duration>>,
+        Self: Sized,
+    {
         self.get_base_consumer()
-            .offsets_for_timestamp(timestamp, timeout_ms)
+            .offsets_for_timestamp(timestamp, timeout)
     }
 
     /// Retrieve current positions (offsets) for topics and partitions.
@@ -179,21 +198,34 @@ pub trait Consumer<C: ConsumerContext> {
 
     /// Returns the metadata information for the specified topic, or for all topics in the cluster
     /// if no topic is specified.
-    fn fetch_metadata(&self, topic: Option<&str>, timeout_ms: i32) -> KafkaResult<Metadata> {
+    fn fetch_metadata<T>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata>
+    where
+        T: Into<Option<Duration>>,
+        Self: Sized,
+    {
         self.get_base_consumer()
-            .fetch_metadata(topic, timeout_ms)
+            .fetch_metadata(topic, timeout)
     }
 
     /// Returns the metadata information for all the topics in the cluster.
-    fn fetch_watermarks(&self, topic: &str, partition: i32, timeout_ms: i32) -> KafkaResult<(i64, i64)> {
+    fn fetch_watermarks<T>(&self, topic: &str, partition: i32, timeout: T)
+        -> KafkaResult<(i64, i64)>
+    where
+        T: Into<Option<Duration>>,
+        Self: Sized,
+    {
         self.get_base_consumer()
-            .fetch_watermarks(topic, partition, timeout_ms)
+            .fetch_watermarks(topic, partition, timeout)
     }
 
     /// Returns the group membership information for the given group. If no group is
     /// specified, all groups will be returned.
-    fn fetch_group_list(&self, group: Option<&str>, timeout_ms: i32) -> KafkaResult<GroupList> {
+    fn fetch_group_list<T>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList>
+    where
+        T: Into<Option<Duration>>,
+        Self: Sized,
+    {
         self.get_base_consumer()
-            .fetch_group_list(group, timeout_ms)
+            .fetch_group_list(group, timeout)
     }
 }

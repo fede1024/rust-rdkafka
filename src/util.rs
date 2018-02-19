@@ -18,6 +18,14 @@ pub fn duration_to_millis(duration: Duration) -> u64 {
     duration.as_secs() * 1000 + u64::from(duration.subsec_nanos()) / 1_000_000
 }
 
+/// Converts a timeout to the kafka's expected representation
+pub(crate) fn timeout_to_ms<T: Into<Option<Duration>>>(timeout: T) -> i32 {
+    timeout
+        .into()
+        .map(|t| duration_to_millis(t) as i32)
+        .unwrap_or(-1)
+}
+
 /// Converts the given time to milliseconds since unix epoch.
 pub fn millis_to_epoch(time: SystemTime) -> i64 {
     duration_to_millis(

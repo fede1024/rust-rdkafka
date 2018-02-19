@@ -10,6 +10,8 @@ use rdkafka::consumer::{Consumer, EmptyConsumerContext, StreamConsumer};
 use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::config::ClientConfig;
 
+use std::time::Duration;
+
 mod utils;
 use utils::*;
 
@@ -36,7 +38,7 @@ fn test_metadata() {
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
     let consumer = create_consumer(&rand_test_group());
 
-    let metadata = consumer.fetch_metadata(None, 5000).unwrap();
+    let metadata = consumer.fetch_metadata(None, Duration::from_secs(5)).unwrap();
     assert_eq!(metadata.orig_broker_id(), -1);
     assert!(!metadata.orig_broker_name().is_empty());
 
@@ -66,7 +68,8 @@ fn test_metadata() {
     assert_eq!(topic_metadata.partitions()[0].replicas(), &[0]);
     assert_eq!(topic_metadata.partitions()[0].isr(), &[0]);
 
-    let metadata_one_topic = consumer.fetch_metadata(Some(&topic_name), 5000).unwrap();
+    let metadata_one_topic = consumer.fetch_metadata(Some(&topic_name), Duration::from_secs(5))
+        .unwrap();
     assert_eq!(metadata_one_topic.topics().len(), 1);
 }
 
@@ -104,7 +107,7 @@ fn test_group_membership() {
         .for_each(|_| Ok(()))
         .wait();
 
-    let group_list = consumer.fetch_group_list(None, 5000).unwrap();
+    let group_list = consumer.fetch_group_list(None, Duration::from_secs(5)).unwrap();
 
     // Print all the data, valgrind will check memory access
     for group in group_list.groups().iter() {
@@ -114,7 +117,8 @@ fn test_group_membership() {
         }
     }
 
-    let group_list2 = consumer.fetch_group_list(Some(&group_name), 5000).unwrap();
+    let group_list2 = consumer.fetch_group_list(Some(&group_name), Duration::from_secs(5))
+        .unwrap();
     assert_eq!(group_list2.groups().len(), 1);
 
     let consumer_group = group_list2.groups().iter().find(|&g| g.name() == group_name).unwrap();

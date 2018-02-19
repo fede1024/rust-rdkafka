@@ -169,7 +169,7 @@ fn test_produce_consume_with_timestamp() {
     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999_999));
 
     // Lookup the offsets
-    let tpl = consumer.offsets_for_timestamp(999_999, 10_000).unwrap();
+    let tpl = consumer.offsets_for_timestamp(999_999, Duration::from_secs(10)).unwrap();
     let tp = tpl.find_partition(&topic_name, 0).unwrap();
     assert_eq!(tp.topic(), topic_name);
     assert_eq!(tp.offset(), Offset::Offset(100));
@@ -240,9 +240,10 @@ fn test_consumer_commit_message() {
         })
         .wait();
 
-    assert_eq!(consumer.fetch_watermarks(&topic_name, 0, 5000).unwrap(), (0, 10));
-    assert_eq!(consumer.fetch_watermarks(&topic_name, 1, 5000).unwrap(), (0, 11));
-    assert_eq!(consumer.fetch_watermarks(&topic_name, 2, 5000).unwrap(), (0, 12));
+    let timeout = Duration::from_secs(5);
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 0, timeout).unwrap(), (0, 10));
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 1, timeout).unwrap(), (0, 11));
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 2, timeout).unwrap(), (0, 12));
 
     let mut assignment = TopicPartitionList::new();
     assignment.add_partition_offset(&topic_name, 0, Offset::Invalid);
@@ -254,7 +255,7 @@ fn test_consumer_commit_message() {
     committed.add_partition_offset(&topic_name, 0, Offset::Invalid);
     committed.add_partition_offset(&topic_name, 1, Offset::Offset(11));
     committed.add_partition_offset(&topic_name, 2, Offset::Invalid);
-    assert_eq!(committed, consumer.committed(5000).unwrap());
+    assert_eq!(committed, consumer.committed(timeout).unwrap());
 
     let mut position = TopicPartitionList::new();
     position.add_partition_offset(&topic_name, 0, Offset::Offset(10));
@@ -296,9 +297,10 @@ fn test_consumer_store_offset_commit() {
     // Commit the whole current state
     consumer.commit_consumer_state(CommitMode::Sync).unwrap();
 
-    assert_eq!(consumer.fetch_watermarks(&topic_name, 0, 5000).unwrap(), (0, 10));
-    assert_eq!(consumer.fetch_watermarks(&topic_name, 1, 5000).unwrap(), (0, 11));
-    assert_eq!(consumer.fetch_watermarks(&topic_name, 2, 5000).unwrap(), (0, 12));
+    let timeout = Duration::from_secs(5);
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 0, timeout).unwrap(), (0, 10));
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 1, timeout).unwrap(), (0, 11));
+    assert_eq!(consumer.fetch_watermarks(&topic_name, 2, timeout).unwrap(), (0, 12));
 
     let mut assignment = TopicPartitionList::new();
     assignment.add_partition_offset(&topic_name, 0, Offset::Invalid);
@@ -310,7 +312,7 @@ fn test_consumer_store_offset_commit() {
     committed.add_partition_offset(&topic_name, 0, Offset::Invalid);
     committed.add_partition_offset(&topic_name, 1, Offset::Offset(11));
     committed.add_partition_offset(&topic_name, 2, Offset::Invalid);
-    assert_eq!(committed, consumer.committed(5000).unwrap());
+    assert_eq!(committed, consumer.committed(timeout).unwrap());
 
     let mut position = TopicPartitionList::new();
     position.add_partition_offset(&topic_name, 0, Offset::Offset(10));
