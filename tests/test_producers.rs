@@ -3,7 +3,7 @@ extern crate futures;
 extern crate rand;
 extern crate rdkafka;
 
-use rdkafka::{Context, Statistics};
+use rdkafka::{ClientContext, Statistics};
 use rdkafka::message::{Message, OwnedMessage};
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
@@ -23,7 +23,7 @@ struct PrintingContext {
     _n: i64, // Add data for memory access validation
 }
 
-impl Context for PrintingContext {
+impl ClientContext for PrintingContext {
     // Access and use all stats.
     fn stats(&self, stats: Statistics) {
         let stats_str = format!("{:?}", stats);
@@ -57,7 +57,7 @@ impl CollectingContext {
     }
 }
 
-impl Context for CollectingContext {
+impl ClientContext for CollectingContext {
     // Access and use all stats.
     fn stats(&self, stats: Statistics) {
         let mut stats_vec = self.stats.lock().unwrap();

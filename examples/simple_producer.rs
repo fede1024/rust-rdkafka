@@ -15,11 +15,11 @@ use example_utils::setup_logger;
 
 
 fn produce(brokers: &str, topic_name: &str) {
-    let producer = ClientConfig::new()
+    let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .set("produce.offset.report", "true")
         .set("message.timeout.ms", "5000")
-        .create::<FutureProducer<_>>()
+        .create()
         .expect("Producer creation error");
 
     // This loop is non blocking: all messages will be sent one after the other, without waiting

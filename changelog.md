@@ -7,6 +7,10 @@
   the one one built in librdkafka. Disable by default.
 * Mark all `from_ptr` methods as unsafe.
 * Remove `Timestamp::from_system_time` and implement `From` trait instead.
+* Rename `Context` to `ClientContext`.
+* Rename `Empty(...)Context` to `Default(...)Context`.
+* Use default type parameters for the context of `Client`, producers and consumers
+  with `Default(...)Context` set as the default one.
 
 <a name="0.14.1"></a>
 ## 0.14.1 (2017-12-30)

@@ -54,22 +54,22 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     let cpu_pool = Builder::new().pool_size(4).create();
 
     // Create the `StreamConsumer`, to receive the messages from the topic in form of a `Stream`.
-    let consumer = ClientConfig::new()
+    let consumer: StreamConsumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "false")
-        .create::<StreamConsumer<_>>()
+        .create()
         .expect("Consumer creation failed");
 
     consumer.subscribe(&[input_topic]).expect("Can't subscribe to specified topic");
 
     // Create the `FutureProducer` to produce asynchronously.
-    let producer = ClientConfig::new()
+    let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .set("produce.offset.report", "true")
-        .create::<FutureProducer<_>>()
+        .create()
         .expect("Producer creation error");
 
     // Create a handle to the core, that will be used to provide additional asynchronous work

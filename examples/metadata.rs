@@ -13,9 +13,9 @@ mod example_utils;
 use example_utils::setup_logger;
 
 fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_offsets: bool) {
-    let consumer = ClientConfig::new()
+    let consumer: BaseConsumer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
-        .create::<BaseConsumer<_>>()
+        .create()
         .expect("Consumer creation failed");
 
     trace!("Consumer created");

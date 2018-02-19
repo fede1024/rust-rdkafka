@@ -23,7 +23,7 @@ use futures::future::join_all;
 use futures::stream::Stream;
 
 use rdkafka::Message;
-use rdkafka::client::{Context, EmptyContext};
+use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{Consumer, ConsumerContext};
@@ -39,7 +39,7 @@ use example_utils::setup_logger;
 // offsets are committed
 struct LoggingConsumerContext;
 
-impl Context for LoggingConsumerContext {}
+impl ClientContext for LoggingConsumerContext {}
 
 impl ConsumerContext for LoggingConsumerContext {
     fn commit_callback(&self, result: KafkaResult<()>, _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList) {
@@ -56,7 +56,7 @@ type LoggingConsumer = StreamConsumer<LoggingConsumerContext>;
 fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsumer {
     let context = LoggingConsumerContext;
 
-    let consumer = ClientConfig::new()
+    let consumer: LoggingConsumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
@@ -67,7 +67,7 @@ fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsume
         // but only commit the offsets explicitly stored via `consumer.store_offset`.
         .set("enable.auto.offset.store", "false")
         .set_log_level(RDKafkaLogLevel::Debug)
-        .create_with_context::<_, LoggingConsumer>(context)
+        .create_with_context(context)
         .expect("Consumer creation failed");
 
     consumer.subscribe(&[topic]).expect("Can't subscribe to specified topic");
@@ -75,12 +75,11 @@ fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsume
     consumer
 }
 
-
-fn create_producer(brokers: &str) -> FutureProducer<EmptyContext> {
+fn create_producer(brokers: &str) -> FutureProducer {
     ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .set("queue.buffering.max.ms", "0")  // Do not buffer
-        .create::<FutureProducer<EmptyContext>>()
+        .create()
         .expect("Producer creation failed")
 }
 

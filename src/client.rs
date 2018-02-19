@@ -18,10 +18,15 @@ use metadata::Metadata;
 use statistics::Statistics;
 use util::{bytes_cstr_to_owned, timeout_to_ms};
 
-/// A Context is an object that can store user-defined data and on which callbacks can be
-/// defined. Refer to the list of methods to see which callbacks can currently be overridden.
-/// The context must be thread safe, and might be owned by multiple threads.
-pub trait Context: Send + Sync {
+/// Client-level context
+///
+/// Each client (consumers and producers included) has a context object that can be used to
+/// customize its behavior. Implementing `ClientContext` enables the customization of
+/// methods common to all clients, while `ProducerContext` and `ConsumerContext` are specific to
+/// producers and consumers. Refer to the list of methods to see which callbacks can currently
+/// be overridden. Implementations of `ClientContext` must be thread safe, as they might be owned by
+/// multiple threads.
+pub trait ClientContext: Send + Sync {
     /// Receives log lines from librdkafka.
     fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
         match level {
@@ -51,17 +56,12 @@ pub trait Context: Send + Sync {
     // https://github.com/rust-lang/rfcs/pull/1406 will maybe help in the future.
 }
 
-/// An empty context that can be used when no context is needed.
+/// An empty `ClientContext` that can be used when no context is needed. Default
+/// callback implementations will be used.
 #[derive(Clone, Default)]
-pub struct EmptyContext;
+pub struct DefaultClientContext;
 
-impl Context for EmptyContext { }
-
-impl EmptyContext {
-    pub fn new() -> EmptyContext {
-        EmptyContext {}
-    }
-}
+impl ClientContext for DefaultClientContext { }
 
 //
 // ********** CLIENT **********
@@ -102,12 +102,12 @@ impl Drop for NativeClient {
 /// A low level rdkafka client. This client shouldn't be used directly. The producer and consumer modules
 /// provide different producer and consumer implementations based on top of `Client` that can be
 /// used instead.
-pub struct Client<C: Context> {
+pub struct Client<C: ClientContext=DefaultClientContext> {
     native: NativeClient,
     context: Box<C>,
 }
 
-impl<C: Context> Client<C> {
+impl<C: ClientContext> Client<C> {
     /// Creates a new `Client` given a configuration, a client type and a context.
     pub fn new(config: &ClientConfig, native_config: NativeClientConfig, rd_kafka_type: RDKafkaType,
                context: C)
@@ -266,7 +266,7 @@ impl Drop for NativeTopic {
     }
 }
 
-pub unsafe extern "C" fn native_log_cb<C: Context>(
+pub unsafe extern "C" fn native_log_cb<C: ClientContext>(
         client: *const RDKafka, level: i32,
         fac: *const i8, buf: *const i8) {
     let fac = CStr::from_ptr(fac).to_string_lossy();
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn native_log_cb<C: Context>(
     mem::forget(context);   // Do not free the context
 }
 
-pub unsafe extern "C" fn native_stats_cb<C: Context>(
+pub unsafe extern "C" fn native_stats_cb<C: ClientContext>(
         _conf: *mut RDKafka, json: *mut i8, json_len: usize,
         opaque: *mut c_void) -> i32 {
     let context = Box::from_raw(opaque as *mut C);
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn native_stats_cb<C: Context>(
     0 // librdkafka will free the json buffer
 }
 
-pub unsafe extern "C" fn native_error_cb<C: Context>(
+pub unsafe extern "C" fn native_error_cb<C: ClientContext>(
         _client: *mut RDKafka, err: i32, reason: *const i8,
         opaque: *mut c_void) {
     let err = rdsys::primitive_to_rd_kafka_resp_err_t(err)
@@ -325,7 +325,7 @@ mod tests {
         let config = ClientConfig::new();
         let native_config = config.create_native_config().unwrap();
         let client = Client::new(&config, native_config, RDKafkaType::RD_KAFKA_PRODUCER,
-                                 EmptyContext::new()).unwrap();
+                                 DefaultClientContext).unwrap();
         assert!(!client.native_ptr().is_null());
     }
 }
