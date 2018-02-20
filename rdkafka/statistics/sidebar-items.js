@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Broker",""],["ConsumerGroup",""],["Partition",""],["Statistics","Statistics from librdkafka. Refer to the librdkafka documentation for details."],["Topic",""],["TopicPartition",""],["Window",""]]});

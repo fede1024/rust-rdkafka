@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `_IO_FILE` struct in crate `rdkafka_sys`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, _IO_FILE">
+
+    <title>rdkafka_sys::bindings::_IO_FILE - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
+    
+    <link rel="stylesheet" type="text/css" href="../../dark.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
+    <script src="../../storage.js"></script>
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct _IO_FILE</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#fields">Fields</a><div class="sidebar-links"><a href="#structfield._flags">_flags</a><a href="#structfield._IO_read_ptr">_IO_read_ptr</a><a href="#structfield._IO_read_end">_IO_read_end</a><a href="#structfield._IO_read_base">_IO_read_base</a><a href="#structfield._IO_write_base">_IO_write_base</a><a href="#structfield._IO_write_ptr">_IO_write_ptr</a><a href="#structfield._IO_write_end">_IO_write_end</a><a href="#structfield._IO_buf_base">_IO_buf_base</a><a href="#structfield._IO_buf_end">_IO_buf_end</a><a href="#structfield._IO_save_base">_IO_save_base</a><a href="#structfield._IO_backup_base">_IO_backup_base</a><a href="#structfield._IO_save_end">_IO_save_end</a><a href="#structfield._markers">_markers</a><a href="#structfield._chain">_chain</a><a href="#structfield._fileno">_fileno</a><a href="#structfield._flags2">_flags2</a><a href="#structfield._old_offset">_old_offset</a><a href="#structfield._cur_column">_cur_column</a><a href="#structfield._vtable_offset">_vtable_offset</a><a href="#structfield._shortbuf">_shortbuf</a><a href="#structfield._lock">_lock</a><a href="#structfield._offset">_offset</a><a href="#structfield.__pad1">__pad1</a><a href="#structfield.__pad2">__pad2</a><a href="#structfield.__pad3">__pad3</a><a href="#structfield.__pad4">__pad4</a><a href="#structfield.__pad5">__pad5</a><a href="#structfield._mode">_mode</a><a href="#structfield._unused2">_unused2</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Debug">Debug</a><a href="#impl-Copy">Copy</a><a href="#impl-Clone">Clone</a></div></div><p class='location'><a href='../index.html'>rdkafka_sys</a>::<wbr><a href='index.html'>bindings</a></p><script>window.sidebarCurrent = {name: '_IO_FILE', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <div class="theme-picker">
+        <button id="theme-picker" aria-label="Pick another theme!">
+            <img src="../../brush.svg" width="18" alt="Pick another theme!">
+        </button>
+        <div id="theme-choices"></div>
+    </div>
+    <script src="../../theme.js"></script>
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>rdkafka_sys</a>::<wbr><a href='index.html'>bindings</a>::<wbr><a class="struct" href=''>_IO_FILE</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/rdkafka_sys/bindings/linux_64.rs.html#906-936' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'><div class="docblock attributes">#[repr(C)]
+</div>pub struct _IO_FILE {
+    pub _flags: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_int.html" title="type std::os::raw::c_int">c_int</a>,
+    pub _IO_read_ptr: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_read_end: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_read_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_write_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_write_ptr: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_write_end: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_buf_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_buf_end: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_save_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_backup_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _IO_save_end: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a>,
+    pub _markers: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="struct" href="../../rdkafka_sys/bindings/struct._IO_marker.html" title="struct rdkafka_sys::bindings::_IO_marker">_IO_marker</a>,
+    pub _chain: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="struct" href="../../rdkafka_sys/bindings/struct._IO_FILE.html" title="struct rdkafka_sys::bindings::_IO_FILE">_IO_FILE</a>,
+    pub _fileno: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_int.html" title="type std::os::raw::c_int">c_int</a>,
+    pub _flags2: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_int.html" title="type std::os::raw::c_int">c_int</a>,
+    pub _old_offset: <a class="type" href="../../rdkafka_sys/bindings/type.__off_t.html" title="type rdkafka_sys::bindings::__off_t">__off_t</a>,
+    pub _cur_column: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_ushort.html" title="type std::os::raw::c_ushort">c_ushort</a>,
+    pub _vtable_offset: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_schar.html" title="type std::os::raw::c_schar">c_schar</a>,
+    pub _shortbuf: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">[</a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">; 1]</a>,
+    pub _lock: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="../../rdkafka_sys/bindings/type._IO_lock_t.html" title="type rdkafka_sys::bindings::_IO_lock_t">_IO_lock_t</a>,
+    pub _offset: <a class="type" href="../../rdkafka_sys/bindings/type.__off64_t.html" title="type rdkafka_sys::bindings::__off64_t">__off64_t</a>,
+    pub __pad1: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="enum" href="https://doc.rust-lang.org/nightly/std/os/raw/enum.c_void.html" title="enum std::os::raw::c_void">c_void</a>,
+    pub __pad2: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="enum" href="https://doc.rust-lang.org/nightly/std/os/raw/enum.c_void.html" title="enum std::os::raw::c_void">c_void</a>,
+    pub __pad3: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="enum" href="https://doc.rust-lang.org/nightly/std/os/raw/enum.c_void.html" title="enum std::os::raw::c_void">c_void</a>,
+    pub __pad4: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="enum" href="https://doc.rust-lang.org/nightly/std/os/raw/enum.c_void.html" title="enum std::os::raw::c_void">c_void</a>,
+    pub __pad5: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>,
+    pub _mode: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_int.html" title="type std::os::raw::c_int">c_int</a>,
+    pub _unused2: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">[</a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">; 20]</a>,
+}</pre><h2 id='fields' class='fields small-section-header'>
+                       Fields<a href='#fields' class='anchor'></a></h2><span id="structfield._flags" class="structfield small-section-header">
+                           <a href="#structfield._flags" class="anchor field"></a>
+                           <span id="_flags.v" class='invisible'>
+                           <code>_flags: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_int.html" title="type std::os::raw::c_int">c_int</a></code>
+                           </span></span><span id="structfield._IO_read_ptr" class="structfield small-section-header">
+                           <a href="#structfield._IO_read_ptr" class="anchor field"></a>
+                           <span id="_IO_read_ptr.v" class='invisible'>
+                           <code>_IO_read_ptr: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_read_end" class="structfield small-section-header">
+                           <a href="#structfield._IO_read_end" class="anchor field"></a>
+                           <span id="_IO_read_end.v" class='invisible'>
+                           <code>_IO_read_end: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_read_base" class="structfield small-section-header">
+                           <a href="#structfield._IO_read_base" class="anchor field"></a>
+                           <span id="_IO_read_base.v" class='invisible'>
+                           <code>_IO_read_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_write_base" class="structfield small-section-header">
+                           <a href="#structfield._IO_write_base" class="anchor field"></a>
+                           <span id="_IO_write_base.v" class='invisible'>
+                           <code>_IO_write_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_write_ptr" class="structfield small-section-header">
+                           <a href="#structfield._IO_write_ptr" class="anchor field"></a>
+                           <span id="_IO_write_ptr.v" class='invisible'>
+                           <code>_IO_write_ptr: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_write_end" class="structfield small-section-header">
+                           <a href="#structfield._IO_write_end" class="anchor field"></a>
+                           <span id="_IO_write_end.v" class='invisible'>
+                           <code>_IO_write_end: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_buf_base" class="structfield small-section-header">
+                           <a href="#structfield._IO_buf_base" class="anchor field"></a>
+                           <span id="_IO_buf_base.v" class='invisible'>
+                           <code>_IO_buf_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_buf_end" class="structfield small-section-header">
+                           <a href="#structfield._IO_buf_end" class="anchor field"></a>
+                           <span id="_IO_buf_end.v" class='invisible'>
+                           <code>_IO_buf_end: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_save_base" class="structfield small-section-header">
+                           <a href="#structfield._IO_save_base" class="anchor field"></a>
+                           <span id="_IO_save_base.v" class='invisible'>
+                           <code>_IO_save_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_backup_base" class="structfield small-section-header">
+                           <a href="#structfield._IO_backup_base" class="anchor field"></a>
+                           <span id="_IO_backup_base.v" class='invisible'>
+                           <code>_IO_backup_base: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._IO_save_end" class="structfield small-section-header">
+                           <a href="#structfield._IO_save_end" class="anchor field"></a>
+                           <span id="_IO_save_end.v" class='invisible'>
+                           <code>_IO_save_end: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a></code>
+                           </span></span><span id="structfield._markers" class="structfield small-section-header">
+                           <a href="#structfield._markers" class="anchor field"></a>
+                           <span id="_markers.v" class='invisible'>
+                           <code>_markers: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="struct" href="../../rdkafka_sys/bindings/struct._IO_marker.html" title="struct rdkafka_sys::bindings::_IO_marker">_IO_marker</a></code>
+                           </span></span><span id="structfield._chain" class="structfield small-section-header">
+                           <a href="#structfield._chain" class="anchor field"></a>
+                           <span id="_chain.v" class='invisible'>
+                           <code>_chain: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="struct" href="../../rdkafka_sys/bindings/struct._IO_FILE.html" title="struct rdkafka_sys::bindings::_IO_FILE">_IO_FILE</a></code>
+                           </span></span><span id="structfield._fileno" class="structfield small-section-header">
+                           <a href="#structfield._fileno" class="anchor field"></a>
+                           <span id="_fileno.v" class='invisible'>
+                           <code>_fileno: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_int.html" title="type std::os::raw::c_int">c_int</a></code>
+                           </span></span><span id="structfield._flags2" class="structfield small-section-header">
+                           <a href="#structfield._flags2" class="anchor field"></a>
+                           <span id="_flags2.v" class='invisible'>
+                           <code>_flags2: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_int.html" title="type std::os::raw::c_int">c_int</a></code>
+                           </span></span><span id="structfield._old_offset" class="structfield small-section-header">
+                           <a href="#structfield._old_offset" class="anchor field"></a>
+                           <span id="_old_offset.v" class='invisible'>
+                           <code>_old_offset: <a class="type" href="../../rdkafka_sys/bindings/type.__off_t.html" title="type rdkafka_sys::bindings::__off_t">__off_t</a></code>
+                           </span></span><span id="structfield._cur_column" class="structfield small-section-header">
+                           <a href="#structfield._cur_column" class="anchor field"></a>
+                           <span id="_cur_column.v" class='invisible'>
+                           <code>_cur_column: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_ushort.html" title="type std::os::raw::c_ushort">c_ushort</a></code>
+                           </span></span><span id="structfield._vtable_offset" class="structfield small-section-header">
+                           <a href="#structfield._vtable_offset" class="anchor field"></a>
+                           <span id="_vtable_offset.v" class='invisible'>
+                           <code>_vtable_offset: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_schar.html" title="type std::os::raw::c_schar">c_schar</a></code>
+                           </span></span><span id="structfield._shortbuf" class="structfield small-section-header">
+                           <a href="#structfield._shortbuf" class="anchor field"></a>
+                           <span id="_shortbuf.v" class='invisible'>
+                           <code>_shortbuf: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">[</a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">; 1]</a></code>
+                           </span></span><span id="structfield._lock" class="structfield small-section-header">
+                           <a href="#structfield._lock" class="anchor field"></a>
+                           <span id="_lock.v" class='invisible'>
+                           <code>_lock: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="../../rdkafka_sys/bindings/type._IO_lock_t.html" title="type rdkafka_sys::bindings::_IO_lock_t">_IO_lock_t</a></code>
+                           </span></span><span id="structfield._offset" class="structfield small-section-header">
+                           <a href="#structfield._offset" class="anchor field"></a>
+                           <span id="_offset.v" class='invisible'>
+                           <code>_offset: <a class="type" href="../../rdkafka_sys/bindings/type.__off64_t.html" title="type rdkafka_sys::bindings::__off64_t">__off64_t</a></code>
+                           </span></span><span id="structfield.__pad1" class="structfield small-section-header">
+                           <a href="#structfield.__pad1" class="anchor field"></a>
+                           <span id="__pad1.v" class='invisible'>
+                           <code>__pad1: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="enum" href="https://doc.rust-lang.org/nightly/std/os/raw/enum.c_void.html" title="enum std::os::raw::c_void">c_void</a></code>
+                           </span></span><span id="structfield.__pad2" class="structfield small-section-header">
+                           <a href="#structfield.__pad2" class="anchor field"></a>
+                           <span id="__pad2.v" class='invisible'>
+                           <code>__pad2: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="enum" href="https://doc.rust-lang.org/nightly/std/os/raw/enum.c_void.html" title="enum std::os::raw::c_void">c_void</a></code>
+                           </span></span><span id="structfield.__pad3" class="structfield small-section-header">
+                           <a href="#structfield.__pad3" class="anchor field"></a>
+                           <span id="__pad3.v" class='invisible'>
+                           <code>__pad3: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="enum" href="https://doc.rust-lang.org/nightly/std/os/raw/enum.c_void.html" title="enum std::os::raw::c_void">c_void</a></code>
+                           </span></span><span id="structfield.__pad4" class="structfield small-section-header">
+                           <a href="#structfield.__pad4" class="anchor field"></a>
+                           <span id="__pad4.v" class='invisible'>
+                           <code>__pad4: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="enum" href="https://doc.rust-lang.org/nightly/std/os/raw/enum.c_void.html" title="enum std::os::raw::c_void">c_void</a></code>
+                           </span></span><span id="structfield.__pad5" class="structfield small-section-header">
+                           <a href="#structfield.__pad5" class="anchor field"></a>
+                           <span id="__pad5.v" class='invisible'>
+                           <code>__pad5: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code>
+                           </span></span><span id="structfield._mode" class="structfield small-section-header">
+                           <a href="#structfield._mode" class="anchor field"></a>
+                           <span id="_mode.v" class='invisible'>
+                           <code>_mode: <a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_int.html" title="type std::os::raw::c_int">c_int</a></code>
+                           </span></span><span id="structfield._unused2" class="structfield small-section-header">
+                           <a href="#structfield._unused2" class="anchor field"></a>
+                           <span id="_unused2.v" class='invisible'>
+                           <code>_unused2: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">[</a><a class="type" href="https://doc.rust-lang.org/nightly/std/os/raw/type.c_char.html" title="type std::os::raw::c_char">c_char</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">; 20]</a></code>
+                           </span></span>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../rdkafka_sys/bindings/struct._IO_FILE.html" title="struct rdkafka_sys::bindings::_IO_FILE">_IO_FILE</a></code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka_sys/bindings/linux_64.rs.html#905' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka_sys/bindings/linux_64.rs.html#905' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 id='impl-Copy' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html" title="trait core::marker::Copy">Copy</a> for <a class="struct" href="../../rdkafka_sys/bindings/struct._IO_FILE.html" title="struct rdkafka_sys::bindings::_IO_FILE">_IO_FILE</a></code><a href='#impl-Copy' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka_sys/bindings/linux_64.rs.html#905' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 id='impl-Clone' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="struct" href="../../rdkafka_sys/bindings/struct._IO_FILE.html" title="struct rdkafka_sys::bindings::_IO_FILE">_IO_FILE</a></code><a href='#impl-Clone' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka_sys/bindings/linux_64.rs.html#1089-1091' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; Self</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka_sys/bindings/linux_64.rs.html#1090' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Self)</code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/clone.rs.html#112-114' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt><kbd>?</kbd></dt>
+                    <dd>Show this help dialog</dd>
+                    <dt><kbd>S</kbd></dt>
+                    <dd>Focus the search field</dd>
+                    <dt><kbd>↑</kbd></dt>
+                    <dd>Move up in search results</dd>
+                    <dt><kbd>↓</kbd></dt>
+                    <dd>Move down in search results</dd>
+                    <dt><kbd>↹</kbd></dt>
+                    <dd>Switch tab</dd>
+                    <dt><kbd>&#9166;</kbd></dt>
+                    <dd>Go to active search result</dd>
+                    <dt><kbd>+</kbd></dt>
+                    <dd>Expand all sections</dd>
+                    <dt><kbd>-</kbd></dt>
+                    <dd>Collapse all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "rdkafka_sys";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

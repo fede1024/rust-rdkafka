@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `base_producer` mod in crate `rdkafka`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, base_producer">
+
+    <title>rdkafka::producer::base_producer - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle">
+    
+    <link rel="stylesheet" type="text/css" href="../../../dark.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css" id="themeStyle">
+    <script src="../../../storage.js"></script>
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Module base_producer</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#reexports">Re-exports</a></li><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li></ul></div><p class='location'><a href='../../index.html'>rdkafka</a>::<wbr><a href='../index.html'>producer</a></p><script>window.sidebarCurrent = {name: 'base_producer', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script></div>
+    </nav>
+
+    <div class="theme-picker">
+        <button id="theme-picker" aria-label="Pick another theme!">
+            <img src="../../../brush.svg" width="18" alt="Pick another theme!">
+        </button>
+        <div id="theme-choices"></div>
+    </div>
+    <script src="../../../theme.js"></script>
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../../index.html'>rdkafka</a>::<wbr><a href='../index.html'>producer</a>::<wbr><a class="mod" href=''>base_producer</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/rdkafka/producer/base_producer.rs.html#1-354' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Low level Kafka producers.</p>
+<p>For more information about the producers provided in rdkafka, refer to the module level documentation.</p>
+<h2 id="baseproducer" class="section-header"><a href="#baseproducer"><code>BaseProducer</code></a></h2>
+<p>The <code>BaseProducer</code> is a low level Kafka producer designed to be as similar as possible to
+the underlying C librdkafka producer, while maintaining a safe Rust interface.</p>
+<p>Production of messages is fully asynchronous. The librdkafka producer will take care of buffering
+requests together according to configuration, and to send them efficiently. Once a message has
+been produced, or the retry count reached, a callback function called delivery callback will be
+called.</p>
+<p>The <code>BaseProducer</code> requires a <code>ProducerContext</code> which will be used to specify the delivery callback
+and the <code>DeliveryOpaque</code>. The <code>DeliveryOpaque</code> is a user-defined type that the user can pass to the
+<code>send</code> method of the producer, and that the producer will then forward to the delivery
+callback of the corresponding message. The <code>DeliveryOpaque</code> is useful in case the delivery
+callback requires additional information about the message (such as message id for example).</p>
+<h3 id="calling-poll" class="section-header"><a href="#calling-poll">Calling poll</a></h3>
+<p>To execute delivery callbacks the <code>poll</code> method of the producer should be called regularly.
+If <code>poll</code> is not called, or not often enough, a <code>RDKafkaError::QueueFull</code> error will be returned.</p>
+<h2 id="threadedproducer" class="section-header"><a href="#threadedproducer"><code>ThreadedProducer</code></a></h2>
+<p>The <code>ThreadedProducer</code> is a wrapper around the <code>BaseProducer</code> which spawns a thread
+dedicated to calling <code>poll</code> on the producer at regular intervals, so that the user doesn't
+have to. The thread is started when the producer is created, and it will be terminated
+once the producer goes out of scope.</p>
+<p>A <code>RDKafkaError::QueueFull</code> error can still be returned in case the polling thread is not
+fast enough or Kafka is not able to receive data and acknowledge messages quickly enough.
+If this error is returned, the producer should wait and try again.</p>
+</div><h2 id='reexports' class='section-header'><a href="#reexports">Re-exports</a></h2>
+<table><tr><td><code>pub use message::<a class="type" href="../../../rdkafka/message/type.DeliveryResult.html" title="type rdkafka::message::DeliveryResult">DeliveryResult</a>;</code></td></tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.BaseProducer.html"
+                                  title='struct rdkafka::producer::base_producer::BaseProducer'>BaseProducer</a></td>
+                           <td class='docblock-short'>
+                                <p>Low level Kafka producer.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DefaultProducerContext.html"
+                                  title='struct rdkafka::producer::base_producer::DefaultProducerContext'>DefaultProducerContext</a></td>
+                           <td class='docblock-short'>
+                                <p>Default producer context that can be use when a custom context is not required.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ThreadedProducer.html"
+                                  title='struct rdkafka::producer::base_producer::ThreadedProducer'>ThreadedProducer</a></td>
+                           <td class='docblock-short'>
+                                <p>A producer with a separate thread for event handling.</p>
+
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.ProducerContext.html"
+                                  title='trait rdkafka::producer::base_producer::ProducerContext'>ProducerContext</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>ProducerContext</code> is a <code>Context</code> specific for producers. It can be used to store
+user-specified callbacks, such as <code>delivery</code>.</p>
+
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt><kbd>?</kbd></dt>
+                    <dd>Show this help dialog</dd>
+                    <dt><kbd>S</kbd></dt>
+                    <dd>Focus the search field</dd>
+                    <dt><kbd>↑</kbd></dt>
+                    <dd>Move up in search results</dd>
+                    <dt><kbd>↓</kbd></dt>
+                    <dd>Move down in search results</dd>
+                    <dt><kbd>↹</kbd></dt>
+                    <dd>Switch tab</dd>
+                    <dt><kbd>&#9166;</kbd></dt>
+                    <dd>Go to active search result</dd>
+                    <dt><kbd>+</kbd></dt>
+                    <dd>Expand all sections</dd>
+                    <dt><kbd>-</kbd></dt>
+                    <dd>Collapse all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "rdkafka";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

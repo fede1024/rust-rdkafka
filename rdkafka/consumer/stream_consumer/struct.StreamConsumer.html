@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `StreamConsumer` struct in crate `rdkafka`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, StreamConsumer">
+
+    <title>rdkafka::consumer::stream_consumer::StreamConsumer - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle">
+    
+    <link rel="stylesheet" type="text/css" href="../../../dark.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css" id="themeStyle">
+    <script src="../../../storage.js"></script>
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct StreamConsumer</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#methods">Methods</a><div class="sidebar-links"><a href="#method.start">start</a><a href="#method.start_with">start_with</a><a href="#method.stop">stop</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Consumer%3CC%3E">Consumer&lt;C&gt;</a><a href="#impl-FromClientConfig">FromClientConfig</a><a href="#impl-FromClientConfigAndContext%3CC%3E">FromClientConfigAndContext&lt;C&gt;</a><a href="#impl-Drop">Drop</a></div></div><p class='location'><a href='../../index.html'>rdkafka</a>::<wbr><a href='../index.html'>consumer</a>::<wbr><a href='index.html'>stream_consumer</a></p><script>window.sidebarCurrent = {name: 'StreamConsumer', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <div class="theme-picker">
+        <button id="theme-picker" aria-label="Pick another theme!">
+            <img src="../../../brush.svg" width="18" alt="Pick another theme!">
+        </button>
+        <div id="theme-choices"></div>
+    </div>
+    <script src="../../../theme.js"></script>
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>rdkafka</a>::<wbr><a href='../index.html'>consumer</a>::<wbr><a href='index.html'>stream_consumer</a>::<wbr><a class="struct" href=''>StreamConsumer</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#145-149' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'><div class="docblock attributes">#[must_use = "Consumer polling thread will stop immediately if unused"]
+</div>pub struct StreamConsumer&lt;C:&nbsp;<a class="trait" href="../../../rdkafka/consumer/trait.ConsumerContext.html" title="trait rdkafka::consumer::ConsumerContext">ConsumerContext</a> + 'static&nbsp;=&nbsp;<a class="struct" href="../../../rdkafka/consumer/struct.DefaultConsumerContext.html" title="struct rdkafka::consumer::DefaultConsumerContext">DefaultConsumerContext</a>&gt; { /* fields omitted */ }</pre><div class='docblock'><p>A Kafka Consumer providing a <code>futures::Stream</code> interface.</p>
+<p>This consumer doesn't need to be polled since it has a separate polling thread. Due to the
+asynchronous nature of the stream, some messages might be consumed by the consumer without being
+processed on the other end of the stream. If auto commit is used, it might cause message loss
+after consumer restart. Manual offset storing should be used, see the <code>store_offset</code> function on
+<code>Consumer</code>.</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl&lt;C:&nbsp;<a class="trait" href="../../../rdkafka/consumer/trait.ConsumerContext.html" title="trait rdkafka::consumer::ConsumerContext">ConsumerContext</a>&gt; <a class="struct" href="../../../rdkafka/consumer/stream_consumer/struct.StreamConsumer.html" title="struct rdkafka::consumer::stream_consumer::StreamConsumer">StreamConsumer</a>&lt;C&gt;</code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#175-212' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.start' class="method"><span id='start.v' class='invisible'><code>pub fn <a href='#method.start' class='fnname'>start</a>(&amp;self) -&gt; <a class="struct" href="../../../rdkafka/consumer/stream_consumer/struct.MessageStream.html" title="struct rdkafka::consumer::stream_consumer::MessageStream">MessageStream</a>&lt;C&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#178-180' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Starts the StreamConsumer with default configuration (100ms polling interval and no
+<code>NoMessageReceived</code> notifications).</p>
+</div><h4 id='method.start_with' class="method"><span id='start_with.v' class='invisible'><code>pub fn <a href='#method.start_with' class='fnname'>start_with</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;poll_interval: <a class="struct" href="https://doc.rust-lang.org/nightly/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;no_message_error: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a><br>) -&gt; <a class="struct" href="../../../rdkafka/consumer/stream_consumer/struct.MessageStream.html" title="struct rdkafka::consumer::stream_consumer::MessageStream">MessageStream</a>&lt;C&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#186-199' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Starts the StreamConsumer with the specified poll interval. Additionally, if
+<code>no_message_error</code> is set to true, it will return an error of type
+<code>KafkaError::NoMessageReceived</code> every time the poll interval is reached and no message has
+been received.</p>
+</div><h4 id='method.stop' class="method"><span id='stop.v' class='invisible'><code>pub fn <a href='#method.stop' class='fnname'>stop</a>(&amp;self)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#202-211' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Stops the StreamConsumer, blocking the caller until the internal consumer has been stopped.</p>
+</div></div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Consumer%3CC%3E' class='impl'><span class='in-band'><code>impl&lt;C:&nbsp;<a class="trait" href="../../../rdkafka/consumer/trait.ConsumerContext.html" title="trait rdkafka::consumer::ConsumerContext">ConsumerContext</a>&gt; <a class="trait" href="../../../rdkafka/consumer/trait.Consumer.html" title="trait rdkafka::consumer::Consumer">Consumer</a>&lt;C&gt; for <a class="struct" href="../../../rdkafka/consumer/stream_consumer/struct.StreamConsumer.html" title="struct rdkafka::consumer::stream_consumer::StreamConsumer">StreamConsumer</a>&lt;C&gt;</code><a href='#impl-Consumer%3CC%3E' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#151-155' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.get_base_consumer' class="method"><span id='get_base_consumer.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#tymethod.get_base_consumer' class='fnname'>get_base_consumer</a>(&amp;self) -&gt; &amp;<a class="struct" href="../../../rdkafka/consumer/base_consumer/struct.BaseConsumer.html" title="struct rdkafka::consumer::base_consumer::BaseConsumer">BaseConsumer</a>&lt;C&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#152-154' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a reference to the BaseConsumer.</p>
+</div><h4 id='method.subscribe' class="method"><span id='subscribe.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.subscribe' class='fnname'>subscribe</a>(&amp;self, topics: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#128-130' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Subscribe the consumer to a list of topics.</p>
+</div><h4 id='method.unsubscribe' class="method"><span id='unsubscribe.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.unsubscribe' class='fnname'>unsubscribe</a>(&amp;self)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#133-135' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Unsubscribe the current subscription list.</p>
+</div><h4 id='method.assign' class="method"><span id='assign.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.assign' class='fnname'>assign</a>(&amp;self, assignment: &amp;<a class="struct" href="../../../rdkafka/topic_partition_list/struct.TopicPartitionList.html" title="struct rdkafka::topic_partition_list::TopicPartitionList">TopicPartitionList</a>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#139-141' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Manually assign topics and partitions to the consumer. If used, automatic consumer rebalance won't be activated. <a href="../../../rdkafka/consumer/trait.Consumer.html#method.assign">Read more</a></p>
+</div><h4 id='method.commit' class="method"><span id='commit.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.commit' class='fnname'>commit</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;topic_partition_list: &amp;<a class="struct" href="../../../rdkafka/topic_partition_list/struct.TopicPartitionList.html" title="struct rdkafka::topic_partition_list::TopicPartitionList">TopicPartitionList</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;mode: <a class="enum" href="../../../rdkafka/consumer/enum.CommitMode.html" title="enum rdkafka::consumer::CommitMode">CommitMode</a><br>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#146-148' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Commits the offset of the specified message. The commit can be sync (blocking), or async. Notice that when a specific offset is committed, all the previous offsets are considered committed as well. Use this method only if you are processing messages in order. <a href="../../../rdkafka/consumer/trait.Consumer.html#method.commit">Read more</a></p>
+</div><h4 id='method.commit_consumer_state' class="method"><span id='commit_consumer_state.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.commit_consumer_state' class='fnname'>commit_consumer_state</a>(&amp;self, mode: <a class="enum" href="../../../rdkafka/consumer/enum.CommitMode.html" title="enum rdkafka::consumer::CommitMode">CommitMode</a>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#154-156' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Commit the current consumer state. Notice that if the consumer fails after a message has been received, but before the message has been processed by the user code, this might lead to data loss. Check the &quot;at-least-once delivery&quot; section in the readme for more information. <a href="../../../rdkafka/consumer/trait.Consumer.html#method.commit_consumer_state">Read more</a></p>
+</div><h4 id='method.commit_message' class="method"><span id='commit_message.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.commit_message' class='fnname'>commit_message</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;message: &amp;<a class="struct" href="../../../rdkafka/message/struct.BorrowedMessage.html" title="struct rdkafka::message::BorrowedMessage">BorrowedMessage</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;mode: <a class="enum" href="../../../rdkafka/consumer/enum.CommitMode.html" title="enum rdkafka::consumer::CommitMode">CommitMode</a><br>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#160-162' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Commit the provided message. Note that this will also automatically commit every message with lower offset within the same partition. <a href="../../../rdkafka/consumer/trait.Consumer.html#method.commit_message">Read more</a></p>
+</div><h4 id='method.store_offset' class="method"><span id='store_offset.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.store_offset' class='fnname'>store_offset</a>(&amp;self, message: &amp;<a class="struct" href="../../../rdkafka/message/struct.BorrowedMessage.html" title="struct rdkafka::message::BorrowedMessage">BorrowedMessage</a>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#166-168' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Store offset for this message to be used on the next (auto)commit. When using this <code>enable.auto.offset.store</code> should be set to <code>false</code> in the config. <a href="../../../rdkafka/consumer/trait.Consumer.html#method.store_offset">Read more</a></p>
+</div><h4 id='method.subscription' class="method"><span id='subscription.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.subscription' class='fnname'>subscription</a>(&amp;self) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../../rdkafka/topic_partition_list/struct.TopicPartitionList.html" title="struct rdkafka::topic_partition_list::TopicPartitionList">TopicPartitionList</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#171-173' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the current topic subscription.</p>
+</div><h4 id='method.assignment' class="method"><span id='assignment.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.assignment' class='fnname'>assignment</a>(&amp;self) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../../rdkafka/topic_partition_list/struct.TopicPartitionList.html" title="struct rdkafka::topic_partition_list::TopicPartitionList">TopicPartitionList</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#176-178' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the current partition assignment.</p>
+</div><h4 id='method.committed' class="method"><span id='committed.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.committed' class='fnname'>committed</a>&lt;T&gt;(&amp;self, timeout: T) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../../rdkafka/topic_partition_list/struct.TopicPartitionList.html" title="struct rdkafka::topic_partition_list::TopicPartitionList">TopicPartitionList</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>&gt;&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;Self: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#181-187' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Retrieve committed offsets for topics and partitions.</p>
+</div><h4 id='method.offsets_for_timestamp' class="method"><span id='offsets_for_timestamp.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.offsets_for_timestamp' class='fnname'>offsets_for_timestamp</a>&lt;T&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;timestamp: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i64.html">i64</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;timeout: T<br>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../../rdkafka/topic_partition_list/struct.TopicPartitionList.html" title="struct rdkafka::topic_partition_list::TopicPartitionList">TopicPartitionList</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>&gt;&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;Self: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#190-198' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Lookup the offsets for this consumer's partitions by timestamp.</p>
+</div><h4 id='method.position' class="method"><span id='position.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.position' class='fnname'>position</a>(&amp;self) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../../rdkafka/topic_partition_list/struct.TopicPartitionList.html" title="struct rdkafka::topic_partition_list::TopicPartitionList">TopicPartitionList</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#201-203' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Retrieve current positions (offsets) for topics and partitions.</p>
+</div><h4 id='method.fetch_metadata' class="method"><span id='fetch_metadata.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.fetch_metadata' class='fnname'>fetch_metadata</a>&lt;T&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;topic: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;, <br>&nbsp;&nbsp;&nbsp;&nbsp;timeout: T<br>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../../rdkafka/metadata/struct.Metadata.html" title="struct rdkafka::metadata::Metadata">Metadata</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>&gt;&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;Self: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#207-214' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the metadata information for the specified topic, or for all topics in the cluster if no topic is specified. <a href="../../../rdkafka/consumer/trait.Consumer.html#method.fetch_metadata">Read more</a></p>
+</div><h4 id='method.fetch_watermarks' class="method"><span id='fetch_watermarks.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.fetch_watermarks' class='fnname'>fetch_watermarks</a>&lt;T&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;topic: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;partition: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i32.html">i32</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;timeout: T<br>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i64.html">i64</a>, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i64.html">i64</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>&gt;&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;Self: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#217-225' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the metadata information for all the topics in the cluster.</p>
+</div><h4 id='method.fetch_group_list' class="method"><span id='fetch_group_list.v' class='invisible'><code>fn <a href='../../../rdkafka/consumer/trait.Consumer.html#method.fetch_group_list' class='fnname'>fetch_group_list</a>&lt;T&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;group: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;, <br>&nbsp;&nbsp;&nbsp;&nbsp;timeout: T<br>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../../rdkafka/groups/struct.GroupList.html" title="struct rdkafka::groups::GroupList">GroupList</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>&gt;&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;Self: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/mod.rs.html#229-236' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the group membership information for the given group. If no group is specified, all groups will be returned. <a href="../../../rdkafka/consumer/trait.Consumer.html#method.fetch_group_list">Read more</a></p>
+</div></div><h3 id='impl-FromClientConfig' class='impl'><span class='in-band'><code>impl <a class="trait" href="../../../rdkafka/config/trait.FromClientConfig.html" title="trait rdkafka::config::FromClientConfig">FromClientConfig</a> for <a class="struct" href="../../../rdkafka/consumer/stream_consumer/struct.StreamConsumer.html" title="struct rdkafka::consumer::stream_consumer::StreamConsumer">StreamConsumer</a></code><a href='#impl-FromClientConfig' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#157-161' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.from_config' class="method"><span id='from_config.v' class='invisible'><code>fn <a href='../../../rdkafka/config/trait.FromClientConfig.html#tymethod.from_config' class='fnname'>from_config</a>(config: &amp;<a class="struct" href="../../../rdkafka/config/struct.ClientConfig.html" title="struct rdkafka::config::ClientConfig">ClientConfig</a>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../../rdkafka/consumer/stream_consumer/struct.StreamConsumer.html" title="struct rdkafka::consumer::stream_consumer::StreamConsumer">StreamConsumer</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#158-160' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Create a client from client configuration. The default client context will be used.</p>
+</div></div><h3 id='impl-FromClientConfigAndContext%3CC%3E' class='impl'><span class='in-band'><code>impl&lt;C:&nbsp;<a class="trait" href="../../../rdkafka/consumer/trait.ConsumerContext.html" title="trait rdkafka::consumer::ConsumerContext">ConsumerContext</a>&gt; <a class="trait" href="../../../rdkafka/config/trait.FromClientConfigAndContext.html" title="trait rdkafka::config::FromClientConfigAndContext">FromClientConfigAndContext</a>&lt;C&gt; for <a class="struct" href="../../../rdkafka/consumer/stream_consumer/struct.StreamConsumer.html" title="struct rdkafka::consumer::stream_consumer::StreamConsumer">StreamConsumer</a>&lt;C&gt;</code><a href='#impl-FromClientConfigAndContext%3CC%3E' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#164-173' title='goto source code'>[src]</a></span></h3>
+<div class='docblock'><p>Creates a new <code>StreamConsumer</code> starting from a <code>ClientConfig</code>.</p>
+</div><div class='impl-items'><h4 id='method.from_config_and_context' class="method"><span id='from_config_and_context.v' class='invisible'><code>fn <a href='../../../rdkafka/config/trait.FromClientConfigAndContext.html#tymethod.from_config_and_context' class='fnname'>from_config_and_context</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;config: &amp;<a class="struct" href="../../../rdkafka/config/struct.ClientConfig.html" title="struct rdkafka::config::ClientConfig">ClientConfig</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;context: C<br>) -&gt; <a class="type" href="../../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../../rdkafka/consumer/stream_consumer/struct.StreamConsumer.html" title="struct rdkafka::consumer::stream_consumer::StreamConsumer">StreamConsumer</a>&lt;C&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#165-172' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Create a client from client configuration and a client context.</p>
+</div></div><h3 id='impl-Drop' class='impl'><span class='in-band'><code>impl&lt;C:&nbsp;<a class="trait" href="../../../rdkafka/consumer/trait.ConsumerContext.html" title="trait rdkafka::consumer::ConsumerContext">ConsumerContext</a>&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html" title="trait core::ops::drop::Drop">Drop</a> for <a class="struct" href="../../../rdkafka/consumer/stream_consumer/struct.StreamConsumer.html" title="struct rdkafka::consumer::stream_consumer::StreamConsumer">StreamConsumer</a>&lt;C&gt;</code><a href='#impl-Drop' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#214-221' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.drop' class="method"><span id='drop.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html#tymethod.drop' class='fnname'>drop</a>(&amp;mut self)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/rdkafka/consumer/stream_consumer.rs.html#215-220' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes the destructor for this type. <a href="https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html#tymethod.drop">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt><kbd>?</kbd></dt>
+                    <dd>Show this help dialog</dd>
+                    <dt><kbd>S</kbd></dt>
+                    <dd>Focus the search field</dd>
+                    <dt><kbd>↑</kbd></dt>
+                    <dd>Move up in search results</dd>
+                    <dt><kbd>↓</kbd></dt>
+                    <dd>Move down in search results</dd>
+                    <dt><kbd>↹</kbd></dt>
+                    <dd>Switch tab</dd>
+                    <dt><kbd>&#9166;</kbd></dt>
+                    <dd>Go to active search result</dd>
+                    <dt><kbd>+</kbd></dt>
+                    <dd>Expand all sections</dd>
+                    <dt><kbd>-</kbd></dt>
+                    <dd>Collapse all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "rdkafka";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

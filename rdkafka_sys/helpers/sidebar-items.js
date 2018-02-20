@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["primitive_to_rd_kafka_resp_err_t","This is not great. For legacy reasons some usage of rd_kafka_resp_err_t is passed as an integer in some places. There seems to be no easy way in Rust to match this the other way around so we do it manually."],["rd_kafka_resp_err_t_to_rdkafka_error",""]]});

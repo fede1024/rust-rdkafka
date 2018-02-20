@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MessageStream","A Kafka consumer implementing Stream."],["StreamConsumer","A Kafka Consumer providing a `futures::Stream` interface."]]});

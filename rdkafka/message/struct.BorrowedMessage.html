@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `BorrowedMessage` struct in crate `rdkafka`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, BorrowedMessage">
+
+    <title>rdkafka::message::BorrowedMessage - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
+    
+    <link rel="stylesheet" type="text/css" href="../../dark.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
+    <script src="../../storage.js"></script>
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct BorrowedMessage</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#methods">Methods</a><div class="sidebar-links"><a href="#method.from_consumer">from_consumer</a><a href="#method.from_dr_callback">from_dr_callback</a><a href="#method.ptr">ptr</a><a href="#method.topic_ptr">topic_ptr</a><a href="#method.key_len">key_len</a><a href="#method.payload_len">payload_len</a><a href="#method.detach">detach</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Debug">Debug</a><a href="#impl-Message">Message</a><a href="#impl-Drop">Drop</a></div></div><p class='location'><a href='../index.html'>rdkafka</a>::<wbr><a href='index.html'>message</a></p><script>window.sidebarCurrent = {name: 'BorrowedMessage', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <div class="theme-picker">
+        <button id="theme-picker" aria-label="Pick another theme!">
+            <img src="../../brush.svg" width="18" alt="Pick another theme!">
+        </button>
+        <div id="theme-choices"></div>
+    </div>
+    <script src="../../theme.js"></script>
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>rdkafka</a>::<wbr><a href='index.html'>message</a>::<wbr><a class="struct" href=''>BorrowedMessage</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/rdkafka/message.rs.html#104-107' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct BorrowedMessage&lt;'a&gt; { /* fields omitted */ }</pre><div class='docblock'><p>A zero-copy Kafka message.</p>
+<p>The content of the message is stored in the receiving buffer of the consumer or the producer. As
+such, <code>BorrowedMessage</code> cannot outlive the consumer or producer it belongs to.</p>
+<h2 id="consumers" class="section-header"><a href="#consumers">Consumers</a></h2>
+<p><code>BorrowedMessage</code>s coming from consumers are removed from the consumer buffer once they are
+dropped. Holding references to too many messages will cause the memory of the consumer to fill
+up and the consumer to block until some of the <code>BorrowedMessage</code>s are dropped.</p>
+<h2 id="conversion-to-owned" class="section-header"><a href="#conversion-to-owned">Conversion to owned</a></h2>
+<p>To transform a <code>BorrowedMessage</code> into a <code>OwnedMessage</code>, use the <code>detach</code> method.</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="struct" href="../../rdkafka/message/struct.BorrowedMessage.html" title="struct rdkafka::message::BorrowedMessage">BorrowedMessage</a>&lt;'a&gt;</code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#127-192' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.from_consumer' class="method"><span id='from_consumer.v' class='invisible'><code>pub unsafe fn <a href='#method.from_consumer' class='fnname'>from_consumer</a>&lt;C&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;ptr: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="../../rdkafka/types/type.RDKafkaMessage.html" title="type rdkafka::types::RDKafkaMessage">RDKafkaMessage</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;_consumer: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;'a </a>C<br>) -&gt; <a class="type" href="../../rdkafka/error/type.KafkaResult.html" title="type rdkafka::error::KafkaResult">KafkaResult</a>&lt;<a class="struct" href="../../rdkafka/message/struct.BorrowedMessage.html" title="struct rdkafka::message::BorrowedMessage">BorrowedMessage</a>&lt;'a&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#132-145' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Creates a new <code>BorrowedMessage</code> that wraps the native Kafka message pointer returned by a
+consumer. The lifetime of the message will be bound to the lifetime of the consumer passed
+as parameter. This method should only be used with messages coming from consumers. If the
+message contains an error, only the error is returned and the message structure is freed.</p>
+</div><h4 id='method.from_dr_callback' class="method"><span id='from_dr_callback.v' class='invisible'><code>pub unsafe fn <a href='#method.from_dr_callback' class='fnname'>from_dr_callback</a>&lt;O&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;ptr: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="../../rdkafka/types/type.RDKafkaMessage.html" title="type rdkafka::types::RDKafkaMessage">RDKafkaMessage</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;_owner: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;'a </a>O<br>) -&gt; <a class="type" href="../../rdkafka/message/type.DeliveryResult.html" title="type rdkafka::message::DeliveryResult">DeliveryResult</a>&lt;'a&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#151-158' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Creates a new <code>BorrowedMessage</code> that wraps the native Kafka message pointer returned by the
+delivery callback of a producer. The lifetime of the message will be bound to the lifetime
+of the reference passed as parameter. This method should only be used with messages coming
+from the delivery callback. The message will not be freed in any circumstance.</p>
+</div><h4 id='method.ptr' class="method"><span id='ptr.v' class='invisible'><code>pub fn <a href='#method.ptr' class='fnname'>ptr</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="../../rdkafka/types/type.RDKafkaMessage.html" title="type rdkafka::types::RDKafkaMessage">RDKafkaMessage</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#161-163' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a pointer to the RDKafkaMessage.</p>
+</div><h4 id='method.topic_ptr' class="method"><span id='topic_ptr.v' class='invisible'><code>pub fn <a href='#method.topic_ptr' class='fnname'>topic_ptr</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.pointer.html">*mut </a><a class="type" href="../../rdkafka/types/type.RDKafkaTopic.html" title="type rdkafka::types::RDKafkaTopic">RDKafkaTopic</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#166-168' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a pointer to the message's RDKafkaTopic</p>
+</div><h4 id='method.key_len' class="method"><span id='key_len.v' class='invisible'><code>pub fn <a href='#method.key_len' class='fnname'>key_len</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#171-173' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the length of the key field of the message.</p>
+</div><h4 id='method.payload_len' class="method"><span id='payload_len.v' class='invisible'><code>pub fn <a href='#method.payload_len' class='fnname'>payload_len</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#176-178' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the length of the payload field of the message.</p>
+</div><h4 id='method.detach' class="method"><span id='detach.v' class='invisible'><code>pub fn <a href='#method.detach' class='fnname'>detach</a>(&amp;self) -&gt; <a class="struct" href="../../rdkafka/message/struct.OwnedMessage.html" title="struct rdkafka::message::OwnedMessage">OwnedMessage</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#182-191' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Clones the content of the <code>BorrowedMessage</code> and returns an <code>OwnedMessage</code>, that can
+outlive the consumer. This operation requires memory allocation and can be expensive.</p>
+</div></div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../rdkafka/message/struct.BorrowedMessage.html" title="struct rdkafka::message::BorrowedMessage">BorrowedMessage</a>&lt;'a&gt;</code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#120-124' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#121-123' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 id='impl-Message' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="../../rdkafka/message/trait.Message.html" title="trait rdkafka::message::Message">Message</a> for <a class="struct" href="../../rdkafka/message/struct.BorrowedMessage.html" title="struct rdkafka::message::BorrowedMessage">BorrowedMessage</a>&lt;'a&gt;</code><a href='#impl-Message' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#194-249' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.key' class="method"><span id='key.v' class='invisible'><code>fn <a href='../../rdkafka/message/trait.Message.html#tymethod.key' class='fnname'>key</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#195-203' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the key of the message, or None if there is no key.</p>
+</div><h4 id='method.payload' class="method"><span id='payload.v' class='invisible'><code>fn <a href='../../rdkafka/message/trait.Message.html#tymethod.payload' class='fnname'>payload</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#205-213' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the payload of the message, or None if there is no payload.</p>
+</div><h4 id='method.topic' class="method"><span id='topic.v' class='invisible'><code>fn <a href='../../rdkafka/message/trait.Message.html#tymethod.topic' class='fnname'>topic</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#215-221' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the source topic of the message.</p>
+</div><h4 id='method.partition' class="method"><span id='partition.v' class='invisible'><code>fn <a href='../../rdkafka/message/trait.Message.html#tymethod.partition' class='fnname'>partition</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i32.html">i32</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#223-225' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the partition number where the message is stored.</p>
+</div><h4 id='method.offset' class="method"><span id='offset.v' class='invisible'><code>fn <a href='../../rdkafka/message/trait.Message.html#tymethod.offset' class='fnname'>offset</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i64.html">i64</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#227-229' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the offset of the message.</p>
+</div><h4 id='method.timestamp' class="method"><span id='timestamp.v' class='invisible'><code>fn <a href='../../rdkafka/message/trait.Message.html#tymethod.timestamp' class='fnname'>timestamp</a>(&amp;self) -&gt; <a class="enum" href="../../rdkafka/message/enum.Timestamp.html" title="enum rdkafka::message::Timestamp">Timestamp</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#231-248' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the message timestamp for a consumed message if available.</p>
+</div><h4 id='method.payload_view' class="method"><span id='payload_view.v' class='invisible'><code>fn <a href='../../rdkafka/message/trait.Message.html#method.payload_view' class='fnname'>payload_view</a>&lt;P:&nbsp;?<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a> + <a class="trait" href="../../rdkafka/message/trait.FromBytes.html" title="trait rdkafka::message::FromBytes">FromBytes</a>&gt;(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>P, P::<a class="type" href="../../rdkafka/message/trait.FromBytes.html#associatedtype.Error" title="type rdkafka::message::FromBytes::Error">Error</a>&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#83-85' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Converts the raw bytes of the payload to a reference of the specified type, that points to the same data inside the message and without performing any memory allocation <a href="../../rdkafka/message/trait.Message.html#method.payload_view">Read more</a></p>
+</div><h4 id='method.key_view' class="method"><span id='key_view.v' class='invisible'><code>fn <a href='../../rdkafka/message/trait.Message.html#method.key_view' class='fnname'>key_view</a>&lt;K:&nbsp;?<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a> + <a class="trait" href="../../rdkafka/message/trait.FromBytes.html" title="trait rdkafka::message::FromBytes">FromBytes</a>&gt;(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>K, K::<a class="type" href="../../rdkafka/message/trait.FromBytes.html#associatedtype.Error" title="type rdkafka::message::FromBytes::Error">Error</a>&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#89-91' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Converts the raw bytes of the key to a reference of the specified type, that points to the same data inside the message and without performing any memory allocation <a href="../../rdkafka/message/trait.Message.html#method.key_view">Read more</a></p>
+</div></div><h3 id='impl-Drop' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html" title="trait core::ops::drop::Drop">Drop</a> for <a class="struct" href="../../rdkafka/message/struct.BorrowedMessage.html" title="struct rdkafka::message::BorrowedMessage">BorrowedMessage</a>&lt;'a&gt;</code><a href='#impl-Drop' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#251-256' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.drop' class="method"><span id='drop.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html#tymethod.drop' class='fnname'>drop</a>(&amp;mut self)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/rdkafka/message.rs.html#252-255' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes the destructor for this type. <a href="https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html#tymethod.drop">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt><kbd>?</kbd></dt>
+                    <dd>Show this help dialog</dd>
+                    <dt><kbd>S</kbd></dt>
+                    <dd>Focus the search field</dd>
+                    <dt><kbd>↑</kbd></dt>
+                    <dd>Move up in search results</dd>
+                    <dt><kbd>↓</kbd></dt>
+                    <dd>Move down in search results</dd>
+                    <dt><kbd>↹</kbd></dt>
+                    <dd>Switch tab</dd>
+                    <dt><kbd>&#9166;</kbd></dt>
+                    <dd>Go to active search result</dd>
+                    <dt><kbd>+</kbd></dt>
+                    <dd>Expand all sections</dd>
+                    <dt><kbd>-</kbd></dt>
+                    <dd>Collapse all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "rdkafka";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["BaseConsumer","Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled to make progress on rebalance, callbacks and to receive messages."],["Iter","Iterator for more convenient interface."]]});

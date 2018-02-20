@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `RDKafkaError` enum in crate `rdkafka`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, RDKafkaError">
+
+    <title>rdkafka::types::RDKafkaError - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
+    
+    <link rel="stylesheet" type="text/css" href="../../dark.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
+    <script src="../../storage.js"></script>
+    
+
+    
+    
+</head>
+<body class="rustdoc enum">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Enum RDKafkaError</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#variants">Variants</a><div class="sidebar-links"><a href="#variant.BadMessage">BadMessage</a><a href="#variant.BadCompression">BadCompression</a><a href="#variant.BrokerDestroy">BrokerDestroy</a><a href="#variant.Fail">Fail</a><a href="#variant.BrokerTransportFailure">BrokerTransportFailure</a><a href="#variant.CriticalSystemResource">CriticalSystemResource</a><a href="#variant.Resolve">Resolve</a><a href="#variant.MessageTimedOut">MessageTimedOut</a><a href="#variant.PartitionEOF">PartitionEOF</a><a href="#variant.UnknownPartition">UnknownPartition</a><a href="#variant.FileSystem">FileSystem</a><a href="#variant.UnknownTopic">UnknownTopic</a><a href="#variant.AllBrokersDown">AllBrokersDown</a><a href="#variant.InvalidArgument">InvalidArgument</a><a href="#variant.OperationTimedOut">OperationTimedOut</a><a href="#variant.QueueFull">QueueFull</a><a href="#variant.ISRInsufficient">ISRInsufficient</a><a href="#variant.NodeUpdate">NodeUpdate</a><a href="#variant.SSL">SSL</a><a href="#variant.WaitingForCoordinator">WaitingForCoordinator</a><a href="#variant.UnknownGroup">UnknownGroup</a><a href="#variant.InProgress">InProgress</a><a href="#variant.PreviousInProgress">PreviousInProgress</a><a href="#variant.ExistingSubscription">ExistingSubscription</a><a href="#variant.AssignPartitions">AssignPartitions</a><a href="#variant.RevokePartitions">RevokePartitions</a><a href="#variant.Conflict">Conflict</a><a href="#variant.State">State</a><a href="#variant.UnknownProtocol">UnknownProtocol</a><a href="#variant.NotImplemented">NotImplemented</a><a href="#variant.Authentication">Authentication</a><a href="#variant.NoOffset">NoOffset</a><a href="#variant.Outdated">Outdated</a><a href="#variant.TimedOutQueue">TimedOutQueue</a><a href="#variant.UnsupportedFeature">UnsupportedFeature</a><a href="#variant.WaitCache">WaitCache</a><a href="#variant.Interrupted">Interrupted</a><a href="#variant.KeySerialization">KeySerialization</a><a href="#variant.ValueSerialization">ValueSerialization</a><a href="#variant.KeyDeserialization">KeyDeserialization</a><a href="#variant.ValueDeserialization">ValueDeserialization</a><a href="#variant.Partial">Partial</a><a href="#variant.Unknown">Unknown</a><a href="#variant.NoError">NoError</a><a href="#variant.OffsetOutOfRange">OffsetOutOfRange</a><a href="#variant.InvalidMessage">InvalidMessage</a><a href="#variant.UnknownTopicOrPartition">UnknownTopicOrPartition</a><a href="#variant.InvalidMessageSize">InvalidMessageSize</a><a href="#variant.LeaderNotAvailable">LeaderNotAvailable</a><a href="#variant.NotLeaderForPartition">NotLeaderForPartition</a><a href="#variant.RequestTimedOut">RequestTimedOut</a><a href="#variant.BrokerNotAvailable">BrokerNotAvailable</a><a href="#variant.ReplicaNotAvailable">ReplicaNotAvailable</a><a href="#variant.MessageSizeTooLarge">MessageSizeTooLarge</a><a href="#variant.StaleControllerEpoch">StaleControllerEpoch</a><a href="#variant.OffsetMetadataTooLarge">OffsetMetadataTooLarge</a><a href="#variant.NetworkException">NetworkException</a><a href="#variant.GroupLoadInProgress">GroupLoadInProgress</a><a href="#variant.GroupCoordinatorNotAvailable">GroupCoordinatorNotAvailable</a><a href="#variant.NotCoordinatorForGroup">NotCoordinatorForGroup</a><a href="#variant.InvalidTopic">InvalidTopic</a><a href="#variant.MessageBatchTooLarge">MessageBatchTooLarge</a><a href="#variant.NotEnoughReplicas">NotEnoughReplicas</a><a href="#variant.NotEnoughReplicasAfterAppend">NotEnoughReplicasAfterAppend</a><a href="#variant.InvalidRequiredAcks">InvalidRequiredAcks</a><a href="#variant.IllegalGeneration">IllegalGeneration</a><a href="#variant.InconsistentGroupProtocol">InconsistentGroupProtocol</a><a href="#variant.InvalidGroupId">InvalidGroupId</a><a href="#variant.UnknownMemberId">UnknownMemberId</a><a href="#variant.InvalidSessionTimeout">InvalidSessionTimeout</a><a href="#variant.RebalanceInProgress">RebalanceInProgress</a><a href="#variant.InvalidCommitOffsetSize">InvalidCommitOffsetSize</a><a href="#variant.TopicAuthorizationFailed">TopicAuthorizationFailed</a><a href="#variant.GroupAuthorizationFailed">GroupAuthorizationFailed</a><a href="#variant.ClusterAuthorizationFailed">ClusterAuthorizationFailed</a><a href="#variant.InvalidTimestamp">InvalidTimestamp</a><a href="#variant.UnsupportedSASLMechanism">UnsupportedSASLMechanism</a><a href="#variant.IllegalSASLState">IllegalSASLState</a><a href="#variant.UnsupportedVersion">UnsupportedVersion</a><a href="#variant.TopicAlreadyExists">TopicAlreadyExists</a><a href="#variant.InvalidPartitions">InvalidPartitions</a><a href="#variant.InvalidReplicationFactor">InvalidReplicationFactor</a><a href="#variant.InvalidReplicaAssignment">InvalidReplicaAssignment</a><a href="#variant.InvalidConfig">InvalidConfig</a><a href="#variant.NotController">NotController</a><a href="#variant.InvalidRequest">InvalidRequest</a><a href="#variant.UnsupportedForMessageFormat">UnsupportedForMessageFormat</a><a href="#variant.PolicyViolation">PolicyViolation</a><a href="#variant.OutOfOrderSequenceNumber">OutOfOrderSequenceNumber</a><a href="#variant.DuplicateSequenceNumber">DuplicateSequenceNumber</a><a href="#variant.InvalidProducerEpoch">InvalidProducerEpoch</a><a href="#variant.InvalidTransactionalState">InvalidTransactionalState</a><a href="#variant.InvalidProducerIdMapping">InvalidProducerIdMapping</a><a href="#variant.InvalidTransactionTimeout">InvalidTransactionTimeout</a><a href="#variant.ConcurrentTransactions">ConcurrentTransactions</a><a href="#variant.TransactionCoordinatorFenced">TransactionCoordinatorFenced</a><a href="#variant.TransactionalIdAuthorizationFailed">TransactionalIdAuthorizationFailed</a><a href="#variant.SecurityDisabled">SecurityDisabled</a><a href="#variant.OperationNotAttempted">OperationNotAttempted</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-From%3Crd_kafka_resp_err_t%3E">From&lt;rd_kafka_resp_err_t&gt;</a><a href="#impl-Debug">Debug</a><a href="#impl-Copy">Copy</a><a href="#impl-Clone">Clone</a><a href="#impl-Error">Error</a><a href="#impl-Display">Display</a><a href="#impl-Eq">Eq</a><a href="#impl-PartialEq%3CRDKafkaError%3E">PartialEq&lt;RDKafkaError&gt;</a></div></div><p class='location'><a href='../index.html'>rdkafka</a>::<wbr><a href='index.html'>types</a></p><script>window.sidebarCurrent = {name: 'RDKafkaError', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <div class="theme-picker">
+        <button id="theme-picker" aria-label="Pick another theme!">
+            <img src="../../brush.svg" width="18" alt="Pick another theme!">
+        </button>
+        <div id="theme-choices"></div>
+    </div>
+    <script src="../../theme.js"></script>
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Enum <a href='../index.html'>rdkafka</a>::<wbr><a href='index.html'>types</a>::<wbr><a class="enum" href=''>RDKafkaError</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span></span></h1>
+<pre class='rust enum'>pub enum RDKafkaError {
+    BadMessage,
+    BadCompression,
+    BrokerDestroy,
+    Fail,
+    BrokerTransportFailure,
+    CriticalSystemResource,
+    Resolve,
+    MessageTimedOut,
+    PartitionEOF,
+    UnknownPartition,
+    FileSystem,
+    UnknownTopic,
+    AllBrokersDown,
+    InvalidArgument,
+    OperationTimedOut,
+    QueueFull,
+    ISRInsufficient,
+    NodeUpdate,
+    SSL,
+    WaitingForCoordinator,
+    UnknownGroup,
+    InProgress,
+    PreviousInProgress,
+    ExistingSubscription,
+    AssignPartitions,
+    RevokePartitions,
+    Conflict,
+    State,
+    UnknownProtocol,
+    NotImplemented,
+    Authentication,
+    NoOffset,
+    Outdated,
+    TimedOutQueue,
+    UnsupportedFeature,
+    WaitCache,
+    Interrupted,
+    KeySerialization,
+    ValueSerialization,
+    KeyDeserialization,
+    ValueDeserialization,
+    Partial,
+    Unknown,
+    NoError,
+    OffsetOutOfRange,
+    InvalidMessage,
+    UnknownTopicOrPartition,
+    InvalidMessageSize,
+    LeaderNotAvailable,
+    NotLeaderForPartition,
+    RequestTimedOut,
+    BrokerNotAvailable,
+    ReplicaNotAvailable,
+    MessageSizeTooLarge,
+    StaleControllerEpoch,
+    OffsetMetadataTooLarge,
+    NetworkException,
+    GroupLoadInProgress,
+    GroupCoordinatorNotAvailable,
+    NotCoordinatorForGroup,
+    InvalidTopic,
+    MessageBatchTooLarge,
+    NotEnoughReplicas,
+    NotEnoughReplicasAfterAppend,
+    InvalidRequiredAcks,
+    IllegalGeneration,
+    InconsistentGroupProtocol,
+    InvalidGroupId,
+    UnknownMemberId,
+    InvalidSessionTimeout,
+    RebalanceInProgress,
+    InvalidCommitOffsetSize,
+    TopicAuthorizationFailed,
+    GroupAuthorizationFailed,
+    ClusterAuthorizationFailed,
+    InvalidTimestamp,
+    UnsupportedSASLMechanism,
+    IllegalSASLState,
+    UnsupportedVersion,
+    TopicAlreadyExists,
+    InvalidPartitions,
+    InvalidReplicationFactor,
+    InvalidReplicaAssignment,
+    InvalidConfig,
+    NotController,
+    InvalidRequest,
+    UnsupportedForMessageFormat,
+    PolicyViolation,
+    OutOfOrderSequenceNumber,
+    DuplicateSequenceNumber,
+    InvalidProducerEpoch,
+    InvalidTransactionalState,
+    InvalidProducerIdMapping,
+    InvalidTransactionTimeout,
+    ConcurrentTransactions,
+    TransactionCoordinatorFenced,
+    TransactionalIdAuthorizationFailed,
+    SecurityDisabled,
+    OperationNotAttempted,
+    // some variants omitted
+}</pre><div class='docblock'><p>Errors enum
+Error from the underlying rdkafka library.</p>
+</div><h2 id='variants' class='variants small-section-header'>
+                   Variants<a href='#variants' class='anchor'></a></h2>
+<span id="variant.BadMessage" class="variant small-section-header"><a href="#variant.BadMessage" class="anchor field"></a><span id='BadMessage.v' class='invisible'><code>BadMessage</code></span></span><div class='docblock'><p>Received message is incorrect</p>
+</div><span id="variant.BadCompression" class="variant small-section-header"><a href="#variant.BadCompression" class="anchor field"></a><span id='BadCompression.v' class='invisible'><code>BadCompression</code></span></span><div class='docblock'><p>Bad/unknown compression</p>
+</div><span id="variant.BrokerDestroy" class="variant small-section-header"><a href="#variant.BrokerDestroy" class="anchor field"></a><span id='BrokerDestroy.v' class='invisible'><code>BrokerDestroy</code></span></span><div class='docblock'><p>Broker is going away</p>
+</div><span id="variant.Fail" class="variant small-section-header"><a href="#variant.Fail" class="anchor field"></a><span id='Fail.v' class='invisible'><code>Fail</code></span></span><div class='docblock'><p>Generic failure</p>
+</div><span id="variant.BrokerTransportFailure" class="variant small-section-header"><a href="#variant.BrokerTransportFailure" class="anchor field"></a><span id='BrokerTransportFailure.v' class='invisible'><code>BrokerTransportFailure</code></span></span><div class='docblock'><p>Broker transport failure</p>
+</div><span id="variant.CriticalSystemResource" class="variant small-section-header"><a href="#variant.CriticalSystemResource" class="anchor field"></a><span id='CriticalSystemResource.v' class='invisible'><code>CriticalSystemResource</code></span></span><div class='docblock'><p>Critical system resource</p>
+</div><span id="variant.Resolve" class="variant small-section-header"><a href="#variant.Resolve" class="anchor field"></a><span id='Resolve.v' class='invisible'><code>Resolve</code></span></span><div class='docblock'><p>Failed to resolve broker</p>
+</div><span id="variant.MessageTimedOut" class="variant small-section-header"><a href="#variant.MessageTimedOut" class="anchor field"></a><span id='MessageTimedOut.v' class='invisible'><code>MessageTimedOut</code></span></span><div class='docblock'><p>Produced message timed out</p>
+</div><span id="variant.PartitionEOF" class="variant small-section-header"><a href="#variant.PartitionEOF" class="anchor field"></a><span id='PartitionEOF.v' class='invisible'><code>PartitionEOF</code></span></span><div class='docblock'><p>Reached the end of the topic+partition queue on the broker. Not really an error.</p>
+</div><span id="variant.UnknownPartition" class="variant small-section-header"><a href="#variant.UnknownPartition" class="anchor field"></a><span id='UnknownPartition.v' class='invisible'><code>UnknownPartition</code></span></span><div class='docblock'><p>Permanent: Partition does not exist in cluster.</p>
+</div><span id="variant.FileSystem" class="variant small-section-header"><a href="#variant.FileSystem" class="anchor field"></a><span id='FileSystem.v' class='invisible'><code>FileSystem</code></span></span><div class='docblock'><p>File or filesystem error</p>
+</div><span id="variant.UnknownTopic" class="variant small-section-header"><a href="#variant.UnknownTopic" class="anchor field"></a><span id='UnknownTopic.v' class='invisible'><code>UnknownTopic</code></span></span><div class='docblock'><p>Permanent: Topic does not exist in cluster.</p>
+</div><span id="variant.AllBrokersDown" class="variant small-section-header"><a href="#variant.AllBrokersDown" class="anchor field"></a><span id='AllBrokersDown.v' class='invisible'><code>AllBrokersDown</code></span></span><div class='docblock'><p>All broker connections are down.</p>
+</div><span id="variant.InvalidArgument" class="variant small-section-header"><a href="#variant.InvalidArgument" class="anchor field"></a><span id='InvalidArgument.v' class='invisible'><code>InvalidArgument</code></span></span><div class='docblock'><p>Invalid argument, or invalid configuration</p>
+</div><span id="variant.OperationTimedOut" class="variant small-section-header"><a href="#variant.OperationTimedOut" class="anchor field"></a><span id='OperationTimedOut.v' class='invisible'><code>OperationTimedOut</code></span></span><div class='docblock'><p>Operation timed out</p>
+</div><span id="variant.QueueFull" class="variant small-section-header"><a href="#variant.QueueFull" class="anchor field"></a><span id='QueueFull.v' class='invisible'><code>QueueFull</code></span></span><div class='docblock'><p>Queue is full</p>
+</div><span id="variant.ISRInsufficient" class="variant small-section-header"><a href="#variant.ISRInsufficient" class="anchor field"></a><span id='ISRInsufficient.v' class='invisible'><code>ISRInsufficient</code></span></span><div class='docblock'><p>ISR count &lt; required.acks</p>
+</div><span id="variant.NodeUpdate" class="variant small-section-header"><a href="#variant.NodeUpdate" class="anchor field"></a><span id='NodeUpdate.v' class='invisible'><code>NodeUpdate</code></span></span><div class='docblock'><p>Broker node update</p>
+</div><span id="variant.SSL" class="variant small-section-header"><a href="#variant.SSL" class="anchor field"></a><span id='SSL.v' class='invisible'><code>SSL</code></span></span><div class='docblock'><p>SSL error</p>
+</div><span id="variant.WaitingForCoordinator" class="variant small-section-header"><a href="#variant.WaitingForCoordinator" class="anchor field"></a><span id='WaitingForCoordinator.v' class='invisible'><code>WaitingForCoordinator</code></span></span><div class='docblock'><p>Waiting for coordinator to become available.</p>
+</div><span id="variant.UnknownGroup" class="variant small-section-header"><a href="#variant.UnknownGroup" class="anchor field"></a><span id='UnknownGroup.v' class='invisible'><code>UnknownGroup</code></span></span><div class='docblock'><p>Unknown client group</p>
+</div><span id="variant.InProgress" class="variant small-section-header"><a href="#variant.InProgress" class="anchor field"></a><span id='InProgress.v' class='invisible'><code>InProgress</code></span></span><div class='docblock'><p>Operation in progress</p>
+</div><span id="variant.PreviousInProgress" class="variant small-section-header"><a href="#variant.PreviousInProgress" class="anchor field"></a><span id='PreviousInProgress.v' class='invisible'><code>PreviousInProgress</code></span></span><div class='docblock'><p>Previous operation in progress, wait for it to finish.</p>
+</div><span id="variant.ExistingSubscription" class="variant small-section-header"><a href="#variant.ExistingSubscription" class="anchor field"></a><span id='ExistingSubscription.v' class='invisible'><code>ExistingSubscription</code></span></span><div class='docblock'><p>This operation would interfere with an existing subscription</p>
+</div><span id="variant.AssignPartitions" class="variant small-section-header"><a href="#variant.AssignPartitions" class="anchor field"></a><span id='AssignPartitions.v' class='invisible'><code>AssignPartitions</code></span></span><div class='docblock'><p>Assigned partitions (rebalance_cb)</p>
+</div><span id="variant.RevokePartitions" class="variant small-section-header"><a href="#variant.RevokePartitions" class="anchor field"></a><span id='RevokePartitions.v' class='invisible'><code>RevokePartitions</code></span></span><div class='docblock'><p>Revoked partitions (rebalance_cb)</p>
+</div><span id="variant.Conflict" class="variant small-section-header"><a href="#variant.Conflict" class="anchor field"></a><span id='Conflict.v' class='invisible'><code>Conflict</code></span></span><div class='docblock'><p>Conflicting use</p>
+</div><span id="variant.State" class="variant small-section-header"><a href="#variant.State" class="anchor field"></a><span id='State.v' class='invisible'><code>State</code></span></span><div class='docblock'><p>Wrong state</p>
+</div><span id="variant.UnknownProtocol" class="variant small-section-header"><a href="#variant.UnknownProtocol" class="anchor field"></a><span id='UnknownProtocol.v' class='invisible'><code>UnknownProtocol</code></span></span><div class='docblock'><p>Unknown protocol</p>
+</div><span id="variant.NotImplemented" class="variant small-section-header"><a href="#variant.NotImplemented" class="anchor field"></a><span id='NotImplemented.v' class='invisible'><code>NotImplemented</code></span></span><div class='docblock'><p>Not implemented</p>
+</div><span id="variant.Authentication" class="variant small-section-header"><a href="#variant.Authentication" class="anchor field"></a><span id='Authentication.v' class='invisible'><code>Authentication</code></span></span><div class='docblock'><p>Authentication failure</p>
+</div><span id="variant.NoOffset" class="variant small-section-header"><a href="#variant.NoOffset" class="anchor field"></a><span id='NoOffset.v' class='invisible'><code>NoOffset</code></span></span><div class='docblock'><p>No stored offset</p>
+</div><span id="variant.Outdated" class="variant small-section-header"><a href="#variant.Outdated" class="anchor field"></a><span id='Outdated.v' class='invisible'><code>Outdated</code></span></span><div class='docblock'><p>Outdated</p>
+</div><span id="variant.TimedOutQueue" class="variant small-section-header"><a href="#variant.TimedOutQueue" class="anchor field"></a><span id='TimedOutQueue.v' class='invisible'><code>TimedOutQueue</code></span></span><div class='docblock'><p>Timed out in queue</p>
+</div><span id="variant.UnsupportedFeature" class="variant small-section-header"><a href="#variant.UnsupportedFeature" class="anchor field"></a><span id='UnsupportedFeature.v' class='invisible'><code>UnsupportedFeature</code></span></span><div class='docblock'><p>Feature not supported by broker</p>
+</div><span id="variant.WaitCache" class="variant small-section-header"><a href="#variant.WaitCache" class="anchor field"></a><span id='WaitCache.v' class='invisible'><code>WaitCache</code></span></span><div class='docblock'><p>Awaiting cache update</p>
+</div><span id="variant.Interrupted" class="variant small-section-header"><a href="#variant.Interrupted" class="anchor field"></a><span id='Interrupted.v' class='invisible'><code>Interrupted</code></span></span><div class='docblock'><p>Operation interrupted (e.g., due to yield))</p>
+</div><span id="variant.KeySerialization" class="variant small-section-header"><a href="#variant.KeySerialization" class="anchor field"></a><span id='KeySerialization.v' class='invisible'><code>KeySerialization</code></span></span><div class='docblock'><p>Key serialization error</p>
+</div><span id="variant.ValueSerialization" class="variant small-section-header"><a href="#variant.ValueSerialization" class="anchor field"></a><span id='ValueSerialization.v' class='invisible'><code>ValueSerialization</code></span></span><div class='docblock'><p>Value serialization error</p>
+</div><span id="variant.KeyDeserialization" class="variant small-section-header"><a href="#variant.KeyDeserialization" class="anchor field"></a><span id='KeyDeserialization.v' class='invisible'><code>KeyDeserialization</code></span></span><div class='docblock'><p>Key deserialization error</p>
+</div><span id="variant.ValueDeserialization" class="variant small-section-header"><a href="#variant.ValueDeserialization" class="anchor field"></a><span id='ValueDeserialization.v' class='invisible'><code>ValueDeserialization</code></span></span><div class='docblock'><p>Value deserialization error</p>
+</div><span id="variant.Partial" class="variant small-section-header"><a href="#variant.Partial" class="anchor field"></a><span id='Partial.v' class='invisible'><code>Partial</code></span></span><div class='docblock'><p>Partial response</p>
+</div><span id="variant.Unknown" class="variant small-section-header"><a href="#variant.Unknown" class="anchor field"></a><span id='Unknown.v' class='invisible'><code>Unknown</code></span></span><div class='docblock'><p>Unknown broker error</p>
+</div><span id="variant.NoError" class="variant small-section-header"><a href="#variant.NoError" class="anchor field"></a><span id='NoError.v' class='invisible'><code>NoError</code></span></span><div class='docblock'><p>Success</p>
+</div><span id="variant.OffsetOutOfRange" class="variant small-section-header"><a href="#variant.OffsetOutOfRange" class="anchor field"></a><span id='OffsetOutOfRange.v' class='invisible'><code>OffsetOutOfRange</code></span></span><div class='docblock'><p>Offset out of range</p>
+</div><span id="variant.InvalidMessage" class="variant small-section-header"><a href="#variant.InvalidMessage" class="anchor field"></a><span id='InvalidMessage.v' class='invisible'><code>InvalidMessage</code></span></span><div class='docblock'><p>Invalid message</p>
+</div><span id="variant.UnknownTopicOrPartition" class="variant small-section-header"><a href="#variant.UnknownTopicOrPartition" class="anchor field"></a><span id='UnknownTopicOrPartition.v' class='invisible'><code>UnknownTopicOrPartition</code></span></span><div class='docblock'><p>Unknown topic or partition</p>
+</div><span id="variant.InvalidMessageSize" class="variant small-section-header"><a href="#variant.InvalidMessageSize" class="anchor field"></a><span id='InvalidMessageSize.v' class='invisible'><code>InvalidMessageSize</code></span></span><div class='docblock'><p>Invalid message size</p>
+</div><span id="variant.LeaderNotAvailable" class="variant small-section-header"><a href="#variant.LeaderNotAvailable" class="anchor field"></a><span id='LeaderNotAvailable.v' class='invisible'><code>LeaderNotAvailable</code></span></span><div class='docblock'><p>Leader not available</p>
+</div><span id="variant.NotLeaderForPartition" class="variant small-section-header"><a href="#variant.NotLeaderForPartition" class="anchor field"></a><span id='NotLeaderForPartition.v' class='invisible'><code>NotLeaderForPartition</code></span></span><div class='docblock'><p>Not leader for partition</p>
+</div><span id="variant.RequestTimedOut" class="variant small-section-header"><a href="#variant.RequestTimedOut" class="anchor field"></a><span id='RequestTimedOut.v' class='invisible'><code>RequestTimedOut</code></span></span><div class='docblock'><p>Request timed out</p>
+</div><span id="variant.BrokerNotAvailable" class="variant small-section-header"><a href="#variant.BrokerNotAvailable" class="anchor field"></a><span id='BrokerNotAvailable.v' class='invisible'><code>BrokerNotAvailable</code></span></span><div class='docblock'><p>Broker not available</p>
+</div><span id="variant.ReplicaNotAvailable" class="variant small-section-header"><a href="#variant.ReplicaNotAvailable" class="anchor field"></a><span id='ReplicaNotAvailable.v' class='invisible'><code>ReplicaNotAvailable</code></span></span><div class='docblock'><p>Replica not available</p>
+</div><span id="variant.MessageSizeTooLarge" class="variant small-section-header"><a href="#variant.MessageSizeTooLarge" class="anchor field"></a><span id='MessageSizeTooLarge.v' class='invisible'><code>MessageSizeTooLarge</code></span></span><div class='docblock'><p>Message size too large</p>
+</div><span id="variant.StaleControllerEpoch" class="variant small-section-header"><a href="#variant.StaleControllerEpoch" class="anchor field"></a><span id='StaleControllerEpoch.v' class='invisible'><code>StaleControllerEpoch</code></span></span><div class='docblock'><p>Stale controller epoch code</p>
+</div><span id="variant.OffsetMetadataTooLarge" class="variant small-section-header"><a href="#variant.OffsetMetadataTooLarge" class="anchor field"></a><span id='OffsetMetadataTooLarge.v' class='invisible'><code>OffsetMetadataTooLarge</code></span></span><div class='docblock'><p>Offset metadata string too large</p>
+</div><span id="variant.NetworkException" class="variant small-section-header"><a href="#variant.NetworkException" class="anchor field"></a><span id='NetworkException.v' class='invisible'><code>NetworkException</code></span></span><div class='docblock'><p>Broker disconnected before response received</p>
+</div><span id="variant.GroupLoadInProgress" class="variant small-section-header"><a href="#variant.GroupLoadInProgress" class="anchor field"></a><span id='GroupLoadInProgress.v' class='invisible'><code>GroupLoadInProgress</code></span></span><div class='docblock'><p>Group coordinator load in progress</p>
+</div><span id="variant.GroupCoordinatorNotAvailable" class="variant small-section-header"><a href="#variant.GroupCoordinatorNotAvailable" class="anchor field"></a><span id='GroupCoordinatorNotAvailable.v' class='invisible'><code>GroupCoordinatorNotAvailable</code></span></span><div class='docblock'><p>Group coordinator not available</p>
+</div><span id="variant.NotCoordinatorForGroup" class="variant small-section-header"><a href="#variant.NotCoordinatorForGroup" class="anchor field"></a><span id='NotCoordinatorForGroup.v' class='invisible'><code>NotCoordinatorForGroup</code></span></span><div class='docblock'><p>Not coordinator for group</p>
+</div><span id="variant.InvalidTopic" class="variant small-section-header"><a href="#variant.InvalidTopic" class="anchor field"></a><span id='InvalidTopic.v' class='invisible'><code>InvalidTopic</code></span></span><div class='docblock'><p>Invalid topic</p>
+</div><span id="variant.MessageBatchTooLarge" class="variant small-section-header"><a href="#variant.MessageBatchTooLarge" class="anchor field"></a><span id='MessageBatchTooLarge.v' class='invisible'><code>MessageBatchTooLarge</code></span></span><div class='docblock'><p>Message batch larger than configured server segment size</p>
+</div><span id="variant.NotEnoughReplicas" class="variant small-section-header"><a href="#variant.NotEnoughReplicas" class="anchor field"></a><span id='NotEnoughReplicas.v' class='invisible'><code>NotEnoughReplicas</code></span></span><div class='docblock'><p>Not enough in-sync replicas</p>
+</div><span id="variant.NotEnoughReplicasAfterAppend" class="variant small-section-header"><a href="#variant.NotEnoughReplicasAfterAppend" class="anchor field"></a><span id='NotEnoughReplicasAfterAppend.v' class='invisible'><code>NotEnoughReplicasAfterAppend</code></span></span><div class='docblock'><p>Message(s) written to insufficient number of in-sync replicas</p>
+</div><span id="variant.InvalidRequiredAcks" class="variant small-section-header"><a href="#variant.InvalidRequiredAcks" class="anchor field"></a><span id='InvalidRequiredAcks.v' class='invisible'><code>InvalidRequiredAcks</code></span></span><div class='docblock'><p>Invalid required acks value</p>
+</div><span id="variant.IllegalGeneration" class="variant small-section-header"><a href="#variant.IllegalGeneration" class="anchor field"></a><span id='IllegalGeneration.v' class='invisible'><code>IllegalGeneration</code></span></span><div class='docblock'><p>Specified group generation id is not valid</p>
+</div><span id="variant.InconsistentGroupProtocol" class="variant small-section-header"><a href="#variant.InconsistentGroupProtocol" class="anchor field"></a><span id='InconsistentGroupProtocol.v' class='invisible'><code>InconsistentGroupProtocol</code></span></span><div class='docblock'><p>Inconsistent group protocol</p>
+</div><span id="variant.InvalidGroupId" class="variant small-section-header"><a href="#variant.InvalidGroupId" class="anchor field"></a><span id='InvalidGroupId.v' class='invisible'><code>InvalidGroupId</code></span></span><div class='docblock'><p>Invalid group.id</p>
+</div><span id="variant.UnknownMemberId" class="variant small-section-header"><a href="#variant.UnknownMemberId" class="anchor field"></a><span id='UnknownMemberId.v' class='invisible'><code>UnknownMemberId</code></span></span><div class='docblock'><p>Unknown member</p>
+</div><span id="variant.InvalidSessionTimeout" class="variant small-section-header"><a href="#variant.InvalidSessionTimeout" class="anchor field"></a><span id='InvalidSessionTimeout.v' class='invisible'><code>InvalidSessionTimeout</code></span></span><div class='docblock'><p>Invalid session timeout</p>
+</div><span id="variant.RebalanceInProgress" class="variant small-section-header"><a href="#variant.RebalanceInProgress" class="anchor field"></a><span id='RebalanceInProgress.v' class='invisible'><code>RebalanceInProgress</code></span></span><div class='docblock'><p>Group rebalance in progress</p>
+</div><span id="variant.InvalidCommitOffsetSize" class="variant small-section-header"><a href="#variant.InvalidCommitOffsetSize" class="anchor field"></a><span id='InvalidCommitOffsetSize.v' class='invisible'><code>InvalidCommitOffsetSize</code></span></span><div class='docblock'><p>Commit offset data size is not valid</p>
+</div><span id="variant.TopicAuthorizationFailed" class="variant small-section-header"><a href="#variant.TopicAuthorizationFailed" class="anchor field"></a><span id='TopicAuthorizationFailed.v' class='invisible'><code>TopicAuthorizationFailed</code></span></span><div class='docblock'><p>Topic authorization failed</p>
+</div><span id="variant.GroupAuthorizationFailed" class="variant small-section-header"><a href="#variant.GroupAuthorizationFailed" class="anchor field"></a><span id='GroupAuthorizationFailed.v' class='invisible'><code>GroupAuthorizationFailed</code></span></span><div class='docblock'><p>Group authorization failed</p>
+</div><span id="variant.ClusterAuthorizationFailed" class="variant small-section-header"><a href="#variant.ClusterAuthorizationFailed" class="anchor field"></a><span id='ClusterAuthorizationFailed.v' class='invisible'><code>ClusterAuthorizationFailed</code></span></span><div class='docblock'><p>Cluster authorization failed</p>
+</div><span id="variant.InvalidTimestamp" class="variant small-section-header"><a href="#variant.InvalidTimestamp" class="anchor field"></a><span id='InvalidTimestamp.v' class='invisible'><code>InvalidTimestamp</code></span></span><div class='docblock'><p>Invalid timestamp</p>
+</div><span id="variant.UnsupportedSASLMechanism" class="variant small-section-header"><a href="#variant.UnsupportedSASLMechanism" class="anchor field"></a><span id='UnsupportedSASLMechanism.v' class='invisible'><code>UnsupportedSASLMechanism</code></span></span><div class='docblock'><p>Unsupported SASL mechanism</p>
+</div><span id="variant.IllegalSASLState" class="variant small-section-header"><a href="#variant.IllegalSASLState" class="anchor field"></a><span id='IllegalSASLState.v' class='invisible'><code>IllegalSASLState</code></span></span><div class='docblock'><p>Illegal SASL state</p>
+</div><span id="variant.UnsupportedVersion" class="variant small-section-header"><a href="#variant.UnsupportedVersion" class="anchor field"></a><span id='UnsupportedVersion.v' class='invisible'><code>UnsupportedVersion</code></span></span><div class='docblock'><p>Unsupported version</p>
+</div><span id="variant.TopicAlreadyExists" class="variant small-section-header"><a href="#variant.TopicAlreadyExists" class="anchor field"></a><span id='TopicAlreadyExists.v' class='invisible'><code>TopicAlreadyExists</code></span></span><div class='docblock'><p>Topic already exists</p>
+</div><span id="variant.InvalidPartitions" class="variant small-section-header"><a href="#variant.InvalidPartitions" class="anchor field"></a><span id='InvalidPartitions.v' class='invisible'><code>InvalidPartitions</code></span></span><div class='docblock'><p>Invalid number of partitions</p>
+</div><span id="variant.InvalidReplicationFactor" class="variant small-section-header"><a href="#variant.InvalidReplicationFactor" class="anchor field"></a><span id='InvalidReplicationFactor.v' class='invisible'><code>InvalidReplicationFactor</code></span></span><div class='docblock'><p>Invalid replication factor</p>
+</div><span id="variant.InvalidReplicaAssignment" class="variant small-section-header"><a href="#variant.InvalidReplicaAssignment" class="anchor field"></a><span id='InvalidReplicaAssignment.v' class='invisible'><code>InvalidReplicaAssignment</code></span></span><div class='docblock'><p>Invalid replica assignment</p>
+</div><span id="variant.InvalidConfig" class="variant small-section-header"><a href="#variant.InvalidConfig" class="anchor field"></a><span id='InvalidConfig.v' class='invisible'><code>InvalidConfig</code></span></span><div class='docblock'><p>Invalid config */</p>
+</div><span id="variant.NotController" class="variant small-section-header"><a href="#variant.NotController" class="anchor field"></a><span id='NotController.v' class='invisible'><code>NotController</code></span></span><div class='docblock'><p>Not controller for cluster</p>
+</div><span id="variant.InvalidRequest" class="variant small-section-header"><a href="#variant.InvalidRequest" class="anchor field"></a><span id='InvalidRequest.v' class='invisible'><code>InvalidRequest</code></span></span><div class='docblock'><p>Invalid request</p>
+</div><span id="variant.UnsupportedForMessageFormat" class="variant small-section-header"><a href="#variant.UnsupportedForMessageFormat" class="anchor field"></a><span id='UnsupportedForMessageFormat.v' class='invisible'><code>UnsupportedForMessageFormat</code></span></span><div class='docblock'><p>Message format on broker does not support request</p>
+</div><span id="variant.PolicyViolation" class="variant small-section-header"><a href="#variant.PolicyViolation" class="anchor field"></a><span id='PolicyViolation.v' class='invisible'><code>PolicyViolation</code></span></span><div class='docblock'><p>Policy violation</p>
+</div><span id="variant.OutOfOrderSequenceNumber" class="variant small-section-header"><a href="#variant.OutOfOrderSequenceNumber" class="anchor field"></a><span id='OutOfOrderSequenceNumber.v' class='invisible'><code>OutOfOrderSequenceNumber</code></span></span><div class='docblock'><p>Broker received an out of order sequence number</p>
+</div><span id="variant.DuplicateSequenceNumber" class="variant small-section-header"><a href="#variant.DuplicateSequenceNumber" class="anchor field"></a><span id='DuplicateSequenceNumber.v' class='invisible'><code>DuplicateSequenceNumber</code></span></span><div class='docblock'><p>Broker received a duplicate sequence number</p>
+</div><span id="variant.InvalidProducerEpoch" class="variant small-section-header"><a href="#variant.InvalidProducerEpoch" class="anchor field"></a><span id='InvalidProducerEpoch.v' class='invisible'><code>InvalidProducerEpoch</code></span></span><div class='docblock'><p>Producer attempted an operation with an old epoch</p>
+</div><span id="variant.InvalidTransactionalState" class="variant small-section-header"><a href="#variant.InvalidTransactionalState" class="anchor field"></a><span id='InvalidTransactionalState.v' class='invisible'><code>InvalidTransactionalState</code></span></span><div class='docblock'><p>Producer attempted a transactional operation in an invalid state</p>
+</div><span id="variant.InvalidProducerIdMapping" class="variant small-section-header"><a href="#variant.InvalidProducerIdMapping" class="anchor field"></a><span id='InvalidProducerIdMapping.v' class='invisible'><code>InvalidProducerIdMapping</code></span></span><div class='docblock'><p>Producer attempted to use a producer id which is currently assigned to its transactional id</p>
+</div><span id="variant.InvalidTransactionTimeout" class="variant small-section-header"><a href="#variant.InvalidTransactionTimeout" class="anchor field"></a><span id='InvalidTransactionTimeout.v' class='invisible'><code>InvalidTransactionTimeout</code></span></span><div class='docblock'><p>Transaction timeout is larger than the maxi value allowed by the broker's
+max.transaction.timeout.ms</p>
+</div><span id="variant.ConcurrentTransactions" class="variant small-section-header"><a href="#variant.ConcurrentTransactions" class="anchor field"></a><span id='ConcurrentTransactions.v' class='invisible'><code>ConcurrentTransactions</code></span></span><div class='docblock'><p>Producer attempted to update a transaction while another concurrent operation on the same
+transaction was ongoing</p>
+</div><span id="variant.TransactionCoordinatorFenced" class="variant small-section-header"><a href="#variant.TransactionCoordinatorFenced" class="anchor field"></a><span id='TransactionCoordinatorFenced.v' class='invisible'><code>TransactionCoordinatorFenced</code></span></span><div class='docblock'><p>Indicates that the transaction coordinator sending a WriteTxnMarker is no longer the current
+coordinator for a given producer</p>
+</div><span id="variant.TransactionalIdAuthorizationFailed" class="variant small-section-header"><a href="#variant.TransactionalIdAuthorizationFailed" class="anchor field"></a><span id='TransactionalIdAuthorizationFailed.v' class='invisible'><code>TransactionalIdAuthorizationFailed</code></span></span><div class='docblock'><p>Transactional Id authorization failed</p>
+</div><span id="variant.SecurityDisabled" class="variant small-section-header"><a href="#variant.SecurityDisabled" class="anchor field"></a><span id='SecurityDisabled.v' class='invisible'><code>SecurityDisabled</code></span></span><div class='docblock'><p>Security features are disabled</p>
+</div><span id="variant.OperationNotAttempted" class="variant small-section-header"><a href="#variant.OperationNotAttempted" class="anchor field"></a><span id='OperationNotAttempted.v' class='invisible'><code>OperationNotAttempted</code></span></span><div class='docblock'><p>Operation not attempted</p>
+</div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-From%3Crd_kafka_resp_err_t%3E' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;<a class="enum" href="../../rdkafka/types/enum.RDKafkaRespErr.html" title="enum rdkafka::types::RDKafkaRespErr">rd_kafka_resp_err_t</a>&gt; for <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code><a href='#impl-From%3Crd_kafka_resp_err_t%3E' class='anchor'></a></span><span class='out-of-band'></span></h3>
+<div class='impl-items'><h4 id='method.from' class="method"><span id='from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html#tymethod.from' class='fnname'>from</a>(err: <a class="enum" href="../../rdkafka/types/enum.RDKafkaRespErr.html" title="enum rdkafka::types::RDKafkaRespErr">rd_kafka_resp_err_t</a>) -&gt; <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code></span></h4>
+<div class='docblock'><p>Performs the conversion.</p>
+</div></div><h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Error.html" title="struct core::fmt::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 id='impl-Copy' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html" title="trait core::marker::Copy">Copy</a> for <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code><a href='#impl-Copy' class='anchor'></a></span><span class='out-of-band'></span></h3>
+<div class='impl-items'></div><h3 id='impl-Clone' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code><a href='#impl-Clone' class='anchor'></a></span><span class='out-of-band'></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Self)</code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/clone.rs.html#112-114' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 id='impl-Error' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html" title="trait std::error::Error">Error</a> for <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code><a href='#impl-Error' class='anchor'></a></span><span class='out-of-band'></span></h3>
+<div class='impl-items'><h4 id='method.description' class="method"><span id='description.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/std/error/trait.Error.html#tymethod.description' class='fnname'>description</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span></h4>
+<div class='docblock'><p>A short description of the error. <a href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html#tymethod.description">Read more</a></p>
+</div><h4 id='method.cause' class="method"><span id='cause.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.cause' class='fnname'>cause</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="trait" href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html" title="trait std::error::Error">Error</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/std/error.rs.html#154' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>The lower-level cause of this error, if any. <a href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html#method.cause">Read more</a></p>
+</div></div><h3 id='impl-Display' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a> for <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code><a href='#impl-Display' class='anchor'></a></span><span class='out-of-band'></span></h3>
+<div class='impl-items'><h4 id='method.fmt-1' class="method"><span id='fmt.v-1' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Error.html" title="struct core::fmt::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 id='impl-Eq' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html" title="trait core::cmp::Eq">Eq</a> for <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code><a href='#impl-Eq' class='anchor'></a></span><span class='out-of-band'></span></h3>
+<div class='impl-items'></div><h3 id='impl-PartialEq%3CRDKafkaError%3E' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html" title="trait core::cmp::PartialEq">PartialEq</a>&lt;<a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a>&gt; for <a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a></code><a href='#impl-PartialEq%3CRDKafkaError%3E' class='anchor'></a></span><span class='out-of-band'></span></h3>
+<div class='impl-items'><h4 id='method.eq' class="method"><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class="enum" href="../../rdkafka/error/enum.RDKafkaError.html" title="enum rdkafka::error::RDKafkaError">RDKafkaError</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class="method"><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, other: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Rhs) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/cmp.rs.html#121' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt><kbd>?</kbd></dt>
+                    <dd>Show this help dialog</dd>
+                    <dt><kbd>S</kbd></dt>
+                    <dd>Focus the search field</dd>
+                    <dt><kbd>↑</kbd></dt>
+                    <dd>Move up in search results</dd>
+                    <dt><kbd>↓</kbd></dt>
+                    <dd>Move down in search results</dd>
+                    <dt><kbd>↹</kbd></dt>
+                    <dd>Switch tab</dd>
+                    <dt><kbd>&#9166;</kbd></dt>
+                    <dd>Go to active search result</dd>
+                    <dt><kbd>+</kbd></dt>
+                    <dd>Expand all sections</dd>
+                    <dt><kbd>-</kbd></dt>
+                    <dd>Collapse all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "rdkafka";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

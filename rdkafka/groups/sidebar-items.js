@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GroupInfo","Group information container."],["GroupList","List of groups. This structure wraps the  pointer returned by rdkafka-sys, and deallocates all the native resources when dropped."],["GroupMemberInfo","Group member information container."]]});
