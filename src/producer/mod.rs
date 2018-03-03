@@ -85,4 +85,7 @@ pub use self::base_producer::{
     ProducerContext,
     ThreadedProducer
 };
-pub use self::future_producer::FutureProducer;
+pub use self::future_producer::{
+    FutureProducer,
+    DeliveryFuture
+};
