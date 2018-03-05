@@ -23,6 +23,8 @@ fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_o
     let metadata = consumer.fetch_metadata(topic, timeout)
         .expect("Failed to fetch metadata");
 
+    let mut message_count = 0;
+
     println!("Cluster information:");
     println!("  Broker count: {}", metadata.brokers().len());
     println!("  Topics count: {}", metadata.topics().len());
@@ -47,8 +49,12 @@ fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_o
             if fetch_offsets {
                 let (low, high) = consumer.fetch_watermarks(topic.name(), partition.id(), Duration::from_secs(1))
                     .unwrap_or((-1, -1));
-                println!("       Low watermark: {}  High watermark: {}", low, high);
+                println!("       Low watermark: {}  High watermark: {} (difference: {})", low, high, high - low);
+                message_count += high - low;
             }
+        }
+        if fetch_offsets {
+            println!("     Total message count: {}", message_count);
         }
     }
 }

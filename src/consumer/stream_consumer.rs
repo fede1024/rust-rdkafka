@@ -19,6 +19,11 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 
+/// Default channel size for the stream consumer. The number of context switches
+/// seems to decrease exponentially as the channel size is increased, and it stabilizes when
+/// the channel size reaches 10 or so.
+const CONSUMER_CHANNEL_SIZE: usize = 10;
+
 /// A small wrapper for a message pointer. This wrapper is only used to
 /// pass a message between the polling thread and the thread consuming the stream,
 /// and to transform it from pointer to `BorrowedMessage` with a lifetime that derives from the
@@ -180,7 +185,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     /// been received.
     pub fn start_with(&self, poll_interval: Duration, no_message_error: bool) -> MessageStream<C> {
         // TODO: verify called once
-        let (sender, receiver) = mpsc::channel(0);
+        let (sender, receiver) = mpsc::channel(CONSUMER_CHANNEL_SIZE);
         let consumer = self.consumer.clone();
         let should_stop = self.should_stop.clone();
         let handle = thread::Builder::new()

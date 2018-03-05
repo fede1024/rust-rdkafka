@@ -11,6 +11,7 @@
 * Rename `Empty(...)Context` to `Default(...)Context`.
 * Use default type parameters for the context of `Client`, producers and consumers
   with `Default(...)Context` set as the default one.
+* Increase default buffer size in `StreamConsumer` from 0 to 10 to reduce context switching.
 
 <a name="0.14.1"></a>
 ## 0.14.1 (2017-12-30)
