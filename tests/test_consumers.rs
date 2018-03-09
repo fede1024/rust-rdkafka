@@ -8,7 +8,7 @@ extern crate rdkafka_sys;
 use futures::*;
 
 use rdkafka::{ClientConfig, ClientContext, Message, Statistics, Timestamp};
-use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, StreamConsumer};
+use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext, CommitMode, StreamConsumer};
 use rdkafka::error::{KafkaError, KafkaResult};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::current_time_millis;
@@ -37,20 +37,7 @@ impl ConsumerContext for TestContext {
     }
 }
 
-// Create stream consumer for tests
-fn create_stream_consumer(
-    group_id: &str,
-    config_overrides: Option<HashMap<&str, &str>>,
-) -> StreamConsumer<TestContext> {
-    let cons_context = TestContext { _n: 64 };
-    create_stream_consumer_with_context(group_id, config_overrides, cons_context)
-}
-
-fn create_stream_consumer_with_context<C: ConsumerContext>(
-    group_id: &str,
-    config_overrides: Option<HashMap<&str, &str>>,
-    context: C,
-) -> StreamConsumer<C> {
+fn consumer_config(group_id: &str, config_overrides: Option<HashMap<&str, &str>>) -> ClientConfig {
     let mut config = ClientConfig::new();
 
     config.set("group.id", group_id);
@@ -71,10 +58,63 @@ fn create_stream_consumer_with_context<C: ConsumerContext>(
     }
 
     config
+}
+
+// Create stream consumer for tests
+fn create_stream_consumer(
+    group_id: &str,
+    config_overrides: Option<HashMap<&str, &str>>,
+) -> StreamConsumer<TestContext> {
+    let cons_context = TestContext { _n: 64 };
+    create_stream_consumer_with_context(group_id, config_overrides, cons_context)
+}
+
+fn create_stream_consumer_with_context<C: ConsumerContext>(
+    group_id: &str,
+    config_overrides: Option<HashMap<&str, &str>>,
+    context: C,
+) -> StreamConsumer<C> {
+    consumer_config(group_id, config_overrides)
         .create_with_context(context)
         .expect("Consumer creation failed")
 }
 
+fn create_base_consumer(
+    group_id: &str,
+    config_overrides: Option<HashMap<&str, &str>>
+) -> BaseConsumer<TestContext> {
+    consumer_config(group_id, config_overrides)
+        .create_with_context(TestContext { _n: 64 })
+        .expect("Consumer creation failed")
+}
+
+// All produced messages should be consumed.
+#[test]
+fn test_produce_consume_iter() {
+    let _r = env_logger::init();
+
+    let start_time = current_time_millis();
+    let topic_name = rand_test_topic();
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None);
+    let consumer = create_base_consumer(&rand_test_group(), None);
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+
+    for message in consumer.iter(None).take(100) {
+        match message {
+            Ok(m) => {
+                let id = message_map[&(m.partition(), m.offset())];
+                match m.timestamp() {
+                    Timestamp::CreateTime(timestamp) => assert!(timestamp >= start_time),
+                    _ => panic!("Expected createtime for message timestamp")
+                };
+                assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(id));
+                assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(id));
+                assert_eq!(m.topic(), topic_name.as_str());
+            },
+            Err(e) => panic!("Error receiving message: {:?}", e)
+        }
+    }
+}
 
 // All produced messages should be consumed.
 #[test]

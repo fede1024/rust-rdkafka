@@ -115,6 +115,57 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         self.poll_raw(timeout_to_ms(timeout))
             .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
     }
+
+    /// Returns an iterator over the available messages.
+    ///
+    /// It repeatedly calls [`poll`](#method.poll) with the given timeout.
+    ///
+    /// Note that it's also possible to iterate over the consumer directly. In such case, there's
+    /// no timeout and it blocks forever to get messages.
+    ///
+    /// # Examples
+    ///
+    /// All these are equivalent and will receive messages without timing out.
+    ///
+    /// ```rust,no_run
+    /// # extern crate rdkafka;
+    /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
+    /// #    .create()
+    /// #    .unwrap();
+    ///
+    /// loop {
+    ///   let message = consumer.poll(None);
+    ///   // Handle the message
+    /// }
+    /// ```
+    ///
+    /// ```rust,no_run
+    /// # extern crate rdkafka;
+    /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
+    /// #    .create()
+    /// #    .unwrap();
+    ///
+    /// for message in consumer.iter(None) {
+    ///   // Handle the message
+    /// }
+    /// ```
+    ///
+    /// ```rust,no_run
+    /// # extern crate rdkafka;
+    /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
+    /// #    .create()
+    /// #    .unwrap();
+    ///
+    /// for message in &consumer {
+    ///   // Handle the message
+    /// }
+    /// ```
+    pub fn iter<T: Into<Option<Duration>>>(&self, timeout: T) -> Iter<C> {
+        Iter {
+            consumer: self,
+            timeout: timeout.into(),
+        }
+    }
 }
 
 impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
@@ -297,5 +348,28 @@ impl<C: ConsumerContext> Drop for BaseConsumer<C> {
         trace!("Destroying consumer: {:?}", self.client.native_ptr()); // TODO: fix me (multiple executions ?)
         unsafe { rdsys::rd_kafka_consumer_close(self.client.native_ptr()) };
         trace!("Consumer destroyed: {:?}", self.client.native_ptr());
+    }
+}
+
+/// Iterator for more convenient interface.
+///
+/// It simply repeatedly calls [`BaseConsumer::poll`](struct.BaseConsumer.html#method.poll).
+pub struct Iter<'a, C: ConsumerContext + 'a> {
+    timeout: Option<Duration>,
+    consumer: &'a BaseConsumer<C>,
+}
+
+impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
+    type Item = KafkaResult<BorrowedMessage<'a>>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.consumer.poll(self.timeout)
+    }
+}
+
+impl<'a, C: ConsumerContext + 'a> IntoIterator for &'a BaseConsumer<C> {
+    type Item = KafkaResult<BorrowedMessage<'a>>;
+    type IntoIter = Iter<'a, C>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter(None)
     }
 }
