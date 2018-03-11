@@ -68,6 +68,7 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_SASL").is_ok() {
         configure_flags.push("--enable-sasl");
+        println!("cargo:rustc-link-lib=sasl2");
     } else {
         configure_flags.push("--disable-sasl");
     }
