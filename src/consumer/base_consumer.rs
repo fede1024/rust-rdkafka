@@ -118,10 +118,9 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Returns an iterator over the available messages.
     ///
-    /// It repeatedly calls [`poll`](#method.poll) with the given timeout.
+    /// It repeatedly calls [`poll`](#method.poll) with no timeout.
     ///
-    /// Note that it's also possible to iterate over the consumer directly. In such case, there's
-    /// no timeout and it blocks forever to get messages.
+    /// Note that it's also possible to iterate over the consumer directly.
     ///
     /// # Examples
     ///
@@ -132,7 +131,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
     /// #    .create()
     /// #    .unwrap();
-    ///
+    /// #
     /// loop {
     ///   let message = consumer.poll(None);
     ///   // Handle the message
@@ -144,8 +143,8 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
     /// #    .create()
     /// #    .unwrap();
-    ///
-    /// for message in consumer.iter(None) {
+    /// #
+    /// for message in consumer.iter() {
     ///   // Handle the message
     /// }
     /// ```
@@ -155,16 +154,13 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
     /// #    .create()
     /// #    .unwrap();
-    ///
+    /// #
     /// for message in &consumer {
     ///   // Handle the message
     /// }
     /// ```
-    pub fn iter<T: Into<Option<Duration>>>(&self, timeout: T) -> Iter<C> {
-        Iter {
-            consumer: self,
-            timeout: timeout.into(),
-        }
+    pub fn iter(&self) -> Iter<C> {
+        Iter(self)
     }
 }
 
@@ -354,15 +350,16 @@ impl<C: ConsumerContext> Drop for BaseConsumer<C> {
 /// Iterator for more convenient interface.
 ///
 /// It simply repeatedly calls [`BaseConsumer::poll`](struct.BaseConsumer.html#method.poll).
-pub struct Iter<'a, C: ConsumerContext + 'a> {
-    timeout: Option<Duration>,
-    consumer: &'a BaseConsumer<C>,
-}
+pub struct Iter<'a, C: ConsumerContext + 'a>(&'a BaseConsumer<C>);
 
 impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
     type Item = KafkaResult<BorrowedMessage<'a>>;
     fn next(&mut self) -> Option<Self::Item> {
-        self.consumer.poll(self.timeout)
+        loop {
+            if let Some(item) = self.0.poll(None) {
+                return Some(item)
+            }
+        }
     }
 }
 
@@ -370,6 +367,6 @@ impl<'a, C: ConsumerContext + 'a> IntoIterator for &'a BaseConsumer<C> {
     type Item = KafkaResult<BorrowedMessage<'a>>;
     type IntoIter = Iter<'a, C>;
     fn into_iter(self) -> Self::IntoIter {
-        self.iter(None)
+        self.iter()
     }
 }

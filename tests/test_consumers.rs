@@ -99,7 +99,7 @@ fn test_produce_consume_iter() {
     let consumer = create_base_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    for message in consumer.iter(None).take(100) {
+    for message in consumer.iter().take(100) {
         match message {
             Ok(m) => {
                 let id = message_map[&(m.partition(), m.offset())];
