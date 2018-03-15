@@ -107,7 +107,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rdkafka = "0.14.0"
+//! rdkafka = "0.15.0"
 //! ```
 //!
 //! This crate will compile librdkafka from sources and link it statically to your executable. To compile librdkafka you'll need:
@@ -123,7 +123,7 @@
 //!
 //! ```toml
 //! [dependencies.rdkafka]
-//! version = "0.14.0"
+//! version = "0.15.0"
 //! features = ["ssl", "sasl"]
 //! ```
 //!

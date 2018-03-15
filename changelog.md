@@ -1,6 +1,7 @@
 # Changelog
 
-## master
+<a name="0.15.0"></a>
+## 0.15.0 (2018-03015)
 
 * Added iterator interface to the `BaseConsumer`.
 * Change timeout to more rust-idiomatic `Option<Duration>`.
