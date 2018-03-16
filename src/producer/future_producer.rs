@@ -156,7 +156,8 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
                         topic.to_owned(),
                         timestamp.map_or(Timestamp::NotAvailable, Timestamp::CreateTime),
                         partition.unwrap_or(-1),
-                        0
+                        0,
+                        None, // TODO: fix
                     );
                     let _ = tx.send(Err((e, owned_message)));
                     break DeliveryFuture { rx };

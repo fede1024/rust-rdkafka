@@ -2,11 +2,11 @@
 
 pub const __llvm__: ::std::os::raw::c_uint = 1;
 pub const __clang__: ::std::os::raw::c_uint = 1;
-pub const __clang_major__: ::std::os::raw::c_uint = 8;
-pub const __clang_minor__: ::std::os::raw::c_uint = 1;
+pub const __clang_major__: ::std::os::raw::c_uint = 9;
+pub const __clang_minor__: ::std::os::raw::c_uint = 0;
 pub const __clang_patchlevel__: ::std::os::raw::c_uint = 0;
-pub const __clang_version__: &'static [u8; 23usize] =
-    b"8.1.0 (clang-802.0.42)\x00";
+pub const __clang_version__: &'static [u8; 25usize] =
+    b"9.0.0 (clang-900.0.39.2)\x00";
 pub const __GNUC_MINOR__: ::std::os::raw::c_uint = 2;
 pub const __GNUC_PATCHLEVEL__: ::std::os::raw::c_uint = 1;
 pub const __GNUC__: ::std::os::raw::c_uint = 4;
@@ -18,8 +18,8 @@ pub const __ATOMIC_RELEASE: ::std::os::raw::c_uint = 3;
 pub const __ATOMIC_ACQ_REL: ::std::os::raw::c_uint = 4;
 pub const __ATOMIC_SEQ_CST: ::std::os::raw::c_uint = 5;
 pub const __PRAGMA_REDEFINE_EXTNAME: ::std::os::raw::c_uint = 1;
-pub const __VERSION__: &'static [u8; 51usize] =
-    b"4.2.1 Compatible Apple LLVM 8.1.0 (clang-802.0.42)\x00";
+pub const __VERSION__: &'static [u8; 53usize] =
+    b"4.2.1 Compatible Apple LLVM 9.0.0 (clang-900.0.39.2)\x00";
 pub const __OBJC_BOOL_IS_BOOL: ::std::os::raw::c_uint = 0;
 pub const __CONSTANT_CFSTRINGS__: ::std::os::raw::c_uint = 1;
 pub const __BLOCKS__: ::std::os::raw::c_uint = 1;
@@ -245,6 +245,7 @@ pub const __tune_core2__: ::std::os::raw::c_uint = 1;
 pub const __NO_MATH_INLINES: ::std::os::raw::c_uint = 1;
 pub const __FXSR__: ::std::os::raw::c_uint = 1;
 pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16: ::std::os::raw::c_uint = 1;
+pub const __SSE4_1__: ::std::os::raw::c_uint = 1;
 pub const __SSSE3__: ::std::os::raw::c_uint = 1;
 pub const __SSE3__: ::std::os::raw::c_uint = 1;
 pub const __SSE2__: ::std::os::raw::c_uint = 1;
@@ -258,12 +259,13 @@ pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4: ::std::os::raw::c_uint = 1;
 pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8: ::std::os::raw::c_uint = 1;
 pub const __APPLE_CC__: ::std::os::raw::c_uint = 6000;
 pub const __APPLE__: ::std::os::raw::c_uint = 1;
+pub const __STDC_NO_THREADS__: ::std::os::raw::c_uint = 1;
 pub const OBJC_NEW_PROPERTIES: ::std::os::raw::c_uint = 1;
-pub const __apple_build_version__: ::std::os::raw::c_uint = 8020042;
+pub const __apple_build_version__: ::std::os::raw::c_uint = 9000039;
 pub const __DYNAMIC__: ::std::os::raw::c_uint = 1;
 pub const __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__:
           ::std::os::raw::c_uint =
-    1090;
+    101200;
 pub const __MACH__: ::std::os::raw::c_uint = 1;
 pub const __STDC__: ::std::os::raw::c_uint = 1;
 pub const __STDC_HOSTED__: ::std::os::raw::c_uint = 1;
@@ -352,7 +354,7 @@ pub const __WATCHOS_3_0: ::std::os::raw::c_uint = 30000;
 pub const __WATCHOS_3_1: ::std::os::raw::c_uint = 30100;
 pub const __WATCHOS_3_1_1: ::std::os::raw::c_uint = 30101;
 pub const __WATCHOS_3_2: ::std::os::raw::c_uint = 30200;
-pub const __MAC_OS_X_VERSION_MIN_REQUIRED: ::std::os::raw::c_uint = 1090;
+pub const __MAC_OS_X_VERSION_MIN_REQUIRED: ::std::os::raw::c_uint = 101200;
 pub const __MAC_OS_X_VERSION_MAX_ALLOWED: ::std::os::raw::c_uint = 101204;
 pub const __PTHREAD_SIZE__: ::std::os::raw::c_uint = 8176;
 pub const __PTHREAD_ATTR_SIZE__: ::std::os::raw::c_uint = 56;
@@ -856,9 +858,9 @@ pub const SHUT_RD: ::std::os::raw::c_uint = 0;
 pub const SHUT_WR: ::std::os::raw::c_uint = 1;
 pub const SHUT_RDWR: ::std::os::raw::c_uint = 2;
 pub const LIBRDKAFKA_TYPECHECKS: ::std::os::raw::c_uint = 1;
-pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 721919;
-pub const RD_KAFKA_DEBUG_CONTEXTS: &'static [u8; 81usize] =
-    b"all,generic,broker,topic,metadata,queue,msg,protocol,cgrp,security,fetch,feature\x00";
+pub const RD_KAFKA_VERSION: ::std::os::raw::c_uint = 721407;
+pub const RD_KAFKA_DEBUG_CONTEXTS: &'static [u8; 109usize] =
+    b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer\x00";
 pub const RD_KAFKA_OFFSET_BEGINNING: ::std::os::raw::c_int = -2;
 pub const RD_KAFKA_OFFSET_END: ::std::os::raw::c_int = -1;
 pub const RD_KAFKA_OFFSET_STORED: ::std::os::raw::c_int = -1000;
@@ -867,6 +869,7 @@ pub const RD_KAFKA_OFFSET_TAIL_BASE: ::std::os::raw::c_int = -2000;
 pub const RD_KAFKA_MSG_F_FREE: ::std::os::raw::c_uint = 1;
 pub const RD_KAFKA_MSG_F_COPY: ::std::os::raw::c_uint = 2;
 pub const RD_KAFKA_MSG_F_BLOCK: ::std::os::raw::c_uint = 4;
+pub const RD_KAFKA_MSG_F_PARTITION: ::std::os::raw::c_uint = 8;
 pub const RD_KAFKA_EVENT_NONE: ::std::os::raw::c_uint = 0;
 pub const RD_KAFKA_EVENT_DR: ::std::os::raw::c_uint = 1;
 pub const RD_KAFKA_EVENT_FETCH: ::std::os::raw::c_uint = 2;
@@ -2559,6 +2562,9 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__KEY_DESERIALIZATION = -160,
     RD_KAFKA_RESP_ERR__VALUE_DESERIALIZATION = -159,
     RD_KAFKA_RESP_ERR__PARTIAL = -158,
+    RD_KAFKA_RESP_ERR__READ_ONLY = -157,
+    RD_KAFKA_RESP_ERR__NOENT = -156,
+    RD_KAFKA_RESP_ERR__UNDERFLOW = -155,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,
@@ -2877,6 +2883,57 @@ pub enum rd_kafka_vtype_t {
     RD_KAFKA_VTYPE_OPAQUE = 6,
     RD_KAFKA_VTYPE_MSGFLAGS = 7,
     RD_KAFKA_VTYPE_TIMESTAMP = 8,
+    RD_KAFKA_VTYPE_HEADER = 9,
+    RD_KAFKA_VTYPE_HEADERS = 10,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_headers_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_headers_t = rd_kafka_headers_s;
+extern "C" {
+    pub fn rd_kafka_headers_new(initial_count: usize)
+     -> *mut rd_kafka_headers_t;
+}
+extern "C" {
+    pub fn rd_kafka_headers_destroy(hdrs: *mut rd_kafka_headers_t);
+}
+extern "C" {
+    pub fn rd_kafka_headers_copy(src: *const rd_kafka_headers_t)
+     -> *mut rd_kafka_headers_t;
+}
+extern "C" {
+    pub fn rd_kafka_header_add(hdrs: *mut rd_kafka_headers_t,
+                               name: *const ::std::os::raw::c_char,
+                               name_size: isize,
+                               value: *const ::std::os::raw::c_void,
+                               value_size: isize) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_header_remove(hdrs: *mut rd_kafka_headers_t,
+                                  name: *const ::std::os::raw::c_char)
+     -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_header_get_last(hdrs: *const rd_kafka_headers_t,
+                                    name: *const ::std::os::raw::c_char,
+                                    valuep:
+                                        *mut *const ::std::os::raw::c_void,
+                                    sizep: *mut usize) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_header_get(hdrs: *const rd_kafka_headers_t, idx: usize,
+                               name: *const ::std::os::raw::c_char,
+                               valuep: *mut *const ::std::os::raw::c_void,
+                               sizep: *mut usize) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_header_get_all(hdrs: *const rd_kafka_headers_t,
+                                   idx: usize,
+                                   namep: *mut *const ::std::os::raw::c_char,
+                                   valuep: *mut *const ::std::os::raw::c_void,
+                                   sizep: *mut usize) -> rd_kafka_resp_err_t;
 }
 #[repr(C)]
 #[derive(Debug, Copy)]
@@ -2958,6 +3015,18 @@ extern "C" {
 extern "C" {
     pub fn rd_kafka_message_latency(rkmessage: *const rd_kafka_message_t)
      -> i64;
+}
+extern "C" {
+    pub fn rd_kafka_message_headers(rkmessage: *const rd_kafka_message_t,
+                                    hdrsp: *mut *mut rd_kafka_headers_t)
+     -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_message_set_headers(rkmessage: *mut rd_kafka_message_t,
+                                        hdrs: *mut rd_kafka_headers_t);
+}
+extern "C" {
+    pub fn rd_kafka_header_cnt(hdrs: *const rd_kafka_headers_t) -> usize;
 }
 #[repr(i32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -3208,6 +3277,10 @@ extern "C" {
      -> *mut rd_kafka_topic_conf_t;
 }
 extern "C" {
+    pub fn rd_kafka_default_topic_conf_dup(rk: *mut rd_kafka_t)
+     -> *mut rd_kafka_topic_conf_t;
+}
+extern "C" {
     pub fn rd_kafka_topic_conf_destroy(topic_conf:
                                            *mut rd_kafka_topic_conf_t);
 }
@@ -3241,6 +3314,17 @@ extern "C" {
                                                                                                      *mut ::std::os::raw::c_void)
                                                                                 ->
                                                                                     i32>);
+}
+extern "C" {
+    pub fn rd_kafka_topic_conf_set_msg_order_cmp(topic_conf:
+                                                     *mut rd_kafka_topic_conf_t,
+                                                 msg_order_cmp:
+                                                     ::std::option::Option<unsafe extern "C" fn(a:
+                                                                                                    *const rd_kafka_message_t,
+                                                                                                b:
+                                                                                                    *const rd_kafka_message_t)
+                                                                               ->
+                                                                                   ::std::os::raw::c_int>);
 }
 extern "C" {
     pub fn rd_kafka_topic_partition_available(rkt: *const rd_kafka_topic_t,
@@ -3280,6 +3364,30 @@ extern "C" {
                                                           *mut ::std::os::raw::c_void,
                                                       msg_opaque:
                                                           *mut ::std::os::raw::c_void)
+     -> i32;
+}
+extern "C" {
+    pub fn rd_kafka_msg_partitioner_murmur2(rkt: *const rd_kafka_topic_t,
+                                            key:
+                                                *const ::std::os::raw::c_void,
+                                            keylen: usize, partition_cnt: i32,
+                                            rkt_opaque:
+                                                *mut ::std::os::raw::c_void,
+                                            msg_opaque:
+                                                *mut ::std::os::raw::c_void)
+     -> i32;
+}
+extern "C" {
+    pub fn rd_kafka_msg_partitioner_murmur2_random(rkt:
+                                                       *const rd_kafka_topic_t,
+                                                   key:
+                                                       *const ::std::os::raw::c_void,
+                                                   keylen: usize,
+                                                   partition_cnt: i32,
+                                                   rkt_opaque:
+                                                       *mut ::std::os::raw::c_void,
+                                                   msg_opaque:
+                                                       *mut ::std::os::raw::c_void)
      -> i32;
 }
 extern "C" {
@@ -4158,6 +4266,17 @@ pub type rd_kafka_interceptor_f_on_commit_t =
                                                ic_opaque:
                                                    *mut ::std::os::raw::c_void)
                               -> rd_kafka_resp_err_t>;
+pub type rd_kafka_interceptor_f_on_request_sent_t =
+    ::std::option::Option<unsafe extern "C" fn(rk: *mut rd_kafka_t,
+                                               sockfd: ::std::os::raw::c_int,
+                                               brokername:
+                                                   *const ::std::os::raw::c_char,
+                                               brokerid: i32, ApiKey: i16,
+                                               ApiVersion: i16, CorrId: i32,
+                                               size: usize,
+                                               ic_opaque:
+                                                   *mut ::std::os::raw::c_void)
+                              -> rd_kafka_resp_err_t>;
 extern "C" {
     pub fn rd_kafka_conf_interceptor_add_on_conf_set(conf:
                                                          *mut rd_kafka_conf_t,
@@ -4249,6 +4368,16 @@ extern "C" {
                                                   rd_kafka_interceptor_f_on_commit_t,
                                               ic_opaque:
                                                   *mut ::std::os::raw::c_void)
+     -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_interceptor_add_on_request_sent(rk: *mut rd_kafka_t,
+                                                    ic_name:
+                                                        *const ::std::os::raw::c_char,
+                                                    on_request_sent:
+                                                        rd_kafka_interceptor_f_on_request_sent_t,
+                                                    ic_opaque:
+                                                        *mut ::std::os::raw::c_void)
      -> rd_kafka_resp_err_t;
 }
 pub type __builtin_va_list = [__va_list_tag; 1usize];

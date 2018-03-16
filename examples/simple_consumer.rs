@@ -9,12 +9,12 @@ use futures::stream::Stream;
 
 use rdkafka::Message;
 use rdkafka::client::ClientContext;
-use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
-use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
-use rdkafka::util::get_rdkafka_version;
+use rdkafka::consumer::stream_consumer::StreamConsumer;
+use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
 use rdkafka::error::KafkaResult;
-
+use rdkafka::message::Headers;
+use rdkafka::util::get_rdkafka_version;
 mod example_utils;
 use example_utils::setup_logger;
 
@@ -80,6 +80,19 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
                 };
                 info!("key: '{:?}', payload: '{}', topic: {}, partition: {}, offset: {}",
                       m.key(), payload, m.topic(), m.partition(), m.offset());
+                if let Some(headers) = m.headers() {
+                    for idx in 0..headers.count() {
+                        match headers.get_as::<str>(idx) {
+                            Some((name, Some(value))) => {
+                                info!("header {}: {} = {:?}", idx, name, value);
+                            },
+                            Some((name, None)) => {
+                                info!("header {}: {} = NO VALUE", idx, name);
+                            },
+                            None => {},  // Should never happen
+                        }
+                    }
+                }
                 consumer.commit_message(&m, CommitMode::Async).unwrap();
             },
             Ok(Err(e)) => {

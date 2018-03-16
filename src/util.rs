@@ -4,6 +4,7 @@ use rdsys;
 use std::ffi::CStr;
 use std::os::raw::c_void;
 use std::ptr;
+use std::slice;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Return a tuple representing the version of `librdkafka` in
@@ -37,6 +38,17 @@ pub fn millis_to_epoch(time: SystemTime) -> i64 {
 /// Returns the current time in millis since unix epoch.
 pub fn current_time_millis() -> i64 {
     millis_to_epoch(SystemTime::now())
+}
+
+
+/// Converts a pointer to an array to an optional slice. If the pointer is null, `None` will
+/// be returned.
+pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> Option<&'a[T]> {
+    if ptr.is_null() {
+        None
+    } else {
+        Some(slice::from_raw_parts::<T>(ptr as *const T, size))
+    }
 }
 
 

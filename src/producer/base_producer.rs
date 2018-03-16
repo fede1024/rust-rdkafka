@@ -41,7 +41,7 @@ use rdsys;
 use client::{Client, ClientContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use error::{KafkaError, KafkaResult, IsError};
-use message::{BorrowedMessage, ToBytes};
+use message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use util::{timeout_to_ms, IntoOpaque};
 
 use std::ffi::CString;
@@ -179,6 +179,8 @@ impl<C: ProducerContext> BaseProducer<C> {
         };
         let delivery_opaque_ptr = delivery_opaque.into_ptr();
         let topic_name_c = CString::new(topic_name.to_owned())?;
+        let mut header = OwnedHeaders::new();
+        header.add("a name", "and a value");
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.native_ptr(),
@@ -189,6 +191,7 @@ impl<C: ProducerContext> BaseProducer<C> {
                 RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
                 RD_KAFKA_VTYPE_OPAQUE, delivery_opaque_ptr,
                 RD_KAFKA_VTYPE_TIMESTAMP, timestamp.unwrap_or(0),
+                RD_KAFKA_VTYPE_HEADERS, header.ptr(),
                 RD_KAFKA_VTYPE_END
             )
         };
