@@ -19,7 +19,7 @@ use std::mem;
 use std::ptr;
 use std::time::Duration;
 
-pub unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
+pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     _conf: *mut RDKafka,
     err: RDKafkaRespErr,
     offsets: *mut RDKafkaTopicPartitionList,

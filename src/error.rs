@@ -32,22 +32,35 @@ impl IsError for RDKafkaConfRes {
 /// Represents all Kafka errors. Check the underlying `RDKafkaError` to get details.
 #[derive(Clone, PartialEq, Eq)]
 pub enum KafkaError {
+    /// Invalid client configuration.
     ClientConfig(RDKafkaConfRes, String, String, String),
+    /// Client creation failed.
     ClientCreation(String),
+    /// Consumer commit failed.
     ConsumerCommit(RDKafkaError),
-    ConsumerCreation(String),
-    FutureCanceled,
+    /// Global error.
     Global(RDKafkaError),
+    /// Group list fetch failed.
     GroupListFetch(RDKafkaError),
+    /// Message consumption failed.
     MessageConsumption(RDKafkaError),
+    /// Message production error.
     MessageProduction(RDKafkaError),
+    /// Metadata fetch error.
     MetadataFetch(RDKafkaError),
+    /// No message was received.
     NoMessageReceived,
+    /// Unexpected null pointer
     Nul(ffi::NulError),
+    /// Offset fetch failed.
     OffsetFetch(RDKafkaError),
+    /// Ond of partition reached.
     PartitionEOF(i32),
+    /// Setting partition offset failed.
     SetPartitionOffset(RDKafkaError),
+    /// Offset store failed.
     StoreOffset(RDKafkaError),
+    /// Subscription creation failed.
     Subscription(String),
 }
 
@@ -57,8 +70,6 @@ impl fmt::Debug for KafkaError {
             KafkaError::ClientConfig(_, ref desc, ref key, ref value) => write!(f, "KafkaError (Client config error: {} {} {})", desc, key, value),
             KafkaError::ClientCreation(ref err) => write!(f, "KafkaError (Client creation error: {})", err),
             KafkaError::ConsumerCommit(err) => write!(f, "KafkaError (Consumer commit error: {})", err),
-            KafkaError::ConsumerCreation(ref err) => write!(f, "KafkaError (Consumer creation error: {})", err),
-            KafkaError::FutureCanceled => write!(f, "Future canceled"),
             KafkaError::Global(err) => write!(f, "KafkaError (Global error: {})", err),
             KafkaError::GroupListFetch(err) => write!(f, "KafkaError (Group list fetch error: {})", err),
             KafkaError::MessageConsumption(err) => write!(f, "KafkaError (Message consumption error: {})", err),
@@ -81,8 +92,6 @@ impl fmt::Display for KafkaError {
             KafkaError::ClientConfig(_, ref desc, ref key, ref value) => write!(f, "Client config error: {} {} {}", desc, key, value),
             KafkaError::ClientCreation(ref err) => write!(f, "Client creation error: {}", err),
             KafkaError::ConsumerCommit(err) => write!(f, "Consumer commit error: {}", err),
-            KafkaError::ConsumerCreation(ref err) => write!(f, "Consumer creation error: {}", err),
-            KafkaError::FutureCanceled => write!(f, "Future canceled"),
             KafkaError::Global(err) => write!(f, "Global error: {}", err),
             KafkaError::GroupListFetch(err) => write!(f, "Group list fetch error: {}", err),
             KafkaError::MessageConsumption(err) => write!(f, "Message consumption error: {}", err),
@@ -105,8 +114,6 @@ impl error::Error for KafkaError {
             KafkaError::ClientConfig(_, _, _, _) => "Client config error",
             KafkaError::ClientCreation(_) => "Client creation error",
             KafkaError::ConsumerCommit(_) => "Consumer commit error",
-            KafkaError::ConsumerCreation(_) => "Consumer creation error",
-            KafkaError::FutureCanceled => "Future canceled",
             KafkaError::Global(_) => "Global error",
             KafkaError::GroupListFetch(_) => "Group list fetch error",
             KafkaError::MessageConsumption(_) => "Message consumption error",
@@ -128,8 +135,6 @@ impl error::Error for KafkaError {
             KafkaError::ClientConfig(_, _, _, _) => None,
             KafkaError::ClientCreation(_) => None,
             KafkaError::ConsumerCommit(ref err) => Some(err),
-            KafkaError::ConsumerCreation(_) => None,
-            KafkaError::FutureCanceled => None,
             KafkaError::Global(ref err) => Some(err),
             KafkaError::GroupListFetch(ref err) => Some(err),
             KafkaError::MessageConsumption(ref err) => Some(err),

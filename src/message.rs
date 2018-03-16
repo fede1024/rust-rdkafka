@@ -16,8 +16,11 @@ use util::millis_to_epoch;
 /// Timestamp of a message
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Timestamp {
+    /// Timestamp not available
     NotAvailable,
+    /// Message creation time
     CreateTime(i64),
+    /// Log append time
     LogAppendTime(i64)
 }
 
@@ -319,7 +322,9 @@ impl Message for OwnedMessage {
 /// Given a reference to a byte array, returns a different view of the same data.
 /// No copy of the data should be performed.
 pub trait FromBytes {
+    /// The error type that will be used whenever the conversion fails.
     type Error;
+    /// Tries to convert the provided byte slice into a different type.
     fn from_bytes(&[u8]) -> Result<&Self, Self::Error>;
 }
 
@@ -340,6 +345,7 @@ impl FromBytes for str {
 /// Given some data, returns the byte representation of that data.
 /// No copy of the data should be performed.
 pub trait ToBytes {
+    /// Convert the provided data to bytes.
     fn to_bytes(&self) -> &[u8];
 }
 

@@ -1,3 +1,4 @@
+//! Utility functions
 use rdsys;
 
 use std::ffi::CStr;

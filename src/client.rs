@@ -266,7 +266,7 @@ impl Drop for NativeTopic {
     }
 }
 
-pub unsafe extern "C" fn native_log_cb<C: ClientContext>(
+pub(crate) unsafe extern "C" fn native_log_cb<C: ClientContext>(
         client: *const RDKafka, level: i32,
         fac: *const i8, buf: *const i8) {
     let fac = CStr::from_ptr(fac).to_string_lossy();
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn native_log_cb<C: ClientContext>(
     mem::forget(context);   // Do not free the context
 }
 
-pub unsafe extern "C" fn native_stats_cb<C: ClientContext>(
+pub(crate) unsafe extern "C" fn native_stats_cb<C: ClientContext>(
         _conf: *mut RDKafka, json: *mut i8, json_len: usize,
         opaque: *mut c_void) -> i32 {
     let context = Box::from_raw(opaque as *mut C);
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn native_stats_cb<C: ClientContext>(
     0 // librdkafka will free the json buffer
 }
 
-pub unsafe extern "C" fn native_error_cb<C: ClientContext>(
+pub(crate) unsafe extern "C" fn native_error_cb<C: ClientContext>(
         _client: *mut RDKafka, err: i32, reason: *const i8,
         opaque: *mut c_void) {
     let err = rdsys::primitive_to_rd_kafka_resp_err_t(err)

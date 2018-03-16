@@ -24,8 +24,11 @@ use topic_partition_list::TopicPartitionList;
 /// Rebalance information.
 #[derive(Clone, Debug)]
 pub enum Rebalance<'a> {
+    /// A new partition assignment is received.
     Assign(&'a TopicPartitionList),
+    /// All partitions are revoked.
     Revoke,
+    /// Unexpected error from Kafka.
     Error(String),
 }
 
@@ -126,6 +129,7 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
         self.get_base_consumer().subscribe(topics)
     }
 
+    /// Unsubscribe the current subscription list.
     fn unsubscribe(&self) {
         self.get_base_consumer().unsubscribe();
     }
@@ -151,6 +155,8 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
         self.get_base_consumer().commit_consumer_state(mode)
     }
 
+    /// Commit the provided message. Note that this will also automatically commit every
+    /// message with lower offset within the same partition.
     fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
         self.get_base_consumer().commit_message(message, mode)
     }

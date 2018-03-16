@@ -1,3 +1,8 @@
+//! Future producer
+//!
+//! A high level producer that returns a Future for every produced message.
+// TODO: extend docs
+
 use client::{ClientContext, DefaultClientContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use producer::{DeliveryResult, ThreadedProducer, ProducerContext};
@@ -95,13 +100,6 @@ impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProduce
 /// delivery status of the message.
 pub struct DeliveryFuture {
     rx: Oneshot<OwnedDeliveryResult>,
-}
-
-// TODO: remove?
-impl DeliveryFuture {
-    pub fn close(&mut self) {
-        self.rx.close();
-    }
 }
 
 impl Future for DeliveryFuture {

@@ -1,3 +1,6 @@
+// TODO: add documentation for all fields
+#![allow(missing_docs)]
+
 use std::collections::HashMap;
 
 /// Statistics from librdkafka. Refer to the [librdkafka documentation](https://github.com/edenhill/librdkafka/wiki/Statistics)

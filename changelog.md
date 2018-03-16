@@ -1,5 +1,10 @@
 # Changelog
 
+<a name="master"></a>
+## Master
+
+* Add missing documentation warning.
+
 <a name="0.15.0"></a>
 ## 0.15.0 (2018-03015)
 

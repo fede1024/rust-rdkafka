@@ -55,7 +55,7 @@ pub enum RDKafkaLogLevel {
 }
 
 impl RDKafkaLogLevel {
-    pub fn from_int(level: i32) -> RDKafkaLogLevel {
+    pub(crate) fn from_int(level: i32) -> RDKafkaLogLevel {
         match level {
             0 => RDKafkaLogLevel::Emerg,
             1 => RDKafkaLogLevel::Alert,
@@ -110,6 +110,7 @@ impl Drop for NativeClientConfig {
 #[derive(Clone)]
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
+    /// The librdkafka logging level. Refer to `RDKafkaLogLevel` for the list of available levels.
     pub log_level: RDKafkaLogLevel,
 }
 
@@ -188,10 +189,12 @@ fn log_level_from_global_config() -> RDKafkaLogLevel {
 
 /// Create a new client based on the provided configuration.
 pub trait FromClientConfig: Sized {
+    /// Create a client from client configuration. The default client context will be used.
     fn from_config(&ClientConfig) -> KafkaResult<Self>;
 }
 
 /// Create a new client based on the provided configuration and context.
 pub trait FromClientConfigAndContext<C: ClientContext>: Sized {
+    /// Create a client from client configuration and a client context.
     fn from_config_and_context(&ClientConfig, C) -> KafkaResult<Self>;
 }
