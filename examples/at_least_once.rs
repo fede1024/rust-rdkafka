@@ -28,7 +28,7 @@ use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::error::KafkaResult;
-use rdkafka::producer::FutureProducer;
+use rdkafka::producer::{FutureProducer, ProducerRecord};
 use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
@@ -138,12 +138,21 @@ fn main() {
                 warn!("Kafka error: {}", e);
             }
             Ok(Ok(m)) => {
+                let mut record = ProducerRecord::to("lol");
+                if let Some(p) = m.payload() {
+                    record = record.payload(p);
+                }
+                if let Some(k) = m.key() {
+                    record = record.key(k);
+                }
                 // Send a copy to the message to every output topic in parallel, and wait for the
                 // delivery report to be received.
                 join_all(
                     output_topics.iter()
-                        .map(|output_topic|
-                            producer.send_copy(output_topic, None, m.payload(), m.key(), None, 1000)))
+                        .map(|output_topic| {
+                            record = record.topic(output_topic);
+                            producer.send(&record, 1000)
+                        }))
                     .wait()
                     .expect("Message delivery failed for some topic");
                 // Now that the message is completely processed, add it's position to the offset

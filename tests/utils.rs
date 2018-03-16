@@ -8,7 +8,7 @@ use futures::*;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::ClientConfig;
-use rdkafka::producer::FutureProducer;
+use rdkafka::producer::{FutureProducer, ProducerRecord};
 use rdkafka::message::ToBytes;
 use rdkafka::statistics::Statistics;
 
@@ -87,7 +87,14 @@ where
     let futures = (0..count)
         .map(|id| {
             let future =
-                producer.send_copy(topic_name, partition, Some(&value_fn(id)), Some(&key_fn(id)), timestamp, 1000);
+                producer.send(
+                    &ProducerRecord::to(topic_name)
+                        .partition(partition)
+                        .payload(&value_fn(id))
+                        .key(&key_fn(id))
+                        .timestamp(timestamp),
+                    1000,
+                );
             (id, future)
         })
         .collect::<Vec<_>>();

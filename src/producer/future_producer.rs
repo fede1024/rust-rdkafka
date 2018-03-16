@@ -116,6 +116,7 @@ impl Future for DeliveryFuture {
 }
 
 impl<C: ClientContext + 'static> FutureProducer<C> {
+    // TODO: update doc
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key, or a random one
     /// if the key is not specified. Returns a `DeliveryFuture` that will eventually contain the
@@ -123,22 +124,14 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     /// is allowed to block if the queue is full. Set it to -1 to block forever, or 0 to never block.
     /// If `block_ms` is reached and the queue is still full, a `RDKafkaError::QueueFull` will be
     /// reported in the `DeliveryFuture`.
-    pub fn send_copy<P, K>(
-        &self,
-        topic: &str,
-        partition: Option<i32>,
-        payload: Option<&P>,
-        key: Option<&K>,
-        timestamp: Option<i64>,
-        block_ms: i64,
-    ) -> DeliveryFuture
-    where K: ToBytes + ?Sized,
-          P: ToBytes + ?Sized {
+    pub fn send<P, K>(&self, record: &ProducerRecord<P, K>, block_ms: i64) -> DeliveryFuture
+        where K: ToBytes + ?Sized,
+              P: ToBytes + ?Sized {
         let start_time = Instant::now();
 
         loop {
             let (tx, rx) = futures::oneshot();
-            match self.producer.send_copy(topic, partition, payload, key, timestamp, Box::new(tx)) {
+            match self.producer.send(record, Box::new(tx)) {
                 Ok(_) => break DeliveryFuture{ rx },
                 Err(e) => {
                     if let KafkaError::MessageProduction(RDKafkaError::QueueFull) = e {
@@ -151,12 +144,13 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
                     }
                     let (tx, rx) = futures::oneshot();
                     let owned_message = OwnedMessage::new(
-                        payload.map(|p| p.to_bytes().to_vec()),
-                        key.map(|k| k.to_bytes().to_vec()),
-                        topic.to_owned(),
-                        timestamp.map_or(Timestamp::NotAvailable, Timestamp::CreateTime),
-                        partition.unwrap_or(-1),
-                        0
+                        record.payload.map(|p| p.to_bytes().to_vec()),
+                        record.key.map(|k| k.to_bytes().to_vec()),
+                        record.topic.to_owned(),
+                        record.timestamp.map_or(Timestamp::NotAvailable, Timestamp::CreateTime),
+                        record.partition.unwrap_or(-1),
+                        0,
+                        None, // TODO: fix
                     );
                     let _ = tx.send(Err((e, owned_message)));
                     break DeliveryFuture { rx };
@@ -165,20 +159,13 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         }
     }
 
-    /// Sends a copy of the payload and key provided to the specified topic. This works the same
-    /// way as `send_copy`, the only difference is that it returns an error if enqueuing fails.
-    pub fn send_copy_result<P, K>(
-        &self,
-        topic: &str,
-        partition: Option<i32>,
-        payload: Option<&P>,
-        key: Option<&K>,
-        timestamp: Option<i64>
-    ) -> KafkaResult<DeliveryFuture>
+    /// Sends a copy of the provided record to the specified topic. This works the same
+    /// way as `send_copy`, the only difference is that it returns an error immediately if enqueuing fails.
+    pub fn send_result<P, K>(&self, record: &ProducerRecord<K, P>) -> KafkaResult<DeliveryFuture>
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {
         let (tx, rx) = futures::oneshot();
-        self.producer.send_copy(topic, partition, payload, key, timestamp, Box::new(tx))?;
+        self.producer.send(record, Box::new(tx))?;
         Ok(DeliveryFuture { rx })
     }
 

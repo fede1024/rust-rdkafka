@@ -2,12 +2,15 @@
 use rdsys;
 use rdsys::types::*;
 
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
-use std::slice;
+use std::os::raw::c_void;
+use std::ptr;
 use std::str;
 use std::time::SystemTime;
+
+use util;
 
 use error::{IsError, KafkaError, KafkaResult};
 use util::millis_to_epoch;
@@ -58,8 +61,21 @@ impl From<SystemTime> for Timestamp {
 //    }
 //}
 
+pub trait Headers {
+    fn count(&self) -> usize;
+    fn get(&self, idx: usize) -> Option<(&str, Option<&[u8]>)>;
+
+    fn get_as<V: FromBytes + ?Sized>(&self, idx: usize) -> Option<(&str, Option<Result<&V, V::Error>>)> {
+        self.get(idx)
+            .map(|(name, value)| (name, value.map(V::from_bytes)))
+    }
+}
+
+
 /// The `Message` trait provides access to the fields of a generic Kafka message.
 pub trait Message {
+    type Headers: Headers;
+
     /// Returns the key of the message, or None if there is no key.
     fn key(&self) -> Option<&[u8]>;
 
@@ -89,7 +105,48 @@ pub trait Message {
     fn key_view<K: ?Sized + FromBytes>(&self) -> Option<Result<&K, K::Error>> {
         self.key().map(K::from_bytes)
     }
+
+    fn headers(&self) -> Option<&Self::Headers>;
 }
+
+
+pub struct BorrowedHeaders;
+
+impl BorrowedHeaders {
+    fn as_rdkafka_ptr(&self) -> *const RDKafkaHeaders {
+        self as *const BorrowedHeaders as *const RDKafkaHeaders
+    }
+}
+
+impl Headers for BorrowedHeaders {
+    fn count(&self) -> usize {
+        unsafe { rdsys::rd_kafka_header_cnt(self.as_rdkafka_ptr()) }
+    }
+
+    fn get(&self, idx: usize) -> Option<(&str, Option<&[u8]>)> {
+        let mut value_ptr = ptr::null();
+        let mut name_ptr = ptr::null();
+        let mut value_size = 0;
+        let err = unsafe {
+            rdsys::rd_kafka_header_get_all(
+                self.as_rdkafka_ptr(),
+                idx,
+                &mut name_ptr,
+                &mut value_ptr,
+                &mut value_size
+            )
+        };
+        if err.is_error() {
+            None
+        } else {
+            unsafe {
+                Some((CStr::from_ptr(name_ptr).to_str().unwrap(),
+                      util::ptr_to_slice(value_ptr, value_size)))
+            }
+        }
+    }
+}
+
 
 /// A zero-copy Kafka message.
 ///
@@ -187,29 +244,20 @@ impl<'a> BorrowedMessage<'a> {
             timestamp: self.timestamp(),
             partition: self.partition(),
             offset: self.offset(),
+            headers: None, // TODO: fix
         }
     }
 }
 
 impl<'a> Message for BorrowedMessage<'a> {
-    fn key(&self) -> Option<&[u8]> {
-        unsafe {
-            if (*self.ptr).key.is_null() {
-                None
-            } else {
-                Some(slice::from_raw_parts::<u8>((*self.ptr).key as *const u8, (*self.ptr).key_len))
-            }
-        }
-    }
+    type Headers = BorrowedHeaders;
 
     fn payload(&self) -> Option<&[u8]> {
-        unsafe {
-            if (*self.ptr).payload.is_null() {
-                None
-            } else {
-                Some(slice::from_raw_parts::<u8>((*self.ptr).payload as *const u8, (*self.ptr).len))
-            }
-        }
+        unsafe { util::ptr_to_slice((*self.ptr).payload, (*self.ptr).len) }
+    }
+
+    fn key(&self) -> Option<&[u8]> {
+        unsafe { util::ptr_to_slice((*self.ptr).payload, (*self.ptr).key_len) }
     }
 
     fn topic(&self) -> &str {
@@ -246,6 +294,18 @@ impl<'a> Message for BorrowedMessage<'a> {
             }
         }
     }
+
+    fn headers(&self) -> Option<&BorrowedHeaders> {
+        let mut native_headers_ptr = ptr::null_mut();
+        unsafe {
+            let err = rdsys::rd_kafka_message_headers(self.ptr, &mut native_headers_ptr);
+            match err.into() {
+                RDKafkaError::NoError => Some(&*(native_headers_ptr as *mut RDKafkaHeaders as *mut BorrowedHeaders)),
+                RDKafkaError::NoEnt => None,
+                _ => None,
+            }
+        }
+    }
 }
 
 impl<'a> Drop for BorrowedMessage<'a> {
@@ -259,6 +319,52 @@ impl<'a> Drop for BorrowedMessage<'a> {
 // ********** OWNED MESSAGE **********
 //
 
+#[derive(Debug)]
+pub struct OwnedHeaders {
+    ptr: *mut RDKafkaHeaders,
+}
+
+unsafe impl Send for OwnedHeaders {}
+
+impl OwnedHeaders {
+    pub fn new() -> OwnedHeaders {
+        OwnedHeaders {
+            ptr: unsafe { rdsys::rd_kafka_headers_new(10) }
+        }
+    }
+
+    pub fn add<V: ToBytes + ?Sized>(&mut self, name: &str, value: &V) {
+        let name_cstring = CString::new(name.to_owned()).unwrap();
+        let value_bytes = value.to_bytes();
+        let err = unsafe {
+            rdsys::rd_kafka_header_add(
+                self.ptr,
+                name_cstring.as_ptr(),
+                name_cstring.as_bytes().len() as isize,
+                value_bytes.as_ptr() as *mut c_void,
+                value_bytes.len() as isize,
+            )
+        };
+        // OwnedHeaders should always represent writable instances of RDKafkaHeaders
+        assert!(!err.is_error())
+    }
+
+    pub(crate) fn ptr(&self) -> *mut RDKafkaHeaders {
+        self.ptr
+    }
+}
+
+impl Headers for OwnedHeaders {
+    fn count(&self) -> usize {
+        unsafe { rdsys::rd_kafka_header_cnt(self.ptr) }
+    }
+
+    fn get(&self, idx: usize) -> Option<(&str, Option<&[u8]>)> {
+        unimplemented!()
+    }
+}
+
+
 /// An `OwnedMessage` can be created from a `BorrowedMessage` using the `detach` method.
 /// `OwnedMessage`s don't hold any reference to the consumer, and don't use any memory inside the
 /// consumer buffer.
@@ -269,7 +375,8 @@ pub struct OwnedMessage {
     topic: String,
     timestamp: Timestamp,
     partition: i32,
-    offset: i64
+    offset: i64,
+    headers: Option<OwnedHeaders>,
 }
 
 impl OwnedMessage {
@@ -280,13 +387,16 @@ impl OwnedMessage {
         topic: String,
         timestamp: Timestamp,
         partition: i32,
-        offset: i64
+        offset: i64,
+        headers: Option<OwnedHeaders>,
     ) -> OwnedMessage {
-        OwnedMessage { payload, key, topic, timestamp, partition, offset }
+        OwnedMessage { payload, key, topic, timestamp, partition, offset, headers }
     }
 }
 
 impl Message for OwnedMessage {
+    type Headers = OwnedHeaders;
+
     fn key(&self) -> Option<&[u8]> {
         match self.key {
             Some(ref k) => Some(k.as_slice()),
@@ -315,6 +425,10 @@ impl Message for OwnedMessage {
 
     fn timestamp(&self) -> Timestamp {
         self.timestamp
+    }
+
+    fn headers(&self) -> Option<&OwnedHeaders> {
+        self.headers.as_ref()
     }
 }
 

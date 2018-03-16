@@ -7,7 +7,7 @@ use rdkafka::{ClientContext, Statistics};
 use rdkafka::message::{Message, OwnedMessage};
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
-use rdkafka::producer::{BaseProducer, DeliveryResult, ThreadedProducer, ProducerContext};
+use rdkafka::producer::{BaseProducer, DeliveryResult, ThreadedProducer, ProducerContext, ProducerRecord};
 use rdkafka::util::current_time_millis;
 
 #[macro_use] mod utils;
@@ -117,13 +117,12 @@ fn test_base_producer_queue_full() {
 
     let results = (0..30)
         .map(|id| {
-            producer.send_copy(
-               &topic_name,
-               None,
-               Some(&format!("Message {}", id)),
-               Some(&format!("Key {}", id)),
+            producer.send(
+                &ProducerRecord::to(&topic_name)
+                    .payload(&format!("Message {}", id))
+                    .key(&format!("Key {}", id))
+                    .timestamp(current_time_millis()),
                id,
-               Some(current_time_millis()),
             )
         }).collect::<Vec<_>>();
     while producer.in_flight_count() > 0 {
@@ -153,7 +152,7 @@ fn test_base_producer_timeout() {
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)
-        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), id, None))
+        .map(|id| producer.send(&ProducerRecord::to(&topic_name).payload("A").key("B"), id))
         .filter(|r| r == &Ok(()))
         .count();
 

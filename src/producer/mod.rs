@@ -83,6 +83,7 @@ pub use self::base_producer::{
     DeliveryResult,
     DefaultProducerContext,
     ProducerContext,
+    ProducerRecord,
     ThreadedProducer
 };
 pub use self::future_producer::{

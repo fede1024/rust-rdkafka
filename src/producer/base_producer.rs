@@ -41,7 +41,7 @@ use rdsys;
 use client::{Client, ClientContext};
 use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use error::{KafkaError, KafkaResult, IsError};
-use message::{BorrowedMessage, ToBytes};
+use message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use util::{timeout_to_ms, IntoOpaque};
 
 use std::ffi::CString;
@@ -109,6 +109,54 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
 // ********** BASE PRODUCER **********
 //
 
+#[derive(Clone)]
+pub struct ProducerRecord<'a, K: ToBytes + ?Sized + 'a, P: ToBytes + ?Sized + 'a> {
+    pub topic: &'a str,
+    pub partition: Option<i32>,
+    pub payload: Option<&'a P>,
+    pub key: Option<&'a K>,
+    pub timestamp: Option<i64>,
+    pub headers: Option<OwnedHeaders>
+}
+
+impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> ProducerRecord<'a, K, P> {
+    pub fn to(topic: &'a str) -> ProducerRecord<'a, K, P> {
+        ProducerRecord {
+            topic,
+            partition: None,
+            payload: None,
+            key: None,
+            timestamp: None,
+            headers: None,
+        }
+    }
+
+    pub fn partition(mut self, partition: i32) -> ProducerRecord<'a, K, P> {
+        self.partition = Some(partition);
+        self
+    }
+
+    pub fn payload(mut self, payload: &'a P) -> ProducerRecord<'a, K, P> {
+        self.payload = Some(payload);
+        self
+    }
+
+    pub fn key(mut self, key: &'a K) -> ProducerRecord<'a, K, P> {
+        self.key = Some(key);
+        self
+    }
+
+    pub fn timestamp(mut self, timestamp: i64) -> ProducerRecord<'a, K, P> {
+        self.timestamp = Some(timestamp);
+        self
+    }
+
+    pub fn topic(mut self, topic: &'a str) -> ProducerRecord<'a, K, P> {
+        self.topic = topic;
+        self
+    }
+}
+
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
     /// Creates a new `BaseProducer` starting from a configuration.
     fn from_config(config: &ClientConfig) -> KafkaResult<BaseProducer<DefaultProducerContext>> {
@@ -153,42 +201,38 @@ impl<C: ProducerContext> BaseProducer<C> {
         self.client_arc.native_ptr()
     }
 
+    // TODO: update docs
     /// Sends a copy of the payload and key provided to the specified topic. When no partition is
     /// specified the underlying Kafka library picks a partition based on the key. If no key is
     /// specified, a random partition will be used. Note that some errors will cause an error to be
     /// returned straight-away, such as partition not defined, while others will be returned in the
     /// delivery callback. To correctly handle errors, the delivery callback should be implemented.
-    pub fn send_copy<P, K>(
-        &self,
-        topic_name: &str,
-        partition: Option<i32>,
-        payload: Option<&P>,
-        key: Option<&K>,
-        delivery_opaque: C::DeliveryOpaque,
-        timestamp: Option<i64>,
-    ) -> KafkaResult<()>
+    pub fn send<P, K>(&self, record: &ProducerRecord<K, P>, delivery_opaque: C::DeliveryOpaque) -> KafkaResult<()>
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {
-        let (payload_ptr, payload_len) = match payload.map(P::to_bytes) {
+        let (payload_ptr, payload_len) = match record.payload.map(P::to_bytes) {
             None => (ptr::null_mut(), 0),
             Some(p) => (p.as_ptr() as *mut c_void, p.len()),
         };
-        let (key_ptr, key_len) = match key.map(K::to_bytes) {
+        let (key_ptr, key_len) = match record.key.map(K::to_bytes) {
             None => (ptr::null_mut(), 0),
             Some(k) => (k.as_ptr() as *mut c_void, k.len()),
         };
         let delivery_opaque_ptr = delivery_opaque.into_ptr();
-        let topic_name_c = CString::new(topic_name.to_owned())?;
+        let topic_name_c = CString::new(record.topic.to_owned())?;
+        let mut header = OwnedHeaders::new();
+        header.add("a name", "and a value");
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.native_ptr(),
                 RD_KAFKA_VTYPE_TOPIC, topic_name_c.as_ptr(),
-                RD_KAFKA_VTYPE_PARTITION, partition.unwrap_or(-1),
+                RD_KAFKA_VTYPE_PARTITION, record.partition.unwrap_or(-1),
                 RD_KAFKA_VTYPE_MSGFLAGS, rdsys::RD_KAFKA_MSG_F_COPY as i32,
                 RD_KAFKA_VTYPE_VALUE, payload_ptr, payload_len,
                 RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
                 RD_KAFKA_VTYPE_OPAQUE, delivery_opaque_ptr,
-                RD_KAFKA_VTYPE_TIMESTAMP, timestamp.unwrap_or(0),
+                RD_KAFKA_VTYPE_TIMESTAMP, record.timestamp.unwrap_or(0),
+                RD_KAFKA_VTYPE_HEADERS, header.ptr(),
                 RD_KAFKA_VTYPE_END
             )
         };
@@ -297,18 +341,10 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     }
 
     /// Sends a message to Kafka. See the documentation in `BaseProducer`.
-    pub fn send_copy<P, K>(
-        &self,
-        topic: &str,
-        partition: Option<i32>,
-        payload: Option<&P>,
-        key: Option<&K>,
-        timestamp: Option<i64>,
-        delivery_opaque: C::DeliveryOpaque,
-    ) -> KafkaResult<()>
+    pub fn send<P, K>(&self, record: &ProducerRecord<P, K>, delivery_opaque: C::DeliveryOpaque) -> KafkaResult<()>
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
-        self.producer.send_copy(topic, partition, payload, key, delivery_opaque, timestamp)
+        self.producer.send(record, delivery_opaque)
     }
 
     /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
