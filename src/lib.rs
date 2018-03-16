@@ -207,6 +207,8 @@
 //! `env_logger::init()` or equivalent.
 //!
 
+#![warn(missing_docs)]
+
 //>alloc_system
 
 //#![feature(alloc_system, global_allocator, allocator_api)]
@@ -214,8 +216,6 @@
 //use alloc_system::System;
 //#[global_allocator]
 //static A: System = System;
-
-#![warn(missing_docs)]
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
