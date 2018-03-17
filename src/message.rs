@@ -333,6 +333,10 @@ impl OwnedHeaders {
         }
     }
 
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaHeaders) -> OwnedHeaders {
+        OwnedHeaders { ptr }
+    }
+
     pub fn add<V: ToBytes + ?Sized>(&mut self, name: &str, value: &V) {
         let name_cstring = CString::new(name.to_owned()).unwrap();
         let value_bytes = value.to_bytes();
@@ -349,8 +353,16 @@ impl OwnedHeaders {
         assert!(!err.is_error())
     }
 
-    pub(crate) fn ptr(&self) -> *mut RDKafkaHeaders {
-        self.ptr
+//    pub(crate) fn ptr(&self) -> *mut RDKafkaHeaders {
+//        self.ptr
+//    }
+
+    /// Returns a pointer to the associated internal RDKafkaHeaders structure. The caller
+    /// will be the new owner of the data structure. To properly deallocate, `from_ptr` can be used.
+    pub(crate) fn into_ptr(mut self) -> *mut RDKafkaHeaders {
+        let ptr = self.ptr;
+        self.ptr = ptr::null_mut();
+        return ptr
     }
 }
 
@@ -361,6 +373,16 @@ impl Headers for OwnedHeaders {
 
     fn get(&self, idx: usize) -> Option<(&str, Option<&[u8]>)> {
         unimplemented!()
+    }
+}
+
+impl Drop for OwnedHeaders {
+    fn drop(&mut self) {
+        if !self.ptr.is_null() {
+            trace!("Destroying OwnedHeaders: {:?}", self.ptr);
+            unsafe { rdsys::rd_kafka_headers_destroy(self.ptr) }
+            trace!("OwnedHeaders destroyed: {:?}", self.ptr);
+        }
     }
 }
 

@@ -8,7 +8,7 @@ use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafka
 use producer::{DeliveryResult, ThreadedProducer, ProducerContext};
 use statistics::Statistics;
 use error::{KafkaError, KafkaResult, RDKafkaError};
-use message::{Message, OwnedMessage, Timestamp, ToBytes};
+use message::{Message, OwnedMessage, OwnedHeaders, Timestamp, ToBytes};
 
 use futures::{self, Canceled, Complete, Future, Poll, Oneshot, Async};
 
@@ -130,6 +130,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         payload: Option<&P>,
         key: Option<&K>,
         timestamp: Option<i64>,
+        headers: Option<OwnedHeaders>,
         block_ms: i64,
     ) -> DeliveryFuture
     where K: ToBytes + ?Sized,
@@ -138,7 +139,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
 
         loop {
             let (tx, rx) = futures::oneshot();
-            match self.producer.send_copy(topic, partition, payload, key, timestamp, Box::new(tx)) {
+            match self.producer.send_copy(topic, partition, payload, key, timestamp, headers, Box::new(tx)) {
                 Ok(_) => break DeliveryFuture{ rx },
                 Err(e) => {
                     if let KafkaError::MessageProduction(RDKafkaError::QueueFull) = e {
@@ -174,12 +175,13 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         partition: Option<i32>,
         payload: Option<&P>,
         key: Option<&K>,
-        timestamp: Option<i64>
+        timestamp: Option<i64>,
+        headers: Option<OwnedHeaders>
     ) -> KafkaResult<DeliveryFuture>
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {
         let (tx, rx) = futures::oneshot();
-        self.producer.send_copy(topic, partition, payload, key, timestamp, Box::new(tx))?;
+        self.producer.send_copy(topic, partition, payload, key, timestamp, headers, Box::new(tx))?;
         Ok(DeliveryFuture { rx })
     }
 

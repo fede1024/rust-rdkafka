@@ -164,8 +164,9 @@ impl<C: ProducerContext> BaseProducer<C> {
         partition: Option<i32>,
         payload: Option<&P>,
         key: Option<&K>,
-        delivery_opaque: C::DeliveryOpaque,
         timestamp: Option<i64>,
+        headers: Option<OwnedHeaders>,
+        delivery_opaque: C::DeliveryOpaque,
     ) -> KafkaResult<()>
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {
@@ -179,8 +180,7 @@ impl<C: ProducerContext> BaseProducer<C> {
         };
         let delivery_opaque_ptr = delivery_opaque.into_ptr();
         let topic_name_c = CString::new(topic_name.to_owned())?;
-        let mut header = OwnedHeaders::new();
-        header.add("a name", "and a value");
+        let headers_ptr = headers.map_or(ptr::null_mut(), OwnedHeaders::into_ptr);
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.native_ptr(),
@@ -191,13 +191,17 @@ impl<C: ProducerContext> BaseProducer<C> {
                 RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
                 RD_KAFKA_VTYPE_OPAQUE, delivery_opaque_ptr,
                 RD_KAFKA_VTYPE_TIMESTAMP, timestamp.unwrap_or(0),
-                RD_KAFKA_VTYPE_HEADERS, header.ptr(),
+                RD_KAFKA_VTYPE_HEADERS, headers_ptr,
                 RD_KAFKA_VTYPE_END
             )
         };
         if produce_error.is_error() {
-            if !delivery_opaque_ptr.is_null() { // Drop delivery opaque if provided
+            // Drop delivery opaque and headers if provided
+            if !delivery_opaque_ptr.is_null() {
                 unsafe { C::DeliveryOpaque::from_ptr(delivery_opaque_ptr) };
+            }
+            if !headers_ptr.is_null() {
+                unsafe { OwnedHeaders::from_ptr(headers_ptr) };
             }
             Err(KafkaError::MessageProduction(produce_error.into()))
         } else {
@@ -307,11 +311,12 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
         payload: Option<&P>,
         key: Option<&K>,
         timestamp: Option<i64>,
+        headers: Option<OwnedHeaders>,
         delivery_opaque: C::DeliveryOpaque,
     ) -> KafkaResult<()>
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
-        self.producer.send_copy(topic, partition, payload, key, delivery_opaque, timestamp)
+        self.producer.send_copy(topic, partition, payload, key, timestamp, headers, delivery_opaque)
     }
 
     /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
