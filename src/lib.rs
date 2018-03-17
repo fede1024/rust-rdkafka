@@ -55,11 +55,11 @@
 //!
 //! For more information about consumers and producers, refer to their module-level documentation.
 //!
-//! [`BaseConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/base_consumer/struct.BaseConsumer.html
-//! [`BaseProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.BaseProducer.html
-//! [`ThreadedProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.ThreadedProducer.html
-//! [`StreamConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html
-//! [`FutureProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/future_producer/struct.FutureProducer.html
+//! [`BaseConsumer`]: consumer/base_consumer/struct.BaseConsumer.html
+//! [`BaseProducer`]: producer/base_producer/struct.BaseProducer.html
+//! [`ThreadedProducer`]: producer/base_producer/struct.ThreadedProducer.html
+//! [`StreamConsumer`]: consumer/stream_consumer/struct.StreamConsumer.html
+//! [`FutureProducer`]: producer/future_producer/struct.FutureProducer.html
 //! [librdkafka]: https://github.com/edenhill/librdkafka
 //! [futures]: https://github.com/alexcrichton/futures-rs
 //! [`future`]: https://docs.rs/futures/0.1.3/futures/trait.Future.html
