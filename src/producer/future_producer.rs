@@ -138,8 +138,10 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         let start_time = Instant::now();
 
         loop {
+            // TODO: this could be improved.
+            let mut headers_clone = headers.clone();
             let (tx, rx) = futures::oneshot();
-            match self.producer.send_copy(topic, partition, payload, key, timestamp, headers, Box::new(tx)) {
+            match self.producer.send_copy(topic, partition, payload, key, timestamp, headers_clone, Box::new(tx)) {
                 Ok(_) => break DeliveryFuture{ rx },
                 Err(e) => {
                     if let KafkaError::MessageProduction(RDKafkaError::QueueFull) = e {

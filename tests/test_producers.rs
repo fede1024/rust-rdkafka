@@ -118,12 +118,13 @@ fn test_base_producer_queue_full() {
     let results = (0..30)
         .map(|id| {
             producer.send_copy(
-               &topic_name,
-               None,
-               Some(&format!("Message {}", id)),
-               Some(&format!("Key {}", id)),
-               id,
-               Some(current_time_millis()),
+                &topic_name,
+                None,
+                Some(&format!("Message {}", id)),
+                Some(&format!("Key {}", id)),
+                Some(current_time_millis()),
+                None,
+                id,
             )
         }).collect::<Vec<_>>();
     while producer.in_flight_count() > 0 {
@@ -153,7 +154,7 @@ fn test_base_producer_timeout() {
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)
-        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), id, None))
+        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), None, None, id))
         .filter(|r| r == &Ok(()))
         .count();
 
@@ -179,7 +180,7 @@ fn test_threaded_producer_send() {
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)
-        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), None, id))
+        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), None, None, id))
         .filter(|r| r == &Ok(()))
         .count();
 

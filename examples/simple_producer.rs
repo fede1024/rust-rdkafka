@@ -30,7 +30,7 @@ fn produce(brokers: &str, topic_name: &str) {
             let key = format!("Key {}", i);
             // The send operation on the topic returns a future, that will be completed once the
             // result or failure from Kafka will be received.
-            producer.send_copy(topic_name, None, Some(&value), Some(&key), None, 0)
+            producer.send_copy(topic_name, None, Some(&value), Some(&key), None, None, 0)
                 .map(move |delivery_status| {   // This will be executed onw the result is received
                     info!("Delivery status for message {} received", i);
                     delivery_status

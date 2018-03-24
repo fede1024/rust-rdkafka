@@ -353,10 +353,6 @@ impl OwnedHeaders {
         assert!(!err.is_error())
     }
 
-//    pub(crate) fn ptr(&self) -> *mut RDKafkaHeaders {
-//        self.ptr
-//    }
-
     /// Returns a pointer to the associated internal RDKafkaHeaders structure. The caller
     /// will be the new owner of the data structure. To properly deallocate, `from_ptr` can be used.
     pub(crate) fn into_ptr(mut self) -> *mut RDKafkaHeaders {
@@ -373,6 +369,14 @@ impl Headers for OwnedHeaders {
 
     fn get(&self, idx: usize) -> Option<(&str, Option<&[u8]>)> {
         unimplemented!()
+    }
+}
+
+impl Clone for OwnedHeaders {
+    fn clone(&self) -> Self {
+        OwnedHeaders {
+            ptr: unsafe { rdsys::rd_kafka_headers_copy(self.ptr) }
+        }
     }
 }
 
