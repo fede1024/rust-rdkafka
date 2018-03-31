@@ -7,7 +7,7 @@ use clap::{App, Arg};
 use futures::*;
 
 use rdkafka::config::ClientConfig;
-use rdkafka::producer::{FutureProducer, ProducerRecord};
+use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
@@ -29,10 +29,10 @@ fn produce(brokers: &str, topic_name: &str) {
             // The send operation on the topic returns a future, that will be completed once the
             // result or failure from Kafka will be received.
             producer.send(
-                &ProducerRecord::to(topic_name)
+                FutureRecord::to(topic_name)
                     .payload(&format!("Message {}", i))
                     .key(&format!("Key {}", i)),
-                    0
+                0
             )
                 .map(move |delivery_status| {   // This will be executed onw the result is received
                     info!("Delivery status for message {} received", i);

@@ -7,7 +7,7 @@ use rdkafka::{ClientContext, Statistics};
 use rdkafka::message::{Message, OwnedMessage};
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
-use rdkafka::producer::{BaseProducer, DeliveryResult, ThreadedProducer, ProducerContext, ProducerRecord};
+use rdkafka::producer::{BaseProducer, BaseRecord, DeliveryResult, ThreadedProducer, ProducerContext};
 use rdkafka::util::current_time_millis;
 
 #[macro_use] mod utils;
@@ -118,11 +118,10 @@ fn test_base_producer_queue_full() {
     let results = (0..30)
         .map(|id| {
             producer.send(
-                &ProducerRecord::to(&topic_name)
-                    .payload(&format!("Message {}", id))
-                    .key(&format!("Key {}", id))
-                    .timestamp(current_time_millis()),
-               id,
+                BaseRecord::with_opaque_to(&topic_name, id)
+                    .payload("payload")
+                    .key("key")
+                    .timestamp(current_time_millis())
             )
         }).collect::<Vec<_>>();
     while producer.in_flight_count() > 0 {
@@ -130,11 +129,17 @@ fn test_base_producer_queue_full() {
     }
 
     let errors = results.iter()
-        .filter(|&r| r == &Err(KafkaError::MessageProduction(RDKafkaError::QueueFull)))
+        .filter(|&e| {
+            if let &Err((KafkaError::MessageProduction(RDKafkaError::QueueFull), _)) = e {
+                true
+            } else {
+                false
+            }
+        })
         .count();
 
     let success = results.iter()
-        .filter(|&r| r == &Ok(()))
+        .filter(|&r| r.is_ok())
         .count();
 
     assert_eq!(results.len(), 30);
@@ -152,8 +157,11 @@ fn test_base_producer_timeout() {
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)
-        .map(|id| producer.send(&ProducerRecord::to(&topic_name).payload("A").key("B"), id))
-        .filter(|r| r == &Ok(()))
+        .map(|id| producer.send(
+            BaseRecord::with_opaque_to(&topic_name, id)
+                .payload("A")
+                .key("B")))
+        .filter(|r| r.is_ok())
         .count();
 
     producer.flush(Duration::from_secs(10));
@@ -178,8 +186,8 @@ fn test_threaded_producer_send() {
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)
-        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), None, id))
-        .filter(|r| r == &Ok(()))
+        .map(|id| producer.send(BaseRecord::with_opaque_to(&topic_name, id).payload("A").key("B")))
+        .filter(|r| r.is_ok())
         .count();
 
     assert_eq!(results_count, 10);

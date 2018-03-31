@@ -109,51 +109,67 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
 // ********** BASE PRODUCER **********
 //
 
-#[derive(Clone)]
-pub struct ProducerRecord<'a, K: ToBytes + ?Sized + 'a, P: ToBytes + ?Sized + 'a> {
+#[derive(Debug)]
+pub struct BaseRecord<'a, K: ToBytes + ?Sized + 'a = (), P: ToBytes + ?Sized + 'a = (), D: IntoOpaque = ()> {
     pub topic: &'a str,
     pub partition: Option<i32>,
     pub payload: Option<&'a P>,
     pub key: Option<&'a K>,
     pub timestamp: Option<i64>,
-    pub headers: Option<OwnedHeaders>
+    pub headers: Option<OwnedHeaders>,
+    pub delivery_opaque: Option<D>,
 }
 
-impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> ProducerRecord<'a, K, P> {
-    pub fn to(topic: &'a str) -> ProducerRecord<'a, K, P> {
-        ProducerRecord {
+impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized, D: IntoOpaque> BaseRecord<'a, K, P, D> {
+    pub fn with_opaque_to(topic: &'a str, delivery_opaque: D) -> BaseRecord<'a, K, P, D> {
+        BaseRecord {
             topic,
             partition: None,
             payload: None,
             key: None,
             timestamp: None,
             headers: None,
+            delivery_opaque: Some(delivery_opaque),
         }
     }
 
-    pub fn partition(mut self, partition: i32) -> ProducerRecord<'a, K, P> {
+    pub fn partition(mut self, partition: i32) -> BaseRecord<'a, K, P, D> {
         self.partition = Some(partition);
         self
     }
 
-    pub fn payload(mut self, payload: &'a P) -> ProducerRecord<'a, K, P> {
+    pub fn payload(mut self, payload: &'a P) -> BaseRecord<'a, K, P, D> {
         self.payload = Some(payload);
         self
     }
 
-    pub fn key(mut self, key: &'a K) -> ProducerRecord<'a, K, P> {
+    pub fn key(mut self, key: &'a K) -> BaseRecord<'a, K, P, D> {
         self.key = Some(key);
         self
     }
 
-    pub fn timestamp(mut self, timestamp: i64) -> ProducerRecord<'a, K, P> {
+    pub fn timestamp(mut self, timestamp: i64) -> BaseRecord<'a, K, P, D> {
         self.timestamp = Some(timestamp);
         self
     }
 
-    pub fn topic(mut self, topic: &'a str) -> ProducerRecord<'a, K, P> {
+    pub fn topic(mut self, topic: &'a str) -> BaseRecord<'a, K, P, D> {
         self.topic = topic;
         self
+    }
+}
+
+impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> BaseRecord<'a, K, P, ()> {
+    pub fn to(topic: &'a str) -> BaseRecord<'a, K, P, ()> {
+        BaseRecord {
+            topic,
+            partition: None,
+            payload: None,
+            key: None,
+            timestamp: None,
+            headers: None,
+            delivery_opaque: Some(()),
+        }
     }
 }
 
@@ -207,7 +223,8 @@ impl<C: ProducerContext> BaseProducer<C> {
     /// specified, a random partition will be used. Note that some errors will cause an error to be
     /// returned straight-away, such as partition not defined, while others will be returned in the
     /// delivery callback. To correctly handle errors, the delivery callback should be implemented.
-    pub fn send<P, K>(&self, record: &ProducerRecord<K, P>, delivery_opaque: C::DeliveryOpaque) -> KafkaResult<()>
+    pub fn send<'a, K, P>(&self, mut record: BaseRecord<'a, K, P, C::DeliveryOpaque>)
+        -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {
         let (payload_ptr, payload_len) = match record.payload.map(P::to_bytes) {
@@ -218,10 +235,9 @@ impl<C: ProducerContext> BaseProducer<C> {
             None => (ptr::null_mut(), 0),
             Some(k) => (k.as_ptr() as *mut c_void, k.len()),
         };
-        let delivery_opaque_ptr = delivery_opaque.into_ptr();
-        let topic_name_c = CString::new(record.topic.to_owned())?;
-        let mut header = OwnedHeaders::new();
-        header.add("a name", "and a value");
+        let delivery_opaque_ptr = record.delivery_opaque.take().into_ptr();
+        let headers_ptr = record.headers.take().map_or(ptr::null_mut(), |h| h.ptr());
+        let topic_name_c = CString::new(record.topic.to_owned()).unwrap();
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.native_ptr(),
@@ -232,15 +248,16 @@ impl<C: ProducerContext> BaseProducer<C> {
                 RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
                 RD_KAFKA_VTYPE_OPAQUE, delivery_opaque_ptr,
                 RD_KAFKA_VTYPE_TIMESTAMP, record.timestamp.unwrap_or(0),
-                RD_KAFKA_VTYPE_HEADERS, header.ptr(),
+                RD_KAFKA_VTYPE_HEADERS, headers_ptr,
                 RD_KAFKA_VTYPE_END
             )
         };
         if produce_error.is_error() {
-            if !delivery_opaque_ptr.is_null() { // Drop delivery opaque if provided
-                unsafe { C::DeliveryOpaque::from_ptr(delivery_opaque_ptr) };
-            }
-            Err(KafkaError::MessageProduction(produce_error.into()))
+            // TODO: add delivery opaque back
+//            if !delivery_opaque_ptr.is_null() { // Drop delivery opaque if provided
+//                unsafe { C::DeliveryOpaque::from_ptr(delivery_opaque_ptr) };
+//            }
+            Err((KafkaError::MessageProduction(produce_error.into()), record))
         } else {
             Ok(())
         }
@@ -341,10 +358,11 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     }
 
     /// Sends a message to Kafka. See the documentation in `BaseProducer`.
-    pub fn send<P, K>(&self, record: &ProducerRecord<P, K>, delivery_opaque: C::DeliveryOpaque) -> KafkaResult<()>
-        where K: ToBytes + ?Sized,
-              P: ToBytes + ?Sized {
-        self.producer.send(record, delivery_opaque)
+    pub fn send<'a, K, P>(&self, record: BaseRecord<'a, K, P, C::DeliveryOpaque>)
+        -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
+    where K: ToBytes + ?Sized,
+          P: ToBytes + ?Sized {
+        self.producer.send(record)
     }
 
     /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had

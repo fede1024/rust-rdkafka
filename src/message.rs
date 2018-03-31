@@ -252,12 +252,12 @@ impl<'a> BorrowedMessage<'a> {
 impl<'a> Message for BorrowedMessage<'a> {
     type Headers = BorrowedHeaders;
 
-    fn payload(&self) -> Option<&[u8]> {
-        unsafe { util::ptr_to_slice((*self.ptr).payload, (*self.ptr).len) }
+    fn key(&self) -> Option<&[u8]> {
+        unsafe { util::ptr_to_slice((*self.ptr).key, (*self.ptr).key_len) }
     }
 
-    fn key(&self) -> Option<&[u8]> {
-        unsafe { util::ptr_to_slice((*self.ptr).payload, (*self.ptr).key_len) }
+    fn payload(&self) -> Option<&[u8]> {
+        unsafe { util::ptr_to_slice((*self.ptr).payload, (*self.ptr).len) }
     }
 
     fn topic(&self) -> &str {
@@ -361,6 +361,14 @@ impl Headers for OwnedHeaders {
 
     fn get(&self, idx: usize) -> Option<(&str, Option<&[u8]>)> {
         unimplemented!()
+    }
+}
+
+impl Clone for OwnedHeaders {
+    fn clone(&self) -> Self {
+        OwnedHeaders {
+            ptr: unsafe { rdsys::rd_kafka_headers_copy(self.ptr) }
+        }
     }
 }
 
