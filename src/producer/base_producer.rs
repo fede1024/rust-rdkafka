@@ -235,8 +235,9 @@ impl<C: ProducerContext> BaseProducer<C> {
             None => (ptr::null_mut(), 0),
             Some(k) => (k.as_ptr() as *mut c_void, k.len()),
         };
-        let delivery_opaque_ptr = record.delivery_opaque.take().into_ptr();
-        let headers_ptr = record.headers.take().map_or(ptr::null_mut(), |h| h.ptr());
+        let delivery_opaque_ptr = record.delivery_opaque.as_ref()
+            .map_or(ptr::null_mut(), |d| d.as_ptr());
+        let headers_ptr = record.headers.as_ref().map_or(ptr::null_mut(), |h| h.ptr());
         let topic_name_c = CString::new(record.topic.to_owned()).unwrap();
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
@@ -259,6 +260,8 @@ impl<C: ProducerContext> BaseProducer<C> {
 //            }
             Err((KafkaError::MessageProduction(produce_error.into()), record))
         } else {
+            // The delivery callback will take care of dropping the opaque
+            mem::forget(record.delivery_opaque);
             Ok(())
         }
     }
