@@ -11,7 +11,7 @@ use error::{KafkaError, KafkaResult, RDKafkaError};
 use message::{Message, OwnedMessage, Timestamp, OwnedHeaders, ToBytes};
 use util::IntoOpaque;
 
-use futures::{self, Canceled, Complete, Future, Poll, Oneshot, Async};
+use futures::{self, Canceled, Complete, Future, Poll, Oneshot};
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -86,7 +86,7 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
             payload: self.payload,
             timestamp: self.timestamp,
             headers: self.headers,
-            delivery_opaque: Some(delivery_opaque),
+            delivery_opaque,
         }
     }
 }
@@ -227,7 +227,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
                         0,
                         record.headers,
                     );
-                    record.delivery_opaque.unwrap().send(Err((e, owned_message)));
+                    let _ = record.delivery_opaque.send(Err((e, owned_message)));
                     break DeliveryFuture { rx };
                 }
             }

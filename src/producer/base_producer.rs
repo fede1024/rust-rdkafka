@@ -117,7 +117,7 @@ pub struct BaseRecord<'a, K: ToBytes + ?Sized + 'a = (), P: ToBytes + ?Sized + '
     pub key: Option<&'a K>,
     pub timestamp: Option<i64>,
     pub headers: Option<OwnedHeaders>,
-    pub delivery_opaque: Option<D>,
+    pub delivery_opaque: D,
 }
 
 impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized, D: IntoOpaque> BaseRecord<'a, K, P, D> {
@@ -129,7 +129,7 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized, D: IntoOpaque> BaseRecord<'a,
             key: None,
             timestamp: None,
             headers: None,
-            delivery_opaque: Some(delivery_opaque),
+            delivery_opaque,
         }
     }
 
@@ -152,11 +152,6 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized, D: IntoOpaque> BaseRecord<'a,
         self.timestamp = Some(timestamp);
         self
     }
-
-    pub fn topic(mut self, topic: &'a str) -> BaseRecord<'a, K, P, D> {
-        self.topic = topic;
-        self
-    }
 }
 
 impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> BaseRecord<'a, K, P, ()> {
@@ -168,7 +163,7 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> BaseRecord<'a, K, P, ()> {
             key: None,
             timestamp: None,
             headers: None,
-            delivery_opaque: Some(()),
+            delivery_opaque: (),
         }
     }
 }
@@ -223,7 +218,7 @@ impl<C: ProducerContext> BaseProducer<C> {
     /// specified, a random partition will be used. Note that some errors will cause an error to be
     /// returned straight-away, such as partition not defined, while others will be returned in the
     /// delivery callback. To correctly handle errors, the delivery callback should be implemented.
-    pub fn send<'a, K, P>(&self, mut record: BaseRecord<'a, K, P, C::DeliveryOpaque>)
+    pub fn send<'a, K, P>(&self, record: BaseRecord<'a, K, P, C::DeliveryOpaque>)
         -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {
@@ -235,33 +230,26 @@ impl<C: ProducerContext> BaseProducer<C> {
             None => (ptr::null_mut(), 0),
             Some(k) => (k.as_ptr() as *mut c_void, k.len()),
         };
-        let delivery_opaque_ptr = record.delivery_opaque.as_ref()
-            .map_or(ptr::null_mut(), |d| d.as_ptr());
-        let headers_ptr = record.headers.as_ref().map_or(ptr::null_mut(), |h| h.ptr());
-        let topic_name_c = CString::new(record.topic.to_owned()).unwrap();
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.native_ptr(),
-                RD_KAFKA_VTYPE_TOPIC, topic_name_c.as_ptr(),
+                RD_KAFKA_VTYPE_TOPIC, CString::new(record.topic.to_owned()).unwrap().as_ptr(),
                 RD_KAFKA_VTYPE_PARTITION, record.partition.unwrap_or(-1),
                 RD_KAFKA_VTYPE_MSGFLAGS, rdsys::RD_KAFKA_MSG_F_COPY as i32,
                 RD_KAFKA_VTYPE_VALUE, payload_ptr, payload_len,
                 RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
-                RD_KAFKA_VTYPE_OPAQUE, delivery_opaque_ptr,
+                RD_KAFKA_VTYPE_OPAQUE, record.delivery_opaque.as_ptr(),
                 RD_KAFKA_VTYPE_TIMESTAMP, record.timestamp.unwrap_or(0),
-                RD_KAFKA_VTYPE_HEADERS, headers_ptr,
+                RD_KAFKA_VTYPE_HEADERS, record.headers.as_ref().map_or(ptr::null_mut(), |h| h.ptr()),
                 RD_KAFKA_VTYPE_END
             )
         };
         if produce_error.is_error() {
-            // TODO: add delivery opaque back
-//            if !delivery_opaque_ptr.is_null() { // Drop delivery opaque if provided
-//                unsafe { C::DeliveryOpaque::from_ptr(delivery_opaque_ptr) };
-//            }
             Err((KafkaError::MessageProduction(produce_error.into()), record))
         } else {
-            // The delivery callback will take care of dropping the opaque
+            // The kafka producer now owns the delivery opaque and the headers
             mem::forget(record.delivery_opaque);
+            mem::forget(record.headers);
             Ok(())
         }
     }
