@@ -86,18 +86,16 @@ where
 
     let futures = (0..count)
         .map(|id| {
-            let key = key_fn(id);
-            let payload = value_fn(id);
-            let mut record = FutureRecord::to(topic_name)
-                    .key(&key)
-                    .payload(&payload);
-            if let Some(p) = partition {
-                record = record.partition(p);
-            }
-            if let Some(t) = timestamp {
-                record = record.timestamp(t);
-            }
-            let future = producer.send(record, 1000);
+            let future = producer.send(
+                FutureRecord {
+                    topic: topic_name,
+                    payload: Some(&value_fn(id)),
+                    key: Some(&key_fn(id)),
+                    partition,
+                    timestamp,
+                    headers: None,
+                },
+                1000);
             (id, future)
         })
         .collect::<Vec<_>>();

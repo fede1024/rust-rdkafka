@@ -4,7 +4,7 @@ extern crate rand;
 extern crate rdkafka;
 
 use rdkafka::{ClientContext, Statistics};
-use rdkafka::message::{Message, OwnedMessage};
+use rdkafka::message::{Message, Headers, OwnedMessage};
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
 use rdkafka::producer::{BaseProducer, BaseRecord, DeliveryResult, ThreadedProducer, ProducerContext};
@@ -17,6 +17,7 @@ use std::sync::Mutex;
 use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
+use rdkafka::message::OwnedHeaders;
 
 
 struct PrintingContext {
@@ -177,6 +178,59 @@ fn test_base_producer_timeout() {
         ids.insert(id);
     }
     assert_eq!(ids.len(), 10);
+}
+
+
+struct HeaderCheckContext {
+    ids: Arc<Mutex<HashSet<usize>>>,
+}
+
+impl ClientContext for HeaderCheckContext {}
+
+impl ProducerContext for HeaderCheckContext {
+    type DeliveryOpaque = usize;
+
+    fn delivery(&self, delivery_result: &DeliveryResult, message_id: usize) {
+        let message = delivery_result.as_ref().unwrap();
+        if message_id % 2 == 0 {
+            let headers = message.headers().unwrap();
+            assert_eq!(headers.count(), 3);
+            assert_eq!(headers.get(0), Some(("header1", &[1, 2, 3, 4][..])));
+            assert_eq!(headers.get_as::<str>(1), Some(("header2", Ok("value2"))));
+            assert_eq!(headers.get_as::<[u8]>(2), Some(("header3", Ok(&[][..]))));
+        } else {
+            assert!(message.headers().is_none());
+        }
+        (*self.ids.lock().unwrap()).insert(message_id);
+    }
+}
+
+#[test]
+fn test_base_producer_headers() {
+    let ids_set = Arc::new(Mutex::new(HashSet::new()));
+    let context = HeaderCheckContext { ids: ids_set.clone() };
+    let producer = base_producer_with_context(context, HashMap::new());
+    let topic_name = rand_test_topic();
+
+    let results_count = (0..10)
+        .map(|id| {
+            let mut record = BaseRecord::with_opaque_to(&topic_name, id).payload("A");
+            if id % 2 == 0 {
+                let mut headers = OwnedHeaders::new();
+                headers.add("header1", &[1, 2, 3, 4]);
+                headers.add("header2", "value2");
+                headers.add("header3", &[]);
+                record = record.headers(headers);
+            }
+            producer.send::<str, str>(record)
+        })
+        .filter(|r| r.is_ok())
+        .count();
+
+    producer.flush(Duration::from_secs(10));
+
+    assert_eq!(results_count, 10);
+    assert_eq!((*ids_set.lock().unwrap()).len(), 10);
 }
 
 #[test]

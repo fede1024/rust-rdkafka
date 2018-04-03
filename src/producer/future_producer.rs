@@ -20,17 +20,25 @@ use std::time::{Duration, Instant};
 // ********** FUTURE PRODUCER **********
 //
 
-#[derive(Clone)]
+/// Same as [BaseRecord], but specific to the [FutureProducer].
+#[derive(Debug)]
 pub struct FutureRecord<'a, K: ToBytes + ?Sized + 'a, P: ToBytes + ?Sized + 'a> {
+    /// Required destination topic
     pub topic: &'a str,
+    /// Optional destination partition
     pub partition: Option<i32>,
+    /// Optional payload
     pub payload: Option<&'a P>,
+    /// Optional key
     pub key: Option<&'a K>,
+    /// Optional timestamp
     pub timestamp: Option<i64>,
+    /// Optional message headers
     pub headers: Option<OwnedHeaders>,
 }
 
 impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
+    /// Create a new record with the specified topic name.
     pub fn to(topic: &'a str) -> FutureRecord<'a, K, P> {
         FutureRecord {
             topic,
@@ -53,28 +61,27 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
         }
     }
 
+    /// Set the destination partition of the record.
     pub fn partition(mut self, partition: i32) -> FutureRecord<'a, K, P> {
         self.partition = Some(partition);
         self
     }
 
+    /// Set the destination payload of the record.
     pub fn payload(mut self, payload: &'a P) -> FutureRecord<'a, K, P> {
         self.payload = Some(payload);
         self
     }
 
+    /// Set the destination key of the record.
     pub fn key(mut self, key: &'a K) -> FutureRecord<'a, K, P> {
         self.key = Some(key);
         self
     }
 
+    /// Set the destination timestamp of the record.
     pub fn timestamp(mut self, timestamp: i64) -> FutureRecord<'a, K, P> {
         self.timestamp = Some(timestamp);
-        self
-    }
-
-    pub fn topic(mut self, topic: &'a str) -> FutureRecord<'a, K, P> {
-        self.topic = topic;
         self
     }
 
@@ -179,11 +186,6 @@ impl Future for DeliveryFuture {
     type Error = Canceled;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-//        match self.rx.poll() {
-//            Ok(Async::NotReady) => Ok(Async::NotReady),
-//            Ok(Async::Ready(owned_delivery_result)) => Ok(Async::Ready(owned_delivery_result)),
-//            Err(Canceled) => Err(Canceled),
-//        }
         self.rx.poll()
     }
 }

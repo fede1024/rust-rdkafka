@@ -42,7 +42,7 @@ pub fn current_time_millis() -> i64 {
 
 /// Converts a pointer to an array to an optional slice. If the pointer is null, `None` will
 /// be returned.
-pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> Option<&'a[T]> {
+pub(crate) unsafe fn ptr_to_opt_slice<'a, T>(ptr: *const c_void, size: usize) -> Option<&'a[T]> {
     if ptr.is_null() {
         None
     } else {
@@ -50,6 +50,15 @@ pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> Opt
     }
 }
 
+/// Converts a pointer to an array to a slice. If the pointer is null or the size is zero,
+/// a zero-length slice will be returned.
+pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> &'a[T] {
+    if ptr.is_null() || size == 0 {
+        &[][..]
+    } else {
+        slice::from_raw_parts::<T>(ptr as *const T, size)
+    }
+}
 
 /// A trait for the conversion of Rust data to raw pointers. This conversion is used
 /// to pass opaque objects to the C library and vice versa.

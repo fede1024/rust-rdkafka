@@ -39,7 +39,7 @@ fn test_metadata() {
     let consumer = create_consumer(&rand_test_group());
 
     let metadata = consumer.fetch_metadata(None, Duration::from_secs(5)).unwrap();
-    assert_eq!(metadata.orig_broker_id(), -1);
+    assert_eq!(metadata.orig_broker_id(), 0);
     assert!(!metadata.orig_broker_name().is_empty());
 
     let broker_metadata = metadata.brokers();

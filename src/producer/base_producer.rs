@@ -59,8 +59,9 @@ pub use message::DeliveryResult;
 // ********** PRODUCER CONTEXT **********
 //
 
-/// A `ProducerContext` is a `Context` specific for producers. It can be used to store
-/// user-specified callbacks, such as `delivery`.
+/// A `ProducerContext` is an object that can be used during the creation of a producer to
+/// customizer its behavior. In particular, it can be used to specify the `delivery` callback
+/// that will be called when the ack from a delivered message is received.
 pub trait ProducerContext: ClientContext {
     /// A `DeliveryOpaque` is a user-defined structure that will be passed to the producer when
     /// producing a message, and returned to the `delivery` method once the message has been
@@ -109,18 +110,56 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
 // ********** BASE PRODUCER **********
 //
 
+/// Producer record for the base producer
+///
+/// The `BaseRecord` is a structure that can be used to provide a new record to
+/// [BaseProducer::send]. Since most fields are optional, a `BaseRecord` can be constructed
+/// using the builder pattern.
+///
+/// # Examples
+///
+/// This example will create a `BaseRecord` with no [DeliveryOpaque](ProducerContext::DeliveryOpaque):
+///
+/// ```rust,no_run
+/// # use rdkafka::producer::BaseRecord;
+/// # use rdkafka::message::ToBytes;
+/// let record = BaseRecord::to("topic_name")  // destination topic
+///     .key(&[1, 2, 3, 4])                    // message key
+///     .payload("content")                    // message payload
+///     .partition(5);                         // target partition
+/// ```
+///
+/// The following example will build a similar record, but it will use a number as `DeliveryOpaque`
+/// for the message:
+///
+/// ```rust,no_run
+/// # use rdkafka::producer::BaseRecord;
+/// # use rdkafka::message::ToBytes;
+/// let record = BaseRecord::with_opaque_to("topic_name", 123) // destination topic and message id
+///     .key(&[1, 2, 3, 4])                    // message key
+///     .payload("content")                    // message payload
+///     .partition(5);                         // target partition
+/// ```
 #[derive(Debug)]
 pub struct BaseRecord<'a, K: ToBytes + ?Sized + 'a = (), P: ToBytes + ?Sized + 'a = (), D: IntoOpaque = ()> {
+    /// Required destination topic
     pub topic: &'a str,
+    /// Optional destination partition
     pub partition: Option<i32>,
+    /// Optional payload
     pub payload: Option<&'a P>,
+    /// Optional key
     pub key: Option<&'a K>,
+    /// Optional timestamp
     pub timestamp: Option<i64>,
+    /// Optional message headers
     pub headers: Option<OwnedHeaders>,
+    /// Required delivery opaque (can be `()`)
     pub delivery_opaque: D,
 }
 
 impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized, D: IntoOpaque> BaseRecord<'a, K, P, D> {
+    /// Create a new record with the specified topic name and delivery opaque.
     pub fn with_opaque_to(topic: &'a str, delivery_opaque: D) -> BaseRecord<'a, K, P, D> {
         BaseRecord {
             topic,
@@ -133,28 +172,39 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized, D: IntoOpaque> BaseRecord<'a,
         }
     }
 
+    /// Set the destination partition of the record.
     pub fn partition(mut self, partition: i32) -> BaseRecord<'a, K, P, D> {
         self.partition = Some(partition);
         self
     }
 
+    /// Set the payload of the record.
     pub fn payload(mut self, payload: &'a P) -> BaseRecord<'a, K, P, D> {
         self.payload = Some(payload);
         self
     }
 
+    /// Set the key of the record.
     pub fn key(mut self, key: &'a K) -> BaseRecord<'a, K, P, D> {
         self.key = Some(key);
         self
     }
 
+    /// Set the timestamp of the record.
     pub fn timestamp(mut self, timestamp: i64) -> BaseRecord<'a, K, P, D> {
         self.timestamp = Some(timestamp);
+        self
+    }
+
+    /// Set the headers of the record.
+    pub fn headers(mut self, headers: OwnedHeaders) -> BaseRecord<'a, K, P, D> {
+        self.headers = Some(headers);
         self
     }
 }
 
 impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> BaseRecord<'a, K, P, ()> {
+    /// Create a new record with the specified topic name.
     pub fn to(topic: &'a str) -> BaseRecord<'a, K, P, ()> {
         BaseRecord {
             topic,
@@ -187,11 +237,40 @@ impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
 
 /// Low level Kafka producer.
 ///
-/// The `BaseProducer` needs to be `poll`ed at regular intervals in order to
-/// serve queued delivery report callbacks (for more information, refer to the module-level
-/// documentation. This producer can be cheaply cloned to create a new reference to the same
-/// underlying producer.
-pub struct BaseProducer<C: ProducerContext> {
+/// The `BaseProducer` needs to be polled at regular intervals in order to serve queued delivery
+/// report callbacks (for more information, refer to the module-level documentation). This producer
+/// can be cheaply cloned to create a new reference to the same underlying producer.
+///
+/// # Example usage
+///
+/// This code will send a message to Kafka. No custom [ProducerContext] is specified, so the
+/// [DefaultProducerContext] will be used. To see how to use a producer context, refer to the
+/// examples in the examples folder.
+/// ```rust
+/// use rdkafka::config::ClientConfig;
+/// use rdkafka::producer::{BaseProducer, BaseRecord};
+/// use std::time::Duration;
+///
+/// let producer: BaseProducer = ClientConfig::new()
+///     .set("bootstrap.servers", "kafka:9092")
+///     .create()
+///     .expect("Producer creation error");
+///
+/// producer.send(
+///     BaseRecord::to("destination_topic")
+///         .payload("this is the payload")
+///         .key("and this is a key"),
+/// ).expect("Failed to enqueue");
+///
+/// // Poll at regular intervals to process all the asynchronous delivery events.
+/// for _ in 0..10 {
+///     producer.poll(Duration::from_millis(100));
+/// }
+///
+/// // And/or flush the producer before dropping it.
+/// producer.flush(Duration::from_secs(1));
+/// ```
+pub struct BaseProducer<C: ProducerContext = DefaultProducerContext> {
     client_arc: Arc<Client<C>>,
 }
 
@@ -202,7 +281,7 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 
     /// Polls the producer. Regular calls to `poll` are required to process the events
-    /// and execute the message delivery callbacks.
+    /// and execute the message delivery callbacks. Returns the number of events served.
     pub fn poll<T: Into<Option<Duration>>>(&self, timeout: T) -> i32 {
         unsafe { rdsys::rd_kafka_poll(self.native_ptr(), timeout_to_ms(timeout)) }
     }
@@ -212,12 +291,18 @@ impl<C: ProducerContext> BaseProducer<C> {
         self.client_arc.native_ptr()
     }
 
-    // TODO: update docs
-    /// Sends a copy of the payload and key provided to the specified topic. When no partition is
-    /// specified the underlying Kafka library picks a partition based on the key. If no key is
-    /// specified, a random partition will be used. Note that some errors will cause an error to be
-    /// returned straight-away, such as partition not defined, while others will be returned in the
-    /// delivery callback. To correctly handle errors, the delivery callback should be implemented.
+    /// Produce a message to Kafka. Message fields such as key, payload, partition, timestamp etc.
+    /// are provided to this method via a [BaseRecord]. If the message is correctly enqueued in the
+    /// producer's memory buffer, the method will take ownership of the record and return
+    /// immediately; in case of failure to enqueue, the original record is returned, alongside an
+    /// error code. If the message fails to be produced after being enqueued in the buffer, the
+    /// [ProducerContext::delivery] method will be called asynchronously.
+    ///
+    /// When no partition is specified the underlying Kafka library picks a partition based on a
+    /// hash of the key. If no key is specified, a random partition will be used. To correctly
+    /// handle errors, the delivery callback should be implemented.
+    ///
+    /// Note that this method will never block.
     pub fn send<'a, K, P>(&self, record: BaseRecord<'a, K, P, C::DeliveryOpaque>)
         -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
     where K: ToBytes + ?Sized,
@@ -254,12 +339,13 @@ impl<C: ProducerContext> BaseProducer<C> {
         }
     }
 
-    /// Flushes the producer. Should be called before termination.
+    /// Flushes the producer. Should be called before termination. This method will call `poll()`
+    /// internally.
     pub fn flush<T: Into<Option<Duration>>>(&self, timeout: T) {
         unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout_to_ms(timeout)) };
     }
 
-    /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.
+    /// Returns the number of messages waiting to be sent, or sent but not acknowledged yet.
     pub fn in_flight_count(&self) -> i32 {
         unsafe { rdsys::rd_kafka_outq_len(self.native_ptr()) }
     }
