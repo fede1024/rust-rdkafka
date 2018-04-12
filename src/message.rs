@@ -120,7 +120,7 @@ pub trait Message {
 }
 
 
-/// Borrowed messaege headers
+/// Borrowed message headers
 ///
 /// The `BorrowedHeaders` struct provides a read-only access to headers owned by a received
 /// message or by a [OwnedHeaders] struct.
@@ -315,7 +315,7 @@ impl<'a> Message for BorrowedMessage<'a> {
         unsafe {
             let err = rdsys::rd_kafka_message_headers(self.ptr, &mut native_headers_ptr);
             match err.into() {
-                RDKafkaError::NoError => Some(&*(native_headers_ptr as *mut RDKafkaHeaders as *mut BorrowedHeaders)),
+                RDKafkaError::NoError => Some(&*(native_headers_ptr as *mut BorrowedHeaders)),
                 RDKafkaError::NoEnt => None,
                 _ => None,
             }
