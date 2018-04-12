@@ -52,6 +52,9 @@ pub type RDKafkaGroupInfo = bindings::rd_kafka_group_info;
 /// Native rdkafka group member information
 pub type RDKafkaGroupMemberInfo = bindings::rd_kafka_group_member_info;
 
+/// Native rdkafka group member information
+pub type RDKafkaHeaders = bindings::rd_kafka_headers_t;
+
 // ENUMS
 
 /// Client types
@@ -154,6 +157,12 @@ pub enum RDKafkaError {
     ValueDeserialization = -159,
     /// Partial response
     Partial = -158,
+    /// Modification attempted on read-only object
+    ReadOnly = -157,
+    /// No such entry or item not found
+    NoEnt = -156,
+    /// Read underflow
+    Underflow = -155,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error
