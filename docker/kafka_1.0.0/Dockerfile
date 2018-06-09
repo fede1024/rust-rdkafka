@@ -1,17 +1,15 @@
 FROM ubuntu:16.04
 
 # Install Java.
-ENV JAVA_HOME /usr/lib/jvm/java-9-oracle
+ENV JAVA_HOME /usr/lib/jvm/java-10-oracle
 ENV PATH="$PATH:$JAVA_HOME/bin"
 RUN apt-get update && \
     apt-get install software-properties-common -y
 RUN \
-  echo oracle-java9-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
-  add-apt-repository -y ppa:webupd8team/java && \
+  echo oracle-java10-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections && \
+  add-apt-repository -y ppa:linuxuprising/java && \
   apt-get update && \
-  apt-get install -y oracle-java9-installer && \
-  rm -rf /var/lib/apt/lists/* && \
-  rm -rf /var/cache/oracle-jdk8-installer
+  apt-get install -y oracle-java10-installer
 
 # Install Kafka.
 RUN apt-get update && apt-get install -y \
@@ -22,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     coreutils
 ENV KAFKA_VERSION="1.0.0"
 ENV SCALA_VERSION="2.12"
+ENV KAFKA_GC_LOG_OPTS=" "
 ENV KAFKA_HOME /opt/kafka_${SCALA_VERSION}-${KAFKA_VERSION}
 COPY download-kafka.sh /tmp/download-kafka.sh
 RUN chmod 755 /tmp/download-kafka.sh
@@ -30,4 +29,4 @@ ENV PATH="$PATH:$KAFKA_HOME/bin"
 
 COPY config.properties /server.properties
 
-CMD echo "Kafka starting" && rm -rf /var/lib/kafka  && kafka-server-start.sh /server.properties
+CMD echo "Kafka starting" && rm -rf /var/lib/kafka && kafka-server-start.sh /server.properties
