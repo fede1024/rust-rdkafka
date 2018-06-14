@@ -85,7 +85,13 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
         self
     }
 
-    fn to_base_record<D: IntoOpaque>(self, delivery_opaque: D) -> BaseRecord<'a, K, P, D> {
+    /// Set the headers of the record.
+    pub fn headers(mut self, headers: OwnedHeaders) -> FutureRecord<'a, K, P> {
+        self.headers = Some(headers);
+        self
+    }
+
+    fn into_base_record<D: IntoOpaque>(self, delivery_opaque: D) -> BaseRecord<'a, K, P, D> {
         BaseRecord {
             topic: self.topic,
             partition: self.partition,
@@ -205,7 +211,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         let start_time = Instant::now();
 
         let (tx, rx) = futures::oneshot();
-        let mut base_record = record.to_base_record(Box::new(tx));
+        let mut base_record = record.into_base_record(Box::new(tx));
 
         loop {
             match self.producer.send(base_record) {
@@ -242,7 +248,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {
         let (tx, rx) = futures::oneshot();
-        let base_record = record.to_base_record(Box::new(tx));
+        let base_record = record.into_base_record(Box::new(tx));
         self.producer.send(base_record)
             .map(|()| DeliveryFuture { rx })
             .map_err(|(e, record)| (e, FutureRecord::from_base_record(record)))

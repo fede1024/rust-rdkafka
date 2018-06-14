@@ -7,7 +7,7 @@ extern crate rdkafka_sys;
 use clap::{App, Arg};
 use futures::stream::Stream;
 
-use rdkafka::Message;
+use rdkafka::message::{Message, Headers};
 use rdkafka::client::ClientContext;
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -51,7 +51,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "true")
-        .set("statistics.interval.ms", "30000")
+        //.set("statistics.interval.ms", "30000")
         //.set("auto.offset.reset", "smallest")
         .set_log_level(RDKafkaLogLevel::Debug)
         .create_with_context(context)
@@ -66,9 +66,8 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
 
     for message in message_stream.wait() {
         match message {
-            Err(_) => {
-                warn!("Error while reading from stream.");
-            },
+            Err(_) => warn!("Error while reading from stream."),
+            Ok(Err(e)) => warn!("Kafka error: {}", e),
             Ok(Ok(m)) => {
                 let payload = match m.payload_view::<str>() {
                     None => "",
@@ -80,10 +79,13 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
                 };
                 info!("key: '{:?}', payload: '{}', topic: {}, partition: {}, offset: {}",
                       m.key(), payload, m.topic(), m.partition(), m.offset());
+                if let Some(headers) = m.headers() {
+                    for i in 0..headers.count() {
+                        let header = headers.get(i).unwrap();
+                        info!("  Header {:#?}: {:?}", header.0, header.1);
+                    }
+                }
                 consumer.commit_message(&m, CommitMode::Async).unwrap();
-            },
-            Ok(Err(e)) => {
-                warn!("Kafka error: {}", e);
             },
         };
     }

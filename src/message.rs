@@ -130,6 +130,12 @@ impl BorrowedHeaders {
     fn as_rdkafka_ptr(&self) -> *const RDKafkaHeaders {
         self as *const BorrowedHeaders as *const RDKafkaHeaders
     }
+
+    fn detach(&self) -> OwnedHeaders {
+        OwnedHeaders {
+            ptr: unsafe { rdsys::rd_kafka_headers_copy(self.as_rdkafka_ptr()) }
+        }
+    }
 }
 
 // TODO: use *const RDKafkaHeaders directly?
@@ -259,7 +265,7 @@ impl<'a> BorrowedMessage<'a> {
             timestamp: self.timestamp(),
             partition: self.partition(),
             offset: self.offset(),
-            headers: None, // TODO: fix
+            headers: self.headers().map(|headers| headers.detach()),
         }
     }
 }
@@ -361,7 +367,7 @@ impl OwnedHeaders {
     }
 
     /// Add a new header to the structure.
-    pub fn add<V: ToBytes + ?Sized>(&mut self, name: &str, value: &V) {
+    pub fn add<V: ToBytes + ?Sized>(self, name: &str, value: &V) -> OwnedHeaders {
         let name_cstring = CString::new(name.to_owned()).unwrap();
         let value_bytes = value.to_bytes();
         let err = unsafe {
@@ -374,7 +380,8 @@ impl OwnedHeaders {
             )
         };
         // OwnedHeaders should always represent writable instances of RDKafkaHeaders
-        assert!(!err.is_error())
+        assert!(!err.is_error());
+        self
     }
 
     pub(crate) fn ptr(&self) -> *mut RDKafkaHeaders {
@@ -598,9 +605,9 @@ mod test {
 
     #[test]
     fn test_headers() {
-        let mut owned = OwnedHeaders::new();
-        owned.add("key1", "value1");
-        owned.add("key2", "value2");
+        let owned = OwnedHeaders::new()
+            .add("key1", "value1")
+            .add("key2", "value2");
         assert_eq!(owned.get(0), Some(("key1", &[118, 97, 108, 117, 101, 49][..])));
         assert_eq!(owned.get_as::<str>(1), Some(("key2", Ok("value2"))));
     }

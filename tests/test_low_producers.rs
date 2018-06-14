@@ -1,4 +1,4 @@
-//! Test data production using low level and high level producers.
+//! Test data production using low level producers.
 extern crate futures;
 extern crate rand;
 extern crate rdkafka;
@@ -216,11 +216,12 @@ fn test_base_producer_headers() {
         .map(|id| {
             let mut record = BaseRecord::with_opaque_to(&topic_name, id).payload("A");
             if id % 2 == 0 {
-                let mut headers = OwnedHeaders::new();
-                headers.add("header1", &[1, 2, 3, 4]);
-                headers.add("header2", "value2");
-                headers.add("header3", &[]);
-                record = record.headers(headers);
+                record = record.headers(
+                    OwnedHeaders::new()
+                        .add("header1", &[1, 2, 3, 4])
+                        .add("header2", "value2")
+                        .add("header3", &[])
+                );
             }
             producer.send::<str, str>(record)
         })
