@@ -20,7 +20,8 @@ use std::time::{Duration, Instant};
 // ********** FUTURE PRODUCER **********
 //
 
-/// Same as [BaseRecord], but specific to the [FutureProducer].
+/// Same as [BaseRecord] but specific to the [FutureProducer]. The only difference is that
+/// the [FutureRecord] doesn't provide custom delivery opaque object.
 #[derive(Debug)]
 pub struct FutureRecord<'a, K: ToBytes + ?Sized + 'a, P: ToBytes + ?Sized + 'a> {
     /// Required destination topic

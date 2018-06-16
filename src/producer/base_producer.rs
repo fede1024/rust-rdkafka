@@ -154,7 +154,7 @@ pub struct BaseRecord<'a, K: ToBytes + ?Sized + 'a = (), P: ToBytes + ?Sized + '
     pub timestamp: Option<i64>,
     /// Optional message headers
     pub headers: Option<OwnedHeaders>,
-    /// Required delivery opaque (can be `()`)
+    /// Required delivery opaque (defaults to `()` if not required)
     pub delivery_opaque: D,
 }
 

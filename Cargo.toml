@@ -11,20 +11,19 @@ categories = ["api-bindings"]
 
 [dependencies]
 rdkafka-sys = { path = "rdkafka-sys", version = "0.11.4-0" }
-futures = "^0.1.13"
-libc = "^0.2.0"
-log = "^0.3.0"
-serde = "^1.0.0"
-serde_derive = "^1.0.0"
-serde_json = "^1.0.0"
+futures = "0.1.21"
+libc = "0.2.0"
+log = "0.3.0"
+serde = "1.0.0"
+serde_derive = "1.0.0"
+serde_json = "1.0.0"
 
 [dev-dependencies]
-chrono = "^0.4.0"
-clap = "^2.18.0"
-env_logger = "^0.3.0"
-futures-cpupool = "^0.1.2"
-rand = "^0.3.15"
-tokio-core = "^0.1.4"
+chrono = "0.4.0"
+clap = "2.18.0"
+env_logger = "0.3.0"
+rand = "0.3.15"
+tokio = "0.1.7"
 
 [features]
 default = []

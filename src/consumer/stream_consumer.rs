@@ -11,9 +11,8 @@ use error::{KafkaError, KafkaResult};
 use message::BorrowedMessage;
 use util::duration_to_millis;
 
-use std::cell::Cell;
 use std::ptr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -145,7 +144,7 @@ fn poll_loop<C: ConsumerContext>(
 pub struct StreamConsumer<C: ConsumerContext + 'static = DefaultConsumerContext> {
     consumer: Arc<BaseConsumer<C>>,
     should_stop: Arc<AtomicBool>,
-    handle: Cell<Option<JoinHandle<()>>>,
+    handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl<C: ConsumerContext> Consumer<C> for StreamConsumer<C> {
@@ -166,7 +165,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
         let stream_consumer = StreamConsumer {
             consumer: Arc::new(BaseConsumer::from_config_and_context(config, context)?),
             should_stop: Arc::new(AtomicBool::new(false)),
-            handle: Cell::new(None),
+            handle: Mutex::new(None),
         };
         Ok(stream_consumer)
     }
@@ -194,13 +193,14 @@ impl<C: ConsumerContext> StreamConsumer<C> {
                 poll_loop(consumer.as_ref(), sender, should_stop.as_ref(), poll_interval, no_message_error);
             })
             .expect("Failed to start polling thread");
-        self.handle.set(Some(handle));
+        *self.handle.lock().unwrap() = Some(handle);
         MessageStream::new(self, receiver)
     }
 
     /// Stops the StreamConsumer, blocking the caller until the internal consumer has been stopped.
     pub fn stop(&self) {
-        if let Some(handle) = self.handle.take() {
+        let mut handle = self.handle.lock().unwrap();
+        if let Some(handle) = handle.take() {
             trace!("Stopping polling");
             self.should_stop.store(true, Ordering::Relaxed);
             match handle.join() {

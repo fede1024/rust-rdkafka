@@ -1,16 +1,13 @@
 #[macro_use] extern crate log;
 extern crate clap;
 extern crate futures;
-extern crate futures_cpupool;
 extern crate rand;
 extern crate rdkafka;
-extern crate tokio_core;
+extern crate tokio;
 
 use clap::{App, Arg};
-use futures::Future;
 use futures::stream::Stream;
-use futures_cpupool::Builder;
-use tokio_core::reactor::Core;
+use tokio::prelude::*;
 
 use rdkafka::Message;
 use rdkafka::consumer::Consumer;
@@ -47,11 +44,6 @@ fn expensive_computation(msg: &OwnedMessage) -> String {
 // that runs on a single thread. The expensive CPU-bound computation is handled by the `CpuPool`,
 // without blocking the event loop.
 fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_topic: &str) {
-    // Create the event loop. The event loop will run on a single thread and drive the pipeline.
-    let mut core = Core::new().unwrap();
-
-    // Create the CPU pool, for CPU-intensive message processing.
-    let cpu_pool = Builder::new().pool_size(4).create();
 
     // Create the `StreamConsumer`, to receive the messages from the topic in form of a `Stream`.
     let consumer: StreamConsumer = ClientConfig::new()
@@ -66,15 +58,11 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     consumer.subscribe(&[input_topic]).expect("Can't subscribe to specified topic");
 
     // Create the `FutureProducer` to produce asynchronously.
-    let producer: FutureProducer = ClientConfig::new()
-        .set("bootstrap.servers", brokers)
-        .set("produce.offset.report", "true")
-        .create()
-        .expect("Producer creation error");
-
-    // Create a handle to the core, that will be used to provide additional asynchronous work
-    // to the event loop.
-    let handle = core.handle();
+//    let producer: FutureProducer = ClientConfig::new()
+//        .set("bootstrap.servers", brokers)
+//        .set("produce.offset.report", "true")
+//        .create()
+//        .expect("Producer creation error");
 
     // Create the outer pipeline on the message stream.
     let processed_stream = consumer.start()
@@ -87,40 +75,13 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
                 }
             }
         }).for_each(|msg| {     // Process each message
-            info!("Enqueuing message for computation");
-            let producer = producer.clone();
-            let topic_name = output_topic.to_owned();
-            let owned_message = msg.detach();
-            // Create the inner pipeline, that represents the processing of a single event.
-            let process_message = cpu_pool.spawn_fn(move || {
-                // Take ownership of the message, and runs an expensive computation on it,
-                // using one of the threads of the `cpu_pool`.
-                Ok(expensive_computation(&owned_message))
-            }).and_then(move |computation_result| {
-                // Send the result of the computation to Kafka, asynchronously.
-                info!("Sending result");
-                producer.send::<(), String>(
-                    FutureRecord::to(&topic_name)
-                        .payload(&computation_result),
-                    1000)
-            }).and_then(|d_report| {
-                // Once the message has been produced, print the delivery report and terminate
-                // the pipeline.
-                info!("Delivery report for result: {:?}", d_report);
-                Ok(())
-            }).or_else(|err| {
-                // In case of error, this closure will be executed instead.
-                warn!("Error while processing message: {:?}", err);
-                Ok(())
-            });
-            // Spawns the inner pipeline in the same event pool.
-            handle.spawn(process_message);
+            info!("Message received: {:?}", msg.payload_view::<str>());
             Ok(())
         });
 
     info!("Starting event loop");
-    // Runs the event pool until the consumer terminates.
-    core.run(processed_stream).unwrap();
+//    tokio::run(processed_stream);
+    tokio::executor::current_thread::block_on_all(processed_stream);
     info!("Stream processing terminated");
 }
 
