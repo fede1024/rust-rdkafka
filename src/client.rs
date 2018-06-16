@@ -30,10 +30,12 @@ pub trait ClientContext: Send + Sync {
     /// Receives log lines from librdkafka.
     fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
         match level {
-            RDKafkaLogLevel::Emerg => error!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
-            RDKafkaLogLevel::Alert => error!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
-            RDKafkaLogLevel::Critical => error!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
-            RDKafkaLogLevel::Error => error!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
+            RDKafkaLogLevel::Emerg
+            | RDKafkaLogLevel::Alert
+            | RDKafkaLogLevel::Critical
+            | RDKafkaLogLevel::Error => {
+                error!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+            },
             RDKafkaLogLevel::Warning => warn!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
             RDKafkaLogLevel::Notice => info!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
             RDKafkaLogLevel::Info => info!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),

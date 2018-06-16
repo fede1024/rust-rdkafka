@@ -2,12 +2,15 @@
 use rdsys;
 use rdsys::types::*;
 
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
-use std::slice;
+use std::os::raw::c_void;
+use std::ptr;
 use std::str;
 use std::time::SystemTime;
+
+use util;
 
 use error::{IsError, KafkaError, KafkaResult};
 use util::millis_to_epoch;
@@ -58,8 +61,32 @@ impl From<SystemTime> for Timestamp {
 //    }
 //}
 
+/// Message headers trait
+///
+/// A trait to represent readable message headers. Headers are key-value pairs that can be sent
+/// alongside every message. Only read-only methods are provided by this trait, as the underlying
+/// storage might not allow modification.
+pub trait Headers {
+    /// Return the number of defined headers.
+    fn count(&self) -> usize;
+    /// Get the specified header (the first header corresponds to index 0). If the index is
+    /// out of bounds, None is returned.
+    fn get(&self, idx: usize) -> Option<(&str, &[u8])>;
+
+    /// Same as [Headers::get], but the value of the header will be converted to the specified type.
+    /// If the conversion fails, an error will be returned instead.
+    fn get_as<V: FromBytes + ?Sized>(&self, idx: usize) -> Option<(&str, Result<&V, V::Error>)> {
+        self.get(idx)
+            .map(|(name, value)| (name, V::from_bytes(value)))
+    }
+}
+
+
 /// The `Message` trait provides access to the fields of a generic Kafka message.
 pub trait Message {
+    /// Represent the type of headers that this message contains.
+    type Headers: Headers;
+
     /// Returns the key of the message, or None if there is no key.
     fn key(&self) -> Option<&[u8]>;
 
@@ -89,7 +116,63 @@ pub trait Message {
     fn key_view<K: ?Sized + FromBytes>(&self) -> Option<Result<&K, K::Error>> {
         self.key().map(K::from_bytes)
     }
+
+    /// Returns the headers of the message, if available.
+    fn headers(&self) -> Option<&Self::Headers>;
 }
+
+
+/// Borrowed message headers
+///
+/// The `BorrowedHeaders` struct provides a read-only access to headers owned by [OwnedMessage]
+/// struct or by a [OwnedHeaders] struct.
+pub struct BorrowedHeaders;
+
+impl BorrowedHeaders {
+    unsafe fn from_native_ptr<T>(_owner: &T, headers_ptr: *mut rdsys::rd_kafka_headers_t) -> &BorrowedHeaders {
+        &*(headers_ptr as *mut BorrowedHeaders)
+    }
+
+    fn as_native_ptr(&self) -> *const RDKafkaHeaders {
+        self as *const BorrowedHeaders as *const RDKafkaHeaders
+    }
+
+    fn detach(&self) -> OwnedHeaders {
+        OwnedHeaders {
+            ptr: unsafe { rdsys::rd_kafka_headers_copy(self.as_native_ptr()) }
+        }
+    }
+}
+
+impl Headers for BorrowedHeaders {
+    fn count(&self) -> usize {
+        unsafe { rdsys::rd_kafka_header_cnt(self.as_native_ptr()) }
+    }
+
+    fn get(&self, idx: usize) -> Option<(&str, &[u8])> {
+        let mut value_ptr = ptr::null();
+        let mut name_ptr = ptr::null();
+        let mut value_size = 0;
+        let err = unsafe {
+            rdsys::rd_kafka_header_get_all(
+                self.as_native_ptr(),
+                idx,
+                &mut name_ptr,
+                &mut value_ptr,
+                &mut value_size
+            )
+        };
+        if err.is_error() {
+            None
+        } else {
+            unsafe {
+                Some((CStr::from_ptr(name_ptr).to_str().unwrap(),
+                      util::ptr_to_slice(value_ptr, value_size)))
+            }
+        }
+    }
+}
+
 
 /// A zero-copy Kafka message.
 ///
@@ -187,29 +270,20 @@ impl<'a> BorrowedMessage<'a> {
             timestamp: self.timestamp(),
             partition: self.partition(),
             offset: self.offset(),
+            headers: self.headers().map(|headers| headers.detach()),
         }
     }
 }
 
 impl<'a> Message for BorrowedMessage<'a> {
+    type Headers = BorrowedHeaders;
+
     fn key(&self) -> Option<&[u8]> {
-        unsafe {
-            if (*self.ptr).key.is_null() {
-                None
-            } else {
-                Some(slice::from_raw_parts::<u8>((*self.ptr).key as *const u8, (*self.ptr).key_len))
-            }
-        }
+        unsafe { util::ptr_to_opt_slice((*self.ptr).key, (*self.ptr).key_len) }
     }
 
     fn payload(&self) -> Option<&[u8]> {
-        unsafe {
-            if (*self.ptr).payload.is_null() {
-                None
-            } else {
-                Some(slice::from_raw_parts::<u8>((*self.ptr).payload as *const u8, (*self.ptr).len))
-            }
-        }
+        unsafe { util::ptr_to_opt_slice((*self.ptr).payload, (*self.ptr).len) }
     }
 
     fn topic(&self) -> &str {
@@ -246,6 +320,18 @@ impl<'a> Message for BorrowedMessage<'a> {
             }
         }
     }
+
+    fn headers(&self) -> Option<&BorrowedHeaders> {
+        let mut native_headers_ptr = ptr::null_mut();
+        unsafe {
+            let err = rdsys::rd_kafka_message_headers(self.ptr, &mut native_headers_ptr);
+            match err.into() {
+                RDKafkaError::NoError => Some(BorrowedHeaders::from_native_ptr(self, native_headers_ptr)),
+                RDKafkaError::NoEnt => None,
+                _ => None,
+            }
+        }
+    }
 }
 
 impl<'a> Drop for BorrowedMessage<'a> {
@@ -259,8 +345,87 @@ impl<'a> Drop for BorrowedMessage<'a> {
 // ********** OWNED MESSAGE **********
 //
 
-/// An `OwnedMessage` can be created from a `BorrowedMessage` using the `detach` method.
-/// `OwnedMessage`s don't hold any reference to the consumer, and don't use any memory inside the
+/// Owned message headers
+///
+/// Kafka supports associating an array of key-value pairs to every message, called message headers.
+/// The `OwnedHeaders` can be used to create the desired headers and to pass them to the producer.
+/// See also [BorrowedHeaders].
+#[derive(Debug)]
+pub struct OwnedHeaders {
+    ptr: *mut RDKafkaHeaders,
+}
+
+unsafe impl Send for OwnedHeaders {}
+
+impl OwnedHeaders {
+    /// Create a new `OwnedHeaders` struct with initial capacity 5.
+    pub fn new() -> OwnedHeaders {
+        OwnedHeaders::new_with_capacity(5)
+    }
+
+    /// Create a new `OwnedHeaders` struct with the desired initial capacity. The structure
+    /// is automatically resized as more headers are added.
+    pub fn new_with_capacity(initial_capacity: usize) -> OwnedHeaders {
+        OwnedHeaders {
+            ptr: unsafe { rdsys::rd_kafka_headers_new(initial_capacity) }
+        }
+    }
+
+    /// Add a new header to the structure.
+    pub fn add<V: ToBytes + ?Sized>(self, name: &str, value: &V) -> OwnedHeaders {
+        let name_cstring = CString::new(name.to_owned()).unwrap();
+        let value_bytes = value.to_bytes();
+        let err = unsafe {
+            rdsys::rd_kafka_header_add(
+                self.ptr,
+                name_cstring.as_ptr(),
+                name_cstring.as_bytes().len() as isize,
+                value_bytes.as_ptr() as *mut c_void,
+                value_bytes.len() as isize,
+            )
+        };
+        // OwnedHeaders should always represent writable instances of RDKafkaHeaders
+        assert!(!err.is_error());
+        self
+    }
+
+    pub(crate) fn ptr(&self) -> *mut RDKafkaHeaders {
+        self.ptr
+    }
+
+    /// Generate a read-only [BorrowedHeaders] reference.
+    pub fn as_borrowed(&self) -> &BorrowedHeaders {
+        unsafe { &*(self.ptr as *mut RDKafkaHeaders as *mut BorrowedHeaders) }
+    }
+}
+
+impl Headers for OwnedHeaders {
+    fn count(&self) -> usize {
+        unsafe { rdsys::rd_kafka_header_cnt(self.ptr) }
+    }
+
+    fn get(&self, idx: usize) -> Option<(&str, &[u8])> {
+        self.as_borrowed().get(idx)
+    }
+}
+
+impl Clone for OwnedHeaders {
+    fn clone(&self) -> Self {
+        OwnedHeaders {
+            ptr: unsafe { rdsys::rd_kafka_headers_copy(self.ptr) }
+        }
+    }
+}
+
+impl Drop for OwnedHeaders {
+    fn drop(&mut self) {
+        unsafe { rdsys::rd_kafka_headers_destroy(self.ptr) }
+    }
+}
+
+
+/// An [OwnedMessage] can be created from a [BorrowedMessage] using the [BorrowedMessage::detach]
+/// method. [OwnedMessage]s don't hold any reference to the consumer and don't use any memory inside the
 /// consumer buffer.
 #[derive(Debug)]
 pub struct OwnedMessage {
@@ -269,7 +434,8 @@ pub struct OwnedMessage {
     topic: String,
     timestamp: Timestamp,
     partition: i32,
-    offset: i64
+    offset: i64,
+    headers: Option<OwnedHeaders>,
 }
 
 impl OwnedMessage {
@@ -280,13 +446,16 @@ impl OwnedMessage {
         topic: String,
         timestamp: Timestamp,
         partition: i32,
-        offset: i64
+        offset: i64,
+        headers: Option<OwnedHeaders>,
     ) -> OwnedMessage {
-        OwnedMessage { payload, key, topic, timestamp, partition, offset }
+        OwnedMessage { payload, key, topic, timestamp, partition, offset, headers }
     }
 }
 
 impl Message for OwnedMessage {
+    type Headers = OwnedHeaders;
+
     fn key(&self) -> Option<&[u8]> {
         match self.key {
             Some(ref k) => Some(k.as_slice()),
@@ -316,11 +485,16 @@ impl Message for OwnedMessage {
     fn timestamp(&self) -> Timestamp {
         self.timestamp
     }
+
+    fn headers(&self) -> Option<&OwnedHeaders> {
+        self.headers.as_ref()
+    }
 }
 
 
 /// Given a reference to a byte array, returns a different view of the same data.
-/// No copy of the data should be performed.
+/// No allocation is performed, however the underlying data might be checked for
+/// correctness (for example when converting to `str`).
 pub trait FromBytes {
     /// The error type that will be used whenever the conversion fails.
     type Error;
@@ -385,6 +559,24 @@ impl ToBytes for () {
     }
 }
 
+// Implement to_bytes for arrays - https://github.com/rust-lang/rfcs/issues/1038
+macro_rules! array_impls {
+    ($($N:expr)+) => {
+        $(
+            impl ToBytes for [u8; $N] {
+                fn to_bytes(&self) -> &[u8] { self }
+            }
+         )+
+    }
+}
+
+array_impls! {
+     0  1  2  3  4  5  6  7  8  9
+    10 11 12 13 14 15 16 17 18 19
+    20 21 22 23 24 25 26 27 28 29
+    30 31 32
+}
+
 
 #[cfg(test)]
 mod test {
@@ -414,5 +606,14 @@ mod test {
         assert_eq!(Timestamp::NotAvailable.to_millis(), None);
         let t: Timestamp = 100.into();
         assert_eq!(t, Timestamp::CreateTime(100));
+    }
+
+    #[test]
+    fn test_headers() {
+        let owned = OwnedHeaders::new()
+            .add("key1", "value1")
+            .add("key2", "value2");
+        assert_eq!(owned.get(0), Some(("key1", &[118, 97, 108, 117, 101, 49][..])));
+        assert_eq!(owned.get_as::<str>(1), Some(("key2", Ok("value2"))));
     }
 }

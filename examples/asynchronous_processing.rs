@@ -17,7 +17,7 @@ use rdkafka::consumer::Consumer;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::ClientConfig;
 use rdkafka::message::OwnedMessage;
-use rdkafka::producer::FutureProducer;
+use rdkafka::producer::{FutureProducer, FutureRecord};
 
 use std::thread;
 use std::time::Duration;
@@ -99,7 +99,10 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
             }).and_then(move |computation_result| {
                 // Send the result of the computation to Kafka, asynchronously.
                 info!("Sending result");
-                producer.send_copy::<String, ()>(&topic_name, None, Some(&computation_result), None, None, 1000)
+                producer.send::<(), String>(
+                    FutureRecord::to(&topic_name)
+                        .payload(&computation_result),
+                    1000)
             }).and_then(|d_report| {
                 // Once the message has been produced, print the delivery report and terminate
                 // the pipeline.

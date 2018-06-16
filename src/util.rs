@@ -4,6 +4,7 @@ use rdsys;
 use std::ffi::CStr;
 use std::os::raw::c_void;
 use std::ptr;
+use std::slice;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Return a tuple representing the version of `librdkafka` in
@@ -39,18 +40,37 @@ pub fn current_time_millis() -> i64 {
     millis_to_epoch(SystemTime::now())
 }
 
+/// Converts a pointer to an array to an optional slice. If the pointer is null, `None` will
+/// be returned.
+pub(crate) unsafe fn ptr_to_opt_slice<'a, T>(ptr: *const c_void, size: usize) -> Option<&'a[T]> {
+    if ptr.is_null() {
+        None
+    } else {
+        Some(slice::from_raw_parts::<T>(ptr as *const T, size))
+    }
+}
+
+/// Converts a pointer to an array to a slice. If the pointer is null or the size is zero,
+/// a zero-length slice will be returned.
+pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> &'a[T] {
+    if ptr.is_null() || size == 0 {
+        &[][..]
+    } else {
+        slice::from_raw_parts::<T>(ptr as *const T, size)
+    }
+}
 
 /// A trait for the conversion of Rust data to raw pointers. This conversion is used
 /// to pass opaque objects to the C library and vice versa.
 pub trait IntoOpaque: Send + Sync {
     /// Converts the object into a raw pointer.
-    fn into_ptr(self) -> *mut c_void;
+    fn as_ptr(&self) -> *mut c_void;
     /// Converts the raw pointer back to the original Rust object.
     unsafe fn from_ptr(*mut c_void) -> Self;
 }
 
 impl IntoOpaque for () {
-    fn into_ptr(self) -> *mut c_void {
+    fn as_ptr(&self) -> *mut c_void {
         ptr::null_mut()
     }
 
@@ -60,8 +80,8 @@ impl IntoOpaque for () {
 }
 
 impl IntoOpaque for usize {
-    fn into_ptr(self) -> *mut c_void {
-        self as *mut c_void
+    fn as_ptr(&self) -> *mut c_void {
+        *self as *mut usize as *mut c_void
     }
 
     unsafe fn from_ptr(ptr: *mut c_void) -> Self {
@@ -70,30 +90,12 @@ impl IntoOpaque for usize {
 }
 
 impl<T: Send + Sync> IntoOpaque for Box<T> {
-    fn into_ptr(self) -> *mut c_void {
-        Box::into_raw(self) as *mut c_void
+    fn as_ptr(&self) -> *mut c_void {
+        self.as_ref() as *const T as *mut c_void
     }
 
     unsafe fn from_ptr(ptr: *mut c_void) -> Self {
         Box::from_raw(ptr as *mut T)
-    }
-}
-
-// This might cause information loss, since `into_ptr(None) == into_ptr(Some(()))`.
-impl<T: IntoOpaque> IntoOpaque for Option<T> {
-    fn into_ptr(self) -> *mut c_void {
-        match self {
-            Some(x) => x.into_ptr(),
-            None => ptr::null_mut(),
-        }
-    }
-
-    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(T::from_ptr(ptr))
-        }
     }
 }
 

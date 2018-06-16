@@ -7,12 +7,12 @@ use clap::{App, Arg};
 use futures::*;
 
 use rdkafka::config::ClientConfig;
-use rdkafka::producer::FutureProducer;
+use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
 use example_utils::setup_logger;
-
+use rdkafka::message::OwnedHeaders;
 
 fn produce(brokers: &str, topic_name: &str) {
     let producer: FutureProducer = ClientConfig::new()
@@ -26,11 +26,16 @@ fn produce(brokers: &str, topic_name: &str) {
     // for the results.
     let futures = (0..5)
         .map(|i| {
-            let value = format!("Message {}", i);
-            let key = format!("Key {}", i);
             // The send operation on the topic returns a future, that will be completed once the
             // result or failure from Kafka will be received.
-            producer.send_copy(topic_name, None, Some(&value), Some(&key), None, 0)
+            producer.send(
+                FutureRecord::to(topic_name)
+                    .payload(&format!("Message {}", i))
+                    .key(&format!("Key {}", i))
+                    .headers(OwnedHeaders::new()
+                        .add("header_key", "header_value")),
+                0
+            )
                 .map(move |delivery_status| {   // This will be executed onw the result is received
                     info!("Delivery status for message {} received", i);
                     delivery_status

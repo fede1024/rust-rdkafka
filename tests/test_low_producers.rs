@@ -1,13 +1,13 @@
-//! Test data production using low level and high level producers.
+//! Test data production using low level producers.
 extern crate futures;
 extern crate rand;
 extern crate rdkafka;
 
 use rdkafka::{ClientContext, Statistics};
-use rdkafka::message::{Message, OwnedMessage};
+use rdkafka::message::{Message, Headers, OwnedMessage};
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
-use rdkafka::producer::{BaseProducer, DeliveryResult, ThreadedProducer, ProducerContext};
+use rdkafka::producer::{BaseProducer, BaseRecord, DeliveryResult, ThreadedProducer, ProducerContext};
 use rdkafka::util::current_time_millis;
 
 #[macro_use] mod utils;
@@ -17,6 +17,7 @@ use std::sync::Mutex;
 use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
+use rdkafka::message::OwnedHeaders;
 
 
 struct PrintingContext {
@@ -117,13 +118,11 @@ fn test_base_producer_queue_full() {
 
     let results = (0..30)
         .map(|id| {
-            producer.send_copy(
-               &topic_name,
-               None,
-               Some(&format!("Message {}", id)),
-               Some(&format!("Key {}", id)),
-               id,
-               Some(current_time_millis()),
+            producer.send(
+                BaseRecord::with_opaque_to(&topic_name, id)
+                    .payload("payload")
+                    .key("key")
+                    .timestamp(current_time_millis())
             )
         }).collect::<Vec<_>>();
     while producer.in_flight_count() > 0 {
@@ -131,11 +130,17 @@ fn test_base_producer_queue_full() {
     }
 
     let errors = results.iter()
-        .filter(|&r| r == &Err(KafkaError::MessageProduction(RDKafkaError::QueueFull)))
+        .filter(|&e| {
+            if let &Err((KafkaError::MessageProduction(RDKafkaError::QueueFull), _)) = e {
+                true
+            } else {
+                false
+            }
+        })
         .count();
 
     let success = results.iter()
-        .filter(|&r| r == &Ok(()))
+        .filter(|&r| r.is_ok())
         .count();
 
     assert_eq!(results.len(), 30);
@@ -153,8 +158,11 @@ fn test_base_producer_timeout() {
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)
-        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), id, None))
-        .filter(|r| r == &Ok(()))
+        .map(|id| producer.send(
+            BaseRecord::with_opaque_to(&topic_name, id)
+                .payload("A")
+                .key("B")))
+        .filter(|r| r.is_ok())
         .count();
 
     producer.flush(Duration::from_secs(10));
@@ -172,6 +180,60 @@ fn test_base_producer_timeout() {
     assert_eq!(ids.len(), 10);
 }
 
+
+struct HeaderCheckContext {
+    ids: Arc<Mutex<HashSet<usize>>>,
+}
+
+impl ClientContext for HeaderCheckContext {}
+
+impl ProducerContext for HeaderCheckContext {
+    type DeliveryOpaque = usize;
+
+    fn delivery(&self, delivery_result: &DeliveryResult, message_id: usize) {
+        let message = delivery_result.as_ref().unwrap();
+        if message_id % 2 == 0 {
+            let headers = message.headers().unwrap();
+            assert_eq!(headers.count(), 3);
+            assert_eq!(headers.get(0), Some(("header1", &[1, 2, 3, 4][..])));
+            assert_eq!(headers.get_as::<str>(1), Some(("header2", Ok("value2"))));
+            assert_eq!(headers.get_as::<[u8]>(2), Some(("header3", Ok(&[][..]))));
+        } else {
+            assert!(message.headers().is_none());
+        }
+        (*self.ids.lock().unwrap()).insert(message_id);
+    }
+}
+
+#[test]
+fn test_base_producer_headers() {
+    let ids_set = Arc::new(Mutex::new(HashSet::new()));
+    let context = HeaderCheckContext { ids: ids_set.clone() };
+    let producer = base_producer_with_context(context, HashMap::new());
+    let topic_name = rand_test_topic();
+
+    let results_count = (0..10)
+        .map(|id| {
+            let mut record = BaseRecord::with_opaque_to(&topic_name, id).payload("A");
+            if id % 2 == 0 {
+                record = record.headers(
+                    OwnedHeaders::new()
+                        .add("header1", &[1, 2, 3, 4])
+                        .add("header2", "value2")
+                        .add("header3", &[])
+                );
+            }
+            producer.send::<str, str>(record)
+        })
+        .filter(|r| r.is_ok())
+        .count();
+
+    producer.flush(Duration::from_secs(10));
+
+    assert_eq!(results_count, 10);
+    assert_eq!((*ids_set.lock().unwrap()).len(), 10);
+}
+
 #[test]
 fn test_threaded_producer_send() {
     let context = CollectingContext::new();
@@ -179,8 +241,8 @@ fn test_threaded_producer_send() {
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)
-        .map(|id| producer.send_copy(&topic_name, None, Some("A"), Some("B"), None, id))
-        .filter(|r| r == &Ok(()))
+        .map(|id| producer.send(BaseRecord::with_opaque_to(&topic_name, id).payload("A").key("B")))
+        .filter(|r| r.is_ok())
         .count();
 
     assert_eq!(results_count, 10);

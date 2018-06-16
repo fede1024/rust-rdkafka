@@ -4,9 +4,18 @@
 ## Master
 
 * Add missing documentation warning.
+* Add new experimental producer API. Instead of taking key, value and timestamp directly,
+  producers now get them in a `ProducerRecord` which allows to specify optional arguments using
+  the builder pattern.
+* Add initial message headers support.
+
+<a name="0.16.0"></a>
+## 0.16.0 (2018-05-20)
+
+* Upgrade librdkafka to 0.11.4
 
 <a name="0.15.0"></a>
-## 0.15.0 (2018-03015)
+## 0.15.0 (2018-03-15)
 
 * Added iterator interface to the `BaseConsumer`.
 * Change timeout to more rust-idiomatic `Option<Duration>`.
