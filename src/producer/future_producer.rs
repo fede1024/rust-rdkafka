@@ -179,7 +179,7 @@ impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProduce
     }
 }
 
-/// A `Future` wrapping the result of the message production.
+/// A [Future] wrapping the result of the message production.
 ///
 /// Once completed, the future will contain an `OwnedDeliveryResult` with information on the
 /// delivery status of the message.
@@ -197,14 +197,11 @@ impl Future for DeliveryFuture {
 }
 
 impl<C: ClientContext + 'static> FutureProducer<C> {
-    // TODO: update doc
-    /// Sends a copy of the payload and key provided to the specified topic. When no partition is
-    /// specified the underlying Kafka library picks a partition based on the key, or a random one
-    /// if the key is not specified. Returns a `DeliveryFuture` that will eventually contain the
+    /// Sends the provided [FutureRecord]. Returns a [DeliveryFuture] that will eventually contain the
     /// result of the send. The `block_ms` parameter will control for how long the producer
     /// is allowed to block if the queue is full. Set it to -1 to block forever, or 0 to never block.
-    /// If `block_ms` is reached and the queue is still full, a `RDKafkaError::QueueFull` will be
-    /// reported in the `DeliveryFuture`.
+    /// If `block_ms` is reached and the queue is still full, a [RDKafkaError::QueueFull] will be
+    /// reported in the [DeliveryFuture].
     pub fn send<P, K>(&self, record: FutureRecord<P, K>, block_ms: i64) -> DeliveryFuture
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
@@ -242,8 +239,8 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         }
     }
 
-    /// Sends a copy of the provided record to the specified topic. This works the same
-    /// way as `send_copy`, the only difference is that it returns an error immediately if enqueuing fails.
+    /// Same as [FutureProducer::send], with the only difference that if enqueuing fails, an
+    /// error will be returned immediately, alongside the [FutureRecord] provided.
     pub fn send_result<'a, K, P>(&self, record: FutureRecord<'a, K, P>) -> Result<DeliveryFuture, (KafkaError, FutureRecord<'a, K, P>)>
     where K: ToBytes + ?Sized,
           P: ToBytes + ?Sized {

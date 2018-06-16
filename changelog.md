@@ -4,8 +4,10 @@
 ## Master
 
 * Add missing documentation warning.
-* Add new experimental producer API
-* Add initial headers support
+* Add new experimental producer API. Instead of taking key, value and timestamp directly,
+  producers now get them in a `ProducerRecord` which allows to specify optional arguments using
+  the builder pattern.
+* Add initial message headers support.
 
 <a name="0.16.0"></a>
 ## 0.16.0 (2018-05-20)

@@ -12,7 +12,7 @@ use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
 use example_utils::setup_logger;
-
+use rdkafka::message::OwnedHeaders;
 
 fn produce(brokers: &str, topic_name: &str) {
     let producer: FutureProducer = ClientConfig::new()
@@ -31,7 +31,9 @@ fn produce(brokers: &str, topic_name: &str) {
             producer.send(
                 FutureRecord::to(topic_name)
                     .payload(&format!("Message {}", i))
-                    .key(&format!("Key {}", i)),
+                    .key(&format!("Key {}", i))
+                    .headers(OwnedHeaders::new()
+                        .add("header_key", "header_value")),
                 0
             )
                 .map(move |delivery_status| {   // This will be executed onw the result is received

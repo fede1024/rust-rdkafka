@@ -84,6 +84,7 @@ pub trait Headers {
 
 /// The `Message` trait provides access to the fields of a generic Kafka message.
 pub trait Message {
+    /// Represent the type of headers that this message contains.
     type Headers: Headers;
 
     /// Returns the key of the message, or None if there is no key.
@@ -116,32 +117,36 @@ pub trait Message {
         self.key().map(K::from_bytes)
     }
 
+    /// Returns the headers of the message, if available.
     fn headers(&self) -> Option<&Self::Headers>;
 }
 
 
 /// Borrowed message headers
 ///
-/// The `BorrowedHeaders` struct provides a read-only access to headers owned by a received
-/// message or by a [OwnedHeaders] struct.
+/// The `BorrowedHeaders` struct provides a read-only access to headers owned by [OwnedMessage]
+/// struct or by a [OwnedHeaders] struct.
 pub struct BorrowedHeaders;
 
 impl BorrowedHeaders {
-    fn as_rdkafka_ptr(&self) -> *const RDKafkaHeaders {
+    unsafe fn from_native_ptr<T>(_owner: &T, headers_ptr: *mut rdsys::rd_kafka_headers_t) -> &BorrowedHeaders {
+        &*(headers_ptr as *mut BorrowedHeaders)
+    }
+
+    fn as_native_ptr(&self) -> *const RDKafkaHeaders {
         self as *const BorrowedHeaders as *const RDKafkaHeaders
     }
 
     fn detach(&self) -> OwnedHeaders {
         OwnedHeaders {
-            ptr: unsafe { rdsys::rd_kafka_headers_copy(self.as_rdkafka_ptr()) }
+            ptr: unsafe { rdsys::rd_kafka_headers_copy(self.as_native_ptr()) }
         }
     }
 }
 
-// TODO: use *const RDKafkaHeaders directly?
 impl Headers for BorrowedHeaders {
     fn count(&self) -> usize {
-        unsafe { rdsys::rd_kafka_header_cnt(self.as_rdkafka_ptr()) }
+        unsafe { rdsys::rd_kafka_header_cnt(self.as_native_ptr()) }
     }
 
     fn get(&self, idx: usize) -> Option<(&str, &[u8])> {
@@ -150,7 +155,7 @@ impl Headers for BorrowedHeaders {
         let mut value_size = 0;
         let err = unsafe {
             rdsys::rd_kafka_header_get_all(
-                self.as_rdkafka_ptr(),
+                self.as_native_ptr(),
                 idx,
                 &mut name_ptr,
                 &mut value_ptr,
@@ -321,7 +326,7 @@ impl<'a> Message for BorrowedMessage<'a> {
         unsafe {
             let err = rdsys::rd_kafka_message_headers(self.ptr, &mut native_headers_ptr);
             match err.into() {
-                RDKafkaError::NoError => Some(&*(native_headers_ptr as *mut BorrowedHeaders)),
+                RDKafkaError::NoError => Some(BorrowedHeaders::from_native_ptr(self, native_headers_ptr)),
                 RDKafkaError::NoEnt => None,
                 _ => None,
             }
@@ -419,8 +424,8 @@ impl Drop for OwnedHeaders {
 }
 
 
-/// An `OwnedMessage` can be created from a `BorrowedMessage` using the `detach` method.
-/// `OwnedMessage`s don't hold any reference to the consumer, and don't use any memory inside the
+/// An [OwnedMessage] can be created from a [BorrowedMessage] using the [BorrowedMessage::detach]
+/// method. [OwnedMessage]s don't hold any reference to the consumer and don't use any memory inside the
 /// consumer buffer.
 #[derive(Debug)]
 pub struct OwnedMessage {

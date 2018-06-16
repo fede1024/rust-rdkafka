@@ -48,10 +48,4 @@ fn test_future_producer_send_fail() {
             panic!("Unexpected return value: {:?}", e);
         }
     }
-
-//    let delivery_result = future.wait().expect("Future should complete");
-//    assert!(delivery_result.is_err());
-//
-//    let (kafka_error, owned_message) = delivery_result.err().unwrap();
-//    assert!(error_report.)
 }

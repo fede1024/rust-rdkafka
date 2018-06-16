@@ -296,7 +296,8 @@ impl<C: ProducerContext> BaseProducer<C> {
     /// producer's memory buffer, the method will take ownership of the record and return
     /// immediately; in case of failure to enqueue, the original record is returned, alongside an
     /// error code. If the message fails to be produced after being enqueued in the buffer, the
-    /// [ProducerContext::delivery] method will be called asynchronously.
+    /// [ProducerContext::delivery] method will be called asynchronously, with the provided
+    /// [ProducerContext::DeliveryOpaque].
     ///
     /// When no partition is specified the underlying Kafka library picks a partition based on a
     /// hash of the key. If no key is specified, a random partition will be used. To correctly
