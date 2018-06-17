@@ -3,10 +3,10 @@
 pub const __llvm__: ::std::os::raw::c_uint = 1;
 pub const __clang__: ::std::os::raw::c_uint = 1;
 pub const __clang_major__: ::std::os::raw::c_uint = 9;
-pub const __clang_minor__: ::std::os::raw::c_uint = 0;
+pub const __clang_minor__: ::std::os::raw::c_uint = 1;
 pub const __clang_patchlevel__: ::std::os::raw::c_uint = 0;
 pub const __clang_version__: &'static [u8; 25usize] =
-    b"9.0.0 (clang-900.0.39.2)\x00";
+    b"9.1.0 (clang-902.0.39.1)\x00";
 pub const __GNUC_MINOR__: ::std::os::raw::c_uint = 2;
 pub const __GNUC_PATCHLEVEL__: ::std::os::raw::c_uint = 1;
 pub const __GNUC__: ::std::os::raw::c_uint = 4;
@@ -19,7 +19,7 @@ pub const __ATOMIC_ACQ_REL: ::std::os::raw::c_uint = 4;
 pub const __ATOMIC_SEQ_CST: ::std::os::raw::c_uint = 5;
 pub const __PRAGMA_REDEFINE_EXTNAME: ::std::os::raw::c_uint = 1;
 pub const __VERSION__: &'static [u8; 53usize] =
-    b"4.2.1 Compatible Apple LLVM 9.0.0 (clang-900.0.39.2)\x00";
+    b"4.2.1 Compatible Apple LLVM 9.1.0 (clang-902.0.39.1)\x00";
 pub const __OBJC_BOOL_IS_BOOL: ::std::os::raw::c_uint = 0;
 pub const __CONSTANT_CFSTRINGS__: ::std::os::raw::c_uint = 1;
 pub const __BLOCKS__: ::std::os::raw::c_uint = 1;
@@ -218,6 +218,16 @@ pub const __UINT_FAST64_FMTX__: &'static [u8; 3usize] = b"lX\x00";
 pub const __FINITE_MATH_ONLY__: ::std::os::raw::c_uint = 0;
 pub const __GNUC_STDC_INLINE__: ::std::os::raw::c_uint = 1;
 pub const __GCC_ATOMIC_TEST_AND_SET_TRUEVAL: ::std::os::raw::c_uint = 1;
+pub const __CLANG_ATOMIC_BOOL_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __CLANG_ATOMIC_CHAR_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __CLANG_ATOMIC_CHAR16_T_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __CLANG_ATOMIC_CHAR32_T_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __CLANG_ATOMIC_WCHAR_T_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __CLANG_ATOMIC_SHORT_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __CLANG_ATOMIC_INT_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __CLANG_ATOMIC_LONG_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __CLANG_ATOMIC_LLONG_LOCK_FREE: ::std::os::raw::c_uint = 2;
+pub const __CLANG_ATOMIC_POINTER_LOCK_FREE: ::std::os::raw::c_uint = 2;
 pub const __GCC_ATOMIC_BOOL_LOCK_FREE: ::std::os::raw::c_uint = 2;
 pub const __GCC_ATOMIC_CHAR_LOCK_FREE: ::std::os::raw::c_uint = 2;
 pub const __GCC_ATOMIC_CHAR16_T_LOCK_FREE: ::std::os::raw::c_uint = 2;
@@ -261,11 +271,11 @@ pub const __APPLE_CC__: ::std::os::raw::c_uint = 6000;
 pub const __APPLE__: ::std::os::raw::c_uint = 1;
 pub const __STDC_NO_THREADS__: ::std::os::raw::c_uint = 1;
 pub const OBJC_NEW_PROPERTIES: ::std::os::raw::c_uint = 1;
-pub const __apple_build_version__: ::std::os::raw::c_uint = 9000039;
+pub const __apple_build_version__: ::std::os::raw::c_uint = 9020039;
 pub const __DYNAMIC__: ::std::os::raw::c_uint = 1;
 pub const __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__:
           ::std::os::raw::c_uint =
-    101200;
+    101300;
 pub const __MACH__: ::std::os::raw::c_uint = 1;
 pub const __STDC__: ::std::os::raw::c_uint = 1;
 pub const __STDC_HOSTED__: ::std::os::raw::c_uint = 1;
@@ -286,6 +296,7 @@ pub const __DARWIN_C_ANSI: ::std::os::raw::c_uint = 4096;
 pub const __DARWIN_C_FULL: ::std::os::raw::c_uint = 900000;
 pub const __DARWIN_C_LEVEL: ::std::os::raw::c_uint = 900000;
 pub const __STDC_WANT_LIB_EXT1__: ::std::os::raw::c_uint = 1;
+pub const __DARWIN_NO_LONG_LONG: ::std::os::raw::c_uint = 0;
 pub const _DARWIN_FEATURE_64_BIT_INODE: ::std::os::raw::c_uint = 1;
 pub const _DARWIN_FEATURE_ONLY_UNIX_CONFORMANCE: ::std::os::raw::c_uint = 1;
 pub const _DARWIN_FEATURE_UNIX_CONFORMANCE: ::std::os::raw::c_uint = 3;
@@ -310,6 +321,10 @@ pub const __MAC_10_12: ::std::os::raw::c_uint = 101200;
 pub const __MAC_10_12_1: ::std::os::raw::c_uint = 101201;
 pub const __MAC_10_12_2: ::std::os::raw::c_uint = 101202;
 pub const __MAC_10_12_4: ::std::os::raw::c_uint = 101204;
+pub const __MAC_10_13: ::std::os::raw::c_uint = 101300;
+pub const __MAC_10_13_1: ::std::os::raw::c_uint = 101301;
+pub const __MAC_10_13_2: ::std::os::raw::c_uint = 101302;
+pub const __MAC_10_13_4: ::std::os::raw::c_uint = 101304;
 pub const __IPHONE_2_0: ::std::os::raw::c_uint = 20000;
 pub const __IPHONE_2_1: ::std::os::raw::c_uint = 20100;
 pub const __IPHONE_2_2: ::std::os::raw::c_uint = 20200;
@@ -339,6 +354,10 @@ pub const __IPHONE_10_0: ::std::os::raw::c_uint = 100000;
 pub const __IPHONE_10_1: ::std::os::raw::c_uint = 100100;
 pub const __IPHONE_10_2: ::std::os::raw::c_uint = 100200;
 pub const __IPHONE_10_3: ::std::os::raw::c_uint = 100300;
+pub const __IPHONE_11_0: ::std::os::raw::c_uint = 110000;
+pub const __IPHONE_11_1: ::std::os::raw::c_uint = 110100;
+pub const __IPHONE_11_2: ::std::os::raw::c_uint = 110200;
+pub const __IPHONE_11_3: ::std::os::raw::c_uint = 110300;
 pub const __TVOS_9_0: ::std::os::raw::c_uint = 90000;
 pub const __TVOS_9_1: ::std::os::raw::c_uint = 90100;
 pub const __TVOS_9_2: ::std::os::raw::c_uint = 90200;
@@ -346,6 +365,10 @@ pub const __TVOS_10_0: ::std::os::raw::c_uint = 100000;
 pub const __TVOS_10_0_1: ::std::os::raw::c_uint = 100001;
 pub const __TVOS_10_1: ::std::os::raw::c_uint = 100100;
 pub const __TVOS_10_2: ::std::os::raw::c_uint = 100200;
+pub const __TVOS_11_0: ::std::os::raw::c_uint = 110000;
+pub const __TVOS_11_1: ::std::os::raw::c_uint = 110100;
+pub const __TVOS_11_2: ::std::os::raw::c_uint = 110200;
+pub const __TVOS_11_3: ::std::os::raw::c_uint = 110300;
 pub const __WATCHOS_1_0: ::std::os::raw::c_uint = 10000;
 pub const __WATCHOS_2_0: ::std::os::raw::c_uint = 20000;
 pub const __WATCHOS_2_1: ::std::os::raw::c_uint = 20100;
@@ -354,8 +377,12 @@ pub const __WATCHOS_3_0: ::std::os::raw::c_uint = 30000;
 pub const __WATCHOS_3_1: ::std::os::raw::c_uint = 30100;
 pub const __WATCHOS_3_1_1: ::std::os::raw::c_uint = 30101;
 pub const __WATCHOS_3_2: ::std::os::raw::c_uint = 30200;
-pub const __MAC_OS_X_VERSION_MIN_REQUIRED: ::std::os::raw::c_uint = 101200;
-pub const __MAC_OS_X_VERSION_MAX_ALLOWED: ::std::os::raw::c_uint = 101204;
+pub const __WATCHOS_4_0: ::std::os::raw::c_uint = 40000;
+pub const __WATCHOS_4_1: ::std::os::raw::c_uint = 40100;
+pub const __WATCHOS_4_2: ::std::os::raw::c_uint = 40200;
+pub const __WATCHOS_4_3: ::std::os::raw::c_uint = 40300;
+pub const __MAC_OS_X_VERSION_MIN_REQUIRED: ::std::os::raw::c_uint = 101300;
+pub const __MAC_OS_X_VERSION_MAX_ALLOWED: ::std::os::raw::c_uint = 101304;
 pub const __PTHREAD_SIZE__: ::std::os::raw::c_uint = 8176;
 pub const __PTHREAD_ATTR_SIZE__: ::std::os::raw::c_uint = 56;
 pub const __PTHREAD_MUTEXATTR_SIZE__: ::std::os::raw::c_uint = 8;
@@ -599,8 +626,8 @@ pub const UINT_FAST8_MAX: ::std::os::raw::c_uint = 255;
 pub const UINT_FAST16_MAX: ::std::os::raw::c_uint = 65535;
 pub const UINT_FAST32_MAX: ::std::os::raw::c_uint = 4294967295;
 pub const UINT_FAST64_MAX: ::std::os::raw::c_int = -1;
-pub const INTPTR_MIN: ::std::os::raw::c_longlong = -9223372036854775808;
 pub const INTPTR_MAX: ::std::os::raw::c_ulonglong = 9223372036854775807;
+pub const INTPTR_MIN: ::std::os::raw::c_longlong = -9223372036854775808;
 pub const UINTPTR_MAX: ::std::os::raw::c_int = -1;
 pub const INTMAX_MIN: ::std::os::raw::c_longlong = -9223372036854775808;
 pub const INTMAX_MAX: ::std::os::raw::c_ulonglong = 9223372036854775807;
@@ -677,6 +704,7 @@ pub const KEV_INET6_ADDR_DELETED: ::std::os::raw::c_uint = 3;
 pub const KEV_INET6_NEW_LL_ADDR: ::std::os::raw::c_uint = 4;
 pub const KEV_INET6_NEW_RTADV_ADDR: ::std::os::raw::c_uint = 5;
 pub const KEV_INET6_DEFROUTER: ::std::os::raw::c_uint = 6;
+pub const KEV_INET6_REQUEST_NAT64_PREFIX: ::std::os::raw::c_uint = 7;
 pub const SOCK_STREAM: ::std::os::raw::c_uint = 1;
 pub const SOCK_DGRAM: ::std::os::raw::c_uint = 2;
 pub const SOCK_RAW: ::std::os::raw::c_uint = 3;
@@ -1265,6 +1293,19 @@ pub type __darwin_pthread_t = *mut _opaque_pthread_t;
 pub type __darwin_nl_item = ::std::os::raw::c_int;
 pub type __darwin_wctrans_t = ::std::os::raw::c_int;
 pub type __darwin_wctype_t = __uint32_t;
+pub type u_int8_t = ::std::os::raw::c_uchar;
+pub type u_int16_t = ::std::os::raw::c_ushort;
+pub type u_int32_t = ::std::os::raw::c_uint;
+pub type u_int64_t = ::std::os::raw::c_ulonglong;
+pub type register_t = i64;
+pub type user_addr_t = u_int64_t;
+pub type user_size_t = u_int64_t;
+pub type user_ssize_t = i64;
+pub type user_long_t = i64;
+pub type user_ulong_t = u_int64_t;
+pub type user_time_t = i64;
+pub type user_off_t = i64;
+pub type syscall_arg_t = u_int64_t;
 pub type va_list = __darwin_va_list;
 extern "C" {
     pub fn renameat(arg1: ::std::os::raw::c_int,
@@ -1757,6 +1798,14 @@ extern "C" {
                    __linecapp: *mut usize, __stream: *mut FILE) -> isize;
 }
 extern "C" {
+    pub fn fmemopen(__buf: *mut ::std::os::raw::c_void, __size: usize,
+                    __mode: *const ::std::os::raw::c_char) -> *mut FILE;
+}
+extern "C" {
+    pub fn open_memstream(__bufp: *mut *mut ::std::os::raw::c_char,
+                          __sizep: *mut usize) -> *mut FILE;
+}
+extern "C" {
     #[link_name = "sys_nerr"]
     pub static sys_nerr: ::std::os::raw::c_int;
 }
@@ -1927,19 +1976,6 @@ extern "C" {
     pub fn wcstoumax(__nptr: *const wchar_t, __endptr: *mut *mut wchar_t,
                      __base: ::std::os::raw::c_int) -> uintmax_t;
 }
-pub type u_int8_t = ::std::os::raw::c_uchar;
-pub type u_int16_t = ::std::os::raw::c_ushort;
-pub type u_int32_t = ::std::os::raw::c_uint;
-pub type u_int64_t = ::std::os::raw::c_ulonglong;
-pub type register_t = i64;
-pub type user_addr_t = u_int64_t;
-pub type user_size_t = u_int64_t;
-pub type user_ssize_t = i64;
-pub type user_long_t = i64;
-pub type user_ulong_t = u_int64_t;
-pub type user_time_t = i64;
-pub type user_off_t = i64;
-pub type syscall_arg_t = u_int64_t;
 pub type u_char = ::std::os::raw::c_uchar;
 pub type u_short = ::std::os::raw::c_ushort;
 pub type u_int = ::std::os::raw::c_uint;
@@ -3523,6 +3559,14 @@ extern "C" {
                                           payload:
                                               *const ::std::os::raw::c_void,
                                           size: usize);
+}
+extern "C" {
+    pub fn rd_kafka_queue_io_event_cb_enable(rkqu: *mut rd_kafka_queue_t,
+                                             event_cb:
+                                                 ::std::option::Option<unsafe extern "C" fn(opaque:
+                                                                                                *mut ::std::os::raw::c_void)>,
+                                             opaque:
+                                                 *mut ::std::os::raw::c_void);
 }
 extern "C" {
     pub fn rd_kafka_consume_start(rkt: *mut rd_kafka_topic_t, partition: i32,
