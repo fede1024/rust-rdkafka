@@ -86,6 +86,7 @@ pub trait ConsumerContext: ClientContext {
     #[allow(unused_variables)]
     fn post_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
 
+    // TODO: convert pointer to structure
     /// Post commit callback. This method will run after a group of offsets was committed to the
     /// offset store.
     #[allow(unused_variables)]

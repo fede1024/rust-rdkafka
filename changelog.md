@@ -8,6 +8,8 @@
   producers now get them in a `ProducerRecord` which allows to specify optional arguments using
   the builder pattern.
 * Add initial message headers support.
+* Upgrade tokio-core to tokio in async example, remove futures-cpupool.
+* `MessageStream` is now Send and Sync
 
 <a name="0.16.0"></a>
 ## 0.16.0 (2018-05-20)

@@ -6,8 +6,9 @@ extern crate rdkafka;
 extern crate tokio;
 
 use clap::{App, Arg};
-use futures::stream::Stream;
-use tokio::prelude::*;
+use futures::{Future, lazy, Stream};
+use tokio::executor::current_thread;
+use tokio::executor::thread_pool;
 
 use rdkafka::Message;
 use rdkafka::consumer::Consumer;
@@ -22,15 +23,15 @@ use std::time::Duration;
 mod example_utils;
 use example_utils::setup_logger;
 
-// Emulates an expensive, synchronous computation. This function returns a string with the length
-// of the message payload, if any.
-fn expensive_computation(msg: &OwnedMessage) -> String {
-    info!("Starting expensive computation on message");
+
+// Emulates an expensive, synchronous computation.
+fn expensive_computation<'a>(msg: OwnedMessage) -> String {
+    info!("Starting expensive computation on message {}", msg.offset());
     thread::sleep(Duration::from_millis(rand::random::<u64>() % 5000));
-    info!("Expensive computation completed");
+    info!("Expensive computation completed on message {}", msg.offset());
     match msg.payload_view::<str>() {
         Some(Ok(payload)) => format!("Payload len for {} is {}", payload, payload.len()),
-        Some(Err(_)) => "Error processing message payload".to_owned(),
+        Some(Err(_)) => "Message payload is not a string".to_owned(),
         None => "No payload".to_owned(),
     }
 }
@@ -41,7 +42,7 @@ fn expensive_computation(msg: &OwnedMessage) -> String {
 //   3) send the message to a thread pool for processing.
 //   4) produce the result to the output topic.
 // Moving each message from one stage of the pipeline to next one is handled by the event loop,
-// that runs on a single thread. The expensive CPU-bound computation is handled by the `CpuPool`,
+// that runs on a single thread. The expensive CPU-bound computation is handled by the `ThreadPool`,
 // without blocking the event loop.
 fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_topic: &str) {
 
@@ -58,14 +59,25 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     consumer.subscribe(&[input_topic]).expect("Can't subscribe to specified topic");
 
     // Create the `FutureProducer` to produce asynchronously.
-//    let producer: FutureProducer = ClientConfig::new()
-//        .set("bootstrap.servers", brokers)
-//        .set("produce.offset.report", "true")
-//        .create()
-//        .expect("Producer creation error");
+    let producer: FutureProducer = ClientConfig::new()
+        .set("bootstrap.servers", brokers)
+        .set("produce.offset.report", "true")
+        .set("message.timeout.ms", "5000")
+        .create()
+        .expect("Producer creation error");
+
+    // Create the thread pool where the expensive computation will be performed.
+    let thread_pool = thread_pool::Builder::new()
+        .name_prefix("pool-")
+        .pool_size(4)
+        .build();
+
+    // Use the current thread as IO thread to drive consumer and producer.
+    let mut io_thread = current_thread::CurrentThread::new();
+    let io_thread_handle = io_thread.handle();
 
     // Create the outer pipeline on the message stream.
-    let processed_stream = consumer.start()
+    let stream_processor = consumer.start()
         .filter_map(|result| {  // Filter out errors
             match result {
                 Ok(msg) => Some(msg),
@@ -74,14 +86,39 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
                     None
                 }
             }
-        }).for_each(|msg| {     // Process each message
-            info!("Message received: {:?}", msg.payload_view::<str>());
+        }).for_each(move |borrowed_message| {     // Process each message
+            info!("Message received: {}", borrowed_message.offset());
+            // Borrowed messages can't outlive the consumer they are received from, so they need to
+            // be owned in order to be sent to a separate thread.
+            let owned_message = borrowed_message.detach();
+            let output_topic = output_topic.to_string();
+            let producer = producer.clone();
+            let io_thread_handle = io_thread_handle.clone();
+            let message_future = lazy(move || {
+                // The body of this closure will be executed in the thread pool.
+                let computation_result = expensive_computation(owned_message);
+                let producer_future = producer.send(
+                    FutureRecord::to(&output_topic)
+                        .key("some key")
+                        .payload(&computation_result),
+                    0)
+                    .then(|result| {
+                        match result {
+                            Ok(Ok(delivery)) => println!("Sent: {:?}", delivery),
+                            Ok(Err((e, _))) => println!("Error: {:?}", e),
+                            Err(_) => println!("Future cancelled")
+                        }
+                        Ok(())
+                    });
+                let _ = io_thread_handle.spawn(producer_future);
+                Ok(())
+            });
+            thread_pool.spawn(message_future);
             Ok(())
         });
 
     info!("Starting event loop");
-//    tokio::run(processed_stream);
-    tokio::executor::current_thread::block_on_all(processed_stream);
+    let _ = io_thread.block_on(stream_processor);
     info!("Stream processing terminated");
 }
 
