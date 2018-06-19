@@ -303,6 +303,7 @@
 <span id="303">303</span>
 <span id="304">304</span>
 <span id="305">305</span>
+<span id="306">306</span>
 </pre><pre class="rust ">
 <span class="doccomment">//! Future producer</span>
 <span class="doccomment">//!</span>
@@ -326,7 +327,8 @@
 <span class="comment">// ********** FUTURE PRODUCER **********</span>
 <span class="comment">//</span>
 
-<span class="doccomment">/// Same as [BaseRecord], but specific to the [FutureProducer].</span>
+<span class="doccomment">/// Same as [BaseRecord] but specific to the [FutureProducer]. The only difference is that</span>
+<span class="doccomment">/// the [FutureRecord] doesn&#39;t provide custom delivery opaque object.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FutureRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>, <span class="ident">P</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Required destination topic</span>

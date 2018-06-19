@@ -641,7 +641,7 @@
     <span class="kw">pub</span> <span class="ident">timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Optional message headers</span>
     <span class="kw">pub</span> <span class="ident">headers</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">OwnedHeaders</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Required delivery opaque (can be `()`)</span>
+    <span class="doccomment">/// Required delivery opaque (defaults to `()` if not required)</span>
     <span class="kw">pub</span> <span class="ident">delivery_opaque</span>: <span class="ident">D</span>,
 }
 
