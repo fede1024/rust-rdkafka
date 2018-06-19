@@ -24,6 +24,7 @@ clap = "2.18.0"
 env_logger = "0.3.0"
 rand = "0.3.15"
 tokio = "0.1.7"
+tokio-threadpool = "0.1.4"
 
 [features]
 default = []

@@ -113,7 +113,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         -> Option<KafkaResult<BorrowedMessage>>
     {
         self.poll_raw(timeout_to_ms(timeout))
-            .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
+            .map(|ptr| unsafe { BorrowedMessage::new(ptr) })
     }
 
     /// Returns an iterator over the available messages.
@@ -353,7 +353,7 @@ impl<C: ConsumerContext> Drop for BaseConsumer<C> {
 pub struct Iter<'a, C: ConsumerContext + 'a>(&'a BaseConsumer<C>);
 
 impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
-    type Item = KafkaResult<BorrowedMessage<'a>>;
+    type Item = KafkaResult<BorrowedMessage>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(item) = self.0.poll(None) {
@@ -364,7 +364,7 @@ impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
 }
 
 impl<'a, C: ConsumerContext + 'a> IntoIterator for &'a BaseConsumer<C> {
-    type Item = KafkaResult<BorrowedMessage<'a>>;
+    type Item = KafkaResult<BorrowedMessage>;
     type IntoIter = Iter<'a, C>;
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

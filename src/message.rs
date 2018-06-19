@@ -4,7 +4,6 @@ use rdsys::types::*;
 
 use std::ffi::{CStr, CString};
 use std::fmt;
-use std::marker::PhantomData;
 use std::os::raw::c_void;
 use std::ptr;
 use std::str;
@@ -184,9 +183,8 @@ impl Headers for BorrowedHeaders {
 /// up and the consumer to block until some of the `BorrowedMessage`s are dropped.
 /// ## Conversion to owned
 /// To transform a `BorrowedMessage` into a `OwnedMessage`, use the `detach` method.
-pub struct BorrowedMessage<'a> {
+pub struct BorrowedMessage {
     ptr: *mut RDKafkaMessage,
-    _owner: PhantomData<&'a u8>,
 }
 
 /// The result of a message production.
@@ -198,21 +196,21 @@ pub struct BorrowedMessage<'a> {
 /// ## Lifetimes
 /// In both success or failure scenarios, the payload of the message resides in the buffer of the
 /// producer and will be automatically removed once the `delivery` callback finishes.
-pub type DeliveryResult<'a> = Result<BorrowedMessage<'a>, (KafkaError, BorrowedMessage<'a>)>;
+pub type DeliveryResult = Result<BorrowedMessage, (KafkaError, BorrowedMessage)>;
 
-impl<'a> fmt::Debug for BorrowedMessage<'a> {
+impl fmt::Debug for BorrowedMessage {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Message {{ ptr: {:?} }}", self.ptr())
     }
 }
 
 
-impl<'a> BorrowedMessage<'a> {
+impl BorrowedMessage {
     /// Creates a new `BorrowedMessage` that wraps the native Kafka message pointer returned by a
     /// consumer. The lifetime of the message will be bound to the lifetime of the consumer passed
     /// as parameter. This method should only be used with messages coming from consumers. If the
     /// message contains an error, only the error is returned and the message structure is freed.
-    pub unsafe fn from_consumer<C>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> KafkaResult<BorrowedMessage<'a>> {
+    pub unsafe fn new(ptr: *mut RDKafkaMessage) -> KafkaResult<BorrowedMessage> {
         if (*ptr).err.is_error() {
             let err = match (*ptr).err {
                     rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
@@ -223,7 +221,7 @@ impl<'a> BorrowedMessage<'a> {
             rdsys::rd_kafka_message_destroy(ptr);
             Err(err)
         } else {
-            Ok(BorrowedMessage { ptr, _owner: PhantomData })
+            Ok(BorrowedMessage { ptr })
         }
     }
 
@@ -231,8 +229,8 @@ impl<'a> BorrowedMessage<'a> {
     /// delivery callback of a producer. The lifetime of the message will be bound to the lifetime
     /// of the reference passed as parameter. This method should only be used with messages coming
     /// from the delivery callback. The message will not be freed in any circumstance.
-    pub unsafe fn from_dr_callback<O>(ptr: *mut RDKafkaMessage, _owner: &'a O) -> DeliveryResult<'a> {
-        let borrowed_message = BorrowedMessage { ptr, _owner: PhantomData };
+    pub unsafe fn from_dr_callback<O>(ptr: *mut RDKafkaMessage, _owner: &O) -> DeliveryResult {
+        let borrowed_message = BorrowedMessage { ptr };
         if (*ptr).err.is_error() {
             Err((KafkaError::MessageProduction((*ptr).err.into()), borrowed_message))
         } else {
@@ -275,7 +273,7 @@ impl<'a> BorrowedMessage<'a> {
     }
 }
 
-impl<'a> Message for BorrowedMessage<'a> {
+impl Message for BorrowedMessage {
     type Headers = BorrowedHeaders;
 
     fn key(&self) -> Option<&[u8]> {
@@ -334,7 +332,7 @@ impl<'a> Message for BorrowedMessage<'a> {
     }
 }
 
-impl<'a> Drop for BorrowedMessage<'a> {
+impl Drop for BorrowedMessage {
     fn drop(&mut self) {
         trace!("Destroying message {:?}", self);
         unsafe { rdsys::rd_kafka_message_destroy(self.ptr) };
