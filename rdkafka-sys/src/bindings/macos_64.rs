@@ -3563,7 +3563,9 @@ extern "C" {
 extern "C" {
     pub fn rd_kafka_queue_io_event_cb_enable(rkqu: *mut rd_kafka_queue_t,
                                              event_cb:
-                                                 ::std::option::Option<unsafe extern "C" fn(opaque:
+                                                 ::std::option::Option<unsafe extern "C" fn(rk:
+                                                                                                *mut rd_kafka_t,
+                                                                                            opaque:
                                                                                                 *mut ::std::os::raw::c_void)>,
                                              opaque:
                                                  *mut ::std::os::raw::c_void);

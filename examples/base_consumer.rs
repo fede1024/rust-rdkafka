@@ -59,7 +59,8 @@ impl ConsumerContext for CustomContext {
 // A type alias with your custom consumer can be created for convenience.
 type LoggingConsumer = BaseConsumer<CustomContext>;
 
-unsafe extern "C" fn event_cb(opaque: *mut c_void) {
+//unsafe extern "C" fn event_cb(opaque: *mut c_void) {
+unsafe extern "C" fn event_cb(_client: *mut rdsys::rd_kafka_s, opaque: *mut c_void) {
 //    let opaque_str = CStr::from_ptr(_opaque as *const i8).to_string_lossy();
 //    info!("YOLOOOOO '{}' {:?}", opaque_str, _opaque);
     let tasks_box = Box::from_raw(opaque as *mut RwLock<VecDeque<Task>>);
@@ -129,9 +130,9 @@ impl Stream for StreamConsumer2 {
         match self.consumer.poll(Duration::from_millis(0)) {
             Some(_message) => {
                 let mut tasks = self.tasks.write().unwrap();
-                if let Some(task) = (*tasks).pop_front() {
-                    task.notify();  // Notify next task
-                }
+//                if let Some(task) = (*tasks).pop_front() {
+//                    task.notify();  // Notify next task
+//                }
                 info!("Ready");
                 Ok(Async::Ready(Some(42)))
             },

@@ -1,6 +1,7 @@
 //! Base trait and common functionality for all consumers.
 pub mod base_consumer;
 pub mod stream_consumer;
+pub mod stream_consumer2;
 
 // Re-export
 pub use self::base_consumer::BaseConsumer;

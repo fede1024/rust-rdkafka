@@ -219,10 +219,12 @@
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
-extern crate serde_json;
+extern crate crossbeam;
 extern crate futures;
+extern crate serde_json;
 
 extern crate rdkafka_sys as rdsys;
+extern crate core;
 
 pub use rdsys::types as types;
 

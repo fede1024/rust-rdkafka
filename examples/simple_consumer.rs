@@ -10,7 +10,7 @@ use futures::stream::Stream;
 use rdkafka::message::{Message, Headers};
 use rdkafka::client::ClientContext;
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
-use rdkafka::consumer::stream_consumer::StreamConsumer;
+use rdkafka::consumer::stream_consumer2::StreamConsumer2;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::util::get_rdkafka_version;
 use rdkafka::error::KafkaResult;
@@ -40,7 +40,7 @@ impl ConsumerContext for CustomContext {
 }
 
 // A type alias with your custom consumer can be created for convenience.
-type LoggingConsumer = StreamConsumer<CustomContext>;
+type LoggingConsumer = StreamConsumer2<CustomContext>;
 
 fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
     let context = CustomContext;
@@ -62,7 +62,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
 
     // consumer.start() returns a stream. The stream can be used ot chain together expensive steps,
     // such as complex computations on a thread pool or asynchronous IO.
-    let message_stream = consumer.start();
+    let message_stream = consumer.borrowed_stream();
 
     for message in message_stream.wait() {
         match message {
