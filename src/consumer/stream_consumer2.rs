@@ -42,14 +42,9 @@ impl<'a, C: ConsumerContext> Stream for BorrowedMessageStream<'a, C> {
     type Error = ();  // TODO: error?
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        info!("About to poll");
         match self.stream_consumer.base_consumer.poll(Duration::from_millis(0)) {
-            Some(message) => {
-                info!("Ready");
-                Ok(Async::Ready(Some(message)))
-            },
+            Some(message) => Ok(Async::Ready(Some(message))),
             None => {
-                info!("NotReady");
                 self.task_queue.enqueue_task(task::current());
                 Ok(Async::NotReady)
             }
@@ -99,33 +94,21 @@ impl TaskQueue {
     }
 
     fn enqueue_task(&self, task: Task) {
-        info!("Before enqueue");
         let mut inner_guard = self.0.write().unwrap();
         if (*inner_guard).events_ready {
             (*inner_guard).events_ready = false;
             task.notify();
-            info!("Notified");
         } else {
             (*inner_guard).queue.push_back(task);
-            info!("Enqueued");
         }
-        info!("After enqueue");
     }
 
     fn notify_task(&self) {
-        info!("Notify Task");
         let mut inner_guard = self.0.write().unwrap();
         match (*inner_guard).queue.pop_front() {
-            Some(task) => {
-                task.notify();
-                info!("Task notified");
-            },
-            None => {
-                (*inner_guard).events_ready = true;
-                info!("Events ready");
-            },
+            Some(task) => task.notify(),
+            None => (*inner_guard).events_ready = true,
         };
-        info!("After notify task");
     }
 
     fn to_opaque(self) -> *mut c_void {
