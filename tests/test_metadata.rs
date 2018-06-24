@@ -82,7 +82,7 @@ fn test_subscription() {
     let consumer = create_consumer(&rand_test_group());
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = consumer.start().take(10).wait();
+    let _consumer_future = consumer.borrowed_stream().take(10).wait();
 
     let mut tpl = TopicPartitionList::new();
     tpl.add_topic_unassigned(&topic_name);
@@ -102,7 +102,7 @@ fn test_group_membership() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group
-    let _consumer_future = consumer.start()
+    let _consumer_future = consumer.borrowed_stream()
         .take(1)
         .for_each(|_| Ok(()))
         .wait();

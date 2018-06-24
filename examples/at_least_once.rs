@@ -129,7 +129,7 @@ fn main() {
     let consumer = create_consumer(brokers, group_id, input_topic);
     let producer = create_producer(brokers);
 
-    for message in consumer.start().wait() {
+    for message in consumer.borrowed_stream().wait() {
         match message {
             Err(()) => {
                 warn!("Error while reading from stream");

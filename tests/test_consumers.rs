@@ -127,7 +127,7 @@ fn test_produce_consume_base() {
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = consumer.start()
+    let _consumer_future = consumer.borrowed_stream()
         .take(100)
         .for_each(|message| {
             match message {
@@ -166,7 +166,7 @@ fn test_produce_consume_base_assign() {
 
     let mut partition_count = vec![0, 0, 0];
 
-    let _consumer_future = consumer.start()
+    let _consumer_future = consumer.borrowed_stream()
         .take(19)
         .for_each(|message| {
             match message {
@@ -185,14 +185,18 @@ fn test_produce_consume_base_assign() {
 fn test_produce_consume_with_timestamp() {
     let _r = env_logger::init();
 
+    println!("HERE");
     let topic_name = rand_test_topic();
     let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = consumer.start()
+    println!("HERE");
+
+    let _consumer_future = consumer.borrowed_stream()
         .take(100)
         .for_each(|message| {
+            println!(">>>> {:?}", message);
             match message {
                 Ok(m) => {
                     let id = message_map[&(m.partition(), m.offset())];
@@ -217,13 +221,12 @@ fn test_produce_consume_with_timestamp() {
     assert_eq!(tp.error(), Ok(()));
 }
 
-#[test]
 fn test_consume_with_no_message_error() {
     let _r = env_logger::init();
 
     let consumer = create_stream_consumer(&rand_test_group(), None);
 
-    let message_stream = consumer.start_with(Duration::from_millis(200), true);
+    let message_stream = consumer.borrowed_stream();
 
     let mut first_poll_time = None;
     let mut timeouts_count = 0;
@@ -265,7 +268,7 @@ fn test_consumer_commit_message() {
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = consumer.start()
+    let _consumer_future = consumer.borrowed_stream()
         .take(33)
         .for_each(|message| {
             match message {
@@ -318,7 +321,7 @@ fn test_consumer_store_offset_commit() {
     let consumer = create_stream_consumer(&rand_test_group(), Some(config));
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = consumer.start()
+    let _consumer_future = consumer.borrowed_stream()
         .take(36)
         .for_each(|message| {
             match message {

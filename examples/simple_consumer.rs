@@ -9,8 +9,7 @@ use futures::stream::Stream;
 
 use rdkafka::message::{Message, Headers};
 use rdkafka::client::ClientContext;
-use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
-use rdkafka::consumer::stream_consumer2::StreamConsumer2;
+use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance, StreamConsumer};
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::util::get_rdkafka_version;
 use rdkafka::error::KafkaResult;
@@ -40,7 +39,7 @@ impl ConsumerContext for CustomContext {
 }
 
 // A type alias with your custom consumer can be created for convenience.
-type LoggingConsumer = StreamConsumer2<CustomContext>;
+type LoggingConsumer = StreamConsumer<CustomContext>;
 
 fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
     let context = CustomContext;

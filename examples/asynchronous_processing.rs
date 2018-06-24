@@ -77,7 +77,7 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
     let io_thread_handle = io_thread.handle();
 
     // Create the outer pipeline on the message stream.
-    let stream_processor = consumer.start()
+    let stream_processor = consumer.borrowed_stream()
         .filter_map(|result| {  // Filter out errors
             match result {
                 Ok(msg) => Some(msg),
