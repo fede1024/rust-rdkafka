@@ -15,16 +15,15 @@ use std::mem;
 use std::os::raw::c_void;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
-
+use message::OwnedMessage;
 
 pub struct BorrowedMessageStream<'a, C: ConsumerContext + 'a> {
     stream_consumer: &'a StreamConsumer<C>,
-    task_queue: Arc<TaskQueue>,
 }
 
 impl<'a, C: ConsumerContext> BorrowedMessageStream<'a, C> {
-    fn new(stream_consumer: &'a StreamConsumer<C>, task_queue: Arc<TaskQueue>) -> BorrowedMessageStream<'a, C> {
-        BorrowedMessageStream { stream_consumer, task_queue }
+    fn new(stream_consumer: &'a StreamConsumer<C>) -> BorrowedMessageStream<'a, C> {
+        BorrowedMessageStream { stream_consumer }
     }
 }
 
@@ -33,16 +32,38 @@ impl<'a, C: ConsumerContext> Stream for BorrowedMessageStream<'a, C> {
     type Error = ();
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        println!("Poll");
         match self.stream_consumer.base_consumer.poll(Duration::from_millis(0)) {
-            Some(message) => {
-                println!("Message ready");
-                Ok(Async::Ready(Some(message)))
+            Some(message) => Ok(Async::Ready(Some(message))),
+            None => {
+                self.stream_consumer.tasks.enqueue_task(task::current());
+                Ok(Async::NotReady)
+            }
+        }
+    }
+}
+
+pub struct OwnedMessageStream<C: ConsumerContext> {
+    stream_consumer: Arc<StreamConsumer<C>>,
+}
+
+impl<C: ConsumerContext> OwnedMessageStream<C> {
+    fn new(stream_consumer: Arc<StreamConsumer<C>>) -> OwnedMessageStream<C> {
+        OwnedMessageStream { stream_consumer }
+    }
+}
+
+impl<C: ConsumerContext> Stream for OwnedMessageStream<C> {
+    type Item = KafkaResult<OwnedMessage>;
+    type Error = ();
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        match self.stream_consumer.base_consumer.poll(Duration::from_millis(0)) {
+            Some(result) => {
+                let owned_result = result.map(|message| message.detach());
+                Ok(Async::Ready(Some(owned_result)))
             },
             None => {
-                println!("Task enqueue");
-                self.task_queue.enqueue_task(task::current());
-                println!("Task enqueue done");
+                self.stream_consumer.tasks.enqueue_task(task::current());
                 Ok(Async::NotReady)
             }
         }
@@ -59,7 +80,7 @@ impl<'a, C: ConsumerContext> Stream for BorrowedMessageStream<'a, C> {
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct StreamConsumer<C: ConsumerContext = DefaultConsumerContext> {
     base_consumer: Arc<BaseConsumer<C>>,
-    task_queue: Arc<TaskQueue>,
+    tasks: Arc<TaskQueue>,
 }
 
 impl<C: ConsumerContext> Consumer<C> for StreamConsumer<C> {
@@ -93,22 +114,17 @@ impl TaskQueue {
     }
 
     fn enqueue_task(&self, task: Task) {
-        println!("About to take write in enqueue_task");
         let mut inner_guard = self.0.write().unwrap();
-        println!("enqueue_task locking done");
         if (*inner_guard).events_ready {
             (*inner_guard).events_ready = false;
             task.notify();
         } else {
             (*inner_guard).queue.push_back(task);
         }
-        println!("enqueue_task locking finish");
     }
 
     fn notify_task(&self) {
-        println!("About to take write in notify_task");
         let mut inner_guard = self.0.write().unwrap();
-        println!(">>> {:?}", inner_guard);
         match (*inner_guard).queue.pop_front() {
             Some(task) => task.notify(),
             None => (*inner_guard).events_ready = true,
@@ -125,7 +141,6 @@ impl TaskQueue {
 }
 
 unsafe extern "C" fn event_cb(_client: *mut rdsys::rd_kafka_s, opaque: *mut c_void) {
-    println!("Event cb {:?} {:?}", _client, opaque);
     let task_queue = TaskQueue::from_opaque(opaque);
     task_queue.notify_task();
     mem::forget(task_queue);
@@ -138,23 +153,25 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
 
         let task_queue_ptr = TaskQueue::new().to_opaque();
         let task_queue = unsafe {
-            // TODO: main queue?
             let consumer_queue = rdsys::rd_kafka_queue_get_consumer(base_consumer.client().native_ptr());
-            println!("Setting up cb {:?}", task_queue_ptr);
             rdsys::rd_kafka_queue_io_event_cb_enable(consumer_queue, Some(event_cb), task_queue_ptr);
+            // TODO: queue should be destroyed on StreamConsumer::drop?
             TaskQueue::from_opaque(task_queue_ptr)
         };
 
         Ok(StreamConsumer {
             base_consumer: Arc::new(base_consumer),
-            task_queue: Arc::new(task_queue),
+            tasks: Arc::new(task_queue),
         })
     }
 }
 
 impl<C: ConsumerContext> StreamConsumer<C> {
     pub fn borrowed_stream(&self) -> BorrowedMessageStream<C> {
-        println!("Creating borrowed stream");
-        BorrowedMessageStream::new(self, Arc::clone(&self.task_queue))
+        BorrowedMessageStream::new(self)
+    }
+
+    pub fn owned_stream(self) -> OwnedMessageStream<C> {
+        OwnedMessageStream::new(Arc::new(self))
     }
 }

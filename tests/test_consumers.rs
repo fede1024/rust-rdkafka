@@ -185,13 +185,10 @@ fn test_produce_consume_base_assign() {
 fn test_produce_consume_with_timestamp() {
     let _r = env_logger::init();
 
-    println!("HERE");
     let topic_name = rand_test_topic();
     let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
-
-    println!("HERE");
 
     let _consumer_future = consumer.borrowed_stream()
         .take(100)
@@ -221,6 +218,8 @@ fn test_produce_consume_with_timestamp() {
     assert_eq!(tp.error(), Ok(()));
 }
 
+#[test]
+#[ignore]
 fn test_consume_with_no_message_error() {
     let _r = env_logger::init();
 
