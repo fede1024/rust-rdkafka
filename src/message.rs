@@ -177,13 +177,13 @@ impl Headers for BorrowedHeaders {
 /// A zero-copy Kafka message.
 ///
 /// The content of the message is stored in the receiving buffer of the consumer or the producer. As
-/// such, `BorrowedMessage` cannot outlive the consumer or producer it belongs to.
+/// such, [BorrowedMessage] cannot outlive the consumer or producer it belongs to.
 /// ## Consumers
-/// `BorrowedMessage`s coming from consumers are removed from the consumer buffer once they are
+/// [BorrowedMessage]s coming from consumers are removed from the consumer buffer once they are
 /// dropped. Holding references to too many messages will cause the memory of the consumer to fill
-/// up and the consumer to block until some of the `BorrowedMessage`s are dropped.
+/// up and the consumer to block until some of the [BorrowedMessage]s are dropped.
 /// ## Conversion to owned
-/// To transform a `BorrowedMessage` into a `OwnedMessage`, use the `detach` method.
+/// To transform a [BorrowedMessage] into a [OwnedMessage], use the [detach] method.
 pub struct BorrowedMessage<'a> {
     ptr: *mut RDKafkaMessage,
     _owner: PhantomData<&'a u8>,
@@ -499,7 +499,7 @@ pub trait FromBytes {
     /// The error type that will be used whenever the conversion fails.
     type Error;
     /// Tries to convert the provided byte slice into a different type.
-    fn from_bytes(&[u8]) -> Result<&Self, Self::Error>;
+    fn from_bytes(bytes: &[u8]) -> Result<&Self, Self::Error>;
 }
 
 impl FromBytes for [u8] {

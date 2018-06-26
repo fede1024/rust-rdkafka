@@ -246,7 +246,7 @@ impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
 /// This code will send a message to Kafka. No custom [ProducerContext] is specified, so the
 /// [DefaultProducerContext] will be used. To see how to use a producer context, refer to the
 /// examples in the examples folder.
-/// ```rust
+/// ```rust,no_run
 /// use rdkafka::config::ClientConfig;
 /// use rdkafka::producer::{BaseProducer, BaseRecord};
 /// use std::time::Duration;

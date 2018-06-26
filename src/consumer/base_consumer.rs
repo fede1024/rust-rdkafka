@@ -61,7 +61,7 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.
 pub struct BaseConsumer<C: ConsumerContext= DefaultConsumerContext> {
-    pub client: Client<C>, //TODO make private
+    client: Client<C>,
 }
 
 impl FromClientConfig for BaseConsumer {
@@ -85,7 +85,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
 }
 
 impl<C: ConsumerContext> BaseConsumer<C> {
-    // TODO: document
+    /// Returns a reference to the [Client].
     pub(crate) fn client(&self) -> &Client<C> {
         &self.client
     }
