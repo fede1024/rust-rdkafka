@@ -4,6 +4,7 @@ use futures::task::{self, Task};
 use futures::{Poll, Stream};
 use rdsys;
 
+use client::NativeQueue;
 use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
 use consumer::base_consumer::BaseConsumer;
 use consumer::{Consumer, ConsumerContext, DefaultConsumerContext};
@@ -78,6 +79,8 @@ impl TaskQueue {
 pub struct StreamConsumer<C: ConsumerContext = DefaultConsumerContext> {
     base_consumer: Arc<BaseConsumer<C>>,
     tasks: Arc<TaskQueue>,
+    // The queue should be dropped before BaseConsumer.
+    queue: Arc<NativeQueue>,
 }
 
 impl<C: ConsumerContext> Consumer<C> for StreamConsumer<C> {
@@ -105,16 +108,17 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
         let base_consumer = BaseConsumer::from_config_and_context(config, context)?;
 
         let task_queue_ptr = TaskQueue::new().into_opaque();
+        let consumer_queue = base_consumer.client().get_consumer_queue();
         let task_queue = unsafe {
-            let consumer_queue = rdsys::rd_kafka_queue_get_consumer(base_consumer.client().native_ptr());
-            rdsys::rd_kafka_queue_cb_event_enable(consumer_queue, Some(event_cb), task_queue_ptr);
-            // TODO: queue should be destroyed on StreamConsumer::drop
+            // let consumer_queue = rdsys::rd_kafka_queue_get_consumer(base_consumer.client().native_ptr());
+            rdsys::rd_kafka_queue_cb_event_enable(consumer_queue.ptr(), Some(event_cb), task_queue_ptr);
             TaskQueue::from_opaque(task_queue_ptr)
         };
 
         Ok(StreamConsumer {
             base_consumer: Arc::new(base_consumer),
             tasks: Arc::new(task_queue),
+            queue: Arc::new(consumer_queue),
         })
     }
 }

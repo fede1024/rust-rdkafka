@@ -69,6 +69,7 @@ impl ClientContext for DefaultClientContext { }
 // ********** CLIENT **********
 //
 
+// TODO: this should be pub(crate)
 /// A native rdkafka-sys client. This struct shouldn't be used directly. Use higher level `Client`
 /// or producers and consumers.
 pub struct NativeClient {
@@ -94,10 +95,33 @@ impl NativeClient {
 impl Drop for NativeClient {
     fn drop(&mut self) {
         trace!("Destroying client: {:p}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_destroy(self.ptr);
-        }
+        unsafe { rdsys::rd_kafka_destroy(self.ptr); }
         trace!("Client destroyed: {:?}", self.ptr);
+    }
+}
+
+/// A native rdkafka-sys queue.
+pub struct NativeQueue {
+    ptr: *mut RDKafkaQueue,
+}
+
+impl NativeQueue {
+    /// Wraps a pointer to an RDKafkaQueue object and returns a new NativeQueue.
+    pub unsafe fn from_ptr(ptr: *mut RDKafkaQueue) -> NativeQueue {
+        NativeQueue { ptr }
+    }
+
+    /// Returns the wrapped pointer to RDKafkaQueue.
+    pub fn ptr(&self) -> *mut RDKafkaQueue {
+        self.ptr
+    }
+}
+
+impl Drop for NativeQueue {
+    fn drop(&mut self) {
+        trace!("Destroying queue: {:p}", self.ptr);
+        unsafe { rdsys::rd_kafka_queue_destroy(self.ptr); }
+        trace!("Queue destroyed: {:?}", self.ptr);
     }
 }
 
@@ -232,6 +256,13 @@ impl<C: ClientContext> Client<C> {
             )}
         )
     }
+
+    /// Returns the consumer queue. This should only be used internally.
+    pub(crate) fn get_consumer_queue(&self) -> NativeQueue {
+        unsafe {
+            NativeQueue::from_ptr(rdsys::rd_kafka_queue_get_consumer(self.native_ptr()))
+        }
+    }
 }
 
 struct NativeTopic {
@@ -261,9 +292,7 @@ impl NativeTopic {
 impl Drop for NativeTopic {
     fn drop(&mut self) {
         trace!("Destroying NativeTopic: {:?}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_topic_destroy(self.ptr);
-        }
+        unsafe { rdsys::rd_kafka_topic_destroy(self.ptr); }
         trace!("NativeTopic destroyed: {:?}", self.ptr);
     }
 }

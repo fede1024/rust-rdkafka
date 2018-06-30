@@ -55,6 +55,9 @@ pub type RDKafkaGroupMemberInfo = bindings::rd_kafka_group_member_info;
 /// Native rdkafka group member information
 pub type RDKafkaHeaders = bindings::rd_kafka_headers_t;
 
+/// Native rdkafka queue
+pub type RDKafkaQueue = bindings::rd_kafka_queue_t;
+
 // ENUMS
 
 /// Client types

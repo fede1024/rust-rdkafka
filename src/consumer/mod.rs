@@ -40,7 +40,7 @@ pub trait ConsumerContext: ClientContext {
     /// of the user to call them if needed.
     fn rebalance(
         &self,
-        native_client: &NativeClient,
+        native_client: &NativeClient,   // TODO: this should be Client
         err: RDKafkaRespErr,
         tpl: &TopicPartitionList,
     ) {
