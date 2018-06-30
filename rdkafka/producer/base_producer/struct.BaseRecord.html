@@ -8,10 +8,10 @@
     pub delivery_opaque: D,
 }</pre></div><div class='docblock'><p>Producer record for the base producer</p>
 <p>The <code>BaseRecord</code> is a structure that can be used to provide a new record to
-<a href="../../../rdkafka/producer/base_producer/struct.BaseProducer.html#method.send" title="BaseProducer::send">BaseProducer::send</a>. Since most fields are optional, a <code>BaseRecord</code> can be constructed
+[BaseProducer::send]. Since most fields are optional, a <code>BaseRecord</code> can be constructed
 using the builder pattern.</p>
 <h1 id="examples" class="section-header"><a href="#examples">Examples</a></h1>
-<p>This example will create a <code>BaseRecord</code> with no <a href="../../../rdkafka/producer/base_producer/trait.ProducerContext.html#associatedtype.DeliveryOpaque">DeliveryOpaque</a>:</p>
+<p>This example will create a <code>BaseRecord</code> with no <a href="ProducerContext::DeliveryOpaque">DeliveryOpaque</a>:</p>
 
 <pre class="rust rust-example-rendered">
 <span class="kw">let</span> <span class="ident">record</span> <span class="op">=</span> <span class="ident">BaseRecord</span>::<span class="ident">to</span>(<span class="string">&quot;topic_name&quot;</span>)  <span class="comment">// destination topic</span>

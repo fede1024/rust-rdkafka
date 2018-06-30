@@ -474,30 +474,11 @@ h4 > code, h3 > code, .invisible > code {
 	margin-bottom: 15px;
 }
 
-.content .impl-items .method, .content .impl-items > .type, .impl-items > .associatedconstant {
-	margin-left: 20px;
-}
 .content .impl-items .docblock, .content .impl-items .stability {
 	margin-bottom: .6em;
 }
-.content .docblock > .impl-items {
+.content .impl-items .method, .content .impl-items > .type, .impl-items > .associatedconstant {
 	margin-left: 20px;
-	margin-top: -34px;
-}
-.content .docblock > .impl-items > h4 {
-	border-bottom: 0;
-}
-.content .docblock >.impl-items .table-display {
-	margin: 0;
-}
-.content .docblock >.impl-items table td {
-	padding: 0;
-}
-.toggle-wrapper.marg-left > .collapse-toggle {
-	left: -24px;
-}
-.content .docblock > .impl-items .table-display, .impl-items table td {
-	border: none;
 }
 
 .content .stability code {
@@ -561,8 +542,7 @@ a {
 	content: '\2002\00a7\2002';
 }
 
-.docblock a:not(.srclink):not(.test-arrow):hover,
-.docblock-short a:not(.srclink):not(.test-arrow):hover, .stability a {
+.docblock a:hover, .docblock-short a:hover, .stability a {
 	text-decoration: underline;
 }
 
@@ -625,11 +605,6 @@ a {
 
 tr.result span.primitive::after {
 	content: ' (primitive type)';
-	font-style: italic;
-}
-
-tr.result span.keyword::after {
-	content: ' (keyword)';
 	font-style: italic;
 }
 
@@ -777,7 +752,7 @@ h3 > .collapse-toggle, h4 > .collapse-toggle {
 
 .toggle-wrapper {
 	position: relative;
-	margin-top: 0;
+	margin-top: 5px;
 }
 
 .toggle-wrapper.collapsed {
@@ -860,19 +835,10 @@ span.since {
 
 .attributes {
 	display: block;
-	margin-top: 0px !important;
-	margin-right: 0px;
-	margin-bottom: 0px !important;
-	margin-left: 30px;
+	margin: 0px 0px 0px 30px !important;
 }
 .toggle-attributes.collapsed {
-	margin-bottom: 0;
-}
-.impl-items > .toggle-attributes {
-	margin-left: 20px;
-}
-.impl-items .attributes {
-	font-weight: 500;
+	margin-bottom: 5px;
 }
 
 :target > code {
@@ -1044,8 +1010,6 @@ span.since {
 
 pre.rust {
 	position: relative;
-	tab-width: 4;
-	-moz-tab-width: 4;
 }
 
 .search-failed {

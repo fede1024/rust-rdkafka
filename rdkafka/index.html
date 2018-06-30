@@ -71,7 +71,7 @@
 <h2 id="installation" class="section-header"><a href="#installation">Installation</a></h2>
 <p>Add this to your <code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependencies]
-rdkafka = &quot;0.15.0&quot;
+rdkafka = &quot;0.17.0&quot;
 </code></pre>
 <p>This crate will compile librdkafka from sources and link it statically to your executable. To compile librdkafka you'll need:</p>
 <ul>
@@ -84,7 +84,7 @@ rdkafka = &quot;0.15.0&quot;
 </ul>
 <p>To enable ssl and sasl, use the <code>features</code> field in <code>Cargo.toml</code>. Example:</p>
 <pre><code class="language-toml">[dependencies.rdkafka]
-version = &quot;0.15.0&quot;
+version = &quot;0.17.0&quot;
 features = [&quot;ssl&quot;, &quot;sasl&quot;]
 </code></pre>
 <p>By default a submodule with the librdkafka sources pinned to a specific commit will

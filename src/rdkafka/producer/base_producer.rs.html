@@ -484,6 +484,7 @@
 <span id="484">484</span>
 <span id="485">485</span>
 <span id="486">486</span>
+<span id="487">487</span>
 </pre><pre class="rust ">
 <span class="doccomment">//! Low level Kafka producers.</span>
 <span class="doccomment">//!</span>
@@ -803,10 +804,11 @@
             <span class="prelude-val">None</span> <span class="op">=&gt;</span> (<span class="ident">ptr</span>::<span class="ident">null_mut</span>(), <span class="number">0</span>),
             <span class="prelude-val">Some</span>(<span class="ident">k</span>) <span class="op">=&gt;</span> (<span class="ident">k</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>, <span class="ident">k</span>.<span class="ident">len</span>()),
         };
+        <span class="kw">let</span> <span class="ident">topic_cstring</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">record</span>.<span class="ident">topic</span>.<span class="ident">to_owned</span>()).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">produce_error</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">rdsys</span>::<span class="ident">rd_kafka_producev</span>(
                 <span class="self">self</span>.<span class="ident">native_ptr</span>(),
-                <span class="ident">RD_KAFKA_VTYPE_TOPIC</span>, <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">record</span>.<span class="ident">topic</span>.<span class="ident">to_owned</span>()).<span class="ident">unwrap</span>().<span class="ident">as_ptr</span>(),
+                <span class="ident">RD_KAFKA_VTYPE_TOPIC</span>, <span class="ident">topic_cstring</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">RD_KAFKA_VTYPE_PARTITION</span>, <span class="ident">record</span>.<span class="ident">partition</span>.<span class="ident">unwrap_or</span>(<span class="op">-</span><span class="number">1</span>),
                 <span class="ident">RD_KAFKA_VTYPE_MSGFLAGS</span>, <span class="ident">rdsys</span>::<span class="ident">RD_KAFKA_MSG_F_COPY</span> <span class="kw">as</span> <span class="ident">i32</span>,
                 <span class="ident">RD_KAFKA_VTYPE_VALUE</span>, <span class="ident">payload_ptr</span>, <span class="ident">payload_len</span>,
