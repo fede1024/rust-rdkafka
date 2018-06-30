@@ -316,10 +316,11 @@ impl<C: ProducerContext> BaseProducer<C> {
             None => (ptr::null_mut(), 0),
             Some(k) => (k.as_ptr() as *mut c_void, k.len()),
         };
+        let topic_cstring = CString::new(record.topic.to_owned()).unwrap();
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.native_ptr(),
-                RD_KAFKA_VTYPE_TOPIC, CString::new(record.topic.to_owned()).unwrap().as_ptr(),
+                RD_KAFKA_VTYPE_TOPIC, topic_cstring.as_ptr(),
                 RD_KAFKA_VTYPE_PARTITION, record.partition.unwrap_or(-1),
                 RD_KAFKA_VTYPE_MSGFLAGS, rdsys::RD_KAFKA_MSG_F_COPY as i32,
                 RD_KAFKA_VTYPE_VALUE, payload_ptr, payload_len,
