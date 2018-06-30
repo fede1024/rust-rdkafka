@@ -1,13 +1,13 @@
 # Changelog
 
-<a name="master"></a>
-## Master
+<a name="0.17.0"></a>
+## 0.17.0 (2018-06-30)
 
 * Add missing documentation warning.
 * Add new experimental producer API. Instead of taking key, value and timestamp directly,
   producers now get them in a `ProducerRecord` which allows to specify optional arguments using
   the builder pattern.
-* Add initial message headers support.
+* Add message headers support.
 * Upgrade tokio-core to tokio in async example, remove futures-cpupool.
 * `MessageStream` is now Send and Sync
 
