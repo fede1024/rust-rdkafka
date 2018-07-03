@@ -572,7 +572,7 @@
 
     <span class="doccomment">/// Transforms a pointer to the native librdkafka RDTopicPartitionList into a</span>
     <span class="doccomment">/// managed `TopicPartitionList` instance.</span>
-    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartitionList</span>) <span class="op">-&gt;</span> <span class="ident">TopicPartitionList</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartitionList</span>) <span class="op">-&gt;</span> <span class="ident">TopicPartitionList</span> {
         <span class="ident">TopicPartitionList</span> { <span class="ident">ptr</span> }
     }
 
@@ -593,7 +593,7 @@
 
     <span class="doccomment">/// Capture the instance without calling the destructor on the internal librdkafka</span>
     <span class="doccomment">/// structure.</span>
-    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">leak</span>(<span class="kw-2">mut</span> <span class="self">self</span>) {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">leak</span>(<span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">ptr</span> <span class="op">=</span> <span class="ident">ptr</span>::<span class="ident">null_mut</span>();
     }
 

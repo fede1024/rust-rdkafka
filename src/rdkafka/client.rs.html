@@ -415,7 +415,7 @@
 
 <span class="kw">impl</span> <span class="ident">NativeClient</span> {
     <span class="doccomment">/// Wraps a pointer to an RDKafka object and returns a new NativeClient.</span>
-    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>) <span class="op">-&gt;</span> <span class="ident">NativeClient</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>) <span class="op">-&gt;</span> <span class="ident">NativeClient</span> {
         <span class="ident">NativeClient</span> { <span class="ident">ptr</span> }
     }
 

@@ -240,7 +240,7 @@
 
 <span class="kw">impl</span> <span class="ident">GroupList</span> {
     <span class="doccomment">/// Creates a new group list given a pointer to the native rdkafka-sys group list structure.</span>
-    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafkaGroupList</span>) <span class="op">-&gt;</span> <span class="ident">GroupList</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafkaGroupList</span>) <span class="op">-&gt;</span> <span class="ident">GroupList</span> {
         <span class="ident">GroupList</span>(<span class="ident">ptr</span>)
     }
 
