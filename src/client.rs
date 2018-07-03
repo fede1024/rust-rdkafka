@@ -81,7 +81,7 @@ unsafe impl Send for NativeClient {}
 
 impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
-    pub unsafe fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
         NativeClient { ptr }
     }
 

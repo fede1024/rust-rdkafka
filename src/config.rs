@@ -80,7 +80,7 @@ pub struct NativeClientConfig {
 
 impl NativeClientConfig {
     /// Wraps a pointer to an `RDKafkaConfig` object and returns a new `NativeClientConfig`.
-    pub unsafe fn from_ptr(ptr: *mut RDKafkaConf) -> NativeClientConfig {
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaConf) -> NativeClientConfig {
         NativeClientConfig { ptr }
     }
 

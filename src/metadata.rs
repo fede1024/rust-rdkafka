@@ -100,7 +100,7 @@ pub struct Metadata(*const RDKafkaMetadata);
 
 impl Metadata {
     /// Creates a new Metadata container given a pointer to the native rdkafka-sys metadata.
-    pub unsafe fn from_ptr(ptr: *const RDKafkaMetadata) -> Metadata {
+    pub(crate) unsafe fn from_ptr(ptr: *const RDKafkaMetadata) -> Metadata {
         Metadata(ptr)
     }
 

@@ -212,7 +212,7 @@ impl<'a> BorrowedMessage<'a> {
     /// consumer. The lifetime of the message will be bound to the lifetime of the consumer passed
     /// as parameter. This method should only be used with messages coming from consumers. If the
     /// message contains an error, only the error is returned and the message structure is freed.
-    pub unsafe fn from_consumer<C>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> KafkaResult<BorrowedMessage<'a>> {
+    pub(crate) unsafe fn from_consumer<C>(ptr: *mut RDKafkaMessage, _consumer: &'a C) -> KafkaResult<BorrowedMessage<'a>> {
         if (*ptr).err.is_error() {
             let err = match (*ptr).err {
                     rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
@@ -231,7 +231,7 @@ impl<'a> BorrowedMessage<'a> {
     /// delivery callback of a producer. The lifetime of the message will be bound to the lifetime
     /// of the reference passed as parameter. This method should only be used with messages coming
     /// from the delivery callback. The message will not be freed in any circumstance.
-    pub unsafe fn from_dr_callback<O>(ptr: *mut RDKafkaMessage, _owner: &'a O) -> DeliveryResult<'a> {
+    pub(crate) unsafe fn from_dr_callback<O>(ptr: *mut RDKafkaMessage, _owner: &'a O) -> DeliveryResult<'a> {
         let borrowed_message = BorrowedMessage { ptr, _owner: PhantomData };
         if (*ptr).err.is_error() {
             Err((KafkaError::MessageProduction((*ptr).err.into()), borrowed_message))

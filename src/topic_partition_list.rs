@@ -142,7 +142,7 @@ impl TopicPartitionList {
 
     /// Transforms a pointer to the native librdkafka RDTopicPartitionList into a
     /// managed `TopicPartitionList` instance.
-    pub unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList {
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList {
         TopicPartitionList { ptr }
     }
 
@@ -163,7 +163,7 @@ impl TopicPartitionList {
 
     /// Capture the instance without calling the destructor on the internal librdkafka
     /// structure.
-    pub unsafe fn leak(mut self) {
+    pub(crate) unsafe fn leak(mut self) {
         self.ptr = ptr::null_mut();
     }
 
