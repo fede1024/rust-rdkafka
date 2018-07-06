@@ -105,6 +105,9 @@ pub struct NativeQueue {
     ptr: *mut RDKafkaQueue,
 }
 
+unsafe impl Send for NativeQueue {}
+unsafe impl Sync for NativeQueue {}
+
 impl NativeQueue {
     /// Wraps a pointer to an RDKafkaQueue object and returns a new NativeQueue.
     pub unsafe fn from_ptr(ptr: *mut RDKafkaQueue) -> NativeQueue {

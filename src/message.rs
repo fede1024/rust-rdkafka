@@ -189,6 +189,8 @@ pub struct BorrowedMessage<'a> {
     _owner: PhantomData<&'a u8>,
 }
 
+unsafe impl<'a> Send for BorrowedMessage<'a> {}
+
 /// The result of a message production.
 ///
 /// If message production is successful `DeliveryResult` will contain the sent message, that can be

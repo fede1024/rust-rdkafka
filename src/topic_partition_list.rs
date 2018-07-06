@@ -121,6 +121,8 @@ pub struct TopicPartitionList {
     ptr: *mut RDKafkaTopicPartitionList,
 }
 
+unsafe impl Send for TopicPartitionList {}
+
 impl Clone for TopicPartitionList {
     fn clone(&self) -> Self {
         let new_tpl = unsafe { rdsys::rd_kafka_topic_partition_list_copy(self.ptr) };

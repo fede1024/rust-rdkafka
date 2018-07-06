@@ -132,8 +132,9 @@ impl<C: ConsumerContext> StreamConsumer<C> {
 
     /// Returns a new [OwnedMessageStream]. The [OwnedMessageStream] will take ownership of the
     /// consumer.
-    pub fn owned_stream(self) -> OwnedMessageStream<C> {
-        OwnedMessageStream::new(Arc::new(self))
+    pub fn owned_stream(self) -> (OwnedMessageStream<C>, Arc<StreamConsumer<C>>) {
+        let arc = Arc::new(self);
+        (OwnedMessageStream::new(Arc::clone(&arc)), arc)
     }
 }
 
@@ -185,6 +186,14 @@ pub struct OwnedMessageStream<C: ConsumerContext> {
 impl<C: ConsumerContext> OwnedMessageStream<C> {
     fn new(stream_consumer: Arc<StreamConsumer<C>>) -> OwnedMessageStream<C> {
         OwnedMessageStream { stream_consumer }
+    }
+
+    pub fn consumer(&self) -> &StreamConsumer<C> {
+        self.stream_consumer.as_ref()
+    }
+
+    pub fn consumer_arc(&self) -> Arc<StreamConsumer<C>> {
+        Arc::clone(&self.stream_consumer)
     }
 }
 
