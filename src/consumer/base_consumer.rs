@@ -32,9 +32,12 @@ pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     } else {
         Ok(())
     };
-    (*context).commit_callback(commit_error, offsets);
+    // TODO: what will `offsets` be in case of failure?
+    let tpl = TopicPartitionList::from_ptr(offsets);
+    (*context).commit_callback(commit_error, &tpl);
 
     mem::forget(context); // Do not free the context
+    mem::forget(tpl);     // Do not free the tpl
 }
 
 /// Native rebalance callback. This callback will run on every rebalance, and it will call the
@@ -228,6 +231,15 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
 
     fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
         let error = unsafe { rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset()) };
+        if error.is_error() {
+            Err(KafkaError::StoreOffset(error.into()))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn store_offset_list(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
+        let error = unsafe { rdsys::rd_kafka_offsets_store(self.client.native_ptr(), tpl.ptr()) };
         if error.is_error() {
             Err(KafkaError::StoreOffset(error.into()))
         } else {

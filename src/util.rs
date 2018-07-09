@@ -62,7 +62,7 @@ pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> &'a
 
 /// A trait for the conversion of Rust data to raw pointers. This conversion is used
 /// to pass opaque objects to the C library and vice versa.
-pub trait IntoOpaque: Send + Sync {
+pub trait IntoOpaque: Send {
     /// Converts the object into a raw pointer.
     fn as_ptr(&self) -> *mut c_void;
     /// Converts the raw pointer back to the original Rust object.

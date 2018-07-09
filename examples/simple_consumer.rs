@@ -7,7 +7,7 @@ extern crate rdkafka_sys;
 use clap::{App, Arg};
 use futures::stream::Stream;
 
-use rdkafka::message::{Message, Headers};
+use rdkafka::{Message, Headers, TopicPartitionList};
 use rdkafka::client::ClientContext;
 use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -34,8 +34,8 @@ impl ConsumerContext for CustomContext {
         info!("Post rebalance {:?}", rebalance);
     }
 
-    fn commit_callback(&self, result: KafkaResult<()>, _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList) {
-        info!("Committing offsets: {:?}", result);
+    fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {
+        info!("Committing offsets: {:?} {:?}", result, offsets);
     }
 }
 
@@ -106,7 +106,7 @@ fn main() {
              .long("group-id")
              .help("Consumer group id")
              .takes_value(true)
-             .default_value("example_consumer_group_id"))
+             .default_value("simple_consumer_example"))
         .arg(Arg::with_name("log-conf")
              .long("log-conf")
              .help("Configure the logging format (example: 'rdkafka=trace')")

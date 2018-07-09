@@ -90,7 +90,7 @@ pub trait ConsumerContext: ClientContext {
     /// Post commit callback. This method will run after a group of offsets was committed to the
     /// offset store.
     #[allow(unused_variables)]
-    fn commit_callback(&self, result: KafkaResult<()>, offsets: *mut RDKafkaTopicPartitionList) {}
+    fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {}
 }
 
 /// An empty consumer context that can be user when no context is needed.
@@ -166,6 +166,10 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     /// When using this `enable.auto.offset.store` should be set to `false` in the config.
     fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
         self.get_base_consumer().store_offset(message)
+    }
+
+    fn store_offset_list(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
+        self.get_base_consumer().store_offset_list(tpl)
     }
 
     /// Returns the current topic subscription.

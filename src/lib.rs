@@ -241,7 +241,7 @@ pub mod util;
 // Re-export
 pub use client::ClientContext;
 pub use config::ClientConfig;
-pub use message::{Message, Timestamp};
+pub use message::{Message, Headers, Timestamp};
 pub use statistics::Statistics;
 pub use topic_partition_list::{Offset, TopicPartitionList};
 pub use util::IntoOpaque;

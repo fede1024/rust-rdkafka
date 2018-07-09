@@ -22,7 +22,7 @@ use futures::Future;
 use futures::future::join_all;
 use futures::stream::Stream;
 
-use rdkafka::Message;
+use rdkafka::{Message, TopicPartitionList};
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -42,9 +42,9 @@ struct LoggingConsumerContext;
 impl ClientContext for LoggingConsumerContext {}
 
 impl ConsumerContext for LoggingConsumerContext {
-    fn commit_callback(&self, result: KafkaResult<()>, _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList) {
+    fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {
         match result {
-            Ok(_) => info!("Offsets committed successfully"),
+            Ok(_) => info!("Offsets committed successfully: {:?}", offsets),
             Err(e) => warn!("Error while committing offsets: {}", e),
         };
     }
@@ -98,7 +98,7 @@ fn main() {
              .long("group-id")
              .help("Consumer group id")
              .takes_value(true)
-             .default_value("example_consumer_group_id"))
+             .default_value("at_least_once_example"))
         .arg(Arg::with_name("log-conf")
              .long("log-conf")
              .help("Configure the logging format (example: 'rdkafka=trace')")

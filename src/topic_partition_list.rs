@@ -3,11 +3,14 @@
 use rdsys;
 use rdsys::types::*;
 
+use IntoOpaque;
 use error::{IsError, KafkaError, KafkaResult};
+use message::{BorrowedMessage, Message};
 
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::os::raw::c_void;
 use std::ptr;
 use std::slice;
 
@@ -121,6 +124,8 @@ pub struct TopicPartitionList {
     ptr: *mut RDKafkaTopicPartitionList,
 }
 
+unsafe impl Send for TopicPartitionList {}
+
 impl Clone for TopicPartitionList {
     fn clone(&self) -> Self {
         let new_tpl = unsafe { rdsys::rd_kafka_topic_partition_list_copy(self.ptr) };
@@ -142,7 +147,7 @@ impl TopicPartitionList {
 
     /// Transforms a pointer to the native librdkafka RDTopicPartitionList into a
     /// managed `TopicPartitionList` instance.
-    pub unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList {
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList {
         TopicPartitionList { ptr }
     }
 
@@ -220,6 +225,10 @@ impl TopicPartitionList {
     pub fn add_partition_offset(&mut self, topic: &str, partition: i32, offset: Offset) {
         self.add_partition(topic, partition);
         self.set_partition_offset(topic, partition, offset).expect("Should never fail");
+    }
+
+    pub fn add_message_offset<'a>(&'a mut self, message: &BorrowedMessage) {
+        self.add_partition_offset(message.topic(), message.partition(), Offset::Offset(message.offset()))
     }
 
     /// Given a topic name and a partition number, returns the corresponding list element.
@@ -307,13 +316,27 @@ impl Default for TopicPartitionList {
     }
 }
 
+impl IntoOpaque for TopicPartitionList {
+    fn as_ptr(&self) -> *mut c_void {
+        self.ptr() as *mut c_void
+    }
+
+    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
+        TopicPartitionList { ptr: ptr as *mut rdsys::rd_kafka_topic_partition_list_t }
+    }
+}
+
 impl fmt::Debug for TopicPartitionList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TPL {{")?;
-        for elem in self.elements() {
-            write!(f, "({}, {}): {:?}, ", elem.topic(), elem.partition(), elem.offset())?
+        let count = self.count();
+        write!(f, "{{TPL [")?;
+        for (n, elem) in self.elements().iter().enumerate() {
+            write!(f, "({}, {}): {:?}", elem.topic(), elem.partition(), elem.offset())?;
+            if n < count - 1 {
+                write!(f, ", ")?;
+            }
         }
-        write!(f, "}}")
+        write!(f, "]}}")
     }
 }
 
