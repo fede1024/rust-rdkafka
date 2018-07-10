@@ -10,6 +10,7 @@ use rdkafka::consumer::{BaseConsumer, Consumer};
 use rdkafka::producer::BaseProducer;
 use rdkafka::Message;
 
+use std::collections::binary_heap::BinaryHeap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -22,6 +23,7 @@ use rdkafka::error::KafkaResult;
 use rdkafka::message::BorrowedMessage;
 use rdkafka::producer::BaseRecord;
 use rdkafka::producer::ProducerContext;
+use rdkafka::topic_partition_list::TopicPartitionListElem;
 use rdkafka::ClientContext;
 use rdkafka::TopicPartitionList;
 
@@ -59,12 +61,13 @@ fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsume
     consumer
 }
 
-struct MirrorProducerContext {
+struct MirrorProducerContext<'a> {
+    committable: BinaryHeap<TopicPartitionListElem<'a>>,
     source_consumer: Arc<LoggingConsumer>,
 }
 
-impl ClientContext for MirrorProducerContext {}
-impl ProducerContext for MirrorProducerContext {
+impl<'a> ClientContext for MirrorProducerContext<'a> {}
+impl<'a> ProducerContext for MirrorProducerContext<'a> {
     type DeliveryOpaque = TopicPartitionList;
 
     fn delivery(
@@ -105,7 +108,7 @@ impl ProducerContext for MirrorProducerContext {
     }
 }
 
-type MirrorProducer = BaseProducer<MirrorProducerContext>;
+type MirrorProducer<'a> = BaseProducer<MirrorProducerContext<'a>>;
 
 fn create_producer(brokers: &str, consumer: Arc<LoggingConsumer>) -> MirrorProducer {
     let mirror_context = MirrorProducerContext {

@@ -7,6 +7,7 @@ use IntoOpaque;
 use error::{IsError, KafkaError, KafkaResult};
 use message::{BorrowedMessage, Message};
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -34,6 +35,12 @@ pub enum Offset {
     Invalid,
     /// A specific offset to consume from.
     Offset(i64)
+}
+
+impl PartialOrd for Offset {
+    fn partial_cmp(&self, _other: &Offset) -> Option<Ordering> {
+        unimplemented!()
+    }
 }
 
 impl Offset {
@@ -116,6 +123,12 @@ impl<'a> PartialEq for TopicPartitionListElem<'a> {
         self.topic() == other.topic() &&
             self.partition() == other.partition() &&
             self.offset() == other.offset()
+    }
+}
+
+impl<'a> PartialOrd for TopicPartitionListElem<'a> {
+    fn partial_cmp(&self, _other: &TopicPartitionListElem<'a>) -> Option<Ordering> {
+        unimplemented!()
     }
 }
 
