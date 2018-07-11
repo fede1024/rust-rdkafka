@@ -43,6 +43,12 @@ impl PartialOrd for Offset {
     }
 }
 
+impl Ord for Offset {
+    fn cmp(&self, _other: &Offset) -> Ordering {
+        unimplemented!()
+    }
+}
+
 impl Offset {
     /// Converts the integer representation of an offset use by librdkafka to an `Offset`.
     pub fn from_raw(raw_offset: i64) -> Offset {

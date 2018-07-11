@@ -11,6 +11,7 @@ use rdkafka::producer::BaseProducer;
 use rdkafka::Message;
 
 use std::collections::binary_heap::BinaryHeap;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -23,7 +24,7 @@ use rdkafka::error::KafkaResult;
 use rdkafka::message::BorrowedMessage;
 use rdkafka::producer::BaseRecord;
 use rdkafka::producer::ProducerContext;
-use rdkafka::topic_partition_list::TopicPartitionListElem;
+use rdkafka::topic_partition_list::Offset;
 use rdkafka::ClientContext;
 use rdkafka::TopicPartitionList;
 
@@ -61,13 +62,13 @@ fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsume
     consumer
 }
 
-struct MirrorProducerContext<'a> {
-    committable: BinaryHeap<TopicPartitionListElem<'a>>,
+struct MirrorProducerContext {
+    topic_map: Arc<TopicOffsetMap>,
     source_consumer: Arc<LoggingConsumer>,
 }
 
-impl<'a> ClientContext for MirrorProducerContext<'a> {}
-impl<'a> ProducerContext for MirrorProducerContext<'a> {
+impl ClientContext for MirrorProducerContext {}
+impl ProducerContext for MirrorProducerContext {
     type DeliveryOpaque = TopicPartitionList;
 
     fn delivery(
@@ -87,7 +88,31 @@ impl<'a> ProducerContext for MirrorProducerContext<'a> {
                 //
                 // Either approach, potentially, interacts with the retry
                 // question below.
-                while let Err(_) = self.source_consumer.store_offset_list(&delivery_opaque) {
+                for ((ref topic, ref partition), ref mut offset_run) in self.topic_map.iter_mut() {
+                    if let Some(tpl_elem) = delivery_opaque.find_partition(topic, *partition) {
+                        let offset = tpl_elem.offset();
+                        offset_run.offsets.push(offset);
+                        if offset < offset_run.floor {
+                            offset_run.floor = offset;
+                        }
+                    }
+                }
+                let mut commit_tpl = TopicPartitionList::new();
+                for ((ref topic, ref partition), ref mut offset_run) in self.topic_map.iter_mut() {
+                    loop {
+                        if let Some(min) = offset_run.offsets.peek() {
+                            if *min == offset_run.floor {
+                                offset_run.floor = *min;
+                                let elem = commit_tpl.add_partition(topic, *partition);
+                                elem.set_offset(*min);
+                                let _ = offset_run.offsets.pop().unwrap();
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                while let Err(_) = self.source_consumer.store_offset_list(&commit_tpl) {
                     // TODO(blt) -- backoff
                 }
             }
@@ -108,10 +133,29 @@ impl<'a> ProducerContext for MirrorProducerContext<'a> {
     }
 }
 
-type MirrorProducer<'a> = BaseProducer<MirrorProducerContext<'a>>;
+type MirrorProducer = BaseProducer<MirrorProducerContext>;
+struct OffsetRun {
+    floor: Offset,
+    offsets: BinaryHeap<Offset>, // a minheap
+}
+type TopicOffsetMap = HashMap<(String, i32), OffsetRun>;
+type TopicMap = HashMap<(String, i32), Offset>;
 
-fn create_producer(brokers: &str, consumer: Arc<LoggingConsumer>) -> MirrorProducer {
+fn create_producer(brokers: &str, mut topic_map: TopicMap, consumer: Arc<LoggingConsumer>) -> MirrorProducer {
+    let topic_offset_map = topic_map.drain().fold(HashMap::default(), |mut acc, (k, v)| {
+        let mut minheap = BinaryHeap::new();
+        minheap.push(v);
+        acc.insert(
+            k,
+            OffsetRun {
+                floor: v,
+                offsets: minheap,
+            },
+        );
+        acc
+    });
     let mirror_context = MirrorProducerContext {
+        topic_map: Arc::new(topic_offset_map),
         source_consumer: consumer,
     };
     ClientConfig::new()
@@ -207,7 +251,8 @@ fn main() {
     let group_id = matches.value_of("group-id").unwrap();
 
     let consumer = Arc::new(create_consumer(brokers, group_id, input_topic));
-    let producer = create_producer(brokers, Arc::clone(&consumer));
+    let topic_map = consumer.position().unwrap().to_topic_map();
+    let producer = create_producer(brokers, topic_map, Arc::clone(&consumer));
 
     mirroring(consumer.as_ref(), &producer, &output_topic);
 }
