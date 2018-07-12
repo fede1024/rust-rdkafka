@@ -235,6 +235,15 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
+    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
+        let error = unsafe { rdsys::rd_kafka_offsets_store(self.client.native_ptr(), tpl.ptr()) };
+        if error.is_error() {
+            Err(KafkaError::StoreOffset(error.into()))
+        } else {
+            Ok(())
+        }
+    }
+
     fn subscription(&self) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
         let error = unsafe { rdsys::rd_kafka_subscription(self.client.native_ptr(), &mut tpl_ptr) };

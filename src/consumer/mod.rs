@@ -168,6 +168,12 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
         self.get_base_consumer().store_offset(message)
     }
 
+    /// Store offsets to be used on the next (auto)commit.
+    /// When using this `enable.auto.offset.store` should be set to `false` in the config.
+    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
+        self.get_base_consumer().store_offsets(tpl)
+    }
+
     /// Returns the current topic subscription.
     fn subscription(&self) -> KafkaResult<TopicPartitionList> {
         self.get_base_consumer().subscription()
