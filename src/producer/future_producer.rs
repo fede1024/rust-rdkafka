@@ -137,7 +137,7 @@ impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
 impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
     type DeliveryOpaque = Box<Complete<OwnedDeliveryResult>>;
 
-    fn delivery(&self, delivery_result: &DeliveryResult, tx: Box<Complete<OwnedDeliveryResult>>) {
+    fn delivery(&mut self, delivery_result: &DeliveryResult, tx: Box<Complete<OwnedDeliveryResult>>) {
         let owned_delivery_result = match *delivery_result {
             Ok(ref message) => Ok((message.partition(), message.offset())),
             Err((ref error, ref message)) => Err((error.clone(), message.detach())),

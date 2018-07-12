@@ -63,7 +63,7 @@ fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsume
 }
 
 struct MirrorProducerContext {
-    topic_map: Arc<TopicOffsetMap>,
+    topic_map: TopicOffsetMap,
     source_consumer: Arc<LoggingConsumer>,
 }
 
@@ -72,23 +72,19 @@ impl ProducerContext for MirrorProducerContext {
     type DeliveryOpaque = TopicPartitionList;
 
     fn delivery(
-        &self,
+        &mut self,
         delivery_result: &Result<BorrowedMessage, (KafkaError, BorrowedMessage)>,
         delivery_opaque: TopicPartitionList,
     ) {
         match delivery_result {
             Ok(m) => {
                 debug!("Delivered copy of {:?} to {}", delivery_opaque, m.topic());
-                // Question(blt) -- This call to `store_offset` will eventually
-                // cause offsets to be committed out of order. That will cause
-                // data loss. Should, then, the author cobble together a MinHeap
-                // (or similar) approach to commit only when all the suitable
-                // offsets have come through -- implying storage here -- or rely
-                // on rdkafka to take care of this?
-                //
-                // Either approach, potentially, interacts with the retry
-                // question below.
-                for ((ref topic, ref partition), ref mut offset_run) in self.topic_map.iter_mut() {
+                // NOTE(blt) -- Our ambition here is to avoid committing
+                // out-of-order offsets for any given topic. The approach taken
+                // is to dissect the passed TopicPartitionList, compare against
+                // ProducerContext's TopicOffsetMap and use that map to build a
+                // `commit_tpl` of contiguous offsets that are safe to commit.
+                for ((ref mut topic, ref mut partition), ref mut offset_run) in self.topic_map.iter_mut() {
                     if let Some(tpl_elem) = delivery_opaque.find_partition(topic, *partition) {
                         let offset = tpl_elem.offset();
                         offset_run.offsets.push(offset);
@@ -97,17 +93,31 @@ impl ProducerContext for MirrorProducerContext {
                         }
                     }
                 }
+                // By this point, the `self.topic_map` is updated with the
+                // offsets that came in via `delivery_opaque`. We now,
+                // potentially, have 'runs' that can be comitted to the
+                // consumer, which we build up into `commit_tpl`.
                 let mut commit_tpl = TopicPartitionList::new();
                 for ((ref topic, ref partition), ref mut offset_run) in self.topic_map.iter_mut() {
                     loop {
-                        if let Some(min) = offset_run.offsets.peek() {
+                        let mut do_pop = false;
+                        let mut do_break = false;
+                        if let Some(min) = offset_run.offsets.peek_mut() {
                             if *min == offset_run.floor {
                                 offset_run.floor = *min;
                                 let elem = commit_tpl.add_partition(topic, *partition);
                                 elem.set_offset(*min);
-                                let _ = offset_run.offsets.pop().unwrap();
+                                do_pop = true;
                             }
                         } else {
+                            do_break = true;
+                        }
+                        // These kind of wacky clauses down here are to avoid
+                        // double-borrowing on offset_run.
+                        if do_pop {
+                            let _ = offset_run.offsets.pop().unwrap();
+                        }
+                        if do_break {
                             break;
                         }
                     }
@@ -155,7 +165,7 @@ fn create_producer(brokers: &str, mut topic_map: TopicMap, consumer: Arc<Logging
         acc
     });
     let mirror_context = MirrorProducerContext {
-        topic_map: Arc::new(topic_offset_map),
+        topic_map: topic_offset_map,
         source_consumer: consumer,
     };
     ClientConfig::new()

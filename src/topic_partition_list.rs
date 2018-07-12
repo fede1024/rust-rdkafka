@@ -34,18 +34,21 @@ pub enum Offset {
     /// Offset not assigned or invalid.
     Invalid,
     /// A specific offset to consume from.
-    Offset(i64)
+    Offset(i64),
 }
 
 impl PartialOrd for Offset {
-    fn partial_cmp(&self, _other: &Offset) -> Option<Ordering> {
-        unimplemented!()
+    fn partial_cmp(&self, other: &Offset) -> Option<Ordering> {
+        match (self, other) {
+            (Offset::Offset(l), Offset::Offset(r)) => l.partial_cmp(r),
+            (_, _) => None,
+        }
     }
 }
 
 impl Ord for Offset {
-    fn cmp(&self, _other: &Offset) -> Ordering {
-        unimplemented!()
+    fn cmp(&self, other: &Offset) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 
