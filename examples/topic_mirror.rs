@@ -12,13 +12,14 @@ use rdkafka::Message;
 
 use std::collections::binary_heap::BinaryHeap;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 mod example_utils;
 use example_utils::setup_logger;
 
 use rdkafka::consumer::ConsumerContext;
+use rdkafka::consumer::Rebalance;
 use rdkafka::error::KafkaError;
 use rdkafka::error::KafkaResult;
 use rdkafka::message::BorrowedMessage;
@@ -28,7 +29,103 @@ use rdkafka::topic_partition_list::Offset;
 use rdkafka::ClientContext;
 use rdkafka::TopicPartitionList;
 
-struct LoggingContext;
+struct OffsetRun {
+    floor: Offset,
+    offsets: BinaryHeap<Offset>, // a minheap
+}
+type TopicOffsetMap = HashMap<(String, i32), OffsetRun>;
+type TopicMap = HashMap<(String, i32), Offset>;
+
+struct OffsetStore {
+    offset_map: TopicOffsetMap,
+}
+
+impl OffsetStore {
+    fn new() -> OffsetStore {
+        OffsetStore {
+            offset_map: HashMap::default(),
+        }
+    }
+
+    fn prime(&mut self, mut topic_map: TopicMap) -> () {
+        self.offset_map.clear();
+        for (k, v) in topic_map.drain() {
+            let mut minheap = BinaryHeap::new();
+            minheap.push(v);
+            self.offset_map.insert(
+                k,
+                OffsetRun {
+                    floor: v,
+                    offsets: minheap,
+                },
+            );
+        }
+    }
+
+    fn rebalance(&mut self, rebalance: &Rebalance) -> () {
+        match rebalance {
+            Rebalance::Assign(tpl) => {
+                let topic_map = tpl.to_topic_map();
+                self.prime(topic_map);
+            }
+            _ => unreachable!(), // TODO(blt) must actuall handle this
+        }
+    }
+
+    fn commit(&mut self, tpl: TopicPartitionList) -> Option<TopicPartitionList> {
+        // NOTE(blt) -- Our ambition here is to avoid committing out-of-order
+        // offsets for any given topic. The approach taken is to dissect the
+        // passed TopicPartitionList, compare against the stored offset_map and
+        // use that map to build a `commit_tpl` of contiguous offsets that are
+        // safe to commit.
+        for ((ref topic, ref partition), ref mut offset_run) in self.offset_map.iter_mut() {
+            if let Some(tpl_elem) = tpl.find_partition(topic, *partition) {
+                let offset = tpl_elem.offset();
+                offset_run.offsets.push(offset);
+                if offset < offset_run.floor {
+                    offset_run.floor = offset;
+                }
+            }
+        }
+        // By this point, the `self.offset_map` is updated with the offsets that
+        // came in via `tpl`. We now, potentially, have 'runs' that can be
+        // comitted to the consumer, which we build up into `commit_tpl`.
+        let mut commit_tpl = TopicPartitionList::new();
+        for ((ref topic, ref partition), ref mut offset_run) in self.offset_map.iter_mut() {
+            loop {
+                let mut do_pop = false;
+                let mut do_break = false;
+                if let Some(min) = offset_run.offsets.peek_mut() {
+                    if *min == offset_run.floor {
+                        offset_run.floor = *min;
+                        let elem = commit_tpl.add_partition(topic, *partition);
+                        elem.set_offset(*min);
+                        do_pop = true;
+                    }
+                } else {
+                    do_break = true;
+                }
+                // These kind of wacky clauses down here are to avoid
+                // double-borrowing on offset_run.
+                if do_pop {
+                    let _ = offset_run.offsets.pop().unwrap();
+                }
+                if do_break {
+                    break;
+                }
+            }
+        }
+        if commit_tpl.count() == 0 {
+            None
+        } else {
+            Some(commit_tpl)
+        }
+    }
+}
+
+struct LoggingContext {
+    offset_store: Arc<Mutex<OffsetStore>>,
+}
 
 impl ClientContext for LoggingContext {}
 
@@ -36,11 +133,17 @@ impl ConsumerContext for LoggingContext {
     fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {
         info!("Committing offsets: {:?} {:?}", offsets, result);
     }
+
+    fn post_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {
+        let mut lk = self.offset_store.lock().unwrap();
+        lk.rebalance(rebalance);
+    }
 }
 
 type LoggingConsumer = BaseConsumer<LoggingContext>;
 
-fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsumer {
+fn create_consumer(brokers: &str, group_id: &str, topics: &[&str]) -> (Arc<LoggingConsumer>, Arc<Mutex<OffsetStore>>) {
+    let offset_store = Arc::new(Mutex::new(OffsetStore::new()));
     let consumer = ClientConfig::new()
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
@@ -52,19 +155,23 @@ fn create_consumer(brokers: &str, group_id: &str, topic: &str) -> LoggingConsume
         // but only commit the offsets explicitly stored via `consumer.store_offset`.
         .set("enable.auto.offset.store", "false")
         .set("debug", "consumer,cgrp")
-        .create_with_context::<LoggingContext, LoggingConsumer>(LoggingContext)
+        .create_with_context::<LoggingContext, LoggingConsumer>(LoggingContext {
+            offset_store: Arc::clone(&offset_store)
+        })
         .expect("Consumer creation failed");
 
-    consumer
-        .subscribe(&[topic])
-        .expect("Can't subscribe to specified topic");
-
-    consumer
+    consumer.subscribe(topics).expect("Can't subscribe to specified topic");
+    let topic_map = consumer.position().unwrap().to_topic_map();
+    {
+        let mut lk = offset_store.lock().unwrap();
+        lk.prime(topic_map);
+    }
+    (Arc::new(consumer), offset_store)
 }
 
 struct MirrorProducerContext {
-    topic_map: TopicOffsetMap,
-    source_consumer: Arc<LoggingConsumer>,
+    consumer: Arc<LoggingConsumer>,
+    offset_store: Arc<Mutex<OffsetStore>>,
 }
 
 impl ClientContext for MirrorProducerContext {}
@@ -72,58 +179,18 @@ impl ProducerContext for MirrorProducerContext {
     type DeliveryOpaque = TopicPartitionList;
 
     fn delivery(
-        &mut self,
+        &self,
         delivery_result: &Result<BorrowedMessage, (KafkaError, BorrowedMessage)>,
         delivery_opaque: TopicPartitionList,
     ) {
         match delivery_result {
             Ok(m) => {
                 debug!("Delivered copy of {:?} to {}", delivery_opaque, m.topic());
-                // NOTE(blt) -- Our ambition here is to avoid committing
-                // out-of-order offsets for any given topic. The approach taken
-                // is to dissect the passed TopicPartitionList, compare against
-                // ProducerContext's TopicOffsetMap and use that map to build a
-                // `commit_tpl` of contiguous offsets that are safe to commit.
-                for ((ref mut topic, ref mut partition), ref mut offset_run) in self.topic_map.iter_mut() {
-                    if let Some(tpl_elem) = delivery_opaque.find_partition(topic, *partition) {
-                        let offset = tpl_elem.offset();
-                        offset_run.offsets.push(offset);
-                        if offset < offset_run.floor {
-                            offset_run.floor = offset;
-                        }
+                let mut offset_store = self.offset_store.lock().unwrap();
+                if let Some(commit_tpl) = offset_store.commit(delivery_opaque) {
+                    while let Err(_) = self.consumer.store_offset_list(&commit_tpl) {
+                        // TODO(blt) -- backoff
                     }
-                }
-                // By this point, the `self.topic_map` is updated with the
-                // offsets that came in via `delivery_opaque`. We now,
-                // potentially, have 'runs' that can be comitted to the
-                // consumer, which we build up into `commit_tpl`.
-                let mut commit_tpl = TopicPartitionList::new();
-                for ((ref topic, ref partition), ref mut offset_run) in self.topic_map.iter_mut() {
-                    loop {
-                        let mut do_pop = false;
-                        let mut do_break = false;
-                        if let Some(min) = offset_run.offsets.peek_mut() {
-                            if *min == offset_run.floor {
-                                offset_run.floor = *min;
-                                let elem = commit_tpl.add_partition(topic, *partition);
-                                elem.set_offset(*min);
-                                do_pop = true;
-                            }
-                        } else {
-                            do_break = true;
-                        }
-                        // These kind of wacky clauses down here are to avoid
-                        // double-borrowing on offset_run.
-                        if do_pop {
-                            let _ = offset_run.offsets.pop().unwrap();
-                        }
-                        if do_break {
-                            break;
-                        }
-                    }
-                }
-                while let Err(_) = self.source_consumer.store_offset_list(&commit_tpl) {
-                    // TODO(blt) -- backoff
                 }
             }
             Err((e, m)) => {
@@ -144,37 +211,23 @@ impl ProducerContext for MirrorProducerContext {
 }
 
 type MirrorProducer = BaseProducer<MirrorProducerContext>;
-struct OffsetRun {
-    floor: Offset,
-    offsets: BinaryHeap<Offset>, // a minheap
-}
-type TopicOffsetMap = HashMap<(String, i32), OffsetRun>;
-type TopicMap = HashMap<(String, i32), Offset>;
 
-fn create_producer(brokers: &str, mut topic_map: TopicMap, consumer: Arc<LoggingConsumer>) -> MirrorProducer {
-    let topic_offset_map = topic_map.drain().fold(HashMap::default(), |mut acc, (k, v)| {
-        let mut minheap = BinaryHeap::new();
-        minheap.push(v);
-        acc.insert(
-            k,
-            OffsetRun {
-                floor: v,
-                offsets: minheap,
-            },
-        );
-        acc
-    });
-    let mirror_context = MirrorProducerContext {
-        topic_map: topic_offset_map,
-        source_consumer: consumer,
-    };
+fn create_producer(
+    brokers: &str,
+    consumer: Arc<LoggingConsumer>,
+    offset_store: Arc<Mutex<OffsetStore>>,
+) -> MirrorProducer {
+    let mirror_context = MirrorProducerContext { offset_store, consumer };
     ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create_with_context(mirror_context)
         .expect("Producer creation failed")
 }
 
-fn mirroring(consumer: &LoggingConsumer, producer: &MirrorProducer, output_topic: &str) {
+fn mirroring(consumer: &LoggingConsumer, producer: &MirrorProducer, _offset_store: Arc<Mutex<OffsetStore>>) {
+    // `offset_store` is not in use in this function but it could, potentially,
+    // be used by a filter program: just call `commit` without passing to the
+    // producer to avoid mirroring
     loop {
         while producer.poll(Duration::from_secs(0)) > 0 {}
         let message = match consumer.poll(Duration::from_millis(1000)) {
@@ -190,7 +243,7 @@ fn mirroring(consumer: &LoggingConsumer, producer: &MirrorProducer, output_topic
             let mut tpl = TopicPartitionList::new();
             tpl.add_message_offset(&message);
 
-            let mut record = BaseRecord::with_opaque_to(output_topic, tpl);
+            let mut record = BaseRecord::with_opaque_to(message.topic(), tpl);
             if message.key().is_some() {
                 record = record.key(message.key().unwrap());
             }
@@ -238,16 +291,10 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("input-topic")
-                .long("input-topic")
-                .help("Input topic name")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("output-topic")
-                .long("output-topic")
-                .help("Output topic name")
+            Arg::with_name("topic")
+                .long("topic")
+                .help("Topic names")
+                .multiple(true)
                 .takes_value(true)
                 .required(true),
         )
@@ -255,14 +302,13 @@ fn main() {
 
     setup_logger(true, matches.value_of("log-conf"));
 
-    let input_topic = matches.value_of("input-topic").unwrap();
-    let output_topic = matches.value_of("output-topic").unwrap();
+    let topics: Vec<&str> = matches.values_of("topic").unwrap().collect();
     let brokers = matches.value_of("brokers").unwrap();
     let group_id = matches.value_of("group-id").unwrap();
 
-    let consumer = Arc::new(create_consumer(brokers, group_id, input_topic));
-    let topic_map = consumer.position().unwrap().to_topic_map();
-    let producer = create_producer(brokers, topic_map, Arc::clone(&consumer));
+    let (consumer, offset_store) = create_consumer(brokers, group_id, &topics);
+    let producer = create_producer(brokers, Arc::clone(&consumer), Arc::clone(&offset_store));
 
-    mirroring(consumer.as_ref(), &producer, &output_topic);
+    info!("Starting mirroring of topics {:?}", topics);
+    mirroring(consumer.as_ref(), &producer, offset_store);
 }

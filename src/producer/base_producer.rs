@@ -70,7 +70,7 @@ pub trait ProducerContext: ClientContext {
 
     /// This method will be called once the message has been delivered (or failed to). The
     /// `DeliveryOpaque` will be the one provided by the user when calling send.
-    fn delivery(&mut self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque);
+    fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque);
 }
 
 /// Default producer context that can be use when a custom context is not required.
@@ -81,7 +81,7 @@ impl ClientContext for DefaultProducerContext {}
 impl ProducerContext for DefaultProducerContext {
     type DeliveryOpaque = ();
 
-    fn delivery(&mut self, _: &DeliveryResult, _: Self::DeliveryOpaque) {}
+    fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryOpaque) {}
 }
 
 /// Callback that gets called from librdkafka every time a message succeeds or fails to be
@@ -91,7 +91,7 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
     msg: *const RDKafkaMessage,
     _opaque: *mut c_void,
 ) {
-    let mut producer_context = Box::from_raw(_opaque as *mut C);
+    let producer_context = Box::from_raw(_opaque as *mut C);
     let delivery_opaque = C::DeliveryOpaque::from_ptr((*msg)._private);
     let owner = 42u8;
     // Wrap the message pointer into a BorrowedMessage that will only live for the body of this
