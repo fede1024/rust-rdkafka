@@ -91,11 +91,21 @@ fn build_librdkafka() {
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
 
     println!("Compiling librdkafka");
-    run_command_or_fail("librdkafka", "gmake", &["-j", &num_cpus::get().to_string(), "libs"]);
+    make_librdkafka();
 
     println!("cargo:rustc-link-search=native={}/librdkafka/src",
              env::current_dir().expect("Can't find current dir").display());
     println!("cargo:rustc-link-lib=static=rdkafka");
+}
+
+#[cfg(not(target_os= "freebsd"))]
+fn make_librdkafka() {
+    run_command_or_fail("librdkafka", "make", &["-j", &num_cpus::get().to_string(), "libs"]);
+}
+
+#[cfg(target_os= "freebsd")]
+fn make_librdkafka() {
+    run_command_or_fail("librdkafka", "gmake", &["-j", &num_cpus::get().to_string(), "libs"]);
 }
 
 #[cfg(feature = "cmake_build")]
