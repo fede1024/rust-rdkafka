@@ -193,6 +193,13 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
         self.get_base_consumer().committed(timeout)
     }
 
+    fn committed_offsets<T>(&self, mut tpl: TopicPartitionList, timeout: T) -> KafkaResult<TopicPartitionList>
+    where
+        T: Into<Option<Duration>>,
+    {
+        self.get_base_consumer().committed_offsets(tpl, timeout)
+    }
+
     /// Lookup the offsets for this consumer's partitions by timestamp.
     fn offsets_for_timestamp<T>(&self, timestamp: i64, timeout: T)
         -> KafkaResult<TopicPartitionList>
