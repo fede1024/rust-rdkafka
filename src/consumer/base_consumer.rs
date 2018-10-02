@@ -313,6 +313,25 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
+    fn offsets_for_times<T: Into<Option<Duration>>>(&self, mut timestamps: TopicPartitionList, timeout: T)
+                                                    -> KafkaResult<TopicPartitionList>
+    {
+        // This call will then put the offset in the offset field of this topic partition list.
+        let offsets_for_times_error = unsafe {
+            rdsys::rd_kafka_offsets_for_times(
+                self.client.native_ptr(),
+                timestamps.ptr(),
+                timeout_to_ms(timeout)
+            )
+        };
+
+        if offsets_for_times_error.is_error() {
+            Err(KafkaError::MetadataFetch(offsets_for_times_error.into()))
+        } else {
+            Ok(timestamps)
+        }
+    }
+
     fn position(&self) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
         let error = unsafe {
