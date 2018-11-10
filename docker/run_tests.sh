@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 
 # This script is supposed to run inside the docker container.
 
@@ -14,8 +15,8 @@ cp -r /mount/* /rdkafka
 cd /rdkafka/rdkafka-sys/librdkafka
 make clean > /dev/null 2>&1
 cd /rdkafka/
-rm "$UNIT_TESTS"*
-rm "$INTEGRATION_TESTS"*
+rm -f "$UNIT_TESTS"*
+rm -f "$INTEGRATION_TESTS"*
 
 echo -e "${GREEN}*** Inject system allocator ***${NC}"
 sed -i "/\/\/>alloc_system/ c\#![feature(alloc_system, global_allocator, allocator_api)]\nextern crate alloc_system;\nuse alloc_system::System;\n\#[global_allocator]\nstatic A: System = System;\n" src/lib.rs

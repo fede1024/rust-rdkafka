@@ -6,10 +6,10 @@ ENV PATH="$PATH:$JAVA_HOME/bin"
 RUN apt-get update && \
     apt-get install software-properties-common -y
 RUN \
-  echo oracle-java10-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections && \
+  echo oracle-java11-installer shared/accepted-oracle-license-v1-2 select true | /usr/bin/debconf-set-selections && \
   add-apt-repository -y ppa:linuxuprising/java && \
   apt-get update && \
-  apt-get install -y oracle-java10-installer
+  apt-get install -y oracle-java11-installer
 
 # Install Kafka.
 RUN apt-get update && apt-get install -y \
