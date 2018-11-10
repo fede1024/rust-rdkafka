@@ -166,6 +166,7 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR__READ_ONLY => ReadOnly,
         RD_KAFKA_RESP_ERR__NOENT => NoEnt,
         RD_KAFKA_RESP_ERR__UNDERFLOW => Underflow,
+        RD_KAFKA_RESP_ERR__INVALID_TYPE => InvalidType,
         RD_KAFKA_RESP_ERR__END => End,
         RD_KAFKA_RESP_ERR_UNKNOWN => Unknown,
         RD_KAFKA_RESP_ERR_NO_ERROR => NoError,

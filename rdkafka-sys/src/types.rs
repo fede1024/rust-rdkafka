@@ -163,6 +163,8 @@ pub enum RDKafkaError {
     NoEnt = -156,
     /// Read underflow
     Underflow = -155,
+    /// Invalid type
+    InvalidType = -154,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error
