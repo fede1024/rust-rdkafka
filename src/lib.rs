@@ -211,9 +211,7 @@
 
 //>alloc_system
 
-//#![feature(alloc_system, global_allocator, allocator_api)]
-//extern crate alloc_system;
-//use alloc_system::System;
+//use std::alloc::System;
 //#[global_allocator]
 //static A: System = System;
 

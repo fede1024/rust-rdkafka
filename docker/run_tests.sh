@@ -18,7 +18,7 @@ rm "$UNIT_TESTS"*
 rm "$INTEGRATION_TESTS"*
 
 echo -e "${GREEN}*** Inject system allocator ***${NC}"
-sed -i "/\/\/>alloc_system/ c\#![feature(alloc_system, global_allocator, allocator_api)]\nextern crate alloc_system;\nuse alloc_system::System;\n\#[global_allocator]\nstatic A: System = System;\n" src/lib.rs
+sed -i "/\/\/>alloc_system/use std::alloc::System;\n\#[global_allocator]\nstatic A: System = System;\n" src/lib.rs
 
 echo -e "${GREEN}*** Build tests ***${NC}"
 echo "Rust version: $(rustc --version)"
