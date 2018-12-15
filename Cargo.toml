@@ -8,6 +8,7 @@ license = "MIT"
 description = "Rust wrapper for librdkafka"
 keywords = ["kafka", "rdkafka"]
 categories = ["api-bindings"]
+edition = "2018"
 
 [dependencies]
 rdkafka-sys = { path = "rdkafka-sys", version = "0.11.6-0" }

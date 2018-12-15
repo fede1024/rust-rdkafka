@@ -1,17 +1,17 @@
 //! Low level consumer wrapper.
-use rdsys;
-use rdsys::types::*;
+use crate::rdsys;
+use crate::rdsys::types::*;
 
-use client::{Client, NativeClient};
-use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
-use consumer::{Consumer, ConsumerContext, CommitMode, DefaultConsumerContext};
-use error::{KafkaError, KafkaResult, IsError};
-use groups::GroupList;
-use message::{Message, BorrowedMessage};
-use metadata::Metadata;
-use topic_partition_list::TopicPartitionList;
-use topic_partition_list::Offset::Offset;
-use util::{cstr_to_owned, timeout_to_ms};
+use crate::client::{Client, NativeClient};
+use crate::config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
+use crate::consumer::{Consumer, ConsumerContext, CommitMode, DefaultConsumerContext};
+use crate::error::{KafkaError, KafkaResult, IsError};
+use crate::groups::GroupList;
+use crate::message::{Message, BorrowedMessage};
+use crate::metadata::Metadata;
+use crate::topic_partition_list::TopicPartitionList;
+use crate::topic_partition_list::Offset::Offset;
+use crate::util::{cstr_to_owned, timeout_to_ms};
 
 use std::os::raw::c_void;
 use std::str;

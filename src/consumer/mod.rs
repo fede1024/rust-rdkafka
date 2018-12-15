@@ -6,20 +6,20 @@ pub mod stream_consumer;
 pub use self::base_consumer::BaseConsumer;
 pub use self::stream_consumer::{MessageStream, StreamConsumer};
 
-use rdsys;
-use rdsys::types::*;
+use crate::rdsys;
+use crate::rdsys::types::*;
 
-use client::{ClientContext, NativeClient};
-use error::KafkaResult;
-use groups::GroupList;
-use message::BorrowedMessage;
-use metadata::Metadata;
-use util::cstr_to_owned;
+use crate::client::{ClientContext, NativeClient};
+use crate::error::KafkaResult;
+use crate::groups::GroupList;
+use crate::message::BorrowedMessage;
+use crate::metadata::Metadata;
+use crate::util::cstr_to_owned;
 
 use std::ptr;
 use std::time::Duration;
 
-use topic_partition_list::TopicPartitionList;
+use crate::topic_partition_list::TopicPartitionList;
 
 /// Rebalance information.
 #[derive(Clone, Debug)]

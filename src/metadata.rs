@@ -2,10 +2,10 @@
 use std::ffi::CStr;
 use std::slice;
 
-use rdsys;
-use rdsys::types::*;
+use crate::rdsys;
+use crate::rdsys::types::*;
 
-use error::IsError;
+use crate::error::IsError;
 
 /// Broker metadata information.
 pub struct MetadataBroker(RDKafkaMetadataBroker);

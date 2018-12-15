@@ -222,7 +222,7 @@ extern crate futures;
 
 extern crate rdkafka_sys as rdsys;
 
-pub use rdsys::types as types;
+pub use crate::rdsys::types as types;
 
 pub mod client;
 pub mod config;
@@ -237,9 +237,9 @@ pub mod topic_partition_list;
 pub mod util;
 
 // Re-export
-pub use client::ClientContext;
-pub use config::ClientConfig;
-pub use message::{Message, Timestamp};
-pub use statistics::Statistics;
-pub use topic_partition_list::{Offset, TopicPartitionList};
-pub use util::IntoOpaque;
+pub use crate::client::ClientContext;
+pub use crate::config::ClientConfig;
+pub use crate::message::{Message, Timestamp};
+pub use crate::statistics::Statistics;
+pub use crate::topic_partition_list::{Offset, TopicPartitionList};
+pub use crate::util::IntoOpaque;

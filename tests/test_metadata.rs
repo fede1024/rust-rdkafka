@@ -13,7 +13,7 @@ use rdkafka::config::ClientConfig;
 use std::time::Duration;
 
 mod utils;
-use utils::*;
+use crate::utils::*;
 
 
 fn create_consumer(group_id: &str) -> StreamConsumer {

@@ -34,15 +34,15 @@
 //! If this error is returned, the producer should wait and try again.
 //!
 
-use rdsys::rd_kafka_vtype_t::*;
-use rdsys::types::*;
-use rdsys;
+use crate::rdsys::rd_kafka_vtype_t::*;
+use crate::rdsys::types::*;
+use crate::rdsys;
 
-use client::{Client, ClientContext};
-use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use error::{KafkaError, KafkaResult, IsError};
-use message::{BorrowedMessage, OwnedHeaders, ToBytes};
-use util::{timeout_to_ms, IntoOpaque};
+use crate::client::{Client, ClientContext};
+use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::error::{KafkaError, KafkaResult, IsError};
+use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
+use crate::util::{timeout_to_ms, IntoOpaque};
 
 use std::ffi::CString;
 use std::mem;
@@ -53,7 +53,7 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::thread::{self, JoinHandle};
 
-pub use message::DeliveryResult;
+pub use crate::message::DeliveryResult;
 
 //
 // ********** PRODUCER CONTEXT **********
@@ -476,7 +476,7 @@ mod tests {
     // Just test that there are no panics, and that each struct implements the expected
     // traits (Clone, Send, Sync etc.). Behavior is tested in the integrations tests.
     use super::*;
-    use config::ClientConfig;
+    use crate::config::ClientConfig;
 
     // Verify that the producer is clone, according to documentation.
     #[test]

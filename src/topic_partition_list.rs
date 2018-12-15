@@ -1,9 +1,9 @@
 //! A data structure representing topic, partitions and offsets, compatible with the
 //! `RDKafkaTopicPartitionList` exported by `rdkafka-sys`.
-use rdsys;
-use rdsys::types::*;
+use crate::rdsys;
+use crate::rdsys::types::*;
 
-use error::{IsError, KafkaError, KafkaResult};
+use crate::error::{IsError, KafkaError, KafkaResult};
 
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};

@@ -1,6 +1,6 @@
 //! Common client functionalities.
-use rdsys;
-use rdsys::types::*;
+use crate::rdsys;
+use crate::rdsys::types::*;
 
 use std::ffi::{CString, CStr};
 use std::slice;
@@ -11,12 +11,12 @@ use std::time::Duration;
 
 use serde_json;
 
-use config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
-use error::{IsError, KafkaError, KafkaResult};
-use groups::GroupList;
-use metadata::Metadata;
-use statistics::Statistics;
-use util::{bytes_cstr_to_owned, timeout_to_ms};
+use crate::config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
+use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::groups::GroupList;
+use crate::metadata::Metadata;
+use crate::statistics::Statistics;
+use crate::util::{bytes_cstr_to_owned, timeout_to_ms};
 
 /// Client-level context
 ///
@@ -318,8 +318,8 @@ mod tests {
     // Just call everything to test there no panics by default, behavior
     // is tested in the integrations tests.
 
-    use rdsys::types::*;
-    use config::ClientConfig;
+    use crate::rdsys::types::*;
+    use crate::config::ClientConfig;
     use super::*;
 
     #[test]

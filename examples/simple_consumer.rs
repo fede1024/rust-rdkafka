@@ -16,7 +16,7 @@ use rdkafka::util::get_rdkafka_version;
 use rdkafka::error::KafkaResult;
 
 mod example_utils;
-use example_utils::setup_logger;
+use crate::example_utils::setup_logger;
 
 // A context can be used to change the behavior of producers and consumers by adding callbacks
 // that will be executed by librdkafka.

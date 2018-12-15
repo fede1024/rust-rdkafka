@@ -1,15 +1,15 @@
 //! Stream-based consumer implementation.
 use futures::{Future, Poll, Sink, Stream};
 use futures::sync::mpsc;
-use rdsys::types::*;
-use rdsys;
+use crate::rdsys::types::*;
+use crate::rdsys;
 
-use config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
-use consumer::base_consumer::BaseConsumer;
-use consumer::{Consumer, ConsumerContext, DefaultConsumerContext};
-use error::{KafkaError, KafkaResult};
-use message::BorrowedMessage;
-use util::duration_to_millis;
+use crate::config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
+use crate::consumer::base_consumer::BaseConsumer;
+use crate::consumer::{Consumer, ConsumerContext, DefaultConsumerContext};
+use crate::error::{KafkaError, KafkaResult};
+use crate::message::BorrowedMessage;
+use crate::util::duration_to_millis;
 
 use std::ptr;
 use std::sync::{Arc, Mutex};

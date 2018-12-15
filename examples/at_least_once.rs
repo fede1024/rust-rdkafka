@@ -32,7 +32,7 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
-use example_utils::setup_logger;
+use crate::example_utils::setup_logger;
 
 
 // A simple context to customize the consumer behavior and print a log line every time

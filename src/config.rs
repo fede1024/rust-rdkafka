@@ -19,12 +19,12 @@
 //!
 
 use log::LogLevel;
-use rdsys::types::*;
-use rdsys;
+use crate::rdsys::types::*;
+use crate::rdsys;
 
-use client::ClientContext;
-use error::{KafkaError, KafkaResult, IsError};
-use util::bytes_cstr_to_owned;
+use crate::client::ClientContext;
+use crate::error::{KafkaError, KafkaResult, IsError};
+use crate::util::bytes_cstr_to_owned;
 
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -190,11 +190,11 @@ fn log_level_from_global_config() -> RDKafkaLogLevel {
 /// Create a new client based on the provided configuration.
 pub trait FromClientConfig: Sized {
     /// Create a client from client configuration. The default client context will be used.
-    fn from_config(&ClientConfig) -> KafkaResult<Self>;
+    fn from_config(_: &ClientConfig) -> KafkaResult<Self>;
 }
 
 /// Create a new client based on the provided configuration and context.
 pub trait FromClientConfigAndContext<C: ClientContext>: Sized {
     /// Create a client from client configuration and a client context.
-    fn from_config_and_context(&ClientConfig, C) -> KafkaResult<Self>;
+    fn from_config_and_context(_: &ClientConfig, _: C) -> KafkaResult<Self>;
 }

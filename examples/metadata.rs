@@ -10,7 +10,7 @@ use rdkafka::config::ClientConfig;
 use std::time::Duration;
 
 mod example_utils;
-use example_utils::setup_logger;
+use crate::example_utils::setup_logger;
 
 fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_offsets: bool) {
     let consumer: BaseConsumer = ClientConfig::new()

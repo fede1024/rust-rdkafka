@@ -14,7 +14,7 @@ use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::current_time_millis;
 
 mod utils;
-use utils::*;
+use crate::utils::*;
 
 use std::time::{Duration, Instant};
 use std::collections::HashMap;

@@ -11,7 +11,7 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
-use example_utils::setup_logger;
+use crate::example_utils::setup_logger;
 use rdkafka::message::OwnedHeaders;
 
 fn produce(brokers: &str, topic_name: &str) {

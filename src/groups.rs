@@ -1,6 +1,6 @@
 //! Group membership API.
-use rdsys;
-use rdsys::types::*;
+use crate::rdsys;
+use crate::rdsys::types::*;
 
 use std::ffi::CStr;
 use std::slice;

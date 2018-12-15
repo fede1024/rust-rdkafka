@@ -3,13 +3,13 @@
 //! A high level producer that returns a Future for every produced message.
 // TODO: extend docs
 
-use client::{ClientContext, DefaultClientContext};
-use config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
-use producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
-use statistics::Statistics;
-use error::{KafkaError, KafkaResult, RDKafkaError};
-use message::{Message, OwnedMessage, Timestamp, OwnedHeaders, ToBytes};
-use util::IntoOpaque;
+use crate::client::{ClientContext, DefaultClientContext};
+use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
+use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
+use crate::statistics::Statistics;
+use crate::error::{KafkaError, KafkaResult, RDKafkaError};
+use crate::message::{Message, OwnedMessage, Timestamp, OwnedHeaders, ToBytes};
+use crate::util::IntoOpaque;
 
 use futures::{self, Canceled, Complete, Future, Poll, Oneshot};
 
@@ -274,7 +274,7 @@ mod tests {
     // Just test that there are no panics, and that each struct implements the expected
     // traits (Clone, Send, Sync etc.). Behavior is tested in the integrations tests.
     use super::*;
-    use config::ClientConfig;
+    use crate::config::ClientConfig;
 
     struct TestContext;
 

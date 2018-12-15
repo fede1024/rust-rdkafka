@@ -1,10 +1,10 @@
 //! Error manipulations.
-use rdsys::types::*;
+use crate::rdsys::types::*;
 
 use std::{error, ffi, fmt};
 
 // Re-export rdkafka error
-pub use rdsys::types::RDKafkaError;
+pub use crate::rdsys::types::RDKafkaError;
 
 /// Kafka result.
 pub type KafkaResult<T> = Result<T, KafkaError>;

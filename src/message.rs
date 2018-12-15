@@ -1,6 +1,6 @@
 //! Store and manipulate Kafka messages.
-use rdsys;
-use rdsys::types::*;
+use crate::rdsys;
+use crate::rdsys::types::*;
 
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -10,10 +10,10 @@ use std::ptr;
 use std::str;
 use std::time::SystemTime;
 
-use util;
+use crate::util;
 
-use error::{IsError, KafkaError, KafkaResult};
-use util::millis_to_epoch;
+use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::util::millis_to_epoch;
 
 
 /// Timestamp of a message
@@ -499,7 +499,7 @@ pub trait FromBytes {
     /// The error type that will be used whenever the conversion fails.
     type Error;
     /// Tries to convert the provided byte slice into a different type.
-    fn from_bytes(&[u8]) -> Result<&Self, Self::Error>;
+    fn from_bytes(_: &[u8]) -> Result<&Self, Self::Error>;
 }
 
 impl FromBytes for [u8] {
@@ -582,7 +582,7 @@ array_impls! {
 mod test {
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
-    use util::duration_to_millis;
+    use crate::util::duration_to_millis;
 
     #[test]
     fn test_timestamp_creation() {

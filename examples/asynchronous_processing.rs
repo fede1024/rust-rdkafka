@@ -21,7 +21,7 @@ use std::thread;
 use std::time::Duration;
 
 mod example_utils;
-use example_utils::setup_logger;
+use crate::example_utils::setup_logger;
 
 
 // Emulates an expensive, synchronous computation.

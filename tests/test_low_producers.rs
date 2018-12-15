@@ -11,7 +11,7 @@ use rdkafka::producer::{BaseProducer, BaseRecord, DeliveryResult, ThreadedProduc
 use rdkafka::util::current_time_millis;
 
 #[macro_use] mod utils;
-use utils::*;
+use crate::utils::*;
 
 use std::sync::Mutex;
 use std::sync::Arc;

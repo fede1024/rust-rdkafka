@@ -1,5 +1,5 @@
 //! Utility functions
-use rdsys;
+use crate::rdsys;
 
 use std::ffi::CStr;
 use std::os::raw::c_void;
@@ -66,7 +66,7 @@ pub trait IntoOpaque: Send + Sync {
     /// Converts the object into a raw pointer.
     fn as_ptr(&self) -> *mut c_void;
     /// Converts the raw pointer back to the original Rust object.
-    unsafe fn from_ptr(*mut c_void) -> Self;
+    unsafe fn from_ptr(_: *mut c_void) -> Self;
 }
 
 impl IntoOpaque for () {
