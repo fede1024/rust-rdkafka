@@ -54,7 +54,7 @@ pub enum KafkaError {
     Nul(ffi::NulError),
     /// Offset fetch failed.
     OffsetFetch(RDKafkaError),
-    /// Ond of partition reached.
+    /// End of partition reached.
     PartitionEOF(i32),
     /// Setting partition offset failed.
     SetPartitionOffset(RDKafkaError),
