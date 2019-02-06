@@ -1,5 +1,10 @@
 # Changelog
 
+<a name="0.19.0"></a>
+## 0.19.0 (2019-02-06)
+
+* Fix ordering of generics in FutureProducer::send
+
 <a name="0.18.1"></a>
 ## 0.18.1 (2019-02-06)
 
