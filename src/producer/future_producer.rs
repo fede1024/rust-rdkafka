@@ -203,7 +203,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     /// is allowed to block if the queue is full. Set it to -1 to block forever, or 0 to never block.
     /// If `block_ms` is reached and the queue is still full, a [RDKafkaError::QueueFull] will be
     /// reported in the [DeliveryFuture].
-    pub fn send<P, K>(&self, record: FutureRecord<P, K>, block_ms: i64) -> DeliveryFuture
+    pub fn send<K, P>(&self, record: FutureRecord<K, P>, block_ms: i64) -> DeliveryFuture
         where K: ToBytes + ?Sized,
               P: ToBytes + ?Sized {
         let start_time = Instant::now();
