@@ -114,7 +114,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdkafka = "0.18.0"
+rdkafka = "~0.18"
 ```
 
 This crate will compile librdkafka from sources and link it statically to your executable. To compile librdkafka you'll need:
@@ -130,7 +130,7 @@ To enable ssl and sasl, use the `features` field in `Cargo.toml`. Example:
 
 ```toml
 [dependencies.rdkafka]
-version = "0.18.0"
+version = "~0.18"
 features = ["ssl", "sasl"]
 ```
 

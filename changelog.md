@@ -1,5 +1,10 @@
 # Changelog
 
+<a name="0.18.1"></a>
+## 0.18.1 (2019-02-06)
+
+* Add method for storing multiple offsets
+
 <a name="0.18.0"></a>
 ## 0.18.0 (2019-01-18)
 
