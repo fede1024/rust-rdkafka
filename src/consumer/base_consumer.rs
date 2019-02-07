@@ -297,22 +297,12 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         // Set the timestamp we want in the offset field for every partition as librdkafka expects.
         tpl.set_all_offsets(Offset(timestamp));
 
-        // This call will then put the offset in the offset field of this topic partition list.
-        let offsets_for_times_error = unsafe {
-            rdsys::rd_kafka_offsets_for_times(
-                self.client.native_ptr(),
-                tpl.ptr(),
-                timeout_to_ms(timeout)
-            )
-        };
-
-        if offsets_for_times_error.is_error() {
-            Err(KafkaError::MetadataFetch(offsets_for_times_error.into()))
-        } else {
-            Ok(tpl)
-        }
+        self.offsets_for_times(tpl, timeout)
     }
 
+    /**
+     * `timestamps` is a `TopicPartitionList` with timestamps instead of offsets.
+    */
     fn offsets_for_times<T: Into<Option<Duration>>>(&self, mut timestamps: TopicPartitionList, timeout: T)
                                                     -> KafkaResult<TopicPartitionList>
     {
