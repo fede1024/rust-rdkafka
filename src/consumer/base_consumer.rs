@@ -273,14 +273,18 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
             return Err(KafkaError::MetadataFetch(assignment_error.into()));
         }
 
+        self.committed_offsets(unsafe { TopicPartitionList::from_ptr(tpl_ptr) }, timeout)
+    }
+
+    fn committed_offsets<T: Into<Option<Duration>>>(&self, mut tpl: TopicPartitionList, timeout: T) -> KafkaResult<TopicPartitionList> {
         let committed_error = unsafe {
-            rdsys::rd_kafka_committed(self.client.native_ptr(), tpl_ptr, timeout_to_ms(timeout))
+            rdsys::rd_kafka_committed(self.client.native_ptr(), tpl.ptr(), timeout_to_ms(timeout))
         };
 
         if committed_error.is_error() {
             Err(KafkaError::MetadataFetch(committed_error.into()))
         } else {
-            Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
+            Ok(tpl)
         }
     }
 
