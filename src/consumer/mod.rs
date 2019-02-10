@@ -42,7 +42,7 @@ pub trait ConsumerContext: ClientContext {
         &self,
         native_client: &NativeClient,
         err: RDKafkaRespErr,
-        tpl: &TopicPartitionList,
+        tpl: &mut TopicPartitionList,
     ) {
 
         let rebalance = match err {

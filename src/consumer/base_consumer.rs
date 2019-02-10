@@ -48,9 +48,9 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     // let context: &C = &*(opaque_ptr as *const C);
     let context = Box::from_raw(opaque_ptr as *mut C);
     let native_client = NativeClient::from_ptr(rk);
-    let tpl = TopicPartitionList::from_ptr(native_tpl);
+    let mut tpl = TopicPartitionList::from_ptr(native_tpl);
 
-    context.rebalance(&native_client, err, &tpl);
+    context.rebalance(&native_client, err, &mut tpl);
 
     mem::forget(context); // Do not free the context
     mem::forget(native_client); // Do not free native client
