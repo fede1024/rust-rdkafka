@@ -1,5 +1,12 @@
 # Changelog
 
+<a name="0.20.0"></a>
+## 0.20.0 (2019-02-25)
+
+* Add FreeBSD support
+* Add `offsets_for_times` method
+* Add `committed_offsets` method
+
 <a name="0.19.0"></a>
 ## 0.19.0 (2019-02-06)
 
