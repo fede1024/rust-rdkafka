@@ -7,8 +7,7 @@ extern crate tokio;
 
 use clap::{App, Arg};
 use futures::{Future, lazy, Stream};
-use tokio::executor::current_thread;
-use tokio::executor::thread_pool;
+use tokio::runtime::current_thread;
 
 use rdkafka::Message;
 use rdkafka::consumer::Consumer;
@@ -66,14 +65,15 @@ fn run_async_processor(brokers: &str, group_id: &str, input_topic: &str, output_
         .create()
         .expect("Producer creation error");
 
-    // Create the thread pool where the expensive computation will be performed.
-    let thread_pool = thread_pool::Builder::new()
+    // Create the runtime where the expensive computation will be performed.
+    let mut thread_pool = tokio::runtime::Builder::new()
         .name_prefix("pool-")
-        .pool_size(4)
-        .build();
+        .core_threads(4)
+        .build()
+        .unwrap();
 
     // Use the current thread as IO thread to drive consumer and producer.
-    let mut io_thread = current_thread::CurrentThread::new();
+    let mut io_thread = current_thread::Runtime::new().unwrap();
     let io_thread_handle = io_thread.handle();
 
     // Create the outer pipeline on the message stream.
