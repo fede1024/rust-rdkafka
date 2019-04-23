@@ -73,6 +73,9 @@ fn main() {
         .rustified_enum("rd_kafka_conf_res_t")
         .rustified_enum("rd_kafka_resp_err_t")
         .rustified_enum("rd_kafka_timestamp_type_t")
+        .rustified_enum("rd_kafka_admin_op_t")
+        .rustified_enum("rd_kafka_ResourceType_t")
+        .rustified_enum("rd_kafka_ConfigSource_t")
         .generate()
         .expect("failed to generate bindings");
 

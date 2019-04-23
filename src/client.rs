@@ -232,6 +232,14 @@ impl<C: ClientContext> Client<C> {
             )}
         )
     }
+
+    /// Returns a NativeQueue from the current client. The NativeQueue shouldn't
+    /// outlive the client it was generated from.
+    pub(crate) fn new_native_queue(&self) -> NativeQueue {
+        unsafe {
+            NativeQueue::from_ptr(rdsys::rd_kafka_queue_new(self.native_ptr()))
+        }
+    }
 }
 
 struct NativeTopic {
@@ -265,6 +273,41 @@ impl Drop for NativeTopic {
             rdsys::rd_kafka_topic_destroy(self.ptr);
         }
         trace!("NativeTopic destroyed: {:?}", self.ptr);
+    }
+}
+
+pub(crate) struct NativeQueue {
+    ptr: *mut RDKafkaQueue
+}
+
+// The library is completely thread safe, according to the documentation.
+unsafe impl Sync for NativeQueue {}
+unsafe impl Send for NativeQueue {}
+
+impl NativeQueue {
+    /// Wraps a pointer to an `RDKafkaQueue` object and returns a new
+    /// `NativeQueue`.
+    unsafe fn from_ptr(ptr: *mut RDKafkaQueue) -> NativeQueue {
+        NativeQueue { ptr }
+    }
+
+    /// Returns the pointer to the librdkafka RDKafkaQueue structure.
+    pub fn ptr(&self) -> *mut RDKafkaQueue {
+        self.ptr
+    }
+
+    pub fn poll<T: Into<Option<Duration>>>(&self, t: T) -> *mut RDKafkaEvent {
+        unsafe { rdsys::rd_kafka_queue_poll(self.ptr, timeout_to_ms(t)) }
+    }
+}
+
+impl Drop for NativeQueue {
+    fn drop(&mut self) {
+        trace!("Destroying queue: {:?}", self.ptr);
+        unsafe {
+            rdsys::rd_kafka_queue_destroy(self.ptr);
+        }
+        trace!("Queue destroyed: {:?}", self.ptr);
     }
 }
 

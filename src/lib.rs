@@ -224,6 +224,7 @@ extern crate rdkafka_sys as rdsys;
 
 pub use crate::rdsys::types as types;
 
+pub mod admin;
 pub mod client;
 pub mod config;
 pub mod consumer;
