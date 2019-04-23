@@ -7,6 +7,7 @@ use std::slice;
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
+use std::string::ToString;
 use std::time::Duration;
 
 use serde_json;
@@ -199,7 +200,7 @@ impl<C: ClientContext> Client<C> {
     /// specified, all groups will be returned.
     pub fn fetch_group_list<T: Into<Option<Duration>>>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList> {
         // Careful with group_c getting freed before time
-        let group_c = CString::new(group.map_or("".to_string(), |g| g.to_string()))?;
+        let group_c = CString::new(group.map_or("".to_string(), ToString::to_string))?;
         let group_c_ptr = if group.is_some() {
             group_c.as_ptr()
         } else {

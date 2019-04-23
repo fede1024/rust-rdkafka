@@ -304,6 +304,9 @@ impl<C: ProducerContext> BaseProducer<C> {
     /// handle errors, the delivery callback should be implemented.
     ///
     /// Note that this method will never block.
+    // Simplifying the return type requires generic associated types, which are
+    // unstable.
+    #[allow(clippy::type_complexity)]
     pub fn send<'a, K, P>(&self, record: BaseRecord<'a, K, P, C::DeliveryOpaque>)
         -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
     where K: ToBytes + ?Sized,
@@ -327,7 +330,7 @@ impl<C: ProducerContext> BaseProducer<C> {
                 RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
                 RD_KAFKA_VTYPE_OPAQUE, record.delivery_opaque.as_ptr(),
                 RD_KAFKA_VTYPE_TIMESTAMP, record.timestamp.unwrap_or(0),
-                RD_KAFKA_VTYPE_HEADERS, record.headers.as_ref().map_or(ptr::null_mut(), |h| h.ptr()),
+                RD_KAFKA_VTYPE_HEADERS, record.headers.as_ref().map_or(ptr::null_mut(), OwnedHeaders::ptr),
                 RD_KAFKA_VTYPE_END
             )
         };
@@ -437,6 +440,9 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     }
 
     /// Sends a message to Kafka. See the documentation in `BaseProducer`.
+    // Simplifying the return type requires generic associated types, which are
+    // unstable.
+    #[allow(clippy::type_complexity)]
     pub fn send<'a, K, P>(&self, record: BaseRecord<'a, K, P, C::DeliveryOpaque>)
         -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
     where K: ToBytes + ?Sized,
