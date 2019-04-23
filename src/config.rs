@@ -24,13 +24,11 @@ use crate::rdsys;
 
 use crate::client::ClientContext;
 use crate::error::{KafkaError, KafkaResult, IsError};
-use crate::util::bytes_cstr_to_owned;
+use crate::util::ErrBuf;
 
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::mem;
-
-const ERR_LEN: usize = 256;
 
 
 /// The log levels supported by librdkafka.
@@ -145,17 +143,16 @@ impl ClientConfig {
     /// Returns the native rdkafka-sys configuration.
     pub fn create_native_config(&self) -> KafkaResult<NativeClientConfig> {
         let conf = unsafe { rdsys::rd_kafka_conf_new() };
-        let errstr = [0; ERR_LEN];
+        let mut err_buf = ErrBuf::new();
         for (key, value) in &self.conf_map {
             let key_c = CString::new(key.to_string())?;
             let value_c = CString::new(value.to_string())?;
             let ret = unsafe {
                 rdsys::rd_kafka_conf_set(conf, key_c.as_ptr(), value_c.as_ptr(),
-                                           errstr.as_ptr() as *mut i8, errstr.len())
+                                         err_buf.as_mut_ptr(), err_buf.len())
             };
-            if ret.is_error() {
-                let descr = unsafe { bytes_cstr_to_owned(&errstr) };
-                return Err(KafkaError::ClientConfig(ret, descr, key.to_string(), value.to_string()));
+            if ret.is_error() {;
+                return Err(KafkaError::ClientConfig(ret, err_buf.to_string(), key.to_string(), value.to_string()));
             }
         }
         Ok(unsafe {NativeClientConfig::from_ptr(conf)})

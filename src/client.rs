@@ -17,7 +17,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::metadata::Metadata;
 use crate::statistics::Statistics;
-use crate::util::{bytes_cstr_to_owned, timeout_to_ms};
+use crate::util::{ErrBuf, timeout_to_ms};
 
 /// Client-level context
 ///
@@ -115,7 +115,7 @@ impl<C: ClientContext> Client<C> {
     pub fn new(config: &ClientConfig, native_config: NativeClientConfig, rd_kafka_type: RDKafkaType,
                context: C)
             -> KafkaResult<Client<C>> {
-        let errstr = [0i8; 1024];
+        let mut err_buf = ErrBuf::new();
         let mut boxed_context = Box::new(context);
         unsafe { rdsys::rd_kafka_conf_set_opaque(native_config.ptr(), (&mut *boxed_context) as *mut C as *mut c_void) };
         unsafe { rdsys::rd_kafka_conf_set_log_cb(native_config.ptr(), Some(native_log_cb::<C>)) };
@@ -123,13 +123,12 @@ impl<C: ClientContext> Client<C> {
         unsafe { rdsys::rd_kafka_conf_set_error_cb(native_config.ptr(), Some(native_error_cb::<C>)) };
 
         let client_ptr = unsafe {
-            rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr_move(), errstr.as_ptr() as *mut i8, errstr.len())
+            rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr_move(), err_buf.as_mut_ptr(), err_buf.len())
         };
         trace!("Create new librdkafka client {:p}", client_ptr);
 
         if client_ptr.is_null() {
-            let descr = unsafe { bytes_cstr_to_owned(&errstr) };
-            return Err(KafkaError::ClientCreation(descr));
+            return Err(KafkaError::ClientCreation(err_buf.to_string()));
         }
 
         unsafe { rdsys::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
