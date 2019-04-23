@@ -165,6 +165,20 @@ pub enum RDKafkaError {
     Underflow = -155,
     /// Invalid type
     InvalidType = -154,
+    /// Retry operation
+    Retry = -153,
+    /// Purged in queue
+    PurgeQueue = -152,
+    /// Purged in flight
+    PurgeInflight = -151,
+    /// Fatal error: see rd_kafka_fatal_error()
+    Fatal = -150,
+    /// Inconsistent state
+    Inconsistent = -149,
+    /// Gap-less ordering would not be guaranteed if proceeding
+    GaplessGuarantee = -148,
+    /// Maximum poll interval exceeded
+    PollExceeded = -147,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error
@@ -284,6 +298,44 @@ pub enum RDKafkaError {
     SecurityDisabled = 54,
     /// Operation not attempted
     OperationNotAttempted = 55,
+    /// Disk error when trying to access log file on the disk
+    KafkaStorageError = 56,
+    /// The user-specified log directory is not found in the broker config
+    LogDirNotFound = 57,
+    /// SASL Authentication failed
+    SaslAuthenticationFailed = 58,
+    /// Unknown Producer Id
+    UnknownProducerId = 59,
+    /// Partition reassignment is in progress
+    ReassignmentInProgress = 60,
+    /// Delegation Token feature is not enabled
+    DelegationTokenAuthDisabled = 61,
+    /// Delegation Token is not found on server
+    DelegationTokenNotFound = 62,
+    /// Specified Principal is not valid Owner/Renewer
+    DelegationTokenOwnerMismatch = 63,
+    /// Delegation Token requests are not allowed on this connection
+    DelegationTokenRequestNotAllowed = 64,
+    /// Delegation Token authorization failed
+    DelegationTokenAuthorizationFailed = 65,
+    /// Delegation Token is expired
+    DelegationTokenExpired = 66,
+    /// Supplied principalType is not supported
+    InvalidPrincipalType = 67,
+    /// The group is not empty
+    NonEmptyGroup = 68,
+    /// The group id does not exist
+    GroupIdNotFound = 69,
+    /// The fetch session ID was not found
+    FetchSessionIdNotFound = 70,
+    /// The fetch session epoch is invalid
+    InvalidFetchSessionEpoch = 71,
+    /// No matching listener
+    ListenerNotFound = 72,
+    /// Topic deletion is disabled
+    TopicDeletionDisabled = 73,
+    /// Unsupported compression type
+    UnsupportedCompressionType = 74,
     #[doc(hidden)]
     EndAll,
 }
