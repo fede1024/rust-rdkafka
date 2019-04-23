@@ -19,6 +19,7 @@ use crate::utils::*;
 fn create_consumer(group_id: &str) -> StreamConsumer {
     ClientConfig::new()
         .set("group.id", group_id)
+        .set("enable.partition.eof", "true")
         .set("client.id", "rdkafka_integration_test_client")
         .set("bootstrap.servers", get_bootstrap_server().as_str())
         .set("session.timeout.ms", "6000")
