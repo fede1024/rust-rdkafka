@@ -270,7 +270,7 @@ impl<'a> BorrowedMessage<'a> {
             timestamp: self.timestamp(),
             partition: self.partition(),
             offset: self.offset(),
-            headers: self.headers().map(|headers| headers.detach()),
+            headers: self.headers().map(BorrowedHeaders::detach),
         }
     }
 }
@@ -396,6 +396,12 @@ impl OwnedHeaders {
     /// Generate a read-only [BorrowedHeaders] reference.
     pub fn as_borrowed(&self) -> &BorrowedHeaders {
         unsafe { &*(self.ptr as *mut RDKafkaHeaders as *mut BorrowedHeaders) }
+    }
+}
+
+impl Default for OwnedHeaders {
+    fn default() -> OwnedHeaders {
+        OwnedHeaders::new()
     }
 }
 

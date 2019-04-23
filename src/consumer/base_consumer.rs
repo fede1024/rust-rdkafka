@@ -276,7 +276,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         self.committed_offsets(unsafe { TopicPartitionList::from_ptr(tpl_ptr) }, timeout)
     }
 
-    fn committed_offsets<T: Into<Option<Duration>>>(&self, mut tpl: TopicPartitionList, timeout: T) -> KafkaResult<TopicPartitionList> {
+    fn committed_offsets<T: Into<Option<Duration>>>(&self, tpl: TopicPartitionList, timeout: T) -> KafkaResult<TopicPartitionList> {
         let committed_error = unsafe {
             rdsys::rd_kafka_committed(self.client.native_ptr(), tpl.ptr(), timeout_to_ms(timeout))
         };
@@ -307,7 +307,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     /**
      * `timestamps` is a `TopicPartitionList` with timestamps instead of offsets.
     */
-    fn offsets_for_times<T: Into<Option<Duration>>>(&self, mut timestamps: TopicPartitionList, timeout: T)
+    fn offsets_for_times<T: Into<Option<Duration>>>(&self, timestamps: TopicPartitionList, timeout: T)
                                                     -> KafkaResult<TopicPartitionList>
     {
         // This call will then put the offset in the offset field of this topic partition list.
