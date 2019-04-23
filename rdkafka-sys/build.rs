@@ -105,8 +105,6 @@ fn build_librdkafka() {
         configure_flags.push("--disable-lz4");
     }
 
-    configure_flags.push("--enable-static");
-
     println!("Configuring librdkafka");
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
 
