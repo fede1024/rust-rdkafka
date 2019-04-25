@@ -3,7 +3,7 @@ extern crate pkg_config;
 #[cfg(feature = "cmake_build")]
 extern crate cmake;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, self};
 use std::io::Write;
 use std::env;
@@ -60,6 +60,26 @@ fn main() {
         println_stderr!("Building and linking librdkafka statically");
         build_librdkafka();
     }
+
+    let bindings = bindgen::Builder::default()
+        .header("librdkafka/src/rdkafka.h")
+        .generate_comments(false)
+        .emit_builtins()
+        // TODO: using rustified_enum is somewhat dangerous, especially when
+        // also using shared libraries.
+        // For details: https://github.com/rust-lang/rust-bindgen/issues/758
+        .rustified_enum("rd_kafka_vtype_t")
+        .rustified_enum("rd_kafka_type_t")
+        .rustified_enum("rd_kafka_conf_res_t")
+        .rustified_enum("rd_kafka_resp_err_t")
+        .rustified_enum("rd_kafka_timestamp_type_t")
+        .generate()
+        .expect("failed to generate bindings");
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    bindings
+        .write_to_file(out_path.join("bindings.rs"))
+        .expect("failed to write bindings");
 }
 
 #[cfg(not(feature = "cmake_build"))]
@@ -84,8 +104,6 @@ fn build_librdkafka() {
     } else {
         configure_flags.push("--disable-lz4");
     }
-
-    configure_flags.push("--enable-static");
 
     println!("Configuring librdkafka");
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
