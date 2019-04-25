@@ -138,9 +138,16 @@ pub fn primitive_to_rd_kafka_resp_err_t(error: i32) -> Option<RDKafkaRespErr> {
         71   => Some(RD_KAFKA_RESP_ERR_INVALID_FETCH_SESSION_EPOCH),
         72   => Some(RD_KAFKA_RESP_ERR_LISTENER_NOT_FOUND),
         73   => Some(RD_KAFKA_RESP_ERR_TOPIC_DELETION_DISABLED),
-        74   => Some(RD_KAFKA_RESP_ERR_UNSUPPORTED_COMPRESSION_TYPE),
+        74   => Some(RD_KAFKA_RESP_ERR_FENCED_LEADER_EPOCH),
+        75   => Some(RD_KAFKA_RESP_ERR_UNKNOWN_LEADER_EPOCH),
+        76   => Some(RD_KAFKA_RESP_ERR_UNSUPPORTED_COMPRESSION_TYPE),
+        77   => Some(RD_KAFKA_RESP_ERR_STALE_BROKER_EPOCH),
+        78   => Some(RD_KAFKA_RESP_ERR_OFFSET_NOT_AVAILABLE),
+        79   => Some(RD_KAFKA_RESP_ERR_MEMBER_ID_REQUIRED),
+        80   => Some(RD_KAFKA_RESP_ERR_PREFERRED_LEADER_NOT_AVAILABLE),
+        81   => Some(RD_KAFKA_RESP_ERR_GROUP_MAX_SIZE_REACHED),
         // END ALL
-        75   => Some(RD_KAFKA_RESP_ERR_END_ALL),
+        82   => Some(RD_KAFKA_RESP_ERR_END_ALL),
         _ => None
     }
 }
@@ -277,7 +284,14 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR_INVALID_FETCH_SESSION_EPOCH => InvalidFetchSessionEpoch,
         RD_KAFKA_RESP_ERR_LISTENER_NOT_FOUND => ListenerNotFound,
         RD_KAFKA_RESP_ERR_TOPIC_DELETION_DISABLED => TopicDeletionDisabled,
+        RD_KAFKA_RESP_ERR_FENCED_LEADER_EPOCH => FencedLeaderEpoch,
+        RD_KAFKA_RESP_ERR_UNKNOWN_LEADER_EPOCH => UnknownLeaderEpoch,
         RD_KAFKA_RESP_ERR_UNSUPPORTED_COMPRESSION_TYPE => UnsupportedCompressionType,
+        RD_KAFKA_RESP_ERR_STALE_BROKER_EPOCH => StaleBrokerEpoch,
+        RD_KAFKA_RESP_ERR_OFFSET_NOT_AVAILABLE => OffsetNotAvailable,
+        RD_KAFKA_RESP_ERR_MEMBER_ID_REQUIRED => MemberIdRequired,
+        RD_KAFKA_RESP_ERR_PREFERRED_LEADER_NOT_AVAILABLE => PreferredLeaderNotAvailable,
+        RD_KAFKA_RESP_ERR_GROUP_MAX_SIZE_REACHED => GroupMaxSizeReached,
         RD_KAFKA_RESP_ERR_END_ALL => EndAll,
     }
 }
