@@ -1,5 +1,13 @@
 # Changelog
 
+<a name="0.21.0"></a>
+## 0.21.0 (2019-04-24)
+
+* Add librdkafka 1.0 support
+* Automatically generate librdkafka bindings
+* Use updated tokio version in asynchronous\_processing example
+
+
 <a name="0.20.0"></a>
 ## 0.20.0 (2019-02-25)
 
