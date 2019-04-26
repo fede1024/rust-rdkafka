@@ -75,7 +75,6 @@ impl IntoOpaque for () {
     }
 
     unsafe fn from_ptr(_: *mut c_void) -> Self {
-        ()
     }
 }
 
