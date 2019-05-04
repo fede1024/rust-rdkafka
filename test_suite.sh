@@ -16,7 +16,8 @@ failures=`docker inspect -f '{{ .State.ExitCode }}' rustrdkafka_itest_1`
 if [ "$failures" != "0" ]; then
     echo -e "${RED}One or more container terminated with errors${NC}"
     echo -e "${RED}Test suite failed${NC}"
-    exit 1
+    docker-compose rm -f && exit 1
 else
     echo -e "${GREEN}Test suite succeeded${NC}"
+    docker-compose rm -f && exit 0
 fi
