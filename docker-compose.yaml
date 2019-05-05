@@ -4,6 +4,7 @@ version: '2'
 services:
   itest:
     build: .
+    container_name: itest
     links:
       - kafka
       - zookeeper

@@ -11,7 +11,7 @@ docker-compose stop
 docker-compose build
 docker-compose up --abort-on-container-exit
 
-failures=`docker inspect -f '{{ .State.ExitCode }}' rustrdkafka_itest_1`
+failures=`docker inspect -f '{{ .State.ExitCode }}' itest`
 
 if [ "$failures" != "0" ]; then
     echo -e "${RED}One or more container terminated with errors${NC}"
