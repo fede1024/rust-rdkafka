@@ -334,8 +334,22 @@ pub enum RDKafkaError {
     ListenerNotFound = 72,
     /// Topic deletion is disabled
     TopicDeletionDisabled = 73,
+    /// Leader epoch is older than broker epoch
+    FencedLeaderEpoch = 74,
+    /// Leader epoch is newer than broker epoch
+    UnknownLeaderEpoch = 75,
     /// Unsupported compression type
-    UnsupportedCompressionType = 74,
+    UnsupportedCompressionType = 76,
+    /// Broker epoch has changed
+    StaleBrokerEpoch = 77,
+    /// Leader high watermark is not caught up
+    OffsetNotAvailable = 78,
+    /// Group member needs a valid member ID
+    MemberIdRequired = 79,
+    /// Preferred leader was not available
+    PreferredLeaderNotAvailable = 80,
+    /// Consumer group has reached maximum size
+    GroupMaxSizeReached = 81,
     #[doc(hidden)]
     EndAll,
 }
