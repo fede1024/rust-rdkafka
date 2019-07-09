@@ -18,7 +18,6 @@ use crate::util::cstr_to_owned;
 
 use std::ptr;
 use std::time::Duration;
-use std::os::raw::c_char;
 
 use crate::topic_partition_list::TopicPartitionList;
 
@@ -52,7 +51,7 @@ pub trait ConsumerContext: ClientContext {
             }
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke,
             _ => {
-                let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(err) as *const c_char) };
+                let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(err) as *const i8) };
                 error!("Error rebalancing: {}", error);
                 Rebalance::Error(error)
             }
