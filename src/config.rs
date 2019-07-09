@@ -29,6 +29,7 @@ use crate::util::bytes_cstr_to_owned;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::mem;
+use std::os::raw::c_char;
 
 const ERR_LEN: usize = 256;
 
@@ -151,7 +152,7 @@ impl ClientConfig {
             let value_c = CString::new(value.to_string())?;
             let ret = unsafe {
                 rdsys::rd_kafka_conf_set(conf, key_c.as_ptr(), value_c.as_ptr(),
-                                           errstr.as_ptr() as *mut i8, errstr.len())
+                                           errstr.as_ptr() as *mut c_char, errstr.len())
             };
             if ret.is_error() {
                 let descr = unsafe { bytes_cstr_to_owned(&errstr) };

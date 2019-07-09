@@ -9,6 +9,7 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::string::ToString;
 use std::time::Duration;
+use std::os::raw::c_char;
 
 use serde_json;
 
@@ -123,7 +124,7 @@ impl<C: ClientContext> Client<C> {
         unsafe { rdsys::rd_kafka_conf_set_error_cb(native_config.ptr(), Some(native_error_cb::<C>)) };
 
         let client_ptr = unsafe {
-            rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr_move(), errstr.as_ptr() as *mut i8, errstr.len())
+            rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr_move(), errstr.as_ptr() as *mut c_char, errstr.len())
         };
         trace!("Create new librdkafka client {:p}", client_ptr);
 
@@ -271,7 +272,7 @@ impl Drop for NativeTopic {
 
 pub(crate) unsafe extern "C" fn native_log_cb<C: ClientContext>(
         client: *const RDKafka, level: i32,
-        fac: *const i8, buf: *const i8) {
+        fac: *const c_char, buf: *const c_char) {
     let fac = CStr::from_ptr(fac).to_string_lossy();
     let log_message = CStr::from_ptr(buf).to_string_lossy();
 
@@ -281,7 +282,7 @@ pub(crate) unsafe extern "C" fn native_log_cb<C: ClientContext>(
 }
 
 pub(crate) unsafe extern "C" fn native_stats_cb<C: ClientContext>(
-        _conf: *mut RDKafka, json: *mut i8, json_len: usize,
+        _conf: *mut RDKafka, json: *mut c_char, json_len: usize,
         opaque: *mut c_void) -> i32 {
     let context = Box::from_raw(opaque as *mut C);
 
@@ -302,7 +303,7 @@ pub(crate) unsafe extern "C" fn native_stats_cb<C: ClientContext>(
 }
 
 pub(crate) unsafe extern "C" fn native_error_cb<C: ClientContext>(
-        _client: *mut RDKafka, err: i32, reason: *const i8,
+        _client: *mut RDKafka, err: i32, reason: *const c_char,
         opaque: *mut c_void) {
     let err = rdsys::primitive_to_rd_kafka_resp_err_t(err)
         .expect("global error not an rd_kafka_resp_err_t");

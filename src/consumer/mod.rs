@@ -18,6 +18,7 @@ use crate::util::cstr_to_owned;
 
 use std::ptr;
 use std::time::Duration;
+use std::os::raw::c_char;
 
 use crate::topic_partition_list::TopicPartitionList;
 

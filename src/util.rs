@@ -6,6 +6,7 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::slice;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::os::raw::c_char;
 
 /// Return a tuple representing the version of `librdkafka` in
 /// hexadecimal and string format.
@@ -102,12 +103,12 @@ impl<T: Send + Sync> IntoOpaque for Box<T> {
 // TODO: check if the implementation returns a copy of the data and update the documentation
 /// Converts a byte array representing a C string into a String.
 pub unsafe fn bytes_cstr_to_owned(bytes_cstr: &[i8]) -> String {
-    CStr::from_ptr(bytes_cstr.as_ptr()).to_string_lossy().into_owned()
+    CStr::from_ptr(bytes_cstr.as_ptr() as *const c_char).to_string_lossy().into_owned()
 }
 
 /// Converts a C string into a String.
 pub unsafe fn cstr_to_owned(cstr: *const i8) -> String {
-    CStr::from_ptr(cstr).to_string_lossy().into_owned()
+    CStr::from_ptr(cstr as *const c_char).to_string_lossy().into_owned()
 }
 
 #[cfg(test)]
