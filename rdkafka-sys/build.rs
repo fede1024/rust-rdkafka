@@ -113,6 +113,7 @@ fn build_librdkafka() {
 
     println!("cargo:rustc-link-search=native={}/librdkafka/src",
              env::current_dir().expect("Can't find current dir").display());
+    println!("cargo:rustc-link-lib=static=zstd");
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
 
