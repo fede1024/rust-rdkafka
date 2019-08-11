@@ -111,6 +111,57 @@ pub unsafe fn cstr_to_owned(cstr: *const i8) -> String {
     CStr::from_ptr(cstr as *const c_char).to_string_lossy().into_owned()
 }
 
+pub(crate) struct ErrBuf {
+    buf: [c_char; ErrBuf::MAX_ERR_LEN]
+}
+
+impl ErrBuf {
+    const MAX_ERR_LEN: usize = 512;
+
+    pub fn new() -> ErrBuf {
+        ErrBuf { buf: [0; ErrBuf::MAX_ERR_LEN] }
+    }
+
+    pub fn as_mut_ptr(&mut self) -> *mut i8 {
+        self.buf.as_mut_ptr()
+    }
+
+    pub fn len(&self) -> usize {
+        self.buf.len()
+    }
+
+    pub fn to_string(&self) -> String {
+        unsafe { bytes_cstr_to_owned(&self.buf) }
+    }
+}
+
+impl Default for ErrBuf {
+    fn default() -> ErrBuf {
+        ErrBuf::new()
+    }
+}
+
+pub(crate) trait WrappedCPointer {
+    type Target;
+
+    fn ptr(&self) -> *mut Self::Target;
+
+    fn is_null(&self) -> bool {
+        self.ptr().is_null()
+    }
+}
+
+/// Converts a container into a C array.
+pub(crate) trait AsCArray<T: WrappedCPointer> {
+    fn as_c_array(&self) -> *mut *mut T::Target;
+}
+
+impl<T: WrappedCPointer> AsCArray<T> for Vec<T> {
+    fn as_c_array(&self) -> *mut *mut T::Target {
+        self.as_ptr() as *mut *mut T::Target
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

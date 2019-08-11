@@ -55,6 +55,30 @@ pub type RDKafkaGroupMemberInfo = bindings::rd_kafka_group_member_info;
 /// Native rdkafka group member information
 pub type RDKafkaHeaders = bindings::rd_kafka_headers_t;
 
+/// Native rdkafka queue
+pub type RDKafkaQueue = bindings::rd_kafka_queue_t;
+
+// Native rdkafka new topic object
+pub type RDKafkaNewTopic = bindings::rd_kafka_NewTopic_t;
+
+// Native rdkafka delete topic object
+pub type RDKafkaDeleteTopic = bindings::rd_kafka_DeleteTopic_t;
+
+// Native rdkafka new partitions object
+pub type RDKafkaNewPartitions = bindings::rd_kafka_NewPartitions_t;
+
+// Native rdkafka config resource
+pub type RDKafkaConfigResource = bindings::rd_kafka_ConfigResource_t;
+
+// Native rdkafka event
+pub type RDKafkaEvent = bindings::rd_kafka_event_t;
+
+// Native rdkafka admin options
+pub type RDKafkaAdminOptions = bindings::rd_kafka_AdminOptions_t;
+
+// Native rdkafka topic result
+pub type RDKafkaTopicResult = bindings::rd_kafka_topic_result_t;
+
 // ENUMS
 
 /// Client types
@@ -65,6 +89,15 @@ pub use bindings::rd_kafka_conf_res_t as RDKafkaConfRes;
 
 /// Response error
 pub use bindings::rd_kafka_resp_err_t as RDKafkaRespErr;
+
+/// Admin operation
+pub use bindings::rd_kafka_admin_op_t as RDKafkaAdminOp;
+
+/// Config resource type
+pub use bindings::rd_kafka_ResourceType_t as RDKafkaResourceType;
+
+/// Config source
+pub use bindings::rd_kafka_ConfigSource_t as RDKafkaConfigSource;
 
 /// Errors enum
 

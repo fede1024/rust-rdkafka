@@ -18,7 +18,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::metadata::Metadata;
 use crate::statistics::Statistics;
-use crate::util::{bytes_cstr_to_owned, timeout_to_ms};
+use crate::util::{ErrBuf, timeout_to_ms};
 
 /// Client-level context
 ///
@@ -116,7 +116,7 @@ impl<C: ClientContext> Client<C> {
     pub fn new(config: &ClientConfig, native_config: NativeClientConfig, rd_kafka_type: RDKafkaType,
                context: C)
             -> KafkaResult<Client<C>> {
-        let errstr = [0i8; 1024];
+        let mut err_buf = ErrBuf::new();
         let mut boxed_context = Box::new(context);
         unsafe { rdsys::rd_kafka_conf_set_opaque(native_config.ptr(), (&mut *boxed_context) as *mut C as *mut c_void) };
         unsafe { rdsys::rd_kafka_conf_set_log_cb(native_config.ptr(), Some(native_log_cb::<C>)) };
@@ -124,13 +124,12 @@ impl<C: ClientContext> Client<C> {
         unsafe { rdsys::rd_kafka_conf_set_error_cb(native_config.ptr(), Some(native_error_cb::<C>)) };
 
         let client_ptr = unsafe {
-            rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr_move(), errstr.as_ptr() as *mut c_char, errstr.len())
+            rdsys::rd_kafka_new(rd_kafka_type, native_config.ptr_move(), err_buf.as_mut_ptr(), err_buf.len())
         };
         trace!("Create new librdkafka client {:p}", client_ptr);
 
         if client_ptr.is_null() {
-            let descr = unsafe { bytes_cstr_to_owned(&errstr) };
-            return Err(KafkaError::ClientCreation(descr));
+            return Err(KafkaError::ClientCreation(err_buf.to_string()));
         }
 
         unsafe { rdsys::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
@@ -234,6 +233,14 @@ impl<C: ClientContext> Client<C> {
             )}
         )
     }
+
+    /// Returns a NativeQueue from the current client. The NativeQueue shouldn't
+    /// outlive the client it was generated from.
+    pub(crate) fn new_native_queue(&self) -> NativeQueue {
+        unsafe {
+            NativeQueue::from_ptr(rdsys::rd_kafka_queue_new(self.native_ptr()))
+        }
+    }
 }
 
 struct NativeTopic {
@@ -267,6 +274,41 @@ impl Drop for NativeTopic {
             rdsys::rd_kafka_topic_destroy(self.ptr);
         }
         trace!("NativeTopic destroyed: {:?}", self.ptr);
+    }
+}
+
+pub(crate) struct NativeQueue {
+    ptr: *mut RDKafkaQueue
+}
+
+// The library is completely thread safe, according to the documentation.
+unsafe impl Sync for NativeQueue {}
+unsafe impl Send for NativeQueue {}
+
+impl NativeQueue {
+    /// Wraps a pointer to an `RDKafkaQueue` object and returns a new
+    /// `NativeQueue`.
+    unsafe fn from_ptr(ptr: *mut RDKafkaQueue) -> NativeQueue {
+        NativeQueue { ptr }
+    }
+
+    /// Returns the pointer to the librdkafka RDKafkaQueue structure.
+    pub fn ptr(&self) -> *mut RDKafkaQueue {
+        self.ptr
+    }
+
+    pub fn poll<T: Into<Option<Duration>>>(&self, t: T) -> *mut RDKafkaEvent {
+        unsafe { rdsys::rd_kafka_queue_poll(self.ptr, timeout_to_ms(t)) }
+    }
+}
+
+impl Drop for NativeQueue {
+    fn drop(&mut self) {
+        trace!("Destroying queue: {:?}", self.ptr);
+        unsafe {
+            rdsys::rd_kafka_queue_destroy(self.ptr);
+        }
+        trace!("Queue destroyed: {:?}", self.ptr);
     }
 }
 

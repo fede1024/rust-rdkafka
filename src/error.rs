@@ -32,6 +32,12 @@ impl IsError for RDKafkaConfRes {
 /// Represents all Kafka errors. Check the underlying `RDKafkaError` to get details.
 #[derive(Clone, PartialEq, Eq)]
 pub enum KafkaError {
+    /// Creation of admin operation failed.
+    AdminOpCreation(String),
+    /// The admin operation itself failed.
+    AdminOp(RDKafkaError),
+    /// The client was dropped before the operation completed.
+    Canceled,
     /// Invalid client configuration.
     ClientConfig(RDKafkaConfRes, String, String, String),
     /// Client creation failed.
@@ -67,6 +73,9 @@ pub enum KafkaError {
 impl fmt::Debug for KafkaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
+            KafkaError::AdminOp(err) => write!(f, "KafkaError (Admin operation error: {})", err),
+            KafkaError::AdminOpCreation(ref err) => write!(f, "KafkaError (Admin operation creation error: {})", err),
+            KafkaError::Canceled => write!(f, "KafkaError (Client dropped)"),
             KafkaError::ClientConfig(_, ref desc, ref key, ref value) => write!(f, "KafkaError (Client config error: {} {} {})", desc, key, value),
             KafkaError::ClientCreation(ref err) => write!(f, "KafkaError (Client creation error: {})", err),
             KafkaError::ConsumerCommit(err) => write!(f, "KafkaError (Consumer commit error: {})", err),
@@ -89,6 +98,9 @@ impl fmt::Debug for KafkaError {
 impl fmt::Display for KafkaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
+            KafkaError::AdminOp(err) => write!(f, "Admin operation error: {}", err),
+            KafkaError::AdminOpCreation(ref err) => write!(f, "Admin operation creation error: {}", err),
+            KafkaError::Canceled => write!(f, "KafkaError (Client dropped)"),
             KafkaError::ClientConfig(_, ref desc, ref key, ref value) => write!(f, "Client config error: {} {} {}", desc, key, value),
             KafkaError::ClientCreation(ref err) => write!(f, "Client creation error: {}", err),
             KafkaError::ConsumerCommit(err) => write!(f, "Consumer commit error: {}", err),
@@ -111,6 +123,9 @@ impl fmt::Display for KafkaError {
 impl error::Error for KafkaError {
     fn description(&self) -> &str {
         match *self {
+            KafkaError::AdminOp(_) => "Admin operation error",
+            KafkaError::AdminOpCreation(_) => "Admin operation creation error",
+            KafkaError::Canceled => "Client dropped",
             KafkaError::ClientConfig(_, _, _, _) => "Client config error",
             KafkaError::ClientCreation(_) => "Client creation error",
             KafkaError::ConsumerCommit(_) => "Consumer commit error",
@@ -132,6 +147,9 @@ impl error::Error for KafkaError {
     #[allow(clippy::match_same_arms)]
     fn cause(&self) -> Option<&error::Error> {
         match *self {
+            KafkaError::AdminOp(_) => None,
+            KafkaError::AdminOpCreation(_) => None,
+            KafkaError::Canceled => None,
             KafkaError::ClientConfig(_, _, _, _) => None,
             KafkaError::ClientCreation(_) => None,
             KafkaError::ConsumerCommit(ref err) => Some(err),

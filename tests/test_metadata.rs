@@ -40,7 +40,12 @@ fn test_metadata() {
     let consumer = create_consumer(&rand_test_group());
 
     let metadata = consumer.fetch_metadata(None, Duration::from_secs(5)).unwrap();
-    assert_eq!(metadata.orig_broker_id(), 0);
+    let orig_broker_id = metadata.orig_broker_id();
+    // The orig_broker_id may be -1 if librdkafka's bootstrap "broker" handles
+    // the request.
+    if orig_broker_id != -1 && orig_broker_id != 0 {
+        panic!("metadata.orig_broker_id = {}, not 0 or 1 as expected", orig_broker_id)
+    }
     assert!(!metadata.orig_broker_name().is_empty());
 
     let broker_metadata = metadata.brokers();
