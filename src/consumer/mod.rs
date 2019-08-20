@@ -14,10 +14,9 @@ use crate::error::KafkaResult;
 use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
-use crate::util::cstr_to_owned;
+use crate::util::{cstr_to_owned, Timeout};
 
 use std::ptr;
-use std::time::Duration;
 
 use crate::topic_partition_list::TopicPartitionList;
 
@@ -187,7 +186,7 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     /// Retrieve committed offsets for topics and partitions.
     fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer().committed(timeout)
@@ -196,7 +195,7 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     /// Retrieve committed offsets for specified topics and partitions.
     fn committed_offsets<T>(&self, tpl: TopicPartitionList, timeout: T) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
     {
         self.get_base_consumer().committed_offsets(tpl, timeout)
     }
@@ -205,7 +204,7 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     fn offsets_for_timestamp<T>(&self, timestamp: i64, timeout: T)
         -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -216,7 +215,7 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     fn offsets_for_times<T>(&self, timestamps: TopicPartitionList, timeout: T)
                             -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -232,7 +231,7 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     /// if no topic is specified.
     fn fetch_metadata<T>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -243,7 +242,7 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     fn fetch_watermarks<T>(&self, topic: &str, partition: i32, timeout: T)
         -> KafkaResult<(i64, i64)>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -254,7 +253,7 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     /// specified, all groups will be returned.
     fn fetch_group_list<T>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()

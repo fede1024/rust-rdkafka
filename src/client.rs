@@ -8,7 +8,6 @@ use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
 use std::string::ToString;
-use std::time::Duration;
 use std::os::raw::c_char;
 
 use serde_json;
@@ -18,7 +17,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::metadata::Metadata;
 use crate::statistics::Statistics;
-use crate::util::{ErrBuf, timeout_to_ms};
+use crate::util::{ErrBuf, Timeout};
 
 /// Client-level context
 ///
@@ -157,7 +156,7 @@ impl<C: ClientContext> Client<C> {
 
     /// Returns the metadata information for the specified topic, or for all topics in the cluster
     /// if no topic is specified.
-    pub fn fetch_metadata<T: Into<Option<Duration>>>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata> {
+    pub fn fetch_metadata<T: Into<Timeout>>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata> {
         let mut metadata_ptr: *const RDKafkaMetadata = ptr::null_mut();
         let (flag, native_topic) = if let Some(topic_name) = topic {
             (0, Some(self.native_topic(topic_name)?))
@@ -171,7 +170,7 @@ impl<C: ClientContext> Client<C> {
                 flag,
                 native_topic.map(|t| t.ptr()).unwrap_or_else(NativeTopic::null),
                 &mut metadata_ptr as *mut *const RDKafkaMetadata,
-                timeout_to_ms(timeout))
+                timeout.into().as_millis())
         };
         trace!("Metadata fetch completed");
         if ret.is_error() {
@@ -182,13 +181,13 @@ impl<C: ClientContext> Client<C> {
     }
 
     /// Returns high and low watermark for the specified topic and partition.
-    pub fn fetch_watermarks<T: Into<Option<Duration>>>(&self, topic: &str, partition: i32, timeout: T) -> KafkaResult<(i64, i64)> {
+    pub fn fetch_watermarks<T: Into<Timeout>>(&self, topic: &str, partition: i32, timeout: T) -> KafkaResult<(i64, i64)> {
         let mut low = -1;
         let mut high = -1;
         let topic_c = CString::new(topic.to_string())?;
         let ret = unsafe {
             rdsys::rd_kafka_query_watermark_offsets(self.native_ptr(), topic_c.as_ptr(), partition,
-                                                    &mut low as *mut i64, &mut high as *mut i64, timeout_to_ms(timeout))
+                                                    &mut low as *mut i64, &mut high as *mut i64, timeout.into().as_millis())
         };
         if ret.is_error() {
             return Err(KafkaError::MetadataFetch(ret.into()));
@@ -198,7 +197,7 @@ impl<C: ClientContext> Client<C> {
 
     /// Returns the group membership information for the given group. If no group is
     /// specified, all groups will be returned.
-    pub fn fetch_group_list<T: Into<Option<Duration>>>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList> {
+    pub fn fetch_group_list<T: Into<Timeout>>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList> {
         // Careful with group_c getting freed before time
         let group_c = CString::new(group.map_or("".to_string(), ToString::to_string))?;
         let group_c_ptr = if group.is_some() {
@@ -213,7 +212,7 @@ impl<C: ClientContext> Client<C> {
                 self.native_ptr(),
                 group_c_ptr,
                 &mut group_list_ptr as *mut *const RDKafkaGroupList,
-                timeout_to_ms(timeout))
+                timeout.into().as_millis())
         };
         trace!("Group list fetch completed");
         if ret.is_error() {
@@ -297,8 +296,8 @@ impl NativeQueue {
         self.ptr
     }
 
-    pub fn poll<T: Into<Option<Duration>>>(&self, t: T) -> *mut RDKafkaEvent {
-        unsafe { rdsys::rd_kafka_queue_poll(self.ptr, timeout_to_ms(t)) }
+    pub fn poll<T: Into<Timeout>>(&self, t: T) -> *mut RDKafkaEvent {
+        unsafe { rdsys::rd_kafka_queue_poll(self.ptr, t.into().as_millis()) }
     }
 }
 

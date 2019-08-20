@@ -42,7 +42,7 @@ use crate::client::{Client, ClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::error::{KafkaError, KafkaResult, IsError};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
-use crate::util::{timeout_to_ms, IntoOpaque};
+use crate::util::{IntoOpaque, Timeout};
 
 use std::ffi::CString;
 use std::mem;
@@ -282,8 +282,8 @@ impl<C: ProducerContext> BaseProducer<C> {
 
     /// Polls the producer. Regular calls to `poll` are required to process the events
     /// and execute the message delivery callbacks. Returns the number of events served.
-    pub fn poll<T: Into<Option<Duration>>>(&self, timeout: T) -> i32 {
-        unsafe { rdsys::rd_kafka_poll(self.native_ptr(), timeout_to_ms(timeout)) }
+    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> i32 {
+        unsafe { rdsys::rd_kafka_poll(self.native_ptr(), timeout.into().as_millis()) }
     }
 
     /// Returns a pointer to the native Kafka client.
@@ -346,8 +346,8 @@ impl<C: ProducerContext> BaseProducer<C> {
 
     /// Flushes the producer. Should be called before termination. This method will call `poll()`
     /// internally.
-    pub fn flush<T: Into<Option<Duration>>>(&self, timeout: T) {
-        unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout_to_ms(timeout)) };
+    pub fn flush<T: Into<Timeout>>(&self, timeout: T) {
+        unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout.into().as_millis()) };
     }
 
     /// Returns the number of messages waiting to be sent, or sent but not acknowledged yet.
@@ -452,12 +452,12 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
 
     /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
     /// a thread dedicated to calling `poll` regularly.
-    pub fn poll<T: Into<Option<Duration>>>(&self, timeout: T) {
+    pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.poll(timeout);
     }
 
     /// Flushes the producer. Should be called before termination.
-    pub fn flush<T: Into<Option<Duration>>>(&self, timeout: T) {
+    pub fn flush<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.flush(timeout);
     }
 
