@@ -1,6 +1,6 @@
 //! This module contains type aliases for types defined in the auto-generated bindings.
-use std::{error, fmt};
 use std::ffi::CStr;
+use std::{error, fmt};
 
 use bindings;
 use helpers;
@@ -398,9 +398,11 @@ impl fmt::Display for RDKafkaError {
         let description = match helpers::primitive_to_rd_kafka_resp_err_t(*self as i32) {
             Some(err) => {
                 let cstr = unsafe { bindings::rd_kafka_err2str(err) };
-                unsafe { CStr::from_ptr(cstr) }.to_string_lossy().into_owned()
-            },
-            None => "Unknown error".to_owned()
+                unsafe { CStr::from_ptr(cstr) }
+                    .to_string_lossy()
+                    .into_owned()
+            }
+            None => "Unknown error".to_owned(),
         };
 
         write!(f, "{:?} ({})", self, description)
@@ -420,7 +422,10 @@ mod tests {
     #[test]
     fn test_display_error() {
         let error: RDKafkaError = RDKafkaRespErr::RD_KAFKA_RESP_ERR__PARTITION_EOF.into();
-        assert_eq!("PartitionEOF (Broker: No more messages)", format!("{}", error));
+        assert_eq!(
+            "PartitionEOF (Broker: No more messages)",
+            format!("{}", error)
+        );
         assert_eq!("PartitionEOF", format!("{:?}", error));
     }
 }

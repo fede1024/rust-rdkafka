@@ -1,4 +1,5 @@
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate clap;
 extern crate futures;
 extern crate rdkafka;
@@ -7,13 +8,13 @@ extern crate rdkafka_sys;
 use clap::{App, Arg};
 use futures::stream::Stream;
 
-use rdkafka::message::{Message, Headers};
 use rdkafka::client::ClientContext;
-use rdkafka::consumer::{Consumer, ConsumerContext, CommitMode, Rebalance};
-use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
-use rdkafka::util::get_rdkafka_version;
+use rdkafka::consumer::stream_consumer::StreamConsumer;
+use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext, Rebalance};
 use rdkafka::error::KafkaResult;
+use rdkafka::message::{Headers, Message};
+use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
 use crate::example_utils::setup_logger;
@@ -34,7 +35,11 @@ impl ConsumerContext for CustomContext {
         info!("Post rebalance {:?}", rebalance);
     }
 
-    fn commit_callback(&self, result: KafkaResult<()>, _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList) {
+    fn commit_callback(
+        &self,
+        result: KafkaResult<()>,
+        _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList,
+    ) {
         info!("Committing offsets: {:?}", result);
     }
 }
@@ -57,7 +62,8 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
         .create_with_context(context)
         .expect("Consumer creation failed");
 
-    consumer.subscribe(&topics.to_vec())
+    consumer
+        .subscribe(&topics.to_vec())
         .expect("Can't subscribe to specified topics");
 
     // consumer.start() returns a stream. The stream can be used ot chain together expensive steps,
@@ -75,7 +81,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
                     Some(Err(e)) => {
                         warn!("Error while deserializing message payload: {:?}", e);
                         ""
-                    },
+                    }
                 };
                 info!("key: '{:?}', payload: '{}', topic: {}, partition: {}, offset: {}, timestamp: {:?}",
                       m.key(), payload, m.topic(), m.partition(), m.offset(), m.timestamp());
@@ -86,7 +92,7 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
                     }
                 }
                 consumer.commit_message(&m, CommitMode::Async).unwrap();
-            },
+            }
         };
     }
 }
@@ -95,29 +101,37 @@ fn main() {
     let matches = App::new("consumer example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Simple command line consumer")
-        .arg(Arg::with_name("brokers")
-             .short("b")
-             .long("brokers")
-             .help("Broker list in kafka format")
-             .takes_value(true)
-             .default_value("localhost:9092"))
-        .arg(Arg::with_name("group-id")
-             .short("g")
-             .long("group-id")
-             .help("Consumer group id")
-             .takes_value(true)
-             .default_value("example_consumer_group_id"))
-        .arg(Arg::with_name("log-conf")
-             .long("log-conf")
-             .help("Configure the logging format (example: 'rdkafka=trace')")
-             .takes_value(true))
-        .arg(Arg::with_name("topics")
-             .short("t")
-             .long("topics")
-             .help("Topic list")
-             .takes_value(true)
-             .multiple(true)
-             .required(true))
+        .arg(
+            Arg::with_name("brokers")
+                .short("b")
+                .long("brokers")
+                .help("Broker list in kafka format")
+                .takes_value(true)
+                .default_value("localhost:9092"),
+        )
+        .arg(
+            Arg::with_name("group-id")
+                .short("g")
+                .long("group-id")
+                .help("Consumer group id")
+                .takes_value(true)
+                .default_value("example_consumer_group_id"),
+        )
+        .arg(
+            Arg::with_name("log-conf")
+                .long("log-conf")
+                .help("Configure the logging format (example: 'rdkafka=trace')")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("topics")
+                .short("t")
+                .long("topics")
+                .help("Topic list")
+                .takes_value(true)
+                .multiple(true)
+                .required(true),
+        )
         .get_matches();
 
     setup_logger(true, matches.value_of("log-conf"));

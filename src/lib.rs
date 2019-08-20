@@ -215,14 +215,16 @@
 //#[global_allocator]
 //static A: System = System;
 
-#[macro_use] extern crate log;
-#[macro_use] extern crate serde_derive;
-extern crate serde_json;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate serde_derive;
 extern crate futures;
+extern crate serde_json;
 
 extern crate rdkafka_sys as rdsys;
 
-pub use crate::rdsys::types as types;
+pub use crate::rdsys::types;
 
 pub mod admin;
 pub mod client;

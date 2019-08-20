@@ -30,7 +30,7 @@ pub enum Offset {
     /// Offset not assigned or invalid.
     Invalid,
     /// A specific offset to consume from.
-    Offset(i64)
+    Offset(i64),
 }
 
 impl Offset {
@@ -41,7 +41,7 @@ impl Offset {
             OFFSET_END => Offset::End,
             OFFSET_STORED => Offset::Stored,
             OFFSET_INVALID => Offset::Invalid,
-            n => Offset::Offset(n)
+            n => Offset::Offset(n),
         }
     }
 
@@ -65,7 +65,10 @@ pub struct TopicPartitionListElem<'a> {
 }
 
 impl<'a> TopicPartitionListElem<'a> {
-    unsafe fn from_ptr(list: &'a TopicPartitionList, ptr: *mut RDKafkaTopicPartition) -> TopicPartitionListElem {
+    unsafe fn from_ptr(
+        list: &'a TopicPartitionList,
+        ptr: *mut RDKafkaTopicPartition,
+    ) -> TopicPartitionListElem {
         TopicPartitionListElem {
             ptr,
             _owner_list: list,
@@ -76,7 +79,9 @@ impl<'a> TopicPartitionListElem<'a> {
     pub fn topic(&self) -> &str {
         unsafe {
             let c_str = (*self.ptr).topic;
-            CStr::from_ptr(c_str).to_str().expect("Topic name is not UTF-8")
+            CStr::from_ptr(c_str)
+                .to_str()
+                .expect("Topic name is not UTF-8")
         }
     }
 
@@ -110,9 +115,9 @@ impl<'a> TopicPartitionListElem<'a> {
 
 impl<'a> PartialEq for TopicPartitionListElem<'a> {
     fn eq(&self, other: &TopicPartitionListElem<'a>) -> bool {
-        self.topic() == other.topic() &&
-            self.partition() == other.partition() &&
-            self.offset() == other.offset()
+        self.topic() == other.topic()
+            && self.partition() == other.partition()
+            && self.offset() == other.offset()
     }
 }
 
@@ -148,12 +153,13 @@ impl TopicPartitionList {
 
     /// Given a topic map, generates a new `TopicPartitionList`.
     pub fn from_topic_map(topic_map: &HashMap<(String, i32), Offset>) -> TopicPartitionList {
-        topic_map.iter()
-            .fold(TopicPartitionList::with_capacity(topic_map.len()),
-                |mut tpl, (&(ref topic_name, partition), offset)| {
-                    tpl.add_partition_offset(topic_name, partition, *offset);
-                    tpl
-                })
+        topic_map.iter().fold(
+            TopicPartitionList::with_capacity(topic_map.len()),
+            |mut tpl, (&(ref topic_name, partition), offset)| {
+                tpl.add_partition_offset(topic_name, partition, *offset);
+                tpl
+            },
+        )
     }
 
     /// Returns the pointer to the internal librdkafka structure.
@@ -183,7 +189,11 @@ impl TopicPartitionList {
     }
 
     /// Adds a topic and partition to the list.
-    pub fn add_partition<'a>(&'a mut self, topic: &str, partition: i32) -> TopicPartitionListElem<'a> {
+    pub fn add_partition<'a>(
+        &'a mut self,
+        topic: &str,
+        partition: i32,
+    ) -> TopicPartitionListElem<'a> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let tp_ptr = unsafe {
             rdsys::rd_kafka_topic_partition_list_add(self.ptr, topic_c.as_ptr(), partition)
@@ -195,18 +205,31 @@ impl TopicPartitionList {
     pub fn add_partition_range(&mut self, topic: &str, start_partition: i32, stop_partition: i32) {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         unsafe {
-            rdsys::rd_kafka_topic_partition_list_add_range(self.ptr, topic_c.as_ptr(),
-                start_partition, stop_partition);
+            rdsys::rd_kafka_topic_partition_list_add_range(
+                self.ptr,
+                topic_c.as_ptr(),
+                start_partition,
+                stop_partition,
+            );
         }
     }
 
     /// Sets the offset for an already created topic partition. It will fail if the topic partition
     /// isn't in the list.
-    pub fn set_partition_offset(&mut self, topic: &str, partition: i32, offset: Offset) -> KafkaResult<()> {
+    pub fn set_partition_offset(
+        &mut self,
+        topic: &str,
+        partition: i32,
+        offset: Offset,
+    ) -> KafkaResult<()> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let kafka_err = unsafe {
-            rdsys::rd_kafka_topic_partition_list_set_offset(self.ptr, topic_c.as_ptr(), partition,
-                offset.to_raw())
+            rdsys::rd_kafka_topic_partition_list_set_offset(
+                self.ptr,
+                topic_c.as_ptr(),
+                partition,
+                offset.to_raw(),
+            )
         };
 
         if kafka_err.is_error() {
@@ -219,7 +242,8 @@ impl TopicPartitionList {
     /// Adds a topic and partition to the list, with the specified offset.
     pub fn add_partition_offset(&mut self, topic: &str, partition: i32, offset: Offset) {
         self.add_partition(topic, partition);
-        self.set_partition_offset(topic, partition, offset).expect("Should never fail");
+        self.set_partition_offset(topic, partition, offset)
+            .expect("Should never fail");
     }
 
     /// Given a topic name and a partition number, returns the corresponding list element.
@@ -269,7 +293,8 @@ impl TopicPartitionList {
 
     /// Returns a hashmap-based representation of the list.
     pub fn to_topic_map(&self) -> HashMap<(String, i32), Offset> {
-        self.elements().iter()
+        self.elements()
+            .iter()
             .map(|elem| ((elem.topic().to_owned(), elem.partition()), elem.offset()))
             .collect()
     }
@@ -290,14 +315,13 @@ impl PartialEq for TopicPartitionList {
         if self.count() != other.count() {
             return false;
         }
-        self.elements().iter()
-            .all(|elem| {
-                if let Some(other_elem) = other.find_partition(elem.topic(), elem.partition()) {
-                    elem == &other_elem
-                } else {
-                    false
-                }
-            })
+        self.elements().iter().all(|elem| {
+            if let Some(other_elem) = other.find_partition(elem.topic(), elem.partition()) {
+                elem == &other_elem
+            } else {
+                false
+            }
+        })
     }
 }
 
@@ -311,7 +335,13 @@ impl fmt::Debug for TopicPartitionList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "TPL {{")?;
         for elem in self.elements() {
-            write!(f, "({}, {}): {:?}, ", elem.topic(), elem.partition(), elem.offset())?
+            write!(
+                f,
+                "({}, {}): {:?}, ",
+                elem.topic(),
+                elem.partition(),
+                elem.offset()
+            )?
         }
         write!(f, "}}")
     }
@@ -332,14 +362,22 @@ mod tests {
         tpl.add_partition("topic2", 0);
         tpl.add_partition("topic2", 1);
 
-        tpl.set_partition_offset("topic1", 0, Offset::Offset(0)).unwrap();
-        tpl.set_partition_offset("topic1", 1, Offset::Offset(1)).unwrap();
-        tpl.set_partition_offset("topic2", 0, Offset::Offset(2)).unwrap();
-        tpl.set_partition_offset("topic2", 1, Offset::Offset(3)).unwrap();
+        tpl.set_partition_offset("topic1", 0, Offset::Offset(0))
+            .unwrap();
+        tpl.set_partition_offset("topic1", 1, Offset::Offset(1))
+            .unwrap();
+        tpl.set_partition_offset("topic2", 0, Offset::Offset(2))
+            .unwrap();
+        tpl.set_partition_offset("topic2", 1, Offset::Offset(3))
+            .unwrap();
 
         assert_eq!(tpl.count(), 4);
-        assert!(tpl.set_partition_offset("topic0", 3, Offset::Offset(0)).is_err());
-        assert!(tpl.set_partition_offset("topic3", 0, Offset::Offset(0)).is_err());
+        assert!(tpl
+            .set_partition_offset("topic0", 3, Offset::Offset(0))
+            .is_err());
+        assert!(tpl
+            .set_partition_offset("topic3", 0, Offset::Offset(0))
+            .is_err());
 
         let tp0 = tpl.find_partition("topic1", 0).unwrap();
         let tp1 = tpl.find_partition("topic1", 1).unwrap();
@@ -369,11 +407,17 @@ mod tests {
 
         tpl.add_partition_range("topic1", 0, 3);
 
-        tpl.set_partition_offset("topic1", 0, Offset::Offset(0)).unwrap();
-        tpl.set_partition_offset("topic1", 1, Offset::Offset(1)).unwrap();
-        tpl.set_partition_offset("topic1", 2, Offset::Offset(2)).unwrap();
-        tpl.set_partition_offset("topic1", 3, Offset::Offset(3)).unwrap();
-        assert!(tpl.set_partition_offset("topic1", 4, Offset::Offset(2)).is_err());
+        tpl.set_partition_offset("topic1", 0, Offset::Offset(0))
+            .unwrap();
+        tpl.set_partition_offset("topic1", 1, Offset::Offset(1))
+            .unwrap();
+        tpl.set_partition_offset("topic1", 2, Offset::Offset(2))
+            .unwrap();
+        tpl.set_partition_offset("topic1", 3, Offset::Offset(3))
+            .unwrap();
+        assert!(tpl
+            .set_partition_offset("topic1", 4, Offset::Offset(2))
+            .is_err());
     }
 
     #[test]

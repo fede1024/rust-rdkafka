@@ -18,18 +18,17 @@
 //! - `statistics.interval.ms` (0 - disabled): how often the statistic callback specified in the `Context` will be called.
 //!
 
-use log::Level;
-use crate::rdsys::types::*;
 use crate::rdsys;
+use crate::rdsys::types::*;
+use log::Level;
 
 use crate::client::ClientContext;
-use crate::error::{KafkaError, KafkaResult, IsError};
+use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::util::ErrBuf;
 
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::mem;
-
 
 /// The log levels supported by librdkafka.
 #[derive(Copy, Clone, Debug)]
@@ -148,14 +147,24 @@ impl ClientConfig {
             let key_c = CString::new(key.to_string())?;
             let value_c = CString::new(value.to_string())?;
             let ret = unsafe {
-                rdsys::rd_kafka_conf_set(conf, key_c.as_ptr(), value_c.as_ptr(),
-                                         err_buf.as_mut_ptr(), err_buf.len())
+                rdsys::rd_kafka_conf_set(
+                    conf,
+                    key_c.as_ptr(),
+                    value_c.as_ptr(),
+                    err_buf.as_mut_ptr(),
+                    err_buf.len(),
+                )
             };
             if ret.is_error() {
-                return Err(KafkaError::ClientConfig(ret, err_buf.to_string(), key.to_string(), value.to_string()));
+                return Err(KafkaError::ClientConfig(
+                    ret,
+                    err_buf.to_string(),
+                    key.to_string(),
+                    value.to_string(),
+                ));
             }
         }
-        Ok(unsafe {NativeClientConfig::from_ptr(conf)})
+        Ok(unsafe { NativeClientConfig::from_ptr(conf) })
     }
 
     /// Uses the current configuration to create a new Consumer or Producer.
@@ -165,8 +174,10 @@ impl ClientConfig {
 
     /// Uses the current configuration and the provided context to create a new Consumer or Producer.
     pub fn create_with_context<C, T>(&self, context: C) -> KafkaResult<T>
-            where C: ClientContext,
-                  T: FromClientConfigAndContext<C> {
+    where
+        C: ClientContext,
+        T: FromClientConfigAndContext<C>,
+    {
         T::from_config_and_context(self, context)
     }
 }

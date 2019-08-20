@@ -1,14 +1,14 @@
-extern crate log;
-extern crate env_logger;
 extern crate chrono;
+extern crate env_logger;
+extern crate log;
 
 use self::chrono::prelude::*;
 
-use std::thread;
-use self::log::{Record, LevelFilter};
-use self::env_logger::Builder;
 use self::env_logger::fmt::Formatter;
+use self::env_logger::Builder;
+use self::log::{LevelFilter, Record};
 use std::io::Write;
+use std::thread;
 
 pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
     let output_format = move |formatter: &mut Formatter, record: &Record| {
@@ -20,11 +20,21 @@ pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
 
         let local_time: DateTime<Local> = Local::now();
         let time_str = local_time.format("%H:%M:%S%.3f").to_string();
-        write!(formatter, "{} {}{} - {} - {}", time_str, thread_name, record.level(), record.target(), record.args())
+        write!(
+            formatter,
+            "{} {}{} - {} - {}",
+            time_str,
+            thread_name,
+            record.level(),
+            record.target(),
+            record.args()
+        )
     };
 
     let mut builder = Builder::new();
-    builder.format(output_format).filter(None, LevelFilter::Info);
+    builder
+        .format(output_format)
+        .filter(None, LevelFilter::Info);
 
     rust_log.map(|conf| builder.parse_filters(conf));
 

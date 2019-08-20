@@ -81,7 +81,12 @@ impl MetadataTopic {
 
     /// Returns the partition metadata information for all the partitions.
     pub fn partitions(&self) -> &[MetadataPartition] {
-        unsafe { slice::from_raw_parts(self.0.partitions as *const MetadataPartition, self.0.partition_cnt as usize) }
+        unsafe {
+            slice::from_raw_parts(
+                self.0.partitions as *const MetadataPartition,
+                self.0.partition_cnt as usize,
+            )
+        }
     }
 
     /// Returns the metadata error, or None if there was no error.
@@ -120,12 +125,22 @@ impl Metadata {
 
     /// Returns the metadata information for all the brokers in the cluster.
     pub fn brokers(&self) -> &[MetadataBroker] {
-        unsafe { slice::from_raw_parts((*self.0).brokers as *const MetadataBroker, (*self.0).broker_cnt as usize) }
+        unsafe {
+            slice::from_raw_parts(
+                (*self.0).brokers as *const MetadataBroker,
+                (*self.0).broker_cnt as usize,
+            )
+        }
     }
 
     /// Returns the metadata information for all the topics in the cluster.
     pub fn topics(&self) -> &[MetadataTopic] {
-        unsafe { slice::from_raw_parts((*self.0).topics as *const MetadataTopic, (*self.0).topic_cnt as usize) }
+        unsafe {
+            slice::from_raw_parts(
+                (*self.0).topics as *const MetadataTopic,
+                (*self.0).topic_cnt as usize,
+            )
+        }
     }
 }
 

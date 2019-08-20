@@ -5,13 +5,13 @@
 
 use crate::client::{ClientContext, DefaultClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
+use crate::error::{KafkaError, KafkaResult, RDKafkaError};
+use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
 use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
 use crate::statistics::Statistics;
-use crate::error::{KafkaError, KafkaResult, RDKafkaError};
-use crate::message::{Message, OwnedMessage, Timestamp, OwnedHeaders, ToBytes};
 use crate::util::IntoOpaque;
 
-use futures::{self, Canceled, Complete, Future, Poll, Oneshot};
+use futures::{self, Canceled, Complete, Future, Oneshot, Poll};
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -51,7 +51,9 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
         }
     }
 
-    fn from_base_record<D: IntoOpaque>(base_record: BaseRecord<'a, K, P, D>) -> FutureRecord<'a, K, P> {
+    fn from_base_record<D: IntoOpaque>(
+        base_record: BaseRecord<'a, K, P, D>,
+    ) -> FutureRecord<'a, K, P> {
         FutureRecord {
             topic: base_record.topic,
             partition: base_record.partition,
@@ -146,7 +148,6 @@ impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
     }
 }
 
-
 /// A producer that returns a `Future` for every message being produced.
 ///
 /// Since message production in rdkafka is asynchronous, the caller cannot immediately know if the
@@ -162,7 +163,9 @@ pub struct FutureProducer<C: ClientContext + 'static = DefaultClientContext> {
 
 impl<C: ClientContext + 'static> Clone for FutureProducer<C> {
     fn clone(&self) -> FutureProducer<C> {
-        FutureProducer { producer: self.producer.clone() }
+        FutureProducer {
+            producer: self.producer.clone(),
+        }
     }
 }
 
@@ -173,10 +176,17 @@ impl FromClientConfig for FutureProducer {
 }
 
 impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
-        let future_context = FutureProducerContext { wrapped_context: context };
+    fn from_config_and_context(
+        config: &ClientConfig,
+        context: C,
+    ) -> KafkaResult<FutureProducer<C>> {
+        let future_context = FutureProducerContext {
+            wrapped_context: context,
+        };
         let threaded_producer = ThreadedProducer::from_config_and_context(config, future_context)?;
-        Ok(FutureProducer { producer: Arc::new(threaded_producer) })
+        Ok(FutureProducer {
+            producer: Arc::new(threaded_producer),
+        })
     }
 }
 
@@ -204,8 +214,10 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     /// If `block_ms` is reached and the queue is still full, a [RDKafkaError::QueueFull] will be
     /// reported in the [DeliveryFuture].
     pub fn send<K, P>(&self, record: FutureRecord<K, P>, block_ms: i64) -> DeliveryFuture
-        where K: ToBytes + ?Sized,
-              P: ToBytes + ?Sized {
+    where
+        K: ToBytes + ?Sized,
+        P: ToBytes + ?Sized,
+    {
         let start_time = Instant::now();
 
         let (tx, rx) = futures::oneshot();
@@ -218,17 +230,21 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
                     base_record = record;
                     if block_ms == -1 {
                         continue;
-                    } else if block_ms > 0 && start_time.elapsed() < Duration::from_millis(block_ms as u64) {
+                    } else if block_ms > 0
+                        && start_time.elapsed() < Duration::from_millis(block_ms as u64)
+                    {
                         self.poll(Duration::from_millis(100));
                         continue;
                     }
-                },
+                }
                 Err((e, record)) => {
                     let owned_message = OwnedMessage::new(
                         record.payload.map(|p| p.to_bytes().to_vec()),
                         record.key.map(|k| k.to_bytes().to_vec()),
                         record.topic.to_owned(),
-                        record.timestamp.map_or(Timestamp::NotAvailable, Timestamp::CreateTime),
+                        record
+                            .timestamp
+                            .map_or(Timestamp::NotAvailable, Timestamp::CreateTime),
                         record.partition.unwrap_or(-1),
                         0,
                         record.headers,
@@ -242,12 +258,18 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
 
     /// Same as [FutureProducer::send], with the only difference that if enqueuing fails, an
     /// error will be returned immediately, alongside the [FutureRecord] provided.
-    pub fn send_result<'a, K, P>(&self, record: FutureRecord<'a, K, P>) -> Result<DeliveryFuture, (KafkaError, FutureRecord<'a, K, P>)>
-    where K: ToBytes + ?Sized,
-          P: ToBytes + ?Sized {
+    pub fn send_result<'a, K, P>(
+        &self,
+        record: FutureRecord<'a, K, P>,
+    ) -> Result<DeliveryFuture, (KafkaError, FutureRecord<'a, K, P>)>
+    where
+        K: ToBytes + ?Sized,
+        P: ToBytes + ?Sized,
+    {
         let (tx, rx) = futures::oneshot();
         let base_record = record.into_base_record(Box::new(tx));
-        self.producer.send(base_record)
+        self.producer
+            .send(base_record)
             .map(|()| DeliveryFuture { rx })
             .map_err(|(e, record)| (e, FutureRecord::from_base_record(record)))
     }

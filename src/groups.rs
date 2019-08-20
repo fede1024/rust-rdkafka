@@ -3,8 +3,8 @@ use crate::rdsys;
 use crate::rdsys::types::*;
 
 use std::ffi::CStr;
-use std::slice;
 use std::fmt;
+use std::slice;
 
 /// Group member information container.
 pub struct GroupMemberInfo(RDKafkaGroupMemberInfo);
@@ -13,7 +13,8 @@ impl GroupMemberInfo {
     /// Return the id of the member.
     pub fn id(&self) -> &str {
         unsafe {
-            CStr::from_ptr(self.0.member_id).to_str()
+            CStr::from_ptr(self.0.member_id)
+                .to_str()
                 .expect("Member id is not a valid UTF-8 string")
         }
     }
@@ -21,7 +22,8 @@ impl GroupMemberInfo {
     /// Return the client id of the member.
     pub fn client_id(&self) -> &str {
         unsafe {
-            CStr::from_ptr(self.0.client_id).to_str()
+            CStr::from_ptr(self.0.client_id)
+                .to_str()
                 .expect("Client id is not a valid UTF-8 string")
         }
     }
@@ -29,7 +31,8 @@ impl GroupMemberInfo {
     /// Return the client host of the member.
     pub fn client_host(&self) -> &str {
         unsafe {
-            CStr::from_ptr(self.0.client_host).to_str()
+            CStr::from_ptr(self.0.client_host)
+                .to_str()
                 .expect("Member host is not a valid UTF-8 string")
         }
     }
@@ -40,7 +43,10 @@ impl GroupMemberInfo {
             if self.0.member_metadata.is_null() {
                 None
             } else {
-                Some(slice::from_raw_parts::<u8>(self.0.member_metadata as *const u8, self.0.member_metadata_size as usize))
+                Some(slice::from_raw_parts::<u8>(
+                    self.0.member_metadata as *const u8,
+                    self.0.member_metadata_size as usize,
+                ))
             }
         }
     }
@@ -51,7 +57,10 @@ impl GroupMemberInfo {
             if self.0.member_assignment.is_null() {
                 None
             } else {
-                Some(slice::from_raw_parts::<u8>(self.0.member_assignment as *const u8, self.0.member_assignment_size as usize))
+                Some(slice::from_raw_parts::<u8>(
+                    self.0.member_assignment as *const u8,
+                    self.0.member_assignment_size as usize,
+                ))
             }
         }
     }
@@ -64,20 +73,27 @@ impl GroupInfo {
     /// Return the name of the group.
     pub fn name(&self) -> &str {
         unsafe {
-            CStr::from_ptr(self.0.group).to_str()
+            CStr::from_ptr(self.0.group)
+                .to_str()
                 .expect("Group name is not a valid UTF-8 string")
         }
     }
 
     /// Returns the members of the group.
     pub fn members(&self) -> &[GroupMemberInfo] {
-        unsafe { slice::from_raw_parts(self.0.members as *const GroupMemberInfo, self.0.member_cnt as usize) }
+        unsafe {
+            slice::from_raw_parts(
+                self.0.members as *const GroupMemberInfo,
+                self.0.member_cnt as usize,
+            )
+        }
     }
 
     /// Returns the state of the group.
     pub fn state(&self) -> &str {
         unsafe {
-            CStr::from_ptr(self.0.state).to_str()
+            CStr::from_ptr(self.0.state)
+                .to_str()
                 .expect("State is not a valid UTF-8 string")
         }
     }
@@ -85,7 +101,8 @@ impl GroupInfo {
     /// Returns the protocol of the group.
     pub fn protocol(&self) -> &str {
         unsafe {
-            CStr::from_ptr(self.0.protocol).to_str()
+            CStr::from_ptr(self.0.protocol)
+                .to_str()
                 .expect("Protocol name is not a valid UTF-8 string")
         }
     }
@@ -93,7 +110,8 @@ impl GroupInfo {
     /// Returns the protocol type of the group.
     pub fn protocol_type(&self) -> &str {
         unsafe {
-            CStr::from_ptr(self.0.protocol_type).to_str()
+            CStr::from_ptr(self.0.protocol_type)
+                .to_str()
                 .expect("Protocol type is not a valid UTF-8 string")
         }
     }
@@ -117,7 +135,12 @@ impl GroupList {
 
     /// Returns all the groups in the list.
     pub fn groups(&self) -> &[GroupInfo] {
-        unsafe { slice::from_raw_parts((*self.0).groups as *const GroupInfo, (*self.0).group_cnt as usize) }
+        unsafe {
+            slice::from_raw_parts(
+                (*self.0).groups as *const GroupInfo,
+                (*self.0).group_cnt as usize,
+            )
+        }
     }
 }
 

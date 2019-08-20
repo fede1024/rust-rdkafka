@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 /// Statistics from librdkafka. Refer to the [librdkafka documentation](https://github.com/edenhill/librdkafka/wiki/Statistics)
 /// for details.
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Statistics {
     pub name: String,
     #[serde(rename = "type")]
@@ -20,10 +20,10 @@ pub struct Statistics {
     pub simple_cnt: i64,
     pub brokers: HashMap<String, Broker>,
     pub topics: HashMap<String, Topic>,
-    pub cgrp: Option<ConsumerGroup>
+    pub cgrp: Option<ConsumerGroup>,
 }
 
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Broker {
     pub name: String,
     pub nodeid: i32,
@@ -49,32 +49,32 @@ pub struct Broker {
     pub int_latency: Option<Window>,
     pub rtt: Option<Window>,
     pub throttle: Option<Window>,
-    pub toppars: HashMap<String, TopicPartition>
+    pub toppars: HashMap<String, TopicPartition>,
 }
 
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Window {
     pub min: i64,
     pub max: i64,
     pub avg: i64,
     pub sum: i64,
-    pub cnt: i64
+    pub cnt: i64,
 }
 
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 pub struct TopicPartition {
     pub topic: String,
-    pub partition: i32
+    pub partition: i32,
 }
 
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Topic {
     pub topic: String,
     pub metadata_age: i64,
-    pub partitions: HashMap<i32, Partition>
+    pub partitions: HashMap<i32, Partition>,
 }
 
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Partition {
     pub partition: i32,
     pub leader: i32,
@@ -99,20 +99,20 @@ pub struct Partition {
     pub txmsgs: i64,
     pub txbytes: i64,
     pub msgs: i64,
-    pub rx_ver_drops: i64
+    pub rx_ver_drops: i64,
 }
 
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 pub struct ConsumerGroup {
     pub rebalance_age: i64,
     pub rebalance_cnt: i64,
-    pub assignment_size: i32
+    pub assignment_size: i32,
 }
 
 #[cfg(test)]
 mod tests {
-    use serde_json;
     use super::*;
+    use serde_json;
 
     #[test]
     fn test_statistics() {

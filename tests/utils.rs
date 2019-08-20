@@ -1,8 +1,8 @@
 #![allow(dead_code)]
-extern crate rdkafka;
-extern crate rand;
-extern crate regex;
 extern crate futures;
+extern crate rand;
+extern crate rdkafka;
+extern crate regex;
 
 use futures::*;
 use rand::Rng;
@@ -10,8 +10,8 @@ use regex::Regex;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::ClientConfig;
-use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::message::ToBytes;
+use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::statistics::Statistics;
 
 use std::collections::HashMap;
@@ -55,15 +55,24 @@ pub fn get_broker_version() -> KafkaVersion {
             let regex = Regex::new(r"^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?$").unwrap();
             match regex.captures(&v) {
                 Some(captures) => {
-                    let extract = |i| captures.get(i).map(|m| m.as_str().parse().unwrap()).unwrap_or(0);
+                    let extract = |i| {
+                        captures
+                            .get(i)
+                            .map(|m| m.as_str().parse().unwrap())
+                            .unwrap_or(0)
+                    };
                     KafkaVersion(extract(1), extract(2), extract(3), extract(4))
-                },
-                None => panic!("KAFKA_VERSION env var was not in expected [n[.n[.n[.n]]]] format")
+                }
+                None => panic!("KAFKA_VERSION env var was not in expected [n[.n[.n[.n]]]] format"),
             }
-        },
-        Err(VarError::NotUnicode(_)) => panic!("KAFKA_VERSION env var contained non-unicode characters"),
+        }
+        Err(VarError::NotUnicode(_)) => {
+            panic!("KAFKA_VERSION env var contained non-unicode characters")
+        }
         // If the environment variable is unset, assume we're running the latest version.
-        Err(VarError::NotPresent) => KafkaVersion(std::u32::MAX, std::u32::MAX, std::u32::MAX, std::u32::MAX),
+        Err(VarError::NotPresent) => {
+            KafkaVersion(std::u32::MAX, std::u32::MAX, std::u32::MAX, std::u32::MAX)
+        }
     }
 }
 
@@ -119,7 +128,8 @@ where
                     timestamp,
                     headers: None,
                 },
-                1000);
+                1000,
+            );
             (id, future)
         })
         .collect::<Vec<_>>();
@@ -135,7 +145,6 @@ where
 
     message_map
 }
-
 
 pub fn value_fn(id: i32) -> String {
     format!("Message {}", id)

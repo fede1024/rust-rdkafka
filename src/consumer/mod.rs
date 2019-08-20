@@ -44,11 +44,8 @@ pub trait ConsumerContext: ClientContext {
         err: RDKafkaRespErr,
         tpl: &mut TopicPartitionList,
     ) {
-
         let rebalance = match err {
-            RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-                Rebalance::Assign(tpl)
-            }
+            RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => Rebalance::Assign(tpl),
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke,
             _ => {
                 let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(err)) };
@@ -66,8 +63,9 @@ pub trait ConsumerContext: ClientContext {
             match err {
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
                     rdsys::rd_kafka_assign(native_client.ptr(), tpl.ptr());
-                },
-                _ => {  // Also for RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS
+                }
+                _ => {
+                    // Also for RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS
                     rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
                 }
             }
@@ -119,7 +117,7 @@ pub enum CommitMode {
 ///
 /// If there's still the need to erase the type, the generic methods can still be reached through
 /// the [`get_base_consumer`](#method.get_base_consumer) method.
-pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
+pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// Returns a reference to the BaseConsumer.
     fn get_base_consumer(&self) -> &BaseConsumer<C>;
 
@@ -144,7 +142,11 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     /// Commits the offset of the specified message. The commit can be sync (blocking), or async.
     /// Notice that when a specific offset is committed, all the previous offsets are considered
     /// committed as well. Use this method only if you are processing messages in order.
-    fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) -> KafkaResult<()> {
+    fn commit(
+        &self,
+        topic_partition_list: &TopicPartitionList,
+        mode: CommitMode,
+    ) -> KafkaResult<()> {
         self.get_base_consumer().commit(topic_partition_list, mode)
     }
 
@@ -194,7 +196,11 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     }
 
     /// Retrieve committed offsets for specified topics and partitions.
-    fn committed_offsets<T>(&self, tpl: TopicPartitionList, timeout: T) -> KafkaResult<TopicPartitionList>
+    fn committed_offsets<T>(
+        &self,
+        tpl: TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList>
     where
         T: Into<Option<Duration>>,
     {
@@ -202,8 +208,11 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     }
 
     /// Lookup the offsets for this consumer's partitions by timestamp.
-    fn offsets_for_timestamp<T>(&self, timestamp: i64, timeout: T)
-        -> KafkaResult<TopicPartitionList>
+    fn offsets_for_timestamp<T>(
+        &self,
+        timestamp: i64,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList>
     where
         T: Into<Option<Duration>>,
         Self: Sized,
@@ -213,8 +222,11 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
     }
 
     /// Look up the offsets for the specified partitions by timestamp.
-    fn offsets_for_times<T>(&self, timestamps: TopicPartitionList, timeout: T)
-                            -> KafkaResult<TopicPartitionList>
+    fn offsets_for_times<T>(
+        &self,
+        timestamps: TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList>
     where
         T: Into<Option<Duration>>,
         Self: Sized,
@@ -235,13 +247,16 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
         T: Into<Option<Duration>>,
         Self: Sized,
     {
-        self.get_base_consumer()
-            .fetch_metadata(topic, timeout)
+        self.get_base_consumer().fetch_metadata(topic, timeout)
     }
 
     /// Returns the metadata information for all the topics in the cluster.
-    fn fetch_watermarks<T>(&self, topic: &str, partition: i32, timeout: T)
-        -> KafkaResult<(i64, i64)>
+    fn fetch_watermarks<T>(
+        &self,
+        topic: &str,
+        partition: i32,
+        timeout: T,
+    ) -> KafkaResult<(i64, i64)>
     where
         T: Into<Option<Duration>>,
         Self: Sized,
@@ -257,7 +272,6 @@ pub trait Consumer<C: ConsumerContext=DefaultConsumerContext> {
         T: Into<Option<Duration>>,
         Self: Sized,
     {
-        self.get_base_consumer()
-            .fetch_group_list(group, timeout)
+        self.get_base_consumer().fetch_group_list(group, timeout)
     }
 }
