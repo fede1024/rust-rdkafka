@@ -35,6 +35,16 @@ impl Timeout {
     }
 }
 
+impl std::ops::SubAssign for Timeout {
+    fn sub_assign(&mut self, other: Self) {
+        match (self, other) {
+            (Timeout::After(lhs), Timeout::After(rhs)) => *lhs -= rhs,
+            (Timeout::Never, Timeout::After(_)) => (),
+            _ => panic!("subtraction of Timeout::Never is ill-defined"),
+        }
+    }
+}
+
 impl From<Duration> for Timeout {
     fn from(d: Duration) -> Timeout {
         Timeout::After(d)

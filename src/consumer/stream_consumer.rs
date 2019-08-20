@@ -9,7 +9,7 @@ use crate::consumer::base_consumer::BaseConsumer;
 use crate::consumer::{Consumer, ConsumerContext, DefaultConsumerContext};
 use crate::error::{KafkaError, KafkaResult};
 use crate::message::BorrowedMessage;
-use crate::util::duration_to_millis;
+use crate::util::Timeout;
 
 use std::ptr;
 use std::sync::{Arc, Mutex};
@@ -109,10 +109,9 @@ fn poll_loop<C: ConsumerContext>(
 ) {
     trace!("Polling thread loop started");
     let mut curr_sender = sender;
-    let poll_interval_ms = duration_to_millis(poll_interval) as i32;
     while !should_stop.load(Ordering::Relaxed) {
         trace!("Polling base consumer");
-        let future_sender = match consumer.poll_raw(poll_interval_ms) {
+        let future_sender = match consumer.poll_raw(Timeout::After(poll_interval)) {
             None => {
                 if send_none {
                     curr_sender.send(None)

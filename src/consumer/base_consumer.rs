@@ -13,6 +13,7 @@ use crate::topic_partition_list::TopicPartitionList;
 use crate::topic_partition_list::Offset::Offset;
 use crate::util::{cstr_to_owned, Timeout};
 
+use std::cmp;
 use std::os::raw::c_void;
 use std::str;
 use std::mem;
@@ -61,6 +62,7 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
 /// to make progress on rebalance, callbacks and to receive messages.
 pub struct BaseConsumer<C: ConsumerContext= DefaultConsumerContext> {
     client: Client<C>,
+    main_queue_min_poll_interval: Timeout,
 }
 
 impl FromClientConfig for BaseConsumer {
@@ -77,21 +79,30 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
             rdsys::rd_kafka_conf_set_rebalance_cb(native_config.ptr(), Some(native_rebalance_cb::<C>));
             rdsys::rd_kafka_conf_set_offset_commit_cb(native_config.ptr(), Some(native_commit_cb::<C>));
         }
+        let main_queue_min_poll_interval = context.main_queue_min_poll_interval();
         let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context)?;
-        unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
-        Ok(BaseConsumer { client })
+        Ok(BaseConsumer {
+            client,
+            main_queue_min_poll_interval,
+        })
     }
 }
 
 impl<C: ConsumerContext> BaseConsumer<C> {
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
     /// This method is for internal use only. Use poll instead.
-    pub(crate) fn poll_raw(&self, timeout_ms: i32) -> Option<*mut RDKafkaMessage> {
-        let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
-        if message_ptr.is_null() {
-            None
-        } else {
-            Some(message_ptr)
+    pub(crate) fn poll_raw(&self, mut timeout: Timeout) -> Option<*mut RDKafkaMessage> {
+        loop {
+            unsafe { rdsys::rd_kafka_poll(self.client.native_ptr(), 0) };
+            let op_timeout = cmp::min(timeout, self.main_queue_min_poll_interval);
+            let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), op_timeout.as_millis()) };
+            if !message_ptr.is_null() {
+                break Some(message_ptr)
+            }
+            if op_timeout >= timeout {
+                break None
+            }
+            timeout -= op_timeout;
         }
     }
 
@@ -111,7 +122,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     pub fn poll<T: Into<Timeout>>(&self, timeout: T)
         -> Option<KafkaResult<BorrowedMessage>>
     {
-        self.poll_raw(timeout.into().as_millis())
+        self.poll_raw(timeout.into())
             .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
     }
 

@@ -17,6 +17,7 @@ use crate::metadata::Metadata;
 use crate::util::{cstr_to_owned, Timeout};
 
 use std::ptr;
+use std::time::Duration;
 
 use crate::topic_partition_list::TopicPartitionList;
 
@@ -90,6 +91,24 @@ pub trait ConsumerContext: ClientContext {
     /// offset store.
     #[allow(unused_variables)]
     fn commit_callback(&self, result: KafkaResult<()>, offsets: *mut RDKafkaTopicPartitionList) {}
+
+    /// Returns the minimum interval at which to poll the main queue, which
+    /// services the logging, stats, and error callbacks.
+    ///
+    /// The main queue is polled once whenever [`Consumer.poll`] is called. If
+    /// `Consumer.poll` is called with a timeout that is larger than this
+    /// interval, then the main queue will be polled at that interval while the
+    /// consumer queue is blocked.
+    ///
+    /// For example, if the main queue's minimum poll interval is 200ms and
+    /// `Consumer.poll` is called with a timeout of 1s, then `Consumer.poll` may
+    /// block for up to 1s waiting for a message, but it will poll the main
+    /// queue every 200ms while it is waiting.
+    ///
+    /// By default, the minimum poll interval for the main queue is 1s.
+    fn main_queue_min_poll_interval(&self) -> Timeout {
+        Timeout::After(Duration::from_secs(1))
+    }
 }
 
 /// An empty consumer context that can be user when no context is needed.
