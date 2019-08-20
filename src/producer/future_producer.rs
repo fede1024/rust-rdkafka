@@ -9,7 +9,7 @@ use crate::error::{KafkaError, KafkaResult, RDKafkaError};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
 use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
 use crate::statistics::Statistics;
-use crate::util::IntoOpaque;
+use crate::util::{IntoOpaque, Timeout};
 
 use futures::{self, Canceled, Complete, Future, Oneshot, Poll};
 
@@ -276,12 +276,12 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
 
     /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
     /// a thread dedicated to calling `poll` regularly.
-    pub fn poll<T: Into<Option<Duration>>>(&self, timeout: T) {
+    pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.poll(timeout);
     }
 
     /// Flushes the producer. Should be called before termination.
-    pub fn flush<T: Into<Option<Duration>>>(&self, timeout: T) {
+    pub fn flush<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.flush(timeout);
     }
 

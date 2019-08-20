@@ -14,10 +14,9 @@ use crate::error::KafkaResult;
 use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
-use crate::util::cstr_to_owned;
+use crate::util::{cstr_to_owned, Timeout};
 
 use std::ptr;
-use std::time::Duration;
 
 use crate::topic_partition_list::{Offset, TopicPartitionList};
 
@@ -142,10 +141,13 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// Seek to `offset` for the specified `topic` and `partition`. After a
     /// successful call to `seek`, the next poll of the consumer will return the
     /// message with `offset`.
-    fn seek<T>(&self, topic: &str, partition: i32, offset: Offset, timeout: T) -> KafkaResult<()>
-    where
-        T: Into<Option<Duration>>,
-    {
+    fn seek<T: Into<Timeout>>(
+        &self,
+        topic: &str,
+        partition: i32,
+        offset: Offset,
+        timeout: T,
+    ) -> KafkaResult<()> {
         self.get_base_consumer()
             .seek(topic, partition, offset, timeout)
     }
@@ -200,7 +202,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// Retrieve committed offsets for topics and partitions.
     fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer().committed(timeout)
@@ -213,7 +215,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         timeout: T,
     ) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
     {
         self.get_base_consumer().committed_offsets(tpl, timeout)
     }
@@ -225,7 +227,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         timeout: T,
     ) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -239,7 +241,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         timeout: T,
     ) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -255,7 +257,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// if no topic is specified.
     fn fetch_metadata<T>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer().fetch_metadata(topic, timeout)
@@ -269,7 +271,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         timeout: T,
     ) -> KafkaResult<(i64, i64)>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -280,7 +282,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// specified, all groups will be returned.
     fn fetch_group_list<T>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer().fetch_group_list(group, timeout)

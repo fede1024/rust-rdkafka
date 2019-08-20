@@ -10,13 +10,11 @@ use crate::groups::GroupList;
 use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{cstr_to_owned, timeout_to_ms};
+use crate::util::{cstr_to_owned, Timeout};
 
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
-use std::str;
-use std::time::Duration;
 
 pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     _conf: *mut RDKafka,
@@ -119,11 +117,8 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// # Lifetime
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
-    pub fn poll<T: Into<Option<Duration>>>(
-        &self,
-        timeout: T,
-    ) -> Option<KafkaResult<BorrowedMessage>> {
-        self.poll_raw(timeout_to_ms(timeout))
+    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage>> {
+        self.poll_raw(timeout.into().as_millis())
             .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
     }
 
@@ -207,17 +202,20 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         Ok(())
     }
 
-    fn seek<T>(&self, topic: &str, partition: i32, offset: Offset, timeout: T) -> KafkaResult<()>
-    where
-        T: Into<Option<Duration>>,
-    {
+    fn seek<T: Into<Timeout>>(
+        &self,
+        topic: &str,
+        partition: i32,
+        offset: Offset,
+        timeout: T,
+    ) -> KafkaResult<()> {
         let topic = self.client.native_topic(topic)?;
         let ret_code = unsafe {
             rdsys::rd_kafka_seek(
                 topic.ptr(),
                 partition,
                 offset.to_raw(),
-                timeout_to_ms(timeout),
+                timeout.into().as_millis(),
             )
         };
         if ret_code.is_error() {
@@ -310,7 +308,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
-    fn committed<T: Into<Option<Duration>>>(&self, timeout: T) -> KafkaResult<TopicPartitionList> {
+    fn committed<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
         let assignment_error =
             unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
@@ -321,13 +319,17 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         self.committed_offsets(unsafe { TopicPartitionList::from_ptr(tpl_ptr) }, timeout)
     }
 
-    fn committed_offsets<T: Into<Option<Duration>>>(
+    fn committed_offsets<T: Into<Timeout>>(
         &self,
         tpl: TopicPartitionList,
         timeout: T,
     ) -> KafkaResult<TopicPartitionList> {
         let committed_error = unsafe {
-            rdsys::rd_kafka_committed(self.client.native_ptr(), tpl.ptr(), timeout_to_ms(timeout))
+            rdsys::rd_kafka_committed(
+                self.client.native_ptr(),
+                tpl.ptr(),
+                timeout.into().as_millis(),
+            )
         };
 
         if committed_error.is_error() {
@@ -337,7 +339,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
-    fn offsets_for_timestamp<T: Into<Option<Duration>>>(
+    fn offsets_for_timestamp<T: Into<Timeout>>(
         &self,
         timestamp: i64,
         timeout: T,
@@ -359,7 +361,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     /**
      * `timestamps` is a `TopicPartitionList` with timestamps instead of offsets.
      */
-    fn offsets_for_times<T: Into<Option<Duration>>>(
+    fn offsets_for_times<T: Into<Timeout>>(
         &self,
         timestamps: TopicPartitionList,
         timeout: T,
@@ -369,7 +371,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
             rdsys::rd_kafka_offsets_for_times(
                 self.client.native_ptr(),
                 timestamps.ptr(),
-                timeout_to_ms(timeout),
+                timeout.into().as_millis(),
             )
         };
 
@@ -395,7 +397,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
-    fn fetch_metadata<T: Into<Option<Duration>>>(
+    fn fetch_metadata<T: Into<Timeout>>(
         &self,
         topic: Option<&str>,
         timeout: T,
@@ -403,7 +405,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         self.client.fetch_metadata(topic, timeout)
     }
 
-    fn fetch_watermarks<T: Into<Option<Duration>>>(
+    fn fetch_watermarks<T: Into<Timeout>>(
         &self,
         topic: &str,
         partition: i32,
@@ -412,7 +414,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         self.client.fetch_watermarks(topic, partition, timeout)
     }
 
-    fn fetch_group_list<T: Into<Option<Duration>>>(
+    fn fetch_group_list<T: Into<Timeout>>(
         &self,
         group: Option<&str>,
         timeout: T,

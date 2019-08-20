@@ -115,9 +115,7 @@ impl fmt::Debug for KafkaError {
             KafkaError::PauseResume(ref err) => {
                 write!(f, "KafkaError (Pause/resume error: {})", err)
             }
-            KafkaError::Seek(ref err) => {
-                write!(f, "KafkaError (Seek error: {})", err)
-            }
+            KafkaError::Seek(ref err) => write!(f, "KafkaError (Seek error: {})", err),
             KafkaError::SetPartitionOffset(err) => {
                 write!(f, "KafkaError (Set partition offset error: {})", err)
             }

@@ -170,7 +170,9 @@ fn test_produce_consume_seek() {
         }
     }
 
-    consumer.seek(&topic_name, 0, Offset::Offset(1), None).unwrap();
+    consumer
+        .seek(&topic_name, 0, Offset::Offset(1), None)
+        .unwrap();
 
     for (i, message) in consumer.iter().take(3).enumerate() {
         match message {
