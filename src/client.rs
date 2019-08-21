@@ -278,6 +278,17 @@ impl<C: ClientContext> Client<C> {
     pub(crate) fn new_native_queue(&self) -> NativeQueue {
         unsafe { NativeQueue::from_ptr(rdsys::rd_kafka_queue_new(self.native_ptr())) }
     }
+
+    pub(crate) fn consumer_queue(&self) -> Option<NativeQueue> {
+        unsafe {
+            let ptr = rdsys::rd_kafka_queue_get_consumer(self.native_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(NativeQueue::from_ptr(ptr))
+            }
+        }
+    }
 }
 
 pub(crate) struct NativeTopic {

@@ -107,6 +107,10 @@ pub trait ConsumerContext: ClientContext {
     fn main_queue_min_poll_interval(&self) -> Timeout {
         Timeout::After(Duration::from_secs(1))
     }
+
+    /// Message queue nonempty callback. This method will run when the
+    /// consumer's message queue switches from empty to nonempty.
+    fn message_queue_nonempty_callback(&self) {}
 }
 
 /// An empty consumer context that can be user when no context is needed.
