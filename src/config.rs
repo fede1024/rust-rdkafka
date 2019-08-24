@@ -18,7 +18,7 @@
 //! - `statistics.interval.ms` (0 - disabled): how often the statistic callback specified in the `Context` will be called.
 //!
 
-use log::LogLevel;
+use log::Level;
 use crate::rdsys::types::*;
 use crate::rdsys;
 
@@ -34,21 +34,21 @@ use std::mem;
 /// The log levels supported by librdkafka.
 #[derive(Copy, Clone, Debug)]
 pub enum RDKafkaLogLevel {
-    /// Higher priority then LogLevel::Error from the log crate.
+    /// Higher priority then Level::Error from the log crate.
     Emerg = 0,
-    /// Higher priority then LogLevel::Error from the log crate.
+    /// Higher priority then Level::Error from the log crate.
     Alert = 1,
-    /// Higher priority then LogLevel::Error from the log crate.
+    /// Higher priority then Level::Error from the log crate.
     Critical = 2,
-    /// Equivalent to LogLevel::Error from the log crate.
+    /// Equivalent to Level::Error from the log crate.
     Error = 3,
-    /// Equivalent to LogLevel::Warning from the log crate.
+    /// Equivalent to Level::Warning from the log crate.
     Warning = 4,
-    /// Higher priority then LogLevel::Info from the log crate.
+    /// Higher priority then Level::Info from the log crate.
     Notice = 5,
-    /// Equivalent to LogLevel::Info from the log crate.
+    /// Equivalent to Level::Info from the log crate.
     Info = 6,
-    /// Equivalent to LogLevel::Debug from the log crate.
+    /// Equivalent to Level::Debug from the log crate.
     Debug = 7,
 }
 
@@ -173,11 +173,11 @@ impl ClientConfig {
 
 /// Return the log level
 fn log_level_from_global_config() -> RDKafkaLogLevel {
-    if log_enabled!(target: "librdkafka", LogLevel::Debug) {
+    if log_enabled!(target: "librdkafka", Level::Debug) {
         RDKafkaLogLevel::Debug
-    } else if log_enabled!(target: "librdkafka", LogLevel::Info) {
+    } else if log_enabled!(target: "librdkafka", Level::Info) {
         RDKafkaLogLevel::Info
-    } else if log_enabled!(target: "librdkafka", LogLevel::Warn) {
+    } else if log_enabled!(target: "librdkafka", Level::Warn) {
         RDKafkaLogLevel::Warning
     } else {
         RDKafkaLogLevel::Error

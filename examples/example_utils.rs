@@ -5,11 +5,13 @@ extern crate chrono;
 use self::chrono::prelude::*;
 
 use std::thread;
-use self::log::{LogRecord, LogLevelFilter};
-use self::env_logger::LogBuilder;
+use self::log::{Record, LevelFilter};
+use self::env_logger::Builder;
+use self::env_logger::fmt::Formatter;
+use std::io::Write;
 
 pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
-    let output_format = move |record: &LogRecord| {
+    let output_format = move |formatter: &mut Formatter, record: &Record| {
         let thread_name = if log_thread {
             format!("(t: {}) ", thread::current().name().unwrap_or("unknown"))
         } else {
@@ -18,15 +20,15 @@ pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
 
         let local_time: DateTime<Local> = Local::now();
         let time_str = local_time.format("%H:%M:%S%.3f").to_string();
-        format!("{} {}{} - {} - {}", time_str, thread_name, record.level(), record.target(), record.args())
+        write!(formatter, "{} {}{} - {} - {}", time_str, thread_name, record.level(), record.target(), record.args())
     };
 
-    let mut builder = LogBuilder::new();
-    builder.format(output_format).filter(None, LogLevelFilter::Info);
+    let mut builder = Builder::new();
+    builder.format(output_format).filter(None, LevelFilter::Info);
 
-    rust_log.map(|conf| builder.parse(conf));
+    rust_log.map(|conf| builder.parse_filters(conf));
 
-    builder.init().unwrap();
+    builder.init();
 }
 
 #[allow(dead_code)]
