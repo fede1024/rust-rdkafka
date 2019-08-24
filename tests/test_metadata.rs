@@ -31,7 +31,7 @@ fn create_consumer(group_id: &str) -> StreamConsumer {
 
 #[test]
 fn test_metadata() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
@@ -81,7 +81,7 @@ fn test_metadata() {
 
 #[test]
 fn test_subscription() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
     populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None);
@@ -97,7 +97,7 @@ fn test_subscription() {
 
 #[test]
 fn test_group_membership() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
     let group_name = rand_test_group();
