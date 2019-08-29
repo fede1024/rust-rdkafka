@@ -6,6 +6,7 @@ extern crate rdkafka;
 
 use clap::{App, Arg};
 use futures::*;
+use futures::executor::block_on;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord};
@@ -47,7 +48,7 @@ fn produce(brokers: &str, topic_name: &str) {
 
     // This loop will wait until all delivery statuses have been received received.
     for future in futures {
-        info!("Future completed. Result: {:?}", future.wait());
+        info!("Future completed. Result: {:?}", block_on(future));
     }
 }
 

@@ -12,14 +12,16 @@ use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::util::{cstr_to_owned, timeout_to_ms, AsCArray, ErrBuf, IntoOpaque, WrappedCPointer};
 
-use futures::future::{self, Either};
-use futures::{Async, Canceled, Complete, Future, Oneshot, Poll};
+use futures::channel::oneshot::{Canceled, Receiver, Sender, channel};
+use futures::future::{self, Either, Future, FutureExt};
 
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::mem;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -48,13 +50,13 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         topics: I,
         opts: &AdminOptions,
-    ) -> impl Future<Item = Vec<TopicResult>, Error = KafkaError>
+    ) -> impl Future<Output = KafkaResult<Vec<TopicResult>>>
     where
         I: IntoIterator<Item = &'a NewTopic<'a>>,
     {
         match self.create_topics_inner(topics, opts) {
-            Ok(rx) => Either::A(CreateTopicsFuture { rx }),
-            Err(err) => Either::B(future::err(err)),
+            Ok(rx) => Either::Left(CreateTopicsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
         }
     }
 
@@ -62,7 +64,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         topics: I,
         opts: &AdminOptions,
-    ) -> KafkaResult<Oneshot<NativeEvent>>
+    ) -> KafkaResult<Receiver<NativeEvent>>
     where
         I: IntoIterator<Item = &'a NewTopic<'a>>,
     {
@@ -93,10 +95,10 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         topic_names: &[&str],
         opts: &AdminOptions,
-    ) -> impl Future<Item = Vec<TopicResult>, Error = KafkaError> {
+    ) -> impl Future<Output = KafkaResult<Vec<TopicResult>>> {
         match self.delete_topics_inner(topic_names, opts) {
-            Ok(rx) => Either::A(DeleteTopicsFuture { rx }),
-            Err(err) => Either::B(future::err(err)),
+            Ok(rx) => Either::Left(DeleteTopicsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
         }
     }
 
@@ -104,7 +106,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         topic_names: &[&str],
         opts: &AdminOptions,
-    ) -> KafkaResult<Oneshot<NativeEvent>> {
+    ) -> KafkaResult<Receiver<NativeEvent>> {
         let mut native_topics = Vec::new();
         let mut err_buf = ErrBuf::new();
         for tn in topic_names {
@@ -138,13 +140,13 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         partitions: I,
         opts: &AdminOptions,
-    ) -> impl Future<Item = Vec<TopicResult>, Error = KafkaError>
+    ) -> impl Future<Output = KafkaResult<Vec<TopicResult>>>
     where
         I: IntoIterator<Item = &'a NewPartitions<'a>>,
     {
         match self.create_partitions_inner(partitions, opts) {
-            Ok(rx) => Either::A(CreatePartitionsFuture { rx }),
-            Err(err) => Either::B(future::err(err)),
+            Ok(rx) => Either::Left(CreatePartitionsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
         }
     }
 
@@ -152,7 +154,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         partitions: I,
         opts: &AdminOptions,
-    ) -> KafkaResult<Oneshot<NativeEvent>>
+    ) -> KafkaResult<Receiver<NativeEvent>>
     where
         I: IntoIterator<Item = &'a NewPartitions<'a>>,
     {
@@ -183,13 +185,13 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         configs: I,
         opts: &AdminOptions,
-    ) -> impl Future<Item = Vec<ConfigResourceResult>, Error = KafkaError>
+    ) -> impl Future<Output = KafkaResult<Vec<ConfigResourceResult>>>
     where
         I: IntoIterator<Item = &'a ResourceSpecifier<'a>>,
     {
         match self.describe_configs_inner(configs, opts) {
-            Ok(rx) => Either::A(DescribeConfigsFuture { rx }),
-            Err(err) => Either::B(future::err(err)),
+            Ok(rx) => Either::Left(DescribeConfigsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
         }
     }
 
@@ -197,7 +199,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         configs: I,
         opts: &AdminOptions,
-    ) -> KafkaResult<Oneshot<NativeEvent>>
+    ) -> KafkaResult<Receiver<NativeEvent>>
     where
         I: IntoIterator<Item = &'a ResourceSpecifier<'a>>,
     {
@@ -247,13 +249,13 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         configs: I,
         opts: &AdminOptions,
-    ) -> impl Future<Item = Vec<AlterConfigsResult>, Error = KafkaError>
+    ) -> impl Future<Output = KafkaResult<Vec<AlterConfigsResult>>>
     where
         I: IntoIterator<Item = &'a AlterConfig<'a>>,
     {
         match self.alter_configs_inner(configs, opts) {
-            Ok(rx) => Either::A(AlterConfigsFuture { rx }),
-            Err(err) => Either::B(future::err(err)),
+            Ok(rx) => Either::Left(AlterConfigsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
         }
     }
 
@@ -261,7 +263,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         configs: I,
         opts: &AdminOptions,
-    ) -> KafkaResult<Oneshot<NativeEvent>>
+    ) -> KafkaResult<Receiver<NativeEvent>>
     where
         I: IntoIterator<Item = &'a AlterConfig<'a>>,
     {
@@ -344,7 +346,7 @@ fn start_poll_thread(queue: Arc<NativeQueue>, should_stop: Arc<AtomicBool>) -> J
                     continue;
                 }
                 let event = unsafe { NativeEvent::from_ptr(event) };
-                let tx: Box<Complete<NativeEvent>> =
+                let tx: Box<Sender<NativeEvent>> =
                     unsafe { IntoOpaque::from_ptr(rdsys::rd_kafka_event_opaque(event.ptr())) };
                 let _ = tx.send(event);
             }
@@ -457,7 +459,7 @@ impl AdminOptions {
         &self,
         client: *mut RDKafka,
         err_buf: &mut ErrBuf,
-    ) -> KafkaResult<(NativeAdminOptions, Oneshot<NativeEvent>)> {
+    ) -> KafkaResult<(NativeAdminOptions, Receiver<NativeEvent>)> {
         let native_opts = unsafe {
             NativeAdminOptions::from_ptr(rdsys::rd_kafka_AdminOptions_new(
                 client,
@@ -513,7 +515,7 @@ impl AdminOptions {
             check_rdkafka_invalid_arg(res, err_buf)?;
         }
 
-        let (tx, rx) = futures::oneshot();
+        let (tx, rx) = channel();
         let tx = Box::new(tx);
         unsafe {
             rdsys::rd_kafka_AdminOptions_set_opaque(native_opts.ptr, IntoOpaque::as_ptr(&tx))
@@ -734,31 +736,32 @@ impl Drop for NativeNewTopic {
 }
 
 struct CreateTopicsFuture {
-    rx: Oneshot<NativeEvent>,
+    rx: Receiver<NativeEvent>,
 }
 
 impl Future for CreateTopicsFuture {
-    type Item = Vec<TopicResult>;
-    type Error = KafkaError;
+    type Output = KafkaResult<Vec<TopicResult>>;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        match self.rx.poll() {
-            Ok(Async::Ready(event)) => {
-                event.check_error()?;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        match self.rx.poll_unpin(cx) {
+            Poll::Ready(Ok(event)) => {
+                if let Err(e) = event.check_error() {
+                    return Poll::Ready(Err(e));
+                }
                 let res = unsafe { rdsys::rd_kafka_event_CreateTopics_result(event.ptr()) };
                 if res.is_null() {
                     let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Err(KafkaError::AdminOpCreation(format!(
+                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
                         "create topics request received response of incorrect type ({})",
                         typ
-                    )));
+                    ))));
                 }
                 let mut n = 0;
                 let topics = unsafe { rdsys::rd_kafka_CreateTopics_result_topics(res, &mut n) };
-                Ok(Async::Ready(build_topic_results(topics, n)))
+                Poll::Ready(Ok(build_topic_results(topics, n)))
             }
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(Canceled) => Err(KafkaError::Canceled),
+            Poll::Ready(Err(Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+            Poll::Pending => Poll::Pending,
         }
     }
 }
@@ -797,31 +800,32 @@ impl Drop for NativeDeleteTopic {
 }
 
 struct DeleteTopicsFuture {
-    rx: Oneshot<NativeEvent>,
+    rx: Receiver<NativeEvent>,
 }
 
 impl Future for DeleteTopicsFuture {
-    type Item = Vec<TopicResult>;
-    type Error = KafkaError;
+    type Output = KafkaResult<Vec<TopicResult>>;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        match self.rx.poll() {
-            Ok(Async::Ready(event)) => {
-                event.check_error()?;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        match self.rx.poll_unpin(cx) {
+            Poll::Ready(Ok(event)) => {
+                if let Err(e) = event.check_error() {
+                    return Poll::Ready(Err(e))
+                };
                 let res = unsafe { rdsys::rd_kafka_event_DeleteTopics_result(event.ptr()) };
                 if res.is_null() {
                     let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Err(KafkaError::AdminOpCreation(format!(
+                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
                         "delete topics request received response of incorrect type ({})",
                         typ
-                    )));
+                    ))));
                 }
                 let mut n = 0;
                 let topics = unsafe { rdsys::rd_kafka_DeleteTopics_result_topics(res, &mut n) };
-                Ok(Async::Ready(build_topic_results(topics, n)))
+                Poll::Ready(Ok(build_topic_results(topics, n)))
             }
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(Canceled) => Err(KafkaError::Canceled),
+            Poll::Ready(Err(Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+            Poll::Pending => Poll::Pending,
         }
     }
 }
@@ -941,31 +945,32 @@ impl Drop for NativeNewPartitions {
 }
 
 struct CreatePartitionsFuture {
-    rx: Oneshot<NativeEvent>,
+    rx: Receiver<NativeEvent>,
 }
 
 impl Future for CreatePartitionsFuture {
-    type Item = Vec<TopicResult>;
-    type Error = KafkaError;
+    type Output = KafkaResult<Vec<TopicResult>>;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        match self.rx.poll() {
-            Ok(Async::Ready(event)) => {
-                event.check_error()?;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        match self.rx.poll_unpin(cx) {
+            Poll::Ready(Ok(event)) => {
+                if let Err(e) = event.check_error() {
+                    return Poll::Ready(Err(e));
+                }
                 let res = unsafe { rdsys::rd_kafka_event_CreatePartitions_result(event.ptr()) };
                 if res.is_null() {
                     let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Err(KafkaError::AdminOpCreation(format!(
+                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
                         "create partitions request received response of incorrect type ({})",
                         typ
-                    )));
+                    ))));
                 }
                 let mut n = 0;
                 let topics = unsafe { rdsys::rd_kafka_CreatePartitions_result_topics(res, &mut n) };
-                Ok(Async::Ready(build_topic_results(topics, n)))
+                Poll::Ready(Ok(build_topic_results(topics, n)))
             }
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(Canceled) => Err(KafkaError::Canceled),
+            Poll::Ready(Err(Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+            Poll::Pending => Poll::Pending,
         }
     }
 }
@@ -1143,24 +1148,25 @@ fn extract_config_source(config_source: RDKafkaConfigSource) -> KafkaResult<Conf
 }
 
 struct DescribeConfigsFuture {
-    rx: Oneshot<NativeEvent>,
+    rx: Receiver<NativeEvent>,
 }
 
 impl Future for DescribeConfigsFuture {
-    type Item = Vec<ConfigResourceResult>;
-    type Error = KafkaError;
+    type Output = KafkaResult<Vec<ConfigResourceResult>>;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        match self.rx.poll() {
-            Ok(Async::Ready(event)) => {
-                event.check_error()?;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        match self.rx.poll_unpin(cx) {
+            Poll::Ready(Ok(event)) => {
+                if let Err(e) = event.check_error() {
+                    return Poll::Ready(Err(e))
+                }
                 let res = unsafe { rdsys::rd_kafka_event_DescribeConfigs_result(event.ptr()) };
                 if res.is_null() {
                     let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Err(KafkaError::AdminOpCreation(format!(
+                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
                         "describe configs request received response of incorrect type ({})",
                         typ
-                    )));
+                    ))));
                 }
                 let mut n = 0;
                 let resources =
@@ -1206,10 +1212,10 @@ impl Future for DescribeConfigsFuture {
                         entries: entries_out,
                     }))
                 }
-                Ok(Async::Ready(out))
+                Poll::Ready(Ok(out))
             }
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(Canceled) => Err(KafkaError::Canceled),
+            Poll::Ready(Err(Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+            Poll::Pending => Poll::Pending,
         }
     }
 }
@@ -1282,24 +1288,25 @@ impl<'a> AlterConfig<'a> {
 }
 
 struct AlterConfigsFuture {
-    rx: Oneshot<NativeEvent>,
+    rx: Receiver<NativeEvent>,
 }
 
 impl Future for AlterConfigsFuture {
-    type Item = Vec<AlterConfigsResult>;
-    type Error = KafkaError;
+    type Output = KafkaResult<Vec<AlterConfigsResult>>;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        match self.rx.poll() {
-            Ok(Async::Ready(event)) => {
-                event.check_error()?;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        match self.rx.poll_unpin(cx) {
+            Poll::Ready(Ok(event)) => {
+                if let Err(e) = event.check_error() {
+                    return Poll::Ready(Err(e))
+                };
                 let res = unsafe { rdsys::rd_kafka_event_AlterConfigs_result(event.ptr()) };
                 if res.is_null() {
                     let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Err(KafkaError::AdminOpCreation(format!(
+                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
                         "alter configs request received response of incorrect type ({})",
                         typ
-                    )));
+                    ))));
                 }
                 let mut n = 0;
                 let resources =
@@ -1310,10 +1317,10 @@ impl Future for AlterConfigsFuture {
                     let specifier = extract_config_specifier(resource)?;
                     out.push(Ok(specifier));
                 }
-                Ok(Async::Ready(out))
+                Poll::Ready(Ok(out))
             }
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(Canceled) => Err(KafkaError::Canceled),
+            Poll::Ready(Err(Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+            Poll::Pending => Poll::Pending,
         }
     }
 }

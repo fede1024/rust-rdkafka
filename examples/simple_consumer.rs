@@ -6,7 +6,7 @@ extern crate rdkafka;
 extern crate rdkafka_sys;
 
 use clap::{App, Arg};
-use futures::stream::Stream;
+use futures::executor::block_on_stream;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
@@ -70,11 +70,10 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
     // such as complex computations on a thread pool or asynchronous IO.
     let message_stream = consumer.start();
 
-    for message in message_stream.wait() {
+    for message in block_on_stream(message_stream) {
         match message {
-            Err(_) => warn!("Error while reading from stream."),
-            Ok(Err(e)) => warn!("Kafka error: {}", e),
-            Ok(Ok(m)) => {
+            Err(e) => warn!("Kafka error: {}", e),
+            Ok(m) => {
                 let payload = match m.payload_view::<str>() {
                     None => "",
                     Some(Ok(s)) => s,

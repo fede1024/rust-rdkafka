@@ -11,9 +11,13 @@ use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProdu
 use crate::statistics::Statistics;
 use crate::util::IntoOpaque;
 
-use futures::{self, Canceled, Complete, Future, Oneshot, Poll};
+use futures::channel::oneshot::{channel, Receiver, Sender};
+use futures::FutureExt;
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
 
 //
@@ -137,9 +141,9 @@ impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
 }
 
 impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
-    type DeliveryOpaque = Box<Complete<OwnedDeliveryResult>>;
+    type DeliveryOpaque = Box<Sender<OwnedDeliveryResult>>;
 
-    fn delivery(&self, delivery_result: &DeliveryResult, tx: Box<Complete<OwnedDeliveryResult>>) {
+    fn delivery(&self, delivery_result: &DeliveryResult, tx: Box<Sender<OwnedDeliveryResult>>) {
         let owned_delivery_result = match *delivery_result {
             Ok(ref message) => Ok((message.partition(), message.offset())),
             Err((ref error, ref message)) => Err((error.clone(), message.detach())),
@@ -195,15 +199,19 @@ impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProduce
 /// Once completed, the future will contain an `OwnedDeliveryResult` with information on the
 /// delivery status of the message.
 pub struct DeliveryFuture {
-    rx: Oneshot<OwnedDeliveryResult>,
+    rx: Receiver<OwnedDeliveryResult>,
 }
 
 impl Future for DeliveryFuture {
-    type Item = OwnedDeliveryResult;
-    type Error = Canceled;
+    type Output = KafkaResult<OwnedDeliveryResult>;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.rx.poll()
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        match self.rx.poll_unpin(cx) {
+            Poll::Ready(Ok(Ok(inner))) => Poll::Ready(Ok(Ok(inner))),
+            Poll::Ready(Ok(Err(e))) => Poll::Ready(Ok(Err(e))),
+            Poll::Ready(Err(_)) => Poll::Ready(Err(KafkaError::NoMessageReceived)),
+            Poll::Pending => Poll::Pending,
+        }
     }
 }
 
@@ -220,7 +228,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     {
         let start_time = Instant::now();
 
-        let (tx, rx) = futures::oneshot();
+        let (tx, rx) = futures::channel::oneshot::channel();
         let mut base_record = record.into_base_record(Box::new(tx));
 
         loop {
@@ -266,7 +274,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         K: ToBytes + ?Sized,
         P: ToBytes + ?Sized,
     {
-        let (tx, rx) = futures::oneshot();
+        let (tx, rx) = channel();
         let base_record = record.into_base_record(Box::new(tx));
         self.producer
             .send(base_record)

@@ -4,7 +4,6 @@ extern crate rand;
 extern crate rdkafka;
 extern crate regex;
 
-use futures::*;
 use rand::Rng;
 use regex::Regex;
 
@@ -90,7 +89,7 @@ impl ClientContext for TestContext {
 /// Produce the specified count of messages to the topic and partition specified. A map
 /// of (partition, offset) -> message id will be returned. It panics if any error is encountered
 /// while populating the topic.
-pub fn populate_topic<P, K, J, Q>(
+pub async fn populate_topic<P, K, J, Q>(
     topic_name: &str,
     count: i32,
     value_fn: &P,
@@ -136,7 +135,7 @@ where
 
     let mut message_map = HashMap::new();
     for (id, future) in futures {
-        match future.wait() {
+        match future.await {
             Ok(Ok((partition, offset))) => message_map.insert((partition, offset), id),
             Ok(Err((kafka_error, _message))) => panic!("Delivery failed: {}", kafka_error),
             Err(e) => panic!("Waiting for future failed: {}", e),
@@ -156,12 +155,13 @@ pub fn key_fn(id: i32) -> String {
 
 #[cfg(test)]
 mod tests {
+    use futures::executor::block_on;
     use super::*;
 
     #[test]
     fn test_populate_topic() {
         let topic_name = rand_test_topic();
-        let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None);
+        let message_map = block_on(populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None));
 
         let total_messages = message_map
             .iter()
