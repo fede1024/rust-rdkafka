@@ -183,6 +183,9 @@ fn build_librdkafka() {
     } else {
         config.define("WITH_SASL", "0");
     }
+    if let Ok(system_name) = env::var("CMAKE_SYSTEM_NAME") {
+        config.define("CMAKE_SYSTEM_NAME", system_name);
+    }
     let dst = config.build();
     println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!("cargo:rustc-link-lib=static=rdkafka");
