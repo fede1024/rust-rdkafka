@@ -151,7 +151,7 @@ impl ClientConfig {
                 rdsys::rd_kafka_conf_set(conf, key_c.as_ptr(), value_c.as_ptr(),
                                          err_buf.as_mut_ptr(), err_buf.len())
             };
-            if ret.is_error() {;
+            if ret.is_error() {
                 return Err(KafkaError::ClientConfig(ret, err_buf.to_string(), key.to_string(), value.to_string()));
             }
         }
