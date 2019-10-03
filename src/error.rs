@@ -145,7 +145,7 @@ impl error::Error for KafkaError {
     }
 
     #[allow(clippy::match_same_arms)]
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             KafkaError::AdminOp(_) => None,
             KafkaError::AdminOpCreation(_) => None,
