@@ -51,7 +51,7 @@ pub trait ConsumerContext: ClientContext {
             }
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke,
             _ => {
-                let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(err) as *const i8) };
+                let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(err)) };
                 error!("Error rebalancing: {}", error);
                 Rebalance::Error(error)
             }

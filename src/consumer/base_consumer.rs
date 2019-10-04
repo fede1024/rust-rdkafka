@@ -176,7 +176,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
         let ret_code = unsafe { rdsys::rd_kafka_subscribe(self.client.native_ptr(), tpl.ptr()) };
         if ret_code.is_error() {
-            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code) as *const i8) };
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
             return Err(KafkaError::Subscription(error));
         };
         Ok(())
@@ -189,7 +189,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
         let ret_code = unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), assignment.ptr()) };
         if ret_code.is_error() {
-            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code) as *const i8) };
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
             return Err(KafkaError::Subscription(error));
         };
         Ok(())
