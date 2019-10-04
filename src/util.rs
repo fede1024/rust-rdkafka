@@ -102,12 +102,12 @@ impl<T: Send + Sync> IntoOpaque for Box<T> {
 
 // TODO: check if the implementation returns a copy of the data and update the documentation
 /// Converts a byte array representing a C string into a String.
-pub unsafe fn bytes_cstr_to_owned(bytes_cstr: &[i8]) -> String {
+pub unsafe fn bytes_cstr_to_owned(bytes_cstr: &[c_char]) -> String {
     CStr::from_ptr(bytes_cstr.as_ptr() as *const c_char).to_string_lossy().into_owned()
 }
 
 /// Converts a C string into a String.
-pub unsafe fn cstr_to_owned(cstr: *const i8) -> String {
+pub unsafe fn cstr_to_owned(cstr: *const c_char) -> String {
     CStr::from_ptr(cstr as *const c_char).to_string_lossy().into_owned()
 }
 
@@ -122,7 +122,7 @@ impl ErrBuf {
         ErrBuf { buf: [0; ErrBuf::MAX_ERR_LEN] }
     }
 
-    pub fn as_mut_ptr(&mut self) -> *mut i8 {
+    pub fn as_mut_ptr(&mut self) -> *mut c_char {
         self.buf.as_mut_ptr()
     }
 
