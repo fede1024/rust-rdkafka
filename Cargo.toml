@@ -31,9 +31,9 @@ tokio = "0.1.7"
 [features]
 default = []
 
-# Enable ssl and sasl support
+# Enable ssl and gssapi support
 ssl = ["rdkafka-sys/ssl"]
-sasl = ["rdkafka-sys/sasl", "ssl"]
+gssapi = ["rdkafka-sys/gssapi", "ssl"]
 
 # Use dynamic linking instead of static. Will fail if librdkafka is not installed.
 dynamic_linking = ["rdkafka-sys/dynamic_linking"]

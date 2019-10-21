@@ -102,11 +102,10 @@ fn main() {
 fn build_librdkafka() {
     let mut configure_flags = Vec::new();
 
-    if env::var("CARGO_FEATURE_SASL").is_ok() {
-        configure_flags.push("--enable-sasl");
-        println!("cargo:rustc-link-lib=sasl2");
+    if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
+        configure_flags.push("--enable-gssapi");
     } else {
-        configure_flags.push("--disable-sasl");
+        configure_flags.push("--disable-gssapi");
     }
 
     if env::var("CARGO_FEATURE_SSL").is_ok() {
@@ -122,9 +121,9 @@ fn build_librdkafka() {
     }
 
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
-        configure_flags.push("--enable-lz4");
+        configure_flags.push("--enable-lz4-ext");
     } else {
-        configure_flags.push("--disable-lz4");
+        configure_flags.push("--disable-lz4-ext");
     }
 
     println!("Configuring librdkafka");
