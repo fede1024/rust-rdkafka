@@ -109,7 +109,7 @@ fn build_librdkafka() {
     }
 
     println!("Configuring librdkafka");
-    run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
+    run_command_or_fail("librdkafka", "sh", &[&["-c", "./configure"], configure_flags.as_slice()].concat());
 
     println!("Compiling librdkafka");
     make_librdkafka();
