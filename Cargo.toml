@@ -41,4 +41,7 @@ dynamic_linking = ["rdkafka-sys/dynamic_linking"]
 # Use external library for lz4. Use internal if not enabled.
 external_lz4 = ["rdkafka-sys/external_lz4"]
 
+# Enable support for zstd compression.
+zstd = ["rdkafka-sys/zstd"]
+
 cmake_build = ["rdkafka-sys/cmake_build"]
