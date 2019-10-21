@@ -126,6 +126,13 @@ fn build_librdkafka() {
         configure_flags.push("--disable-ssl");
     }
 
+    if env::var("CARGO_FEATURE_ZSTD").is_ok() {
+        configure_flags.push("--enable-zstd");
+        println!("cargo:rustc-link-lib=static=zstd");
+    } else {
+        configure_flags.push("--disable-zstd");
+    }
+
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
         configure_flags.push("--enable-lz4");
     } else {
@@ -144,7 +151,6 @@ fn build_librdkafka() {
             .expect("Can't find current dir")
             .display()
     );
-    println!("cargo:rustc-link-lib=static=zstd");
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
 
@@ -182,6 +188,13 @@ fn build_librdkafka() {
         config.define("WITH_SASL", "1");
     } else {
         config.define("WITH_SASL", "0");
+    }
+    if env::var("CARGO_FEATURE_ZSTD").is_ok() {
+        config.define("WITH_ZSTD", "1");
+        config.register_dep("zstd");
+        println!("cargo:rustc-link-lib=static=zstd");
+    } else {
+        config.define("WITH_ZSTD", "0");
     }
     if let Ok(system_name) = env::var("CMAKE_SYSTEM_NAME") {
         config.define("CMAKE_SYSTEM_NAME", system_name);
