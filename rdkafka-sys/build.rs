@@ -135,6 +135,7 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
         configure_flags.push("--enable-lz4");
+        println!("cargo:rustc-link-lib=static=lz4");
     } else {
         configure_flags.push("--disable-lz4");
     }
@@ -195,6 +196,12 @@ fn build_librdkafka() {
         println!("cargo:rustc-link-lib=static=zstd");
     } else {
         config.define("WITH_ZSTD", "0");
+    }
+    if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
+        config.define("ENABLE_LZ4_EXT", "1");
+        println!("cargo:rustc-link-lib=static=lz4");
+    } else {
+        config.define("ENABLE_LZ4_EXT", "0");
     }
     if let Ok(system_name) = env::var("CMAKE_SYSTEM_NAME") {
         config.define("CMAKE_SYSTEM_NAME", system_name);
