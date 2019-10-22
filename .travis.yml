@@ -2,7 +2,7 @@ language: rust
 
 rust:
   - stable
-  - nightly
+  - nightly-2019-10-17
 
 sudo: required
 
@@ -14,7 +14,7 @@ os:
   - osx
 
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly"  ]]; then ./test_suite.sh; else cargo build --verbose; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == nightly*  ]]; then ./test_suite.sh; else cargo build --verbose; fi
 
 notifications:
   webhooks:

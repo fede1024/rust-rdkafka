@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y build-essential \
     valgrind \
     zlib1g-dev
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2019-10-17
 ENV PATH /root/.cargo/bin/:$PATH
 
 # # Create dummy project for rdkafka
