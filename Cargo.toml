@@ -11,7 +11,7 @@ categories = ["api-bindings"]
 edition = "2018"
 
 [dependencies]
-rdkafka-sys = { path = "rdkafka-sys", version = "1.0.1" }
+rdkafka-sys = { path = "rdkafka-sys", version = "1.2.1" }
 futures = "0.1.21"
 libc = "0.2.0"
 log = "0.3.0"
