@@ -23,6 +23,7 @@ sed -i "/\/\/>alloc_system/use std::alloc::System;\n\#[global_allocator]\nstatic
 
 echo -e "${GREEN}*** Build tests ***${NC}"
 echo "Rust version: $(rustc --version)"
+ls -l
 cargo test --no-run
 if [ "$?" != "0" ]; then
     echo -e "${RED}*** Failure during compilation ***${NC}"
