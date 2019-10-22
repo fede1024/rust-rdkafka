@@ -169,6 +169,11 @@ fn build_librdkafka() {
     } else {
         config.define("WITH_ZSTD", "0");
     }
+    if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
+        config.define("ENABLE_LZ4_EXT", "1");
+    } else {
+        config.define("ENABLE_LZ4_EXT", "0");
+    }
     if let Ok(system_name) = env::var("CMAKE_SYSTEM_NAME") {
         config.define("CMAKE_SYSTEM_NAME", system_name);
     }
