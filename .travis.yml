@@ -1,20 +1,25 @@
 language: rust
 
-rust:
-  - stable
-  - nightly-2019-10-17
-
-sudo: required
-
 services:
   - docker
 
-os:
-  - linux
-  - osx
+jobs:
+  include:
+  - os: linux
+    arch: amd64
+    rust: stable
+  - os: linux
+    arch: amd64
+    rust: nightly-2019-10-17
+    env: RDKAFKA_RUN_TESTS=1
+  - os: linux
+    arch: arm64
+    rust: stable
+  - os: osx
+    rust: stable
 
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == nightly*  ]]; then ./test_suite.sh; else cargo build --verbose; fi
+  - if [[ "$RDKAFKA_RUN_TESTS" ]]; then ./test_suite.sh; else cargo build --verbose; fi
 
 notifications:
   webhooks:
