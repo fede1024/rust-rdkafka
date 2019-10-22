@@ -91,7 +91,7 @@ fn create_base_consumer(
 // All produced messages should be consumed.
 #[test]
 fn test_produce_consume_iter() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let start_time = current_time_millis();
     let topic_name = rand_test_topic();
@@ -119,7 +119,7 @@ fn test_produce_consume_iter() {
 // All produced messages should be consumed.
 #[test]
 fn test_produce_consume_base() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let start_time = current_time_millis();
     let topic_name = rand_test_topic();
@@ -151,7 +151,7 @@ fn test_produce_consume_base() {
 // All produced messages should be consumed.
 #[test]
 fn test_produce_consume_base_assign() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
@@ -183,7 +183,7 @@ fn test_produce_consume_base_assign() {
 // All produced messages should be consumed.
 #[test]
 fn test_produce_consume_with_timestamp() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
     let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
@@ -219,7 +219,7 @@ fn test_produce_consume_with_timestamp() {
 
 #[test]
 fn test_consume_with_no_message_error() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let consumer = create_stream_consumer(&rand_test_group(), None);
 
@@ -256,7 +256,7 @@ fn test_consume_with_no_message_error() {
 // TODO: add check that commit cb gets called correctly
 #[test]
 fn test_consumer_commit_message() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
@@ -306,7 +306,7 @@ fn test_consumer_commit_message() {
 
 #[test]
 fn test_consumer_store_offset_commit() {
-    let _r = env_logger::init();
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
