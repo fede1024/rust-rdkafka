@@ -154,7 +154,7 @@ fn build_librdkafka() {
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
 
-#[cfg(not(target_os = "freebsd"))]
+#[cfg(all(not(target_os = "freebsd"), not(feature = "cmake_build")))]
 fn make_librdkafka() {
     run_command_or_fail(
         "librdkafka",
@@ -163,7 +163,7 @@ fn make_librdkafka() {
     );
 }
 
-#[cfg(target_os = "freebsd")]
+#[cfg(all(target_os = "freebsd", not(feature = "cmake_build")))]
 fn make_librdkafka() {
     run_command_or_fail(
         "librdkafka",
