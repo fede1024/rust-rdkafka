@@ -5,7 +5,8 @@ use std::ffi::CStr;
 const PKG_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn remove_pre(version: &str) -> &str {
-    version.split('-')
+    version
+        .split('-')
         .next()
         .expect("Version format is not valid")
 }

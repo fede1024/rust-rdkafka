@@ -7,8 +7,8 @@ use futures::Future;
 use std::time::Duration;
 
 use rdkafka::admin::{
-    AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, NewPartitions, NewTopic, OwnedResourceSpecifier,
-    ResourceSpecifier, TopicReplication,
+    AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, NewPartitions, NewTopic,
+    OwnedResourceSpecifier, ResourceSpecifier, TopicReplication,
 };
 use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{BaseConsumer, Consumer, DefaultConsumerContext};
@@ -26,11 +26,14 @@ fn create_config() -> ClientConfig {
 }
 
 fn create_admin_client() -> AdminClient<DefaultClientContext> {
-    create_config().create().expect("admin client creation failed")
+    create_config()
+        .create()
+        .expect("admin client creation failed")
 }
 
 fn fetch_metadata(topic: &str) -> Metadata {
-    let consumer: BaseConsumer<DefaultConsumerContext> = create_config().create().expect("consumer creation failed");
+    let consumer: BaseConsumer<DefaultConsumerContext> =
+        create_config().create().expect("consumer creation failed");
     let timeout = Some(Duration::from_secs(1));
 
     let mut backoff = ExponentialBackoff::default();
@@ -53,7 +56,8 @@ fn fetch_metadata(topic: &str) -> Metadata {
 }
 
 fn verify_delete(topic: &str) {
-    let consumer: BaseConsumer<DefaultConsumerContext> = create_config().create().expect("consumer creation failed");
+    let consumer: BaseConsumer<DefaultConsumerContext> =
+        create_config().create().expect("consumer creation failed");
     let timeout = Some(Duration::from_secs(1));
 
     let mut backoff = ExponentialBackoff::default();
@@ -62,7 +66,9 @@ fn verify_delete(topic: &str) {
         // Asking about the topic specifically will recreate it (under the
         // default Kafka configuration, at least) so we have to ask for the list
         // of all topics and search through it.
-        let metadata = consumer.fetch_metadata(None, timeout).map_err(|e| e.to_string())?;
+        let metadata = consumer
+            .fetch_metadata(None, timeout)
+            .map_err(|e| e.to_string())?;
         if let Some(_) = metadata.topics().iter().find(|t| t.name() == topic) {
             Err(format!("topic {} still exists", topic))?
         }
@@ -84,8 +90,8 @@ fn test_topics() {
         let name2 = rand_test_topic();
 
         // Test both the builder API and the literal construction.
-        let topic1 = NewTopic::new(&name1, 1, TopicReplication::Fixed(1))
-            .set("max.message.bytes", "1234");
+        let topic1 =
+            NewTopic::new(&name1, 1, TopicReplication::Fixed(1)).set("max.message.bytes", "1234");
         let topic2 = NewTopic {
             name: &name2,
             num_partitions: 3,
@@ -112,7 +118,10 @@ fn test_topics() {
 
         let res = admin_client
             .describe_configs(
-                &[ResourceSpecifier::Topic(&name1), ResourceSpecifier::Topic(&name2)],
+                &[
+                    ResourceSpecifier::Topic(&name1),
+                    ResourceSpecifier::Topic(&name2),
+                ],
                 &opts,
             )
             .wait()
@@ -144,8 +153,14 @@ fn test_topics() {
         let config_entries2 = config2.entry_map();
         assert_eq!(config1.entries.len(), config_entries1.len());
         assert_eq!(config2.entries.len(), config_entries2.len());
-        assert_eq!(Some(&&expected_entry1), config_entries1.get("max.message.bytes"));
-        assert_eq!(Some(&&expected_entry2), config_entries2.get("max.message.bytes"));
+        assert_eq!(
+            Some(&&expected_entry1),
+            config_entries1.get("max.message.bytes")
+        );
+        assert_eq!(
+            Some(&&expected_entry2),
+            config_entries2.get("max.message.bytes")
+        );
 
         let partitions1 = NewPartitions::new(&name1, 5);
         let res = admin_client
@@ -374,17 +389,32 @@ fn test_event_errors() {
     let opts = AdminOptions::new().request_timeout(Duration::from_nanos(1));
 
     let res = admin_client.create_topics(&[], &opts).wait();
-    assert_eq!(res, Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+    );
 
     let res = admin_client.create_partitions(&[], &opts).wait();
-    assert_eq!(res, Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+    );
 
     let res = admin_client.delete_topics(&[], &opts).wait();
-    assert_eq!(res, Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+    );
 
     let res = admin_client.describe_configs(&[], &opts).wait();
-    assert_eq!(res.err(), Some(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
+    assert_eq!(
+        res.err(),
+        Some(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+    );
 
     let res = admin_client.alter_configs(&[], &opts).wait();
-    assert_eq!(res, Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+    );
 }

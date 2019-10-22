@@ -34,13 +34,13 @@
 //! If this error is returned, the producer should wait and try again.
 //!
 
+use crate::rdsys;
 use crate::rdsys::rd_kafka_vtype_t::*;
 use crate::rdsys::types::*;
-use crate::rdsys;
 
 use crate::client::{Client, ClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use crate::error::{KafkaError, KafkaResult, IsError};
+use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use crate::util::{timeout_to_ms, IntoOpaque};
 
@@ -50,8 +50,8 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
-use std::time::Duration;
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 pub use crate::message::DeliveryResult;
 
@@ -72,7 +72,6 @@ pub trait ProducerContext: ClientContext {
     /// `DeliveryOpaque` will be the one provided by the user when calling send.
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque);
 }
-
 
 /// Default producer context that can be use when a custom context is not required.
 #[derive(Clone)]
@@ -101,7 +100,8 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
     trace!("Delivery event received: {:?}", delivery_result);
     (*producer_context).delivery(&delivery_result, delivery_opaque);
     mem::forget(producer_context); // Do not free the producer context
-    match delivery_result {        // Do not free the message, librdkafka will do it for us
+    match delivery_result {
+        // Do not free the message, librdkafka will do it for us
         Ok(message) | Err((_, message)) => mem::forget(message),
     }
 }
@@ -141,7 +141,12 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
 ///     .partition(5);                         // target partition
 /// ```
 #[derive(Debug)]
-pub struct BaseRecord<'a, K: ToBytes + ?Sized + 'a = (), P: ToBytes + ?Sized + 'a = (), D: IntoOpaque = ()> {
+pub struct BaseRecord<
+    'a,
+    K: ToBytes + ?Sized + 'a = (),
+    P: ToBytes + ?Sized + 'a = (),
+    D: IntoOpaque = (),
+> {
     /// Required destination topic
     pub topic: &'a str,
     /// Optional destination partition
@@ -230,7 +235,12 @@ impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseProducer<C>> {
         let native_config = config.create_native_config()?;
         unsafe { rdsys::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<C>)) };
-        let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_PRODUCER, context)?;
+        let client = Client::new(
+            config,
+            native_config,
+            RDKafkaType::RD_KAFKA_PRODUCER,
+            context,
+        )?;
         Ok(BaseProducer::from_client(client))
     }
 }
@@ -277,7 +287,9 @@ pub struct BaseProducer<C: ProducerContext = DefaultProducerContext> {
 impl<C: ProducerContext> BaseProducer<C> {
     /// Creates a base producer starting from a Client.
     fn from_client(client: Client<C>) -> BaseProducer<C> {
-        BaseProducer { client_arc: Arc::new(client) }
+        BaseProducer {
+            client_arc: Arc::new(client),
+        }
     }
 
     /// Polls the producer. Regular calls to `poll` are required to process the events
@@ -307,10 +319,14 @@ impl<C: ProducerContext> BaseProducer<C> {
     // Simplifying the return type requires generic associated types, which are
     // unstable.
     #[allow(clippy::type_complexity)]
-    pub fn send<'a, K, P>(&self, record: BaseRecord<'a, K, P, C::DeliveryOpaque>)
-        -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
-    where K: ToBytes + ?Sized,
-          P: ToBytes + ?Sized {
+    pub fn send<'a, K, P>(
+        &self,
+        record: BaseRecord<'a, K, P, C::DeliveryOpaque>,
+    ) -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
+    where
+        K: ToBytes + ?Sized,
+        P: ToBytes + ?Sized,
+    {
         let (payload_ptr, payload_len) = match record.payload.map(P::to_bytes) {
             None => (ptr::null_mut(), 0),
             Some(p) => (p.as_ptr() as *mut c_void, p.len()),
@@ -323,15 +339,28 @@ impl<C: ProducerContext> BaseProducer<C> {
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.native_ptr(),
-                RD_KAFKA_VTYPE_TOPIC, topic_cstring.as_ptr(),
-                RD_KAFKA_VTYPE_PARTITION, record.partition.unwrap_or(-1),
-                RD_KAFKA_VTYPE_MSGFLAGS, rdsys::RD_KAFKA_MSG_F_COPY as i32,
-                RD_KAFKA_VTYPE_VALUE, payload_ptr, payload_len,
-                RD_KAFKA_VTYPE_KEY, key_ptr, key_len,
-                RD_KAFKA_VTYPE_OPAQUE, record.delivery_opaque.as_ptr(),
-                RD_KAFKA_VTYPE_TIMESTAMP, record.timestamp.unwrap_or(0),
-                RD_KAFKA_VTYPE_HEADERS, record.headers.as_ref().map_or(ptr::null_mut(), OwnedHeaders::ptr),
-                RD_KAFKA_VTYPE_END
+                RD_KAFKA_VTYPE_TOPIC,
+                topic_cstring.as_ptr(),
+                RD_KAFKA_VTYPE_PARTITION,
+                record.partition.unwrap_or(-1),
+                RD_KAFKA_VTYPE_MSGFLAGS,
+                rdsys::RD_KAFKA_MSG_F_COPY as i32,
+                RD_KAFKA_VTYPE_VALUE,
+                payload_ptr,
+                payload_len,
+                RD_KAFKA_VTYPE_KEY,
+                key_ptr,
+                key_len,
+                RD_KAFKA_VTYPE_OPAQUE,
+                record.delivery_opaque.as_ptr(),
+                RD_KAFKA_VTYPE_TIMESTAMP,
+                record.timestamp.unwrap_or(0),
+                RD_KAFKA_VTYPE_HEADERS,
+                record
+                    .headers
+                    .as_ref()
+                    .map_or(ptr::null_mut(), OwnedHeaders::ptr),
+                RD_KAFKA_VTYPE_END,
             )
         };
         if produce_error.is_error() {
@@ -358,7 +387,9 @@ impl<C: ProducerContext> BaseProducer<C> {
 
 impl<C: ProducerContext> Clone for BaseProducer<C> {
     fn clone(&self) -> BaseProducer<C> {
-        BaseProducer { client_arc: self.client_arc.clone() }
+        BaseProducer {
+            client_arc: self.client_arc.clone(),
+        }
     }
 }
 
@@ -385,7 +416,10 @@ impl FromClientConfig for ThreadedProducer<DefaultProducerContext> {
 }
 
 impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for ThreadedProducer<C> {
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<ThreadedProducer<C>> {
+    fn from_config_and_context(
+        config: &ClientConfig,
+        context: C,
+    ) -> KafkaResult<ThreadedProducer<C>> {
         let threaded_producer = ThreadedProducer {
             producer: BaseProducer::from_config_and_context(config, context)?,
             should_stop: Arc::new(AtomicBool::new(false)),
@@ -443,10 +477,14 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     // Simplifying the return type requires generic associated types, which are
     // unstable.
     #[allow(clippy::type_complexity)]
-    pub fn send<'a, K, P>(&self, record: BaseRecord<'a, K, P, C::DeliveryOpaque>)
-        -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
-    where K: ToBytes + ?Sized,
-          P: ToBytes + ?Sized {
+    pub fn send<'a, K, P>(
+        &self,
+        record: BaseRecord<'a, K, P, C::DeliveryOpaque>,
+    ) -> Result<(), (KafkaError, BaseRecord<'a, K, P, C::DeliveryOpaque>)>
+    where
+        K: ToBytes + ?Sized,
+        P: ToBytes + ?Sized,
+    {
         self.producer.send(record)
     }
 
@@ -474,8 +512,6 @@ impl<C: ProducerContext + 'static> Drop for ThreadedProducer<C> {
         trace!("ThreadedProducer destroyed");
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {

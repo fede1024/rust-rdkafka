@@ -5,10 +5,10 @@ extern crate rdkafka;
 
 use futures::Future;
 
-use rdkafka::producer::FutureProducer;
-use rdkafka::producer::future_producer::FutureRecord;
 use rdkafka::config::ClientConfig;
-use rdkafka::message::{Message, Headers, OwnedHeaders};
+use rdkafka::message::{Headers, Message, OwnedHeaders};
+use rdkafka::producer::future_producer::FutureRecord;
+use rdkafka::producer::FutureProducer;
 
 use std::error::Error;
 
@@ -25,13 +25,14 @@ fn test_future_producer_send_fail() {
         FutureRecord::to("topic")
             .payload("payload")
             .key("key")
-            .partition(100)  // Fail
-            .headers(OwnedHeaders::new()
-                .add("0", "A")
-                .add("1", "B")
-                .add("2", "C")
+            .partition(100) // Fail
+            .headers(
+                OwnedHeaders::new()
+                    .add("0", "A")
+                    .add("1", "B")
+                    .add("2", "C"),
             ),
-        10000
+        10000,
     );
 
     match future.wait() {
@@ -43,7 +44,7 @@ fn test_future_producer_send_fail() {
             assert_eq!(headers.get_as::<str>(0).unwrap(), ("0", Ok("A")));
             assert_eq!(headers.get_as::<str>(1).unwrap(), ("1", Ok("B")));
             assert_eq!(headers.get_as::<str>(2).unwrap(), ("2", Ok("C")));
-        },
+        }
         e => {
             panic!("Unexpected return value: {:?}", e);
         }

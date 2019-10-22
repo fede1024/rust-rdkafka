@@ -58,7 +58,11 @@ impl<C: ClientContext> AdminClient<C> {
         }
     }
 
-    fn create_topics_inner<'a, I>(&self, topics: I, opts: &AdminOptions) -> KafkaResult<Oneshot<NativeEvent>>
+    fn create_topics_inner<'a, I>(
+        &self,
+        topics: I,
+        opts: &AdminOptions,
+    ) -> KafkaResult<Oneshot<NativeEvent>>
     where
         I: IntoIterator<Item = &'a NewTopic<'a>>,
     {
@@ -96,12 +100,18 @@ impl<C: ClientContext> AdminClient<C> {
         }
     }
 
-    fn delete_topics_inner(&self, topic_names: &[&str], opts: &AdminOptions) -> KafkaResult<Oneshot<NativeEvent>> {
+    fn delete_topics_inner(
+        &self,
+        topic_names: &[&str],
+        opts: &AdminOptions,
+    ) -> KafkaResult<Oneshot<NativeEvent>> {
         let mut native_topics = Vec::new();
         let mut err_buf = ErrBuf::new();
         for tn in topic_names {
             let tn_c = CString::new(*tn)?;
-            let native_topic = unsafe { NativeDeleteTopic::from_ptr(rdsys::rd_kafka_DeleteTopic_new(tn_c.as_ptr())) };
+            let native_topic = unsafe {
+                NativeDeleteTopic::from_ptr(rdsys::rd_kafka_DeleteTopic_new(tn_c.as_ptr()))
+            };
             native_topics.push(native_topic);
         }
         let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
@@ -138,7 +148,11 @@ impl<C: ClientContext> AdminClient<C> {
         }
     }
 
-    fn create_partitions_inner<'a, I>(&self, partitions: I, opts: &AdminOptions) -> KafkaResult<Oneshot<NativeEvent>>
+    fn create_partitions_inner<'a, I>(
+        &self,
+        partitions: I,
+        opts: &AdminOptions,
+    ) -> KafkaResult<Oneshot<NativeEvent>>
     where
         I: IntoIterator<Item = &'a NewPartitions<'a>>,
     {
@@ -179,7 +193,11 @@ impl<C: ClientContext> AdminClient<C> {
         }
     }
 
-    fn describe_configs_inner<'a, I>(&self, configs: I, opts: &AdminOptions) -> KafkaResult<Oneshot<NativeEvent>>
+    fn describe_configs_inner<'a, I>(
+        &self,
+        configs: I,
+        opts: &AdminOptions,
+    ) -> KafkaResult<Oneshot<NativeEvent>>
     where
         I: IntoIterator<Item = &'a ResourceSpecifier<'a>>,
     {
@@ -187,15 +205,24 @@ impl<C: ClientContext> AdminClient<C> {
         let mut err_buf = ErrBuf::new();
         for c in configs {
             let (name, typ) = match c {
-                ResourceSpecifier::Topic(name) => (CString::new(*name)?, RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC),
-                ResourceSpecifier::Group(name) => (CString::new(*name)?, RDKafkaResourceType::RD_KAFKA_RESOURCE_GROUP),
+                ResourceSpecifier::Topic(name) => (
+                    CString::new(*name)?,
+                    RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC,
+                ),
+                ResourceSpecifier::Group(name) => (
+                    CString::new(*name)?,
+                    RDKafkaResourceType::RD_KAFKA_RESOURCE_GROUP,
+                ),
                 ResourceSpecifier::Broker(id) => (
                     CString::new(format!("{}", id))?,
                     RDKafkaResourceType::RD_KAFKA_RESOURCE_BROKER,
                 ),
             };
             native_configs.push(unsafe {
-                NativeConfigResource::from_ptr(rdsys::rd_kafka_ConfigResource_new(typ, name.as_ptr()))
+                NativeConfigResource::from_ptr(rdsys::rd_kafka_ConfigResource_new(
+                    typ,
+                    name.as_ptr(),
+                ))
             });
         }
         let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
@@ -230,7 +257,11 @@ impl<C: ClientContext> AdminClient<C> {
         }
     }
 
-    fn alter_configs_inner<'a, I>(&self, configs: I, opts: &AdminOptions) -> KafkaResult<Oneshot<NativeEvent>>
+    fn alter_configs_inner<'a, I>(
+        &self,
+        configs: I,
+        opts: &AdminOptions,
+    ) -> KafkaResult<Oneshot<NativeEvent>>
     where
         I: IntoIterator<Item = &'a AlterConfig<'a>>,
     {
@@ -267,7 +298,12 @@ impl<C: ClientContext> FromClientConfigAndContext<C> for AdminClient<C> {
         // producer, as producer clients are allegedly more lightweight. [0]
         //
         // [0]: https://github.com/confluentinc/confluent-kafka-python/blob/bfb07dfbca47c256c840aaace83d3fe26c587360/confluent_kafka/src/Admin.c#L1492-L1493
-        let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_PRODUCER, context)?;
+        let client = Client::new(
+            config,
+            native_config,
+            RDKafkaType::RD_KAFKA_PRODUCER,
+            context,
+        )?;
         let queue = Arc::new(client.new_native_queue());
         let should_stop = Arc::new(AtomicBool::new(false));
         let handle = start_poll_thread(queue.clone(), should_stop.clone());
@@ -479,7 +515,9 @@ impl AdminOptions {
 
         let (tx, rx) = futures::oneshot();
         let tx = Box::new(tx);
-        unsafe { rdsys::rd_kafka_AdminOptions_set_opaque(native_opts.ptr, IntoOpaque::as_ptr(&tx)) };
+        unsafe {
+            rdsys::rd_kafka_AdminOptions_set_opaque(native_opts.ptr, IntoOpaque::as_ptr(&tx))
+        };
         mem::forget(tx);
 
         Ok((native_opts, rx))
@@ -570,7 +608,11 @@ pub struct NewTopic<'a> {
 
 impl<'a> NewTopic<'a> {
     /// Creates a new `NewTopic`.
-    pub fn new(name: &'a str, num_partitions: i32, replication: TopicReplication<'a>) -> NewTopic<'a> {
+    pub fn new(
+        name: &'a str,
+        num_partitions: i32,
+        replication: TopicReplication<'a>,
+    ) -> NewTopic<'a> {
         NewTopic {
             name,
             num_partitions,
@@ -636,7 +678,9 @@ impl<'a> NewTopic<'a> {
         for (key, val) in &self.config {
             let key_c = CString::new(*key)?;
             let val_c = CString::new(*val)?;
-            let res = unsafe { rdsys::rd_kafka_NewTopic_set_config(topic.ptr(), key_c.as_ptr(), val_c.as_ptr()) };
+            let res = unsafe {
+                rdsys::rd_kafka_NewTopic_set_config(topic.ptr(), key_c.as_ptr(), val_c.as_ptr())
+            };
             check_rdkafka_invalid_arg(res, err_buf)?;
         }
         Ok(topic)
@@ -1044,7 +1088,9 @@ impl Drop for NativeConfigResource {
     }
 }
 
-fn extract_config_specifier(resource: *const RDKafkaConfigResource) -> KafkaResult<OwnedResourceSpecifier> {
+fn extract_config_specifier(
+    resource: *const RDKafkaConfigResource,
+) -> KafkaResult<OwnedResourceSpecifier> {
     let typ = unsafe { rdsys::rd_kafka_ConfigResource_type(resource) };
     match typ {
         RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC => {
@@ -1056,7 +1102,8 @@ fn extract_config_specifier(resource: *const RDKafkaConfigResource) -> KafkaResu
             Ok(OwnedResourceSpecifier::Group(name))
         }
         RDKafkaResourceType::RD_KAFKA_RESOURCE_BROKER => {
-            let name = unsafe { CStr::from_ptr(rdsys::rd_kafka_ConfigResource_name(resource)) }.to_string_lossy();
+            let name = unsafe { CStr::from_ptr(rdsys::rd_kafka_ConfigResource_name(resource)) }
+                .to_string_lossy();
             match name.parse::<i32>() {
                 Ok(id) => Ok(OwnedResourceSpecifier::Broker(id)),
                 Err(_) => Err(KafkaError::AdminOpCreation(format!(
@@ -1075,12 +1122,18 @@ fn extract_config_specifier(resource: *const RDKafkaConfigResource) -> KafkaResu
 fn extract_config_source(config_source: RDKafkaConfigSource) -> KafkaResult<ConfigSource> {
     match config_source {
         RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_UNKNOWN_CONFIG => Ok(ConfigSource::Unknown),
-        RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DYNAMIC_TOPIC_CONFIG => Ok(ConfigSource::DynamicTopic),
-        RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DYNAMIC_BROKER_CONFIG => Ok(ConfigSource::DynamicBroker),
+        RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DYNAMIC_TOPIC_CONFIG => {
+            Ok(ConfigSource::DynamicTopic)
+        }
+        RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DYNAMIC_BROKER_CONFIG => {
+            Ok(ConfigSource::DynamicBroker)
+        }
         RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DYNAMIC_DEFAULT_BROKER_CONFIG => {
             Ok(ConfigSource::DynamicDefaultBroker)
         }
-        RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_STATIC_BROKER_CONFIG => Ok(ConfigSource::StaticBroker),
+        RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_STATIC_BROKER_CONFIG => {
+            Ok(ConfigSource::StaticBroker)
+        }
         RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DEFAULT_CONFIG => Ok(ConfigSource::Default),
         _ => Err(KafkaError::AdminOpCreation(format!(
             "bogus config source type in kafka response: {:?}",
@@ -1110,17 +1163,20 @@ impl Future for DescribeConfigsFuture {
                     )));
                 }
                 let mut n = 0;
-                let resources = unsafe { rdsys::rd_kafka_DescribeConfigs_result_resources(res, &mut n) };
+                let resources =
+                    unsafe { rdsys::rd_kafka_DescribeConfigs_result_resources(res, &mut n) };
                 let mut out = Vec::with_capacity(n);
                 for i in 0..n {
                     let resource = unsafe { *resources.offset(i as isize) };
                     let specifier = extract_config_specifier(resource)?;
                     let mut entries_out = Vec::new();
                     let mut n = 0;
-                    let entries = unsafe { rdsys::rd_kafka_ConfigResource_configs(resource, &mut n) };
+                    let entries =
+                        unsafe { rdsys::rd_kafka_ConfigResource_configs(resource, &mut n) };
                     for j in 0..n {
                         let entry = unsafe { *entries.offset(j as isize) };
-                        let name = unsafe { cstr_to_owned(rdsys::rd_kafka_ConfigEntry_name(entry)) };
+                        let name =
+                            unsafe { cstr_to_owned(rdsys::rd_kafka_ConfigEntry_name(entry)) };
                         let value = unsafe {
                             let value = rdsys::rd_kafka_ConfigEntry_value(entry);
                             if value.is_null() {
@@ -1132,10 +1188,17 @@ impl Future for DescribeConfigsFuture {
                         entries_out.push(ConfigEntry {
                             name,
                             value,
-                            source: extract_config_source(unsafe { rdsys::rd_kafka_ConfigEntry_source(entry) })?,
-                            is_read_only: unsafe { rdsys::rd_kafka_ConfigEntry_is_read_only(entry) } != 0,
-                            is_default: unsafe { rdsys::rd_kafka_ConfigEntry_is_default(entry) } != 0,
-                            is_sensitive: unsafe { rdsys::rd_kafka_ConfigEntry_is_sensitive(entry) } != 0,
+                            source: extract_config_source(unsafe {
+                                rdsys::rd_kafka_ConfigEntry_source(entry)
+                            })?,
+                            is_read_only: unsafe {
+                                rdsys::rd_kafka_ConfigEntry_is_read_only(entry)
+                            } != 0,
+                            is_default: unsafe { rdsys::rd_kafka_ConfigEntry_is_default(entry) }
+                                != 0,
+                            is_sensitive: unsafe {
+                                rdsys::rd_kafka_ConfigEntry_is_sensitive(entry)
+                            } != 0,
                         });
                     }
                     out.push(Ok(ConfigResource {
@@ -1156,7 +1219,8 @@ impl Future for DescribeConfigsFuture {
 //
 
 /// The result of an individual AlterConfig operation.
-pub type AlterConfigsResult = Result<OwnedResourceSpecifier, (OwnedResourceSpecifier, RDKafkaError)>;
+pub type AlterConfigsResult =
+    Result<OwnedResourceSpecifier, (OwnedResourceSpecifier, RDKafkaError)>;
 
 /// Configuration for an AlterConfig operation.
 pub struct AlterConfig<'a> {
@@ -1183,8 +1247,14 @@ impl<'a> AlterConfig<'a> {
 
     fn to_native(&self, err_buf: &mut ErrBuf) -> KafkaResult<NativeConfigResource> {
         let (name, typ) = match self.specifier {
-            ResourceSpecifier::Topic(name) => (CString::new(name)?, RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC),
-            ResourceSpecifier::Group(name) => (CString::new(name)?, RDKafkaResourceType::RD_KAFKA_RESOURCE_GROUP),
+            ResourceSpecifier::Topic(name) => (
+                CString::new(name)?,
+                RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC,
+            ),
+            ResourceSpecifier::Group(name) => (
+                CString::new(name)?,
+                RDKafkaResourceType::RD_KAFKA_RESOURCE_GROUP,
+            ),
             ResourceSpecifier::Broker(id) => (
                 CString::new(format!("{}", id))?,
                 RDKafkaResourceType::RD_KAFKA_RESOURCE_BROKER,
@@ -1192,12 +1262,19 @@ impl<'a> AlterConfig<'a> {
         };
         // N.B.: we wrap config immediately, so that it is destroyed via the
         // NativeNewTopic's Drop implementation if config installation fails.
-        let config = unsafe { NativeConfigResource::from_ptr(rdsys::rd_kafka_ConfigResource_new(typ, name.as_ptr())) };
+        let config = unsafe {
+            NativeConfigResource::from_ptr(rdsys::rd_kafka_ConfigResource_new(typ, name.as_ptr()))
+        };
         for (key, val) in &self.entries {
             let key_c = CString::new(*key)?;
             let val_c = CString::new(*val)?;
-            let res =
-                unsafe { rdsys::rd_kafka_ConfigResource_set_config(config.ptr(), key_c.as_ptr(), val_c.as_ptr()) };
+            let res = unsafe {
+                rdsys::rd_kafka_ConfigResource_set_config(
+                    config.ptr(),
+                    key_c.as_ptr(),
+                    val_c.as_ptr(),
+                )
+            };
             check_rdkafka_invalid_arg(res, err_buf)?;
         }
         Ok(config)
@@ -1225,7 +1302,8 @@ impl Future for AlterConfigsFuture {
                     )));
                 }
                 let mut n = 0;
-                let resources = unsafe { rdsys::rd_kafka_AlterConfigs_result_resources(res, &mut n) };
+                let resources =
+                    unsafe { rdsys::rd_kafka_AlterConfigs_result_resources(res, &mut n) };
                 let mut out = Vec::with_capacity(n);
                 for i in 0..n {
                     let resource = unsafe { *resources.offset(i as isize) };

@@ -3,20 +3,20 @@ use crate::rdsys;
 use crate::rdsys::types::*;
 
 use crate::client::{Client, NativeClient};
-use crate::config::{FromClientConfig, FromClientConfigAndContext, ClientConfig};
-use crate::consumer::{Consumer, ConsumerContext, CommitMode, DefaultConsumerContext};
-use crate::error::{KafkaError, KafkaResult, IsError};
+use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::consumer::{CommitMode, Consumer, ConsumerContext, DefaultConsumerContext};
+use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
-use crate::message::{Message, BorrowedMessage};
+use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
-use crate::topic_partition_list::TopicPartitionList;
 use crate::topic_partition_list::Offset::Offset;
+use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{cstr_to_owned, timeout_to_ms};
 
-use std::os::raw::c_void;
-use std::str;
 use std::mem;
+use std::os::raw::c_void;
 use std::ptr;
+use std::str;
 use std::time::Duration;
 
 pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
@@ -57,10 +57,9 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     tpl.leak() // Do not free native topic partition list
 }
 
-
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.
-pub struct BaseConsumer<C: ConsumerContext= DefaultConsumerContext> {
+pub struct BaseConsumer<C: ConsumerContext = DefaultConsumerContext> {
     client: Client<C>,
 }
 
@@ -75,10 +74,21 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
         let native_config = config.create_native_config()?;
         unsafe {
-            rdsys::rd_kafka_conf_set_rebalance_cb(native_config.ptr(), Some(native_rebalance_cb::<C>));
-            rdsys::rd_kafka_conf_set_offset_commit_cb(native_config.ptr(), Some(native_commit_cb::<C>));
+            rdsys::rd_kafka_conf_set_rebalance_cb(
+                native_config.ptr(),
+                Some(native_rebalance_cb::<C>),
+            );
+            rdsys::rd_kafka_conf_set_offset_commit_cb(
+                native_config.ptr(),
+                Some(native_commit_cb::<C>),
+            );
         }
-        let client = Client::new(config, native_config, RDKafkaType::RD_KAFKA_CONSUMER, context)?;
+        let client = Client::new(
+            config,
+            native_config,
+            RDKafkaType::RD_KAFKA_CONSUMER,
+            context,
+        )?;
         unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
         Ok(BaseConsumer { client })
     }
@@ -88,7 +98,8 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
     /// This method is for internal use only. Use poll instead.
     pub(crate) fn poll_raw(&self, timeout_ms: i32) -> Option<*mut RDKafkaMessage> {
-        let message_ptr = unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
+        let message_ptr =
+            unsafe { rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), timeout_ms) };
         if message_ptr.is_null() {
             None
         } else {
@@ -109,9 +120,10 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// # Lifetime
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
-    pub fn poll<T: Into<Option<Duration>>>(&self, timeout: T)
-        -> Option<KafkaResult<BorrowedMessage>>
-    {
+    pub fn poll<T: Into<Option<Duration>>>(
+        &self,
+        timeout: T,
+    ) -> Option<KafkaResult<BorrowedMessage>> {
         self.poll_raw(timeout_to_ms(timeout))
             .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
     }
@@ -187,7 +199,8 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     }
 
     fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
-        let ret_code = unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), assignment.ptr()) };
+        let ret_code =
+            unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), assignment.ptr()) };
         if ret_code.is_error() {
             let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
             return Err(KafkaError::Subscription(error));
@@ -195,9 +208,17 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         Ok(())
     }
 
-    fn commit(&self, topic_partition_list: &TopicPartitionList, mode: CommitMode) -> KafkaResult<()> {
+    fn commit(
+        &self,
+        topic_partition_list: &TopicPartitionList,
+        mode: CommitMode,
+    ) -> KafkaResult<()> {
         let error = unsafe {
-            rdsys::rd_kafka_commit(self.client.native_ptr(), topic_partition_list.ptr(), mode as i32)
+            rdsys::rd_kafka_commit(
+                self.client.native_ptr(),
+                topic_partition_list.ptr(),
+                mode as i32,
+            )
         };
         if error.is_error() {
             Err(KafkaError::ConsumerCommit(error.into()))
@@ -218,7 +239,9 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     }
 
     fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
-        let error = unsafe { rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32) };
+        let error = unsafe {
+            rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32)
+        };
         if error.is_error() {
             Err(KafkaError::ConsumerCommit(error.into()))
         } else {
@@ -227,7 +250,9 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     }
 
     fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
-        let error = unsafe { rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset()) };
+        let error = unsafe {
+            rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset())
+        };
         if error.is_error() {
             Err(KafkaError::StoreOffset(error.into()))
         } else {
@@ -268,7 +293,8 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
 
     fn committed<T: Into<Option<Duration>>>(&self, timeout: T) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
-        let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
+        let assignment_error =
+            unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
         if assignment_error.is_error() {
             return Err(KafkaError::MetadataFetch(assignment_error.into()));
         }
@@ -276,7 +302,11 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         self.committed_offsets(unsafe { TopicPartitionList::from_ptr(tpl_ptr) }, timeout)
     }
 
-    fn committed_offsets<T: Into<Option<Duration>>>(&self, tpl: TopicPartitionList, timeout: T) -> KafkaResult<TopicPartitionList> {
+    fn committed_offsets<T: Into<Option<Duration>>>(
+        &self,
+        tpl: TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList> {
         let committed_error = unsafe {
             rdsys::rd_kafka_committed(self.client.native_ptr(), tpl.ptr(), timeout_to_ms(timeout))
         };
@@ -288,11 +318,14 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
-    fn offsets_for_timestamp<T: Into<Option<Duration>>>(&self, timestamp: i64, timeout: T)
-        -> KafkaResult<TopicPartitionList>
-    {
+    fn offsets_for_timestamp<T: Into<Option<Duration>>>(
+        &self,
+        timestamp: i64,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
-        let assignment_error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
+        let assignment_error =
+            unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
         if assignment_error.is_error() {
             return Err(KafkaError::MetadataFetch(assignment_error.into()));
         }
@@ -306,16 +339,18 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
 
     /**
      * `timestamps` is a `TopicPartitionList` with timestamps instead of offsets.
-    */
-    fn offsets_for_times<T: Into<Option<Duration>>>(&self, timestamps: TopicPartitionList, timeout: T)
-                                                    -> KafkaResult<TopicPartitionList>
-    {
+     */
+    fn offsets_for_times<T: Into<Option<Duration>>>(
+        &self,
+        timestamps: TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList> {
         // This call will then put the offset in the offset field of this topic partition list.
         let offsets_for_times_error = unsafe {
             rdsys::rd_kafka_offsets_for_times(
                 self.client.native_ptr(),
                 timestamps.ptr(),
-                timeout_to_ms(timeout)
+                timeout_to_ms(timeout),
             )
         };
 
@@ -341,22 +376,28 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
-    fn fetch_metadata<T: Into<Option<Duration>>>(&self, topic: Option<&str>, timeout: T)
-        -> KafkaResult<Metadata>
-    {
+    fn fetch_metadata<T: Into<Option<Duration>>>(
+        &self,
+        topic: Option<&str>,
+        timeout: T,
+    ) -> KafkaResult<Metadata> {
         self.client.fetch_metadata(topic, timeout)
     }
 
-    fn fetch_watermarks<T: Into<Option<Duration>>>(&self, topic: &str, partition: i32, timeout:T)
-        -> KafkaResult<(i64, i64)>
-    {
-        self.client
-            .fetch_watermarks(topic, partition, timeout)
+    fn fetch_watermarks<T: Into<Option<Duration>>>(
+        &self,
+        topic: &str,
+        partition: i32,
+        timeout: T,
+    ) -> KafkaResult<(i64, i64)> {
+        self.client.fetch_watermarks(topic, partition, timeout)
     }
 
-    fn fetch_group_list<T: Into<Option<Duration>>>(&self, group: Option<&str>, timeout: T)
-        -> KafkaResult<GroupList>
-    {
+    fn fetch_group_list<T: Into<Option<Duration>>>(
+        &self,
+        group: Option<&str>,
+        timeout: T,
+    ) -> KafkaResult<GroupList> {
         self.client.fetch_group_list(group, timeout)
     }
 }
@@ -379,7 +420,7 @@ impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(item) = self.0.poll(None) {
-                return Some(item)
+                return Some(item);
             }
         }
     }
