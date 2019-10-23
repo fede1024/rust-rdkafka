@@ -415,7 +415,6 @@ mod tests {
 
     use super::*;
     use crate::config::ClientConfig;
-    use crate::rdsys::types::*;
 
     #[test]
     fn test_client() {

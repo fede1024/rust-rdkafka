@@ -8,8 +8,8 @@ To regenerate the bindings:
 
 ``` bash
 git submodule update --init
-cargo install bindgen --vers 0.30.0
-bindgen --builtins --no-doc-comments librdkafka/src/rdkafka.h -o src/bindings/{platform}.rs
+cargo install bindgen
+./update-bindings.sh
 ```
 
 ## Version

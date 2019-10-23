@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+* Bump librdkafka to v1.2.1.
+* Stop automatically generating librdkafka bindings. Platform-independent
+  bindings are now checked in to the repository.
+* Remove build-time dependency on bindgen, clang, and libclang.
+* Move zstd compression support behind the `zstd` feature flag.
+* Ensure all features are honored in the CMake build system.
+
+
 <a name="0.21.0"></a>
 ## 0.21.0 (2019-04-24)
 
