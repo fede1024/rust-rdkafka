@@ -8,13 +8,6 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
-macro_rules! println_stderr(
-    ($($arg:tt)*) => { {
-        let r = writeln!(&mut ::std::io::stderr(), $($arg)*);
-        r.expect("failed printing to stderr");
-    } }
-);
-
 fn run_command_or_fail<P>(dir: &str, cmd: P, args: &[&str])
 where
     P: AsRef<Path>,
@@ -32,7 +25,7 @@ where
     } else {
         PathBuf::from(cmd)
     };
-    println_stderr!(
+    eprintln!(
         "Running command: \"{} {}\" in dir: {}",
         cmd.display(),
         args.join(" "),
@@ -54,7 +47,7 @@ fn main() {
         .expect("Crate version is not valid");
 
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
-        println_stderr!("librdkafka will be linked dynamically");
+        eprintln!("librdkafka will be linked dynamically");
         let pkg_probe = pkg_config::Config::new()
             .cargo_metadata(true)
             .atleast_version(librdkafka_version)
@@ -62,26 +55,26 @@ fn main() {
 
         match pkg_probe {
             Ok(library) => {
-                println_stderr!("librdkafka found on the system:");
-                println_stderr!("  Name: {:?}", library.libs);
-                println_stderr!("  Path: {:?}", library.link_paths);
-                println_stderr!("  Version: {}", library.version);
+                eprintln!("librdkafka found on the system:");
+                eprintln!("  Name: {:?}", library.libs);
+                eprintln!("  Path: {:?}", library.link_paths);
+                eprintln!("  Version: {}", library.version);
             }
             Err(_) => {
-                println_stderr!(
+                eprintln!(
                     "librdkafka {} cannot be found on the system",
                     librdkafka_version
                 );
-                println_stderr!("Dynamic linking failed. Exiting.");
+                eprintln!("Dynamic linking failed. Exiting.");
                 process::exit(1);
             }
         }
     } else {
         if !Path::new("librdkafka/LICENSE").exists() {
-            println_stderr!("Setting up submodules");
+            eprintln!("Setting up submodules");
             run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
         }
-        println_stderr!("Building and linking librdkafka statically");
+        eprintln!("Building and linking librdkafka statically");
         build_librdkafka();
     }
 
