@@ -2,7 +2,6 @@ FROM ubuntu:16.04
 
 RUN apt-get update && apt-get install -y build-essential \
     curl \
-    llvm-3.9-dev libclang-3.9-dev clang-3.9 \
     openssl libssl-dev \
     pkg-config \
     python \

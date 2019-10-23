@@ -43,6 +43,7 @@ extern crate openssl_sys;
 
 extern crate libz_sys;
 
+#[allow(non_camel_case_types, non_upper_case_globals, non_snake_case, clippy::all)]
 pub mod bindings;
 pub mod helpers;
 pub mod types;
