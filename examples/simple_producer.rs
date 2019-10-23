@@ -1,22 +1,32 @@
-#[macro_use]
-extern crate log;
-extern crate clap;
-extern crate futures;
-extern crate rdkafka;
-
 use clap::{App, Arg};
 use futures::*;
-use futures::executor::block_on;
+use log::*;
 
 use rdkafka::config::ClientConfig;
-use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::async_support::*;
 use rdkafka::util::get_rdkafka_version;
 
 mod example_utils;
-use crate::example_utils::setup_logger;
+use example_utils::setup_logger;
 use rdkafka::message::OwnedHeaders;
 
-fn produce(brokers: &str, topic_name: &str) {
+async fn send(producer: FutureProducer, topic_name: &str, i: &i32, payload: &String, key: &String) -> KafkaResult<OwnedDeliveryResult>{
+    producer
+        .send(
+            FutureRecord::to(topic_name)
+                .payload(&payload)
+                .key(&key)
+                .headers(OwnedHeaders::new().add("header_key", "header_value")),
+            0,
+        )
+        .map(move |delivery_status| {
+            // This will be executed onw the result is received
+            info!("Delivery status for message {} received", i);
+            delivery_status
+        }).await
+}
+
+async fn produce(brokers: &str, topic_name: &str) {
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .set("produce.offset.report", "true")
@@ -26,33 +36,32 @@ fn produce(brokers: &str, topic_name: &str) {
 
     // This loop is non blocking: all messages will be sent one after the other, without waiting
     // for the results.
-    let futures = (0..5)
+    let payloads: Vec<_> = (0..5)
         .map(|i| {
+            let payload = format!("Message {}", i);
+            let key = format!("Key {}", i);
+            (i, payload, key)
+        })
+        .collect();
+    let futures = payloads
+        .iter()
+        .map(|t| {
+            let (i, payload, key) = t;
             // The send operation on the topic returns a future, that will be completed once the
             // result or failure from Kafka will be received.
-            producer
-                .send(
-                    FutureRecord::to(topic_name)
-                        .payload(&format!("Message {}", i))
-                        .key(&format!("Key {}", i))
-                        .headers(OwnedHeaders::new().add("header_key", "header_value")),
-                    0,
-                )
-                .map(move |delivery_status| {
-                    // This will be executed onw the result is received
-                    info!("Delivery status for message {} received", i);
-                    delivery_status
-                })
+
+            send(producer.clone(), topic_name, i, payload, key)
         })
         .collect::<Vec<_>>();
 
     // This loop will wait until all delivery statuses have been received received.
     for future in futures {
-        info!("Future completed. Result: {:?}", block_on(future));
+        info!("Future completed. Result: {:?}", future.await);
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let matches = App::new("producer example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Simple command line producer")
@@ -88,5 +97,5 @@ fn main() {
     let topic = matches.value_of("topic").unwrap();
     let brokers = matches.value_of("brokers").unwrap();
 
-    produce(brokers, topic);
+    produce(brokers, topic).await;
 }

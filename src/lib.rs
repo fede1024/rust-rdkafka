@@ -214,14 +214,7 @@
 //use std::alloc::System;
 //#[global_allocator]
 //static A: System = System;
-
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-
-extern crate rdkafka_sys as rdsys;
+use rdkafka_sys as rdsys;
 
 pub use crate::rdsys::types;
 
@@ -245,3 +238,12 @@ pub use crate::message::{Message, Timestamp};
 pub use crate::statistics::Statistics;
 pub use crate::topic_partition_list::{Offset, TopicPartitionList};
 pub use crate::util::IntoOpaque;
+
+/// Re-export of types useful when using rdkafka with async
+pub mod async_support {
+    pub use crate::error::KafkaResult;
+    pub use crate::consumer::StreamConsumer;
+    pub use crate::message::OwnedMessage;
+    pub use crate::producer::{FutureProducer, FutureRecord};
+    pub use crate::producer::future_producer::OwnedDeliveryResult;
+}

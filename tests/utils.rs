@@ -1,9 +1,6 @@
 #![allow(dead_code)]
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
-extern crate regex;
-
+use lazy_static::lazy_static;
+use log::*;
 use rand::Rng;
 use regex::Regex;
 
@@ -89,7 +86,7 @@ impl ClientContext for TestContext {
 /// Produce the specified count of messages to the topic and partition specified. A map
 /// of (partition, offset) -> message id will be returned. It panics if any error is encountered
 /// while populating the topic.
-pub async fn populate_topic<P, K, J, Q>(
+pub async fn populate_topic<'a, P, K, J, Q>(
     topic_name: &str,
     count: i32,
     value_fn: &P,
@@ -98,16 +95,18 @@ pub async fn populate_topic<P, K, J, Q>(
     timestamp: Option<i64>,
 ) -> HashMap<(i32, i64), i32>
 where
-    P: Fn(i32) -> J,
-    K: Fn(i32) -> Q,
-    J: ToBytes,
-    Q: ToBytes,
+    P: Fn(i32) -> &'a J,
+    K: Fn(i32) -> &'a Q,
+    J: ToBytes + 'a,
+    Q: ToBytes + 'a,
 {
     let prod_context = TestContext { _some_data: 1234 };
 
     // Produce some messages
+    let bootstrap_servers = get_bootstrap_server();
+    info!("Connecting to kafka at {}", bootstrap_servers);
     let producer = ClientConfig::new()
-        .set("bootstrap.servers", get_bootstrap_server().as_str())
+        .set("bootstrap.servers", bootstrap_servers.as_str())
         .set("statistics.interval.ms", "500")
         .set("api.version.request", "true")
         .set("debug", "all")
@@ -116,52 +115,60 @@ where
         .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 
-    let futures = (0..count)
+    let results = (0..count)
         .map(|id| {
-            let future = producer.send(
+            (id, producer.send(
                 FutureRecord {
                     topic: topic_name,
-                    payload: Some(&value_fn(id)),
-                    key: Some(&key_fn(id)),
+                    payload: Some(value_fn(id)),
+                    key: Some(key_fn(id)),
                     partition,
                     timestamp,
                     headers: None,
                 },
                 1000,
-            );
-            (id, future)
+            ))
         })
         .collect::<Vec<_>>();
 
     let mut message_map = HashMap::new();
-    for (id, future) in futures {
-        match future.await {
-            Ok(Ok((partition, offset))) => message_map.insert((partition, offset), id),
-            Ok(Err((kafka_error, _message))) => panic!("Delivery failed: {}", kafka_error),
-            Err(e) => panic!("Waiting for future failed: {}", e),
+    for (id, f) in results {
+        match f.await {
+            Ok(Ok((partition, offset))) => {
+                debug!("Successfully produced record {} to partition {} with offset {}", id, partition, offset);
+                message_map.insert((partition, offset), id)
+            },
+            Ok(Err((kafka_error, _message))) => panic!("Delivery failed for record {}: {}", id, kafka_error),
+            Err(e) => panic!("Waiting for future failed for record {}: {}", id, e),
         };
     }
 
     message_map
 }
 
-pub fn value_fn(id: i32) -> String {
-    format!("Message {}", id)
+lazy_static! {
+    static ref VALUES: Vec<String> = (0..100).map(|i| format!("Message {}", i)).collect();
+    static ref KEYS: Vec<String> = (0..100).map(|i| format!("Key {}", i)).collect();
 }
 
-pub fn key_fn(id: i32) -> String {
-    format!("Key {}", id)
+pub fn value_fn(id: i32) -> &'static String {
+    VALUES.get(id as usize).unwrap()
+}
+
+pub fn key_fn(id: i32) -> &'static String {
+    KEYS.get(id as usize).unwrap()
 }
 
 #[cfg(test)]
 mod tests {
-    use futures::executor::block_on;
     use super::*;
 
-    #[test]
-    fn test_populate_topic() {
+    #[tokio::test]
+    async fn test_populate_topic() {
+        let _ = env_logger::try_init();
+
         let topic_name = rand_test_topic();
-        let message_map = block_on(populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None));
+        let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None).await;
 
         let total_messages = message_map
             .iter()

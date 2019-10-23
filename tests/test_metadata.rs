@@ -1,11 +1,5 @@
 //! Test metadata fetch, group membership, consumer metadata.
-extern crate env_logger;
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
-
 use futures::StreamExt;
-use futures::executor::{block_on, block_on_stream};
 
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::topic_partition_list::TopicPartitionList;
@@ -14,7 +8,7 @@ use rdkafka::config::ClientConfig;
 use std::time::Duration;
 
 mod utils;
-use crate::utils::*;
+use utils::*;
 
 
 fn create_consumer(group_id: &str) -> StreamConsumer {
@@ -30,14 +24,14 @@ fn create_consumer(group_id: &str) -> StreamConsumer {
         .expect("Failed to create StreamConsumer")
 }
 
-#[test]
-fn test_metadata() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_metadata() {
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    block_on(populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None));
-    block_on(populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None));
-    block_on(populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None));
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None).await;
     let consumer = create_consumer(&rand_test_group());
 
     let metadata = consumer.fetch_metadata(None, Duration::from_secs(5)).unwrap();
@@ -80,36 +74,36 @@ fn test_metadata() {
     assert_eq!(metadata_one_topic.topics().len(), 1);
 }
 
-#[test]
-fn test_subscription() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_subscription() {
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    block_on(populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None));
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None).await;
     let consumer = create_consumer(&rand_test_group());
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = block_on_stream(consumer.start()).take(10);
+    let _consumer_future = consumer.start().take(10).collect::<Vec<_>>().await;
 
     let mut tpl = TopicPartitionList::new();
     tpl.add_topic_unassigned(&topic_name);
     assert_eq!(tpl, consumer.subscription().unwrap());
 }
 
-#[test]
-fn test_group_membership() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_group_membership() {
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
     let group_name = rand_test_group();
-    block_on(populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None));
-    block_on(populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None));
-    block_on(populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None));
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None).await;
     let consumer = create_consumer(&group_name);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group
-    let _ = block_on_stream(consumer.start().take(1)).collect::<Vec<_>>();
+    let _ = consumer.start().take(1).collect::<Vec<_>>().await;
 
     let group_list = consumer.fetch_group_list(None, Duration::from_secs(5)).unwrap();
 

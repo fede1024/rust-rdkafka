@@ -1,11 +1,6 @@
 //! Test data consumption using low level and high level consumers.
-extern crate env_logger;
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
-extern crate rdkafka_sys;
-
-use futures::executor::{block_on, block_on_stream};
+use futures::StreamExt;
+use log::*;
 
 use rdkafka::{ClientConfig, ClientContext, Message, Statistics, Timestamp};
 use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext, CommitMode, StreamConsumer};
@@ -14,7 +9,7 @@ use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::current_time_millis;
 
 mod utils;
-use crate::utils::*;
+use utils::*;
 
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
@@ -89,13 +84,13 @@ fn create_base_consumer(
 }
 
 // All produced messages should be consumed.
-#[test]
-fn test_produce_consume_iter() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_produce_consume_iter() {
+    let _r = env_logger::try_init();
 
     let start_time = current_time_millis();
     let topic_name = rand_test_topic();
-    let message_map = block_on(populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None));
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
     let consumer = create_base_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -117,17 +112,17 @@ fn test_produce_consume_iter() {
 }
 
 // All produced messages should be consumed.
-#[test]
-fn test_produce_consume_base() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_produce_consume_base() {
+    let _r = env_logger::try_init();
 
     let start_time = current_time_millis();
     let topic_name = rand_test_topic();
-    let message_map = block_on(populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None));
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = block_on_stream(consumer.start())
+    let _consumer_future = consumer.start()
         .take(100)
         .for_each(|message| {
             match message {
@@ -143,18 +138,21 @@ fn test_produce_consume_base() {
                 },
                 Err(e) => panic!("Error receiving message: {:?}", e)
             };
-        });
+            futures::future::ready(())
+        }).await;
+
+    consumer.stop();
 }
 
 // All produced messages should be consumed.
-#[test]
-fn test_produce_consume_base_assign() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_produce_consume_base_assign() {
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    block_on(populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None));
-    block_on(populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None));
-    block_on(populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None));
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None).await;
     let consumer = create_stream_consumer(&rand_test_group(), None);
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
@@ -162,31 +160,34 @@ fn test_produce_consume_base_assign() {
     tpl.add_partition_offset(&topic_name, 2, Offset::Offset(9));
     consumer.assign(&tpl).unwrap();
 
-    let mut partition_count = vec![0, 0, 0];
+    let mut partition_count: Vec<usize> = vec![0, 0, 0];
 
-    let _consumer_future = block_on_stream(consumer.start())
+    let _consumer_future = consumer.start()
         .take(19)
         .for_each(|message| {
             match message {
                 Ok(m) => partition_count[m.partition() as usize] += 1,
                 Err(e) => panic!("Error receiving message: {:?}", e)
             };
-        });
+            futures::future::ready(())
+        }).await;
+
+    consumer.stop();
 
     assert_eq!(partition_count, vec![10, 8, 1]);
 }
 
 // All produced messages should be consumed.
-#[test]
-fn test_produce_consume_with_timestamp() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_produce_consume_with_timestamp() {
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    let message_map = block_on(populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111)));
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111)).await;
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = block_on_stream(consumer.start())
+    let _consumer_future = consumer.start()
         .take(100)
         .for_each(|message| {
             match message {
@@ -198,9 +199,10 @@ fn test_produce_consume_with_timestamp() {
                 },
                 Err(e) => panic!("Error receiving message: {:?}", e)
             };
-        });
+            futures::future::ready(())
+        }).await;
 
-    block_on(populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999_999)));
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999_999)).await;
 
     // Lookup the offsets
     let tpl = consumer.offsets_for_timestamp(999_999, Duration::from_secs(10)).unwrap();
@@ -209,21 +211,24 @@ fn test_produce_consume_with_timestamp() {
     assert_eq!(tp.offset(), Offset::Offset(100));
     assert_eq!(tp.partition(), 0);
     assert_eq!(tp.error(), Ok(()));
+
+    consumer.stop();
 }
 
-#[test]
-fn test_consume_with_no_message_error() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_consume_with_no_message_error() {
+    let _r = env_logger::try_init();
 
     let consumer = create_stream_consumer(&rand_test_group(), None);
 
-    let message_stream = consumer.start_with(Duration::from_millis(200), true);
+    let mut message_stream = consumer.start_with(Duration::from_millis(200), true);
 
     let mut first_poll_time = None;
     let mut timeouts_count = 0;
-    for message in block_on_stream(message_stream) {
+    while let Some(message) = message_stream.next().await {
         match message {
             Err(KafkaError::NoMessageReceived) => {
+                debug!("No message received");
                 // TODO: use entry interface for Options once available
                 if first_poll_time.is_none() {
                     first_poll_time = Some(Instant::now());
@@ -238,6 +243,8 @@ fn test_consume_with_no_message_error() {
         };
     }
 
+    consumer.stop();
+
     assert_eq!(timeouts_count, 26);
     // It should take 5000ms
     println!("Duration: {:?}", first_poll_time.unwrap().elapsed());
@@ -248,18 +255,18 @@ fn test_consume_with_no_message_error() {
 
 
 // TODO: add check that commit cb gets called correctly
-#[test]
-fn test_consumer_commit_message() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_consumer_commit_message() {
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    block_on(populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None));
-    block_on(populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None));
-    block_on(populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None));
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None).await;
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = block_on_stream(consumer.start())
+    let _consumer_future = consumer.start()
         .take(33)
         .for_each(|message| {
             match message {
@@ -270,6 +277,7 @@ fn test_consumer_commit_message() {
                 },
                 Err(e) => panic!("error receiving message: {:?}", e)
             };
+            futures::future::ready(())
         });
 
     let timeout = Duration::from_secs(5);
@@ -294,23 +302,25 @@ fn test_consumer_commit_message() {
     position.add_partition_offset(&topic_name, 1, Offset::Offset(11));
     position.add_partition_offset(&topic_name, 2, Offset::Offset(12));
     assert_eq!(position, consumer.position().unwrap());
+
+    consumer.stop();
 }
 
-#[test]
-fn test_consumer_store_offset_commit() {
-    let _r = env_logger::init();
+#[tokio::test]
+async fn test_consumer_store_offset_commit() {
+    let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    block_on(populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None));
-    block_on(populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None));
-    block_on(populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None));
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None).await;
     let mut config = HashMap::new();
     config.insert("enable.auto.offset.store", "false");
     config.insert("enable.partition.eof", "true");
     let consumer = create_stream_consumer(&rand_test_group(), Some(config));
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = block_on_stream(consumer.start())
+    let _consumer_future = consumer.start()
         .take(36)
         .for_each(|message| {
             match message {
@@ -322,7 +332,8 @@ fn test_consumer_store_offset_commit() {
                 Err(KafkaError::PartitionEOF(_)) => {},
                 Err(e) => panic!("Error receiving message: {:?}", e)
             };
-        });
+            futures::future::ready(())
+        }).await;
 
     // Commit the whole current state
     consumer.commit_consumer_state(CommitMode::Sync).unwrap();
@@ -349,4 +360,6 @@ fn test_consumer_store_offset_commit() {
     position.add_partition_offset(&topic_name, 1, Offset::Offset(11));
     position.add_partition_offset(&topic_name, 2, Offset::Offset(12));
     assert_eq!(position, consumer.position().unwrap());
+
+    consumer.stop();
 }

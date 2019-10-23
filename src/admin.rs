@@ -14,10 +14,9 @@ use crate::util::{cstr_to_owned, timeout_to_ms, AsCArray, ErrBuf, IntoOpaque, Wr
 
 use futures::channel::oneshot::{Canceled, Receiver, Sender, channel};
 use futures::future::{self, Either, Future, FutureExt};
-
+use log::*;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
-use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -518,9 +517,9 @@ impl AdminOptions {
         let (tx, rx) = channel();
         let tx = Box::new(tx);
         unsafe {
-            rdsys::rd_kafka_AdminOptions_set_opaque(native_opts.ptr, IntoOpaque::as_ptr(&tx))
+            rdsys::rd_kafka_AdminOptions_set_opaque(native_opts.ptr, IntoOpaque::as_ptr(&tx));
+            std::mem::forget(tx);
         };
-        mem::forget(tx);
 
         Ok((native_opts, rx))
     }

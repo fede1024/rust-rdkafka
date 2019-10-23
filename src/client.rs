@@ -2,6 +2,7 @@
 use crate::rdsys;
 use crate::rdsys::types::*;
 
+use log::*;
 use std::ffi::{CStr, CString};
 use std::mem;
 use std::os::raw::c_char;
@@ -71,6 +72,7 @@ impl ClientContext for DefaultClientContext {}
 
 /// A native rdkafka-sys client. This struct shouldn't be used directly. Use higher level `Client`
 /// or producers and consumers.
+#[derive(Clone)]
 pub struct NativeClient {
     ptr: *mut RDKafka,
 }
@@ -104,6 +106,7 @@ impl Drop for NativeClient {
 /// A low level rdkafka client. This client shouldn't be used directly. The producer and consumer modules
 /// provide different producer and consumer implementations based on top of `Client` that can be
 /// used instead.
+#[derive(Clone)]
 pub struct Client<C: ClientContext = DefaultClientContext> {
     native: NativeClient,
     context: Box<C>,

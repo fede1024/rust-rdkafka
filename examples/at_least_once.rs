@@ -11,27 +11,21 @@
 /// For a simpler example of consumers and producers, check the `simple_consumer` and
 /// `simple_producer` files in the example folder.
 ///
-#[macro_use] extern crate log;
-extern crate clap;
-extern crate futures;
-extern crate rdkafka;
-extern crate rdkafka_sys;
-
 use clap::{App, Arg};
-use futures::executor::{block_on, block_on_stream};
 use futures::future::join_all;
+use log::*;
 
 use rdkafka::Message;
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
-use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::error::KafkaResult;
-use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::get_rdkafka_version;
+use rdkafka::async_support::*;
 
 mod example_utils;
-use crate::example_utils::setup_logger;
+use example_utils::setup_logger;
+use futures::StreamExt;
 
 
 // A simple context to customize the consumer behavior and print a log line every time
@@ -82,7 +76,8 @@ fn create_producer(brokers: &str) -> FutureProducer {
         .expect("Producer creation failed")
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let matches = App::new("at-least-once")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("At-least-once delivery example")
@@ -128,7 +123,7 @@ fn main() {
     let consumer = create_consumer(brokers, group_id, input_topic);
     let producer = create_producer(brokers);
 
-    for message in block_on_stream(consumer.start()) {
+    for message in consumer.start().next().await {
         match message {
             Err(e) => {
                 warn!("Kafka error: {}", e);
@@ -136,7 +131,7 @@ fn main() {
             Ok(m) => {
                 // Send a copy to the message to every output topic in parallel, and wait for the
                 // delivery report to be received.
-                block_on(join_all(
+                join_all(
                     output_topics.iter()
                         .map(|output_topic| {
                             let mut record = FutureRecord::to(output_topic);
@@ -147,7 +142,9 @@ fn main() {
                                 record = record.key(k);
                             }
                             producer.send(record, 1000)
-                        }))).into_iter().collect::<Result<Vec<_>, _>>()
+                        }))
+                    .await
+                    .into_iter().collect::<Result<Vec<_>, _>>()
                     .expect("Message delivery failed for some topic");
                 // Now that the message is completely processed, add it's position to the offset
                 // store. The actual offset will be committed every 5 seconds.

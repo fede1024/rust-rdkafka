@@ -1,23 +1,18 @@
-#[macro_use]
-extern crate log;
-extern crate clap;
-extern crate futures;
-extern crate rdkafka;
-extern crate rdkafka_sys;
-
 use clap::{App, Arg};
-use futures::executor::block_on_stream;
+
+use log::*;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
-use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext, Rebalance};
 use rdkafka::error::KafkaResult;
 use rdkafka::message::{Headers, Message};
 use rdkafka::util::get_rdkafka_version;
+use rdkafka::async_support::*;
 
 mod example_utils;
-use crate::example_utils::setup_logger;
+use example_utils::setup_logger;
+use futures::StreamExt;
 
 // A context can be used to change the behavior of producers and consumers by adding callbacks
 // that will be executed by librdkafka.
@@ -47,7 +42,7 @@ impl ConsumerContext for CustomContext {
 // A type alias with your custom consumer can be created for convenience.
 type LoggingConsumer = StreamConsumer<CustomContext>;
 
-fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
+async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
     let context = CustomContext;
 
     let consumer: LoggingConsumer = ClientConfig::new()
@@ -68,9 +63,9 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
 
     // consumer.start() returns a stream. The stream can be used ot chain together expensive steps,
     // such as complex computations on a thread pool or asynchronous IO.
-    let message_stream = consumer.start();
+    let mut message_stream = consumer.start();
 
-    for message in block_on_stream(message_stream) {
+    while let Some(message) = message_stream.next().await {
         match message {
             Err(e) => warn!("Kafka error: {}", e),
             Ok(m) => {
@@ -96,7 +91,8 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let matches = App::new("consumer example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Simple command line consumer")
@@ -142,5 +138,5 @@ fn main() {
     let brokers = matches.value_of("brokers").unwrap();
     let group_id = matches.value_of("group-id").unwrap();
 
-    consume_and_print(brokers, group_id, &topics);
+    consume_and_print(brokers, group_id, &topics).await;
 }

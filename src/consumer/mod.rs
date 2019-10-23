@@ -1,10 +1,12 @@
 //! Base trait and common functionality for all consumers.
-pub mod base_consumer;
-pub mod stream_consumer;
+mod base_consumer;
+mod message_stream;
+mod stream_consumer;
 
 // Re-export
-pub use self::base_consumer::BaseConsumer;
-pub use self::stream_consumer::{MessageStream, StreamConsumer};
+pub use base_consumer::BaseConsumer;
+pub use message_stream::MessageStream;
+pub use stream_consumer::StreamConsumer;
 
 use crate::rdsys;
 use crate::rdsys::types::*;
@@ -16,6 +18,7 @@ use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
 use crate::util::cstr_to_owned;
 
+use log::*;
 use std::ptr;
 use std::time::Duration;
 

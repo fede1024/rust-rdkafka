@@ -20,12 +20,12 @@
 
 use crate::rdsys;
 use crate::rdsys::types::*;
-use log::Level;
 
 use crate::client::ClientContext;
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::util::ErrBuf;
 
+use log::*;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::mem;
@@ -144,6 +144,7 @@ impl ClientConfig {
         let conf = unsafe { rdsys::rd_kafka_conf_new() };
         let mut err_buf = ErrBuf::new();
         for (key, value) in &self.conf_map {
+            trace!("Adding config value {}={}", key, value);
             let key_c = CString::new(key.to_string())?;
             let value_c = CString::new(value.to_string())?;
             let ret = unsafe {

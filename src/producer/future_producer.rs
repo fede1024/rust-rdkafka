@@ -11,14 +11,12 @@ use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProdu
 use crate::statistics::Statistics;
 use crate::util::IntoOpaque;
 
-use futures::channel::oneshot::{channel, Receiver, Sender};
-use futures::FutureExt;
+use futures::channel::oneshot::{channel, Sender};
+use log::*;
 
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
+use tokio_executor::blocking::{run as block_on};
 
 //
 // ********** FUTURE PRODUCER **********
@@ -52,19 +50,6 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
             key: None,
             timestamp: None,
             headers: None,
-        }
-    }
-
-    fn from_base_record<D: IntoOpaque>(
-        base_record: BaseRecord<'a, K, P, D>,
-    ) -> FutureRecord<'a, K, P> {
-        FutureRecord {
-            topic: base_record.topic,
-            partition: base_record.partition,
-            key: base_record.key,
-            payload: base_record.payload,
-            timestamp: base_record.timestamp,
-            headers: base_record.headers,
         }
     }
 
@@ -123,7 +108,7 @@ struct FutureProducerContext<C: ClientContext + 'static> {
 /// If message delivery was successful, `OwnedDeliveryResult` will return the partition and offset
 /// of the message. If the message failed to be delivered an error will be returned, together with
 /// an owned copy of the original message.
-type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
+pub type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
 
 // Delegates all the methods calls to the wrapped context.
 impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
@@ -194,25 +179,13 @@ impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProduce
     }
 }
 
-/// A [Future] wrapping the result of the message production.
-///
-/// Once completed, the future will contain an `OwnedDeliveryResult` with information on the
-/// delivery status of the message.
-pub struct DeliveryFuture {
-    rx: Receiver<OwnedDeliveryResult>,
-}
-
-impl Future for DeliveryFuture {
-    type Output = KafkaResult<OwnedDeliveryResult>;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        match self.rx.poll_unpin(cx) {
-            Poll::Ready(Ok(Ok(inner))) => Poll::Ready(Ok(Ok(inner))),
-            Poll::Ready(Ok(Err(e))) => Poll::Ready(Ok(Err(e))),
-            Poll::Ready(Err(_)) => Poll::Ready(Err(KafkaError::NoMessageReceived)),
-            Poll::Pending => Poll::Pending,
-        }
-    }
+enum ProducerPollResult<'a, K, P>
+    where
+        K: ToBytes + ?Sized,
+        P: ToBytes + ?Sized,
+{
+    Produce(BaseRecord<'a, K, P, Box<Sender<OwnedDeliveryResult>>>),
+    Delivered,
 }
 
 impl<C: ClientContext + 'static> FutureProducer<C> {
@@ -221,28 +194,43 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     /// is allowed to block if the queue is full. Set it to -1 to block forever, or 0 to never block.
     /// If `block_ms` is reached and the queue is still full, a [RDKafkaError::QueueFull] will be
     /// reported in the [DeliveryFuture].
-    pub fn send<K, P>(&self, record: FutureRecord<K, P>, block_ms: i64) -> DeliveryFuture
+    pub async fn send<'a, K, P>(&self, record: FutureRecord<'a, K, P>, block_ms: i64) -> KafkaResult<OwnedDeliveryResult>
     where
         K: ToBytes + ?Sized,
         P: ToBytes + ?Sized,
     {
         let start_time = Instant::now();
+        let timeout_dur = if block_ms > 0 {
+            Some(Duration::from_millis(block_ms as u64))
+        } else {
+            None
+        };
 
-        let (tx, rx) = futures::channel::oneshot::channel();
-        let mut base_record = record.into_base_record(Box::new(tx));
+        let (tx, rx) = channel();
+        let record = record.into_base_record(Box::new(tx));
 
-        loop {
-            match self.producer.send(base_record) {
-                Ok(_) => break DeliveryFuture { rx },
+        let mut poll_result = ProducerPollResult::Produce(record);
+
+        while let ProducerPollResult::Produce(to_produce) = std::mem::replace(&mut poll_result, ProducerPollResult::Delivered) {
+            poll_result = match self.producer.send(to_produce) {
+                Ok(_) => {
+                    trace!("Record successfully delivered");
+                    ProducerPollResult::Delivered
+                },
                 Err((KafkaError::MessageProduction(RDKafkaError::QueueFull), record)) => {
-                    base_record = record;
-                    if block_ms == -1 {
-                        continue;
-                    } else if block_ms > 0
-                        && start_time.elapsed() < Duration::from_millis(block_ms as u64)
-                    {
-                        self.poll(Duration::from_millis(100));
-                        continue;
+                    if let Some(to) = timeout_dur {
+                        let timed_out = start_time.elapsed() >= to;
+                        if timed_out {
+                            debug!("Queue full and timeout reached");
+                            return Err(KafkaError::MessageProduction(RDKafkaError::QueueFull));
+                        } else {
+                            debug!("Queue full, polling for 100ms before trying again");
+                            let producer = Arc::clone(&self.producer);
+                            block_on(move || producer.poll(Duration::from_millis(100))).await;
+                            ProducerPollResult::Produce(record)
+                        }
+                    } else {
+                        ProducerPollResult::Produce(record)
                     }
                 }
                 Err((e, record)) => {
@@ -258,39 +246,49 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
                         record.headers,
                     );
                     let _ = record.delivery_opaque.send(Err((e, owned_message)));
-                    break DeliveryFuture { rx };
+                    ProducerPollResult::Delivered
                 }
-            }
+            };
         }
+
+        rx.await.map_err(|_| KafkaError::Canceled)
     }
 
     /// Same as [FutureProducer::send], with the only difference that if enqueuing fails, an
     /// error will be returned immediately, alongside the [FutureRecord] provided.
-    pub fn send_result<'a, K, P>(
+    pub async fn send_result<'a, K, P>(
         &self,
         record: FutureRecord<'a, K, P>,
-    ) -> Result<DeliveryFuture, (KafkaError, FutureRecord<'a, K, P>)>
+    ) -> KafkaResult<OwnedDeliveryResult>
     where
         K: ToBytes + ?Sized,
         P: ToBytes + ?Sized,
     {
         let (tx, rx) = channel();
-        let base_record = record.into_base_record(Box::new(tx));
-        self.producer
-            .send(base_record)
-            .map(|()| DeliveryFuture { rx })
-            .map_err(|(e, record)| (e, FutureRecord::from_base_record(record)))
-    }
 
-    /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
-    /// a thread dedicated to calling `poll` regularly.
-    pub fn poll<T: Into<Option<Duration>>>(&self, timeout: T) {
-        self.producer.poll(timeout);
+        let record = record.into_base_record(Box::new(tx));
+        if let Err((e, record)) = self.producer.send(record) {
+            let owned_message = OwnedMessage::new(
+                record.payload.map(|p| p.to_bytes().to_vec()),
+                record.key.map(|k| k.to_bytes().to_vec()),
+                record.topic.to_owned(),
+                record
+                    .timestamp
+                    .map_or(Timestamp::NotAvailable, Timestamp::CreateTime),
+                record.partition.unwrap_or(-1),
+                0,
+                record.headers,
+            );
+            let _ = record.delivery_opaque.send(Err((e, owned_message)));
+        }
+
+        rx.await.map_err(|_| KafkaError::Canceled)
     }
 
     /// Flushes the producer. Should be called before termination.
-    pub fn flush<T: Into<Option<Duration>>>(&self, timeout: T) {
-        self.producer.flush(timeout);
+    pub async fn flush<T: Into<Option<Duration>> + Send + 'static>(&self, timeout: T) {
+        let producer = Arc::clone(&self.producer);
+        block_on(move || producer.flush(timeout)).await
     }
 
     /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.

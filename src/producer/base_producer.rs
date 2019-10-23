@@ -44,6 +44,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use crate::util::{timeout_to_ms, IntoOpaque};
 
+use log::*;
 use std::ffi::CString;
 use std::mem;
 use std::os::raw::c_void;

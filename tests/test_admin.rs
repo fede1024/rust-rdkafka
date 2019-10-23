@@ -1,8 +1,5 @@
 //! Test administrative commands using the admin API.
-
 use backoff::{ExponentialBackoff, Operation};
-use futures::executor::block_on;
-
 
 use std::time::Duration;
 
@@ -17,7 +14,8 @@ use rdkafka::metadata::Metadata;
 use rdkafka::ClientConfig;
 
 mod utils;
-use crate::utils::*;
+use utils::*;
+use backoff::backoff::Backoff;
 
 fn create_config() -> ClientConfig {
     let mut config = ClientConfig::new();
@@ -72,8 +70,10 @@ fn verify_delete(topic: &str) {
     .unwrap()
 }
 
-#[test]
-fn test_topics() {
+#[tokio::test]
+async fn test_topics() {
+    let _ = env_logger::try_init();
+
     let admin_client = create_admin_client();
     let opts = AdminOptions::new().operation_timeout(Duration::from_secs(1));
 
@@ -93,8 +93,9 @@ fn test_topics() {
             config: Vec::new(),
         };
 
-        let res = block_on(admin_client
-            .create_topics(&[topic1, topic2], &opts))
+        let res = admin_client
+            .create_topics(&[topic1, topic2], &opts)
+            .await
             .expect("topic creation failed");
         assert_eq!(res, &[Ok(name1.clone()), Ok(name2.clone())]);
 
@@ -109,11 +110,11 @@ fn test_topics() {
         assert_eq!(1, metadata_topic1.partitions().len());
         assert_eq!(3, metadata_topic2.partitions().len());
 
-        let res = block_on(admin_client
+        let res = admin_client
             .describe_configs(
                 &[ResourceSpecifier::Topic(&name1), ResourceSpecifier::Topic(&name2)],
                 &opts,
-            ))
+            ).await
             .expect("describe configs failed");
         let config1 = &res[0].as_ref().expect("describe configs failed on topic 1");
         let config2 = &res[1].as_ref().expect("describe configs failed on topic 2");
@@ -146,8 +147,9 @@ fn test_topics() {
         assert_eq!(Some(&&expected_entry2), config_entries2.get("max.message.bytes"));
 
         let partitions1 = NewPartitions::new(&name1, 5);
-        let res = block_on(admin_client
-            .create_partitions(&[partitions1], &opts))
+        let res = admin_client
+            .create_partitions(&[partitions1], &opts)
+            .await
             .expect("partition creation failed");
         assert_eq!(res, &[Ok(name1.clone())]);
 
@@ -165,8 +167,9 @@ fn test_topics() {
         .retry(&mut backoff)
         .unwrap();
 
-        let res = block_on(admin_client
-            .delete_topics(&[&name1, &name2], &opts))
+        let res = admin_client
+            .delete_topics(&[&name1, &name2], &opts)
+            .await
             .expect("topic deletion failed");
         assert_eq!(res, &[Ok(name1.clone()), Ok(name2.clone())]);
         verify_delete(&name1);
@@ -177,7 +180,7 @@ fn test_topics() {
     // creating topics.
     {
         let topic = NewTopic::new("ignored", 1, TopicReplication::Variable(&[&[0], &[0]]));
-        let res = block_on(admin_client.create_topics(&[topic], &opts));
+        let res = admin_client.create_topics(&[topic], &opts).await;
         assert_eq!(
             Err(KafkaError::AdminOpCreation(
                 "replication configuration for topic 'ignored' assigns 2 partition(s), \
@@ -194,8 +197,9 @@ fn test_topics() {
         let name = rand_test_topic();
         let topic = NewTopic::new(&name, 1, TopicReplication::Fixed(1));
 
-        let res = block_on(admin_client
-            .create_topics(vec![&topic], &opts))
+        let res = admin_client
+            .create_topics(vec![&topic], &opts)
+            .await
             .expect("topic creation failed");
         assert_eq!(res, &[Ok(name.clone())]);
         let _ = fetch_metadata(&name);
@@ -203,7 +207,7 @@ fn test_topics() {
         // This partition specification is obviously garbage, and so trips
         // a client-side error.
         let partitions = NewPartitions::new(&name, 2).assign(&[&[0], &[0], &[0]]);
-        let res = block_on(admin_client.create_partitions(&[partitions], &opts));
+        let res = admin_client.create_partitions(&[partitions], &opts).await;
         assert_eq!(
             res,
             Err(KafkaError::AdminOpCreation(format!(
@@ -215,8 +219,9 @@ fn test_topics() {
 
         // Only the server knows that this partition specification is garbage.
         let partitions = NewPartitions::new(&name, 2).assign(&[&[0], &[0]]);
-        let res = block_on(admin_client
-            .create_partitions(&[partitions], &opts))
+        let res = admin_client
+            .create_partitions(&[partitions], &opts)
+            .await
             .expect("partition creation failed");
         assert_eq!(res, &[Err((name, RDKafkaError::InvalidReplicaAssignment))],);
     }
@@ -224,8 +229,9 @@ fn test_topics() {
     // Verify that deleting a non-existent topic fails.
     {
         let name = rand_test_topic();
-        let res = block_on(admin_client
-            .delete_topics(&[&name], &opts))
+        let res = admin_client
+            .delete_topics(&[&name], &opts)
+            .await
             .expect("delete topics failed");
         assert_eq!(res, &[Err((name, RDKafkaError::UnknownTopicOrPartition))]);
     }
@@ -239,14 +245,16 @@ fn test_topics() {
         let topic1 = NewTopic::new(&name1, 1, TopicReplication::Fixed(1));
         let topic2 = NewTopic::new(&name2, 1, TopicReplication::Fixed(1));
 
-        let res = block_on(admin_client
-            .create_topics(vec![&topic1], &opts))
+        let res = admin_client
+            .create_topics(vec![&topic1], &opts)
+            .await
             .expect("topic creation failed");
         assert_eq!(res, &[Ok(name1.clone())]);
         let _ = fetch_metadata(&name1);
 
-        let res = block_on(admin_client
-            .create_topics(vec![&topic1, &topic2], &opts))
+        let res = admin_client
+            .create_topics(vec![&topic1, &topic2], &opts)
+            .await
             .expect("topic creation failed");
         assert_eq!(
             res,
@@ -257,14 +265,16 @@ fn test_topics() {
         );
         let _ = fetch_metadata(&name2);
 
-        let res = block_on(admin_client
-            .delete_topics(&[&name1], &opts))
+        let res = admin_client
+            .delete_topics(&[&name1], &opts)
+            .await
             .expect("topic deletion failed");
         assert_eq!(res, &[Ok(name1.clone())]);
         verify_delete(&name1);
 
-        let res = block_on(admin_client
-            .delete_topics(&[&name2, &name1], &opts))
+        let res = admin_client
+            .delete_topics(&[&name2, &name1], &opts)
+            .await
             .expect("topic deletion failed");
         assert_eq!(
             res,
@@ -276,14 +286,17 @@ fn test_topics() {
     }
 }
 
-#[test]
-fn test_configs() {
+#[tokio::test]
+async fn test_configs() {
+    let _ = env_logger::try_init();
+
     let admin_client = create_admin_client();
     let opts = AdminOptions::new();
     let broker = ResourceSpecifier::Broker(0);
 
-    let res = block_on(admin_client
-        .describe_configs(&[broker], &opts))
+    let res = admin_client
+        .describe_configs(&[broker], &opts)
+        .await
         .expect("describe configs failed");
     let config = &res[0].as_ref().expect("describe configs failed");
     let orig_val = config
@@ -294,16 +307,18 @@ fn test_configs() {
         .expect("original value missing");
 
     let config = AlterConfig::new(broker).set("log.flush.interval.messages", "1234");
-    let res = block_on(admin_client
-        .alter_configs(&[config], &opts))
+    let res = admin_client
+        .alter_configs(&[config], &opts)
+        .await
         .expect("alter configs failed");
     assert_eq!(res, &[Ok(OwnedResourceSpecifier::Broker(0))]);
 
     let mut backoff = ExponentialBackoff::default();
     backoff.max_elapsed_time = Some(Duration::from_secs(5));
-    (|| {
-        let res = block_on(admin_client
-            .describe_configs(&[broker], &opts))
+    loop {
+        let res = admin_client
+            .describe_configs(&[broker], &opts)
+            .await
             .expect("describe configs failed");
         let config = &res[0].as_ref().expect("describe configs failed");
         let entry = config.get("log.flush.interval.messages");
@@ -329,16 +344,16 @@ fn test_configs() {
             }
         };
         if entry != Some(&expected_entry) {
-            Err(format!("{:?} != {:?}", entry, Some(&expected_entry)))?
+            let next_backoff = backoff.next_backoff().expect(&format!("{:?} != {:?}", entry, Some(&expected_entry)));
+            tokio::timer::delay_for(next_backoff).await;
         }
-        Ok(())
-    })
-    .retry(&mut backoff)
-    .unwrap();
+        break
+    }
 
     let config = AlterConfig::new(broker).set("log.flush.interval.ms", &orig_val);
-    let res = block_on(admin_client
-        .alter_configs(&[config], &opts))
+    let res = admin_client
+        .alter_configs(&[config], &opts)
+        .await
         .expect("alter configs failed");
     assert_eq!(res, &[Ok(OwnedResourceSpecifier::Broker(0))]);
 }
@@ -346,8 +361,10 @@ fn test_configs() {
 // Tests whether each admin operation properly reports an error if the entire
 // request fails. The original implementations failed to check this, resulting
 // in confusing situations where a failed admin request would return Ok([]).
-#[test]
-fn test_event_errors() {
+#[tokio::test]
+async fn test_event_errors() {
+    let _ = env_logger::try_init();
+
     // Configure an admin client to target a Kafka server that doesn't exist,
     // then set an impossible timeout. This will ensure that every request fails
     // with an OperationTimedOut error, assuming, of course, that the request
@@ -358,18 +375,18 @@ fn test_event_errors() {
         .expect("admin client creation failed");
     let opts = AdminOptions::new().request_timeout(Duration::from_nanos(1));
 
-    let res = block_on(admin_client.create_topics(&[], &opts));
+    let res = admin_client.create_topics(&[], &opts).await;
     assert_eq!(res, Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
 
-    let res = block_on(admin_client.create_partitions(&[], &opts));
+    let res = admin_client.create_partitions(&[], &opts).await;
     assert_eq!(res, Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
 
-    let res = block_on(admin_client.delete_topics(&[], &opts));
+    let res = admin_client.delete_topics(&[], &opts).await;
     assert_eq!(res, Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
 
-    let res = block_on(admin_client.describe_configs(&[], &opts));
+    let res = admin_client.describe_configs(&[], &opts).await;
     assert_eq!(res.err(), Some(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
 
-    let res = block_on(admin_client.alter_configs(&[], &opts));
+    let res = admin_client.alter_configs(&[], &opts).await;
     assert_eq!(res, Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut)));
 }

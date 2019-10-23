@@ -5,6 +5,7 @@ use crate::rdsys::types::*;
 
 use crate::error::{IsError, KafkaError, KafkaResult};
 
+use log::*;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;

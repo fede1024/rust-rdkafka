@@ -13,6 +13,7 @@ use crate::topic_partition_list::Offset::Offset;
 use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{cstr_to_owned, timeout_to_ms};
 
+use log::*;
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
@@ -59,6 +60,7 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.
+#[derive(Clone)]
 pub struct BaseConsumer<C: ConsumerContext = DefaultConsumerContext> {
     client: Client<C>,
 }
@@ -125,7 +127,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         timeout: T,
     ) -> Option<KafkaResult<BorrowedMessage>> {
         self.poll_raw(timeout_to_ms(timeout))
-            .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
+            .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr) })
     }
 
     /// Returns an iterator over the available messages.

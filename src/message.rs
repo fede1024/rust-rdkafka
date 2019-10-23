@@ -2,6 +2,7 @@
 use crate::rdsys;
 use crate::rdsys::types::*;
 
+use log::*;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
@@ -214,10 +215,9 @@ impl<'a> BorrowedMessage<'a> {
     /// consumer. The lifetime of the message will be bound to the lifetime of the consumer passed
     /// as parameter. This method should only be used with messages coming from consumers. If the
     /// message contains an error, only the error is returned and the message structure is freed.
-    pub(crate) unsafe fn from_consumer<C>(
+    pub(crate) unsafe fn from_consumer<'b>(
         ptr: *mut RDKafkaMessage,
-        _consumer: &'a C,
-    ) -> KafkaResult<BorrowedMessage<'a>> {
+    ) -> KafkaResult<BorrowedMessage<'b>> {
         if (*ptr).err.is_error() {
             let err = match (*ptr).err {
                 rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {

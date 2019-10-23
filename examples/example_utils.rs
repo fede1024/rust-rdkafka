@@ -1,12 +1,8 @@
-extern crate chrono;
-extern crate env_logger;
-extern crate log;
+use chrono::prelude::*;
 
-use self::chrono::prelude::*;
-
-use self::env_logger::fmt::Formatter;
-use self::env_logger::Builder;
-use self::log::{LevelFilter, Record};
+use env_logger::fmt::Formatter;
+use env_logger::Builder;
+use log::{LevelFilter, Record};
 use std::io::Write;
 use std::thread;
 

@@ -78,8 +78,8 @@
 pub mod base_producer;
 pub mod future_producer;
 
-pub use self::base_producer::{
+pub use base_producer::{
     BaseProducer, BaseRecord, DefaultProducerContext, DeliveryResult, ProducerContext,
     ThreadedProducer,
 };
-pub use self::future_producer::{DeliveryFuture, FutureProducer, FutureRecord};
+pub use future_producer::{FutureProducer, FutureRecord};

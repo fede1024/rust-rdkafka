@@ -2,6 +2,7 @@
 #![allow(missing_docs)]
 
 use std::collections::HashMap;
+use serde::Deserialize;
 
 /// Statistics from librdkafka. Refer to the [librdkafka documentation](https://github.com/edenhill/librdkafka/wiki/Statistics)
 /// for details.

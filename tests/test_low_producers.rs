@@ -1,8 +1,4 @@
 //! Test data production using low level producers.
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
-
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
 use rdkafka::message::{Headers, Message, OwnedMessage};
@@ -14,7 +10,7 @@ use rdkafka::{ClientContext, Statistics};
 
 #[macro_use]
 mod utils;
-use crate::utils::*;
+use utils::*;
 
 use rdkafka::message::OwnedHeaders;
 use std::collections::{HashMap, HashSet};
@@ -125,6 +121,8 @@ fn threaded_producer_with_context<C: ProducerContext>(
 
 #[test]
 fn test_base_producer_queue_full() {
+    let _ = env_logger::try_init();
+
     let producer = base_producer(map!("queue.buffering.max.messages" => "10"));
     let topic_name = rand_test_topic();
 
@@ -162,6 +160,8 @@ fn test_base_producer_queue_full() {
 
 #[test]
 fn test_base_producer_timeout() {
+    let _ = env_logger::try_init();
+
     let context = CollectingContext::new();
     let producer = base_producer_with_context(
         context.clone(),
@@ -225,6 +225,8 @@ impl ProducerContext for HeaderCheckContext {
 
 #[test]
 fn test_base_producer_headers() {
+    let _ = env_logger::try_init();
+
     let ids_set = Arc::new(Mutex::new(HashSet::new()));
     let context = HeaderCheckContext {
         ids: ids_set.clone(),
@@ -256,6 +258,8 @@ fn test_base_producer_headers() {
 
 #[test]
 fn test_threaded_producer_send() {
+    let _ = env_logger::try_init();
+
     let context = CollectingContext::new();
     let producer = threaded_producer_with_context(context.clone(), HashMap::new());
     let topic_name = rand_test_topic();
