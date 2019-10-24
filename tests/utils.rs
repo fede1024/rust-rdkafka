@@ -112,7 +112,6 @@ where
         .set("statistics.interval.ms", "500")
         .set("api.version.request", "true")
         .set("debug", "all")
-        .set("produce.offset.report", "true")
         .set("message.timeout.ms", "30000")
         .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");

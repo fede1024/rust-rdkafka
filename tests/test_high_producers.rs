@@ -16,7 +16,6 @@ use std::error::Error;
 fn test_future_producer_send_fail() {
     let producer = ClientConfig::new()
         .set("bootstrap.servers", "localhost")
-        .set("produce.offset.report", "true")
         .set("message.timeout.ms", "5000")
         .create::<FutureProducer>()
         .expect("Failed to create producer");
