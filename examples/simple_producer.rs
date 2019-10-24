@@ -18,7 +18,6 @@ use rdkafka::message::OwnedHeaders;
 fn produce(brokers: &str, topic_name: &str) {
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
-        .set("produce.offset.report", "true")
         .set("message.timeout.ms", "5000")
         .create()
         .expect("Producer creation error");

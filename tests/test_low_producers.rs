@@ -85,7 +85,6 @@ fn default_config(config_overrides: HashMap<&str, &str>) -> ClientConfig {
     let mut config = ClientConfig::new();
     config
         .set("bootstrap.servers", &get_bootstrap_server())
-        .set("produce.offset.report", "true")
         .set("message.timeout.ms", "5000");
 
     for (key, value) in config_overrides {
