@@ -274,4 +274,14 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     {
         self.get_base_consumer().fetch_group_list(group, timeout)
     }
+
+    /// Pause consumption for the provided list of partitions.
+    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+        self.get_base_consumer().pause(partitions)
+    }
+
+    /// Resume consumption for the provided list of partitions.
+    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+        self.get_base_consumer().resume(partitions)
+    }
 }

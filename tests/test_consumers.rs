@@ -387,3 +387,55 @@ fn test_consumer_store_offset_commit() {
     position.add_partition_offset(&topic_name, 2, Offset::Offset(12));
     assert_eq!(position, consumer.position().unwrap());
 }
+
+fn ensure_empty<C: ConsumerContext>(consumer: &BaseConsumer<C>, err_msg: &str) {
+    const MAX_TRY_TIME: Duration = Duration::from_secs(2);
+    let start = Instant::now();
+    while start.elapsed() < MAX_TRY_TIME {
+        assert!(consumer.poll(MAX_TRY_TIME).is_none(), "{}", err_msg);
+    }
+}
+
+#[test]
+fn test_pause_resume_consumer_iter() {
+    const PAUSE_COUNT: i32 = 3;
+    const MESSAGE_COUNT: i32 = 300;
+    const MESSAGES_PER_PAUSE: i32 = MESSAGE_COUNT / PAUSE_COUNT;
+
+    let _r = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+    populate_topic(
+        &topic_name,
+        MESSAGE_COUNT,
+        &value_fn,
+        &key_fn,
+        Some(0),
+        None,
+    );
+    let group_id = rand_test_group();
+    let consumer = create_base_consumer(&group_id, None);
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+
+    for _ in 0..PAUSE_COUNT {
+        let mut num_taken = 0;
+        for message in consumer.iter().take(MESSAGES_PER_PAUSE as usize) {
+            message.unwrap();
+            num_taken += 1;
+        }
+        assert_eq!(num_taken, MESSAGES_PER_PAUSE);
+
+        let partitions = consumer.assignment().unwrap();
+        assert!(partitions.count() > 0);
+        consumer.pause(&partitions).unwrap();
+
+        ensure_empty(
+            &consumer,
+            "Partition is paused - we should not receive anything",
+        );
+
+        consumer.resume(&partitions).unwrap();
+    }
+
+    ensure_empty(&consumer, "There should be no messages left");
+}

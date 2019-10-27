@@ -400,6 +400,27 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     ) -> KafkaResult<GroupList> {
         self.client.fetch_group_list(group, timeout)
     }
+
+    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+        let ret_code =
+            unsafe { rdsys::rd_kafka_pause_partitions(self.client.native_ptr(), partitions.ptr()) };
+        if ret_code.is_error() {
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
+            return Err(KafkaError::PauseResume(error));
+        };
+        Ok(())
+    }
+
+    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+        let ret_code = unsafe {
+            rdsys::rd_kafka_resume_partitions(self.client.native_ptr(), partitions.ptr())
+        };
+        if ret_code.is_error() {
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
+            return Err(KafkaError::PauseResume(error));
+        };
+        Ok(())
+    }
 }
 
 impl<C: ConsumerContext> Drop for BaseConsumer<C> {
