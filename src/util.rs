@@ -6,6 +6,7 @@ use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
 use std::slice;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Return a tuple representing the version of `librdkafka` in
@@ -96,6 +97,16 @@ impl<T: Send + Sync> IntoOpaque for Box<T> {
 
     unsafe fn from_ptr(ptr: *mut c_void) -> Self {
         Box::from_raw(ptr as *mut T)
+    }
+}
+
+impl<T: Send + Sync> IntoOpaque for Arc<T> {
+    fn as_ptr(&self) -> *mut c_void {
+        self.as_ref() as *const T as *mut c_void
+    }
+
+    unsafe fn from_ptr(ptr: *mut c_void) -> Self {
+        Arc::from_raw(ptr as *mut T)
     }
 }
 
