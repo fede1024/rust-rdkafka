@@ -5,7 +5,7 @@ extern crate rdkafka;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
-use rdkafka::message::{Headers, Message, OwnedMessage};
+use rdkafka::message::{Headers, Message, OwnedMessage, OwnedHeaders};
 use rdkafka::producer::{
     BaseProducer, BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer,
 };
@@ -16,8 +16,8 @@ use rdkafka::{ClientContext, Statistics};
 mod utils;
 use crate::utils::*;
 
-use rdkafka::message::OwnedHeaders;
 use std::collections::{HashMap, HashSet};
+use std::error::Error;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -281,4 +281,39 @@ fn test_threaded_producer_send() {
         assert_eq!(error, &None);
         ids.insert(id);
     }
+}
+
+#[test]
+fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
+    struct OpaqueArcContext {}
+
+    impl ClientContext for OpaqueArcContext {}
+
+    impl ProducerContext for OpaqueArcContext {
+        type DeliveryOpaque = Arc<Mutex<usize>>;
+
+        fn delivery(&self, _: &DeliveryResult, opaque: Self::DeliveryOpaque) {
+            let mut shared_count = opaque.lock().unwrap();
+            *shared_count += 1;
+        }
+    }
+
+    let shared_count = Arc::new(Mutex::new(0));
+    let context = OpaqueArcContext {};
+    let producer = base_producer_with_context(context, HashMap::new());
+    let topic_name = rand_test_topic();
+
+    let results_count = (0..10)
+        .map(|_| {
+            let record = BaseRecord::with_opaque_to(&topic_name, shared_count.clone()).payload("A");
+            producer.send::<str, str>(record)
+        })
+        .filter(|r| r.is_ok())
+        .count();
+
+    producer.flush(Duration::from_secs(10));
+
+    let shared_count = Arc::try_unwrap(shared_count).unwrap().into_inner()?;
+    assert_eq!(results_count, shared_count);
+    Ok(())
 }
