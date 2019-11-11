@@ -35,11 +35,21 @@ pub trait ClientContext: Send + Sync {
             RDKafkaLogLevel::Emerg
             | RDKafkaLogLevel::Alert
             | RDKafkaLogLevel::Critical
-            | RDKafkaLogLevel::Error => error!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
-            RDKafkaLogLevel::Warning => warn!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
-            RDKafkaLogLevel::Notice => info!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
-            RDKafkaLogLevel::Info => info!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
-            RDKafkaLogLevel::Debug => debug!(target: "librdkafka", "librdkafka: {} {}", fac, log_message),
+            | RDKafkaLogLevel::Error => {
+                error!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+            }
+            RDKafkaLogLevel::Warning => {
+                warn!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+            }
+            RDKafkaLogLevel::Notice => {
+                info!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+            }
+            RDKafkaLogLevel::Info => {
+                info!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+            }
+            RDKafkaLogLevel::Debug => {
+                debug!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+            }
         }
     }
 

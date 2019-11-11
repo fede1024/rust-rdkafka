@@ -5,7 +5,7 @@ extern crate rdkafka;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
-use rdkafka::message::{Headers, Message, OwnedMessage, OwnedHeaders};
+use rdkafka::message::{Headers, Message, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::{
     BaseProducer, BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer,
 };
