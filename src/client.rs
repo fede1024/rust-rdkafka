@@ -273,7 +273,7 @@ impl<C: ClientContext> Client<C> {
 
     /// Returns a NativeTopic from the current client. The NativeTopic shouldn't outlive the client
     /// it was generated from.
-    fn native_topic(&self, topic: &str) -> KafkaResult<NativeTopic> {
+    pub(crate) fn native_topic(&self, topic: &str) -> KafkaResult<NativeTopic> {
         let topic_c = CString::new(topic.to_string())?;
         Ok(unsafe {
             NativeTopic::from_ptr(rdsys::rd_kafka_topic_new(
@@ -291,7 +291,7 @@ impl<C: ClientContext> Client<C> {
     }
 }
 
-struct NativeTopic {
+pub(crate) struct NativeTopic {
     ptr: *mut RDKafkaTopic,
 }
 
@@ -305,7 +305,7 @@ impl NativeTopic {
     }
 
     /// Returns the pointer to the librdkafka RDKafkaTopic structure.
-    fn ptr(&self) -> *mut RDKafkaTopic {
+    pub fn ptr(&self) -> *mut RDKafkaTopic {
         self.ptr
     }
 

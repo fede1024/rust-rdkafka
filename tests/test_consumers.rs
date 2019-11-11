@@ -153,6 +153,37 @@ fn test_produce_consume_base() {
         .wait();
 }
 
+// Seeking should allow replaying messages and skipping messages.
+#[test]
+fn test_produce_consume_seek() {
+    let _r = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+    populate_topic(&topic_name, 5, &value_fn, &key_fn, Some(0), None);
+    let consumer = create_base_consumer(&rand_test_group(), None);
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+
+    for (i, message) in consumer.iter().take(3).enumerate() {
+        match message {
+            Ok(message) => assert_eq!(dbg!(message.offset()), i as i64),
+            Err(e) => panic!("Error receiving message: {:?}", e),
+        }
+    }
+
+    consumer.seek(&topic_name, 0, Offset::Offset(1), None).unwrap();
+
+    for (i, message) in consumer.iter().take(3).enumerate() {
+        match message {
+            Ok(message) => assert_eq!(message.offset(), i as i64 + 1),
+            Err(e) => panic!("Error receiving message: {:?}", e),
+        }
+    }
+
+    consumer.seek(&topic_name, 0, Offset::End, None).unwrap();
+
+    ensure_empty(&consumer, "There should be no messages left");
+}
+
 // All produced messages should be consumed.
 #[test]
 fn test_produce_consume_base_assign() {

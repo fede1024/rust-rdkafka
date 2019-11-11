@@ -64,6 +64,8 @@ pub enum KafkaError {
     PartitionEOF(i32),
     /// Pause/Resume failed.
     PauseResume(String),
+    /// Seeking a partition failed.
+    Seek(String),
     /// Setting partition offset failed.
     SetPartitionOffset(RDKafkaError),
     /// Offset store failed.
@@ -113,6 +115,9 @@ impl fmt::Debug for KafkaError {
             KafkaError::PauseResume(ref err) => {
                 write!(f, "KafkaError (Pause/resume error: {})", err)
             }
+            KafkaError::Seek(ref err) => {
+                write!(f, "KafkaError (Seek error: {})", err)
+            }
             KafkaError::SetPartitionOffset(err) => {
                 write!(f, "KafkaError (Set partition offset error: {})", err)
             }
@@ -149,6 +154,7 @@ impl fmt::Display for KafkaError {
             KafkaError::OffsetFetch(err) => write!(f, "Offset fetch error: {}", err),
             KafkaError::PartitionEOF(part_n) => write!(f, "Partition EOF: {}", part_n),
             KafkaError::PauseResume(ref err) => write!(f, "Pause/resume error: {}", err),
+            KafkaError::Seek(ref err) => write!(f, "Seek error: {}", err),
             KafkaError::SetPartitionOffset(err) => write!(f, "Set partition offset error: {}", err),
             KafkaError::StoreOffset(err) => write!(f, "Store offset error: {}", err),
             KafkaError::Subscription(ref err) => write!(f, "Subscription error: {}", err),
@@ -175,6 +181,7 @@ impl error::Error for KafkaError {
             KafkaError::OffsetFetch(_) => "Offset fetch error",
             KafkaError::PartitionEOF(_) => "Partition EOF error",
             KafkaError::PauseResume(_) => "Pause/resume error",
+            KafkaError::Seek(_) => "Seek error",
             KafkaError::SetPartitionOffset(_) => "Set partition offset error",
             KafkaError::StoreOffset(_) => "Store offset error",
             KafkaError::Subscription(_) => "Subscription error",
@@ -200,6 +207,7 @@ impl error::Error for KafkaError {
             KafkaError::OffsetFetch(ref err) => Some(err),
             KafkaError::PartitionEOF(_) => None,
             KafkaError::PauseResume(_) => None,
+            KafkaError::Seek(_) => None,
             KafkaError::SetPartitionOffset(ref err) => Some(err),
             KafkaError::StoreOffset(ref err) => Some(err),
             KafkaError::Subscription(_) => None,

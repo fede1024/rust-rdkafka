@@ -8,6 +8,7 @@
 * Remove build-time dependency on bindgen, clang, and libclang.
 * Move zstd compression support behind the `zstd` feature flag.
 * Ensure all features are honored in the CMake build system.
+* Add [`Consumer::seek`] method.
 
 
 <a name="0.21.0"></a>
