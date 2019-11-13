@@ -15,7 +15,7 @@ edition = "2018"
 libc = "0.2.65"
 libz-sys = "1.0"
 zstd-sys = { version = "1.4.15", features = [], optional = true }
-openssl-sys = { version = "~ 0.9.0", optional = true }
+openssl-sys = { version = "0.9.48", optional = true }
 lz4-sys = { version = "1.8.3", optional = true }
 
 [build-dependencies]
@@ -33,6 +33,7 @@ default = []
 # Enable ssl and sasl support
 ssl = ["openssl-sys"]
 sasl = ["ssl"]
+ssl_vendored = ["ssl", "openssl-sys/vendored"]
 
 # Use dynamic linking instead of static. Will fail if librdkafka is not installed.
 dynamic_linking = []

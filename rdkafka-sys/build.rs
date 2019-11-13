@@ -1,10 +1,13 @@
+use std::borrow::Borrow;
 use std::env;
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
-fn run_command_or_fail<P>(dir: &str, cmd: P, args: &[&str])
+fn run_command_or_fail<P, S>(dir: &str, cmd: P, args: &[S])
 where
     P: AsRef<Path>,
+    S: Borrow<str> + AsRef<OsStr>,
 {
     let cmd = cmd.as_ref();
     let cmd = if cmd.components().count() > 1 && cmd.is_relative() {
@@ -39,6 +42,12 @@ fn main() {
         .split('-')
         .next()
         .expect("Crate version is not valid");
+
+    if env::var("DEP_OPENSSL_VENDORED").is_ok() {
+        let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
+        env::set_var("CFLAGS", format!("-I{}/include", openssl_root));
+        env::set_var("LDFLAGS", format!("-L{}/lib", openssl_root));
+    }
 
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
         eprintln!("librdkafka will be linked dynamically");
@@ -75,31 +84,45 @@ fn main() {
 
 #[cfg(not(feature = "cmake_build"))]
 fn build_librdkafka() {
-    let mut configure_flags = Vec::new();
+    let mut configure_flags: Vec<String> = Vec::new();
+    let mut cflags = Vec::new();
+    let mut ldflags = Vec::new();
 
     if env::var("CARGO_FEATURE_SASL").is_ok() {
-        configure_flags.push("--enable-sasl");
+        configure_flags.push("--enable-sasl".into());
         println!("cargo:rustc-link-lib=sasl2");
     } else {
-        configure_flags.push("--disable-sasl");
+        configure_flags.push("--disable-sasl".into());
     }
 
     if env::var("CARGO_FEATURE_SSL").is_ok() {
-        configure_flags.push("--enable-ssl");
+        configure_flags.push("--enable-ssl".into());
     } else {
-        configure_flags.push("--disable-ssl");
+        configure_flags.push("--disable-ssl".into());
+    }
+    if env::var("DEP_OPENSSL_VENDORED").is_ok() {
+        let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
+        cflags.push(format!("-I{}/include", openssl_root));
+        ldflags.push(format!("-L{}/lib", openssl_root));
     }
 
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
-        configure_flags.push("--enable-zstd");
+        configure_flags.push("--enable-zstd".into());
     } else {
-        configure_flags.push("--disable-zstd");
+        configure_flags.push("--disable-zstd".into());
     }
 
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
-        configure_flags.push("--enable-lz4");
+        configure_flags.push("--enable-lz4".into());
     } else {
-        configure_flags.push("--disable-lz4");
+        configure_flags.push("--disable-lz4".into());
+    }
+
+    if !cflags.is_empty() {
+        configure_flags.push(format!("--CFLAGS={}", cflags.join(" ")));
+    }
+    if !ldflags.is_empty() {
+        configure_flags.push(format!("--LDFLAGS={}", ldflags.join(" ")));
     }
 
     println!("Configuring librdkafka");
@@ -137,6 +160,9 @@ fn build_librdkafka() {
         config.define("WITH_SSL", "1");
     } else {
         config.define("WITH_SSL", "0");
+    }
+    if env::var("DEP_OPENSSL_VENDORED").is_ok() {
+        config.register_dep("openssl");
     }
     if env::var("CARGO_FEATURE_SASL").is_ok() {
         config.define("WITH_SASL", "1");

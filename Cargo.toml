@@ -34,6 +34,7 @@ default = []
 # Enable ssl and sasl support
 ssl = ["rdkafka-sys/ssl"]
 sasl = ["rdkafka-sys/sasl", "ssl"]
+ssl_vendored = ["ssl", "rdkafka-sys/ssl_vendored"]
 
 # Use dynamic linking instead of static. Will fail if librdkafka is not installed.
 dynamic_linking = ["rdkafka-sys/dynamic_linking"]
