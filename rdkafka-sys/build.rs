@@ -47,6 +47,7 @@ fn main() {
 
     if env::var("DEP_OPENSSL_VENDORED").is_ok() {
         let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
+        env::set_var("OPENSSL_ROOT_DIR", &openssl_root);
         env::set_var("CFLAGS", format!("-I{}/include", openssl_root));
         env::set_var("LDFLAGS", format!("-L{}/lib", openssl_root));
     }
