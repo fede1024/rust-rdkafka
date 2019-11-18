@@ -17,9 +17,13 @@ jobs:
     rust: stable
   - os: osx
     rust: stable
+  - os: windows
+    arch: amd64
+    rust: stable
+    env: FEATURES=cmake_build
 
 script:
-  - if [[ "$RDKAFKA_RUN_TESTS" ]]; then ./test_suite.sh; else cargo build --verbose; fi
+  - if [[ "$RDKAFKA_RUN_TESTS" ]]; then ./test_suite.sh; else cargo build --verbose --features "$FEATURES"; fi
 
 notifications:
   webhooks:
