@@ -9,8 +9,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
-use crate::topic_partition_list::Offset::Offset;
-use crate::topic_partition_list::TopicPartitionList;
+use crate::topic_partition_list::{Offset, TopicPartitionList};
 use crate::util::{cstr_to_owned, timeout_to_ms};
 
 use std::mem;
@@ -208,6 +207,26 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         Ok(())
     }
 
+    fn seek<T>(&self, topic: &str, partition: i32, offset: Offset, timeout: T) -> KafkaResult<()>
+    where
+        T: Into<Option<Duration>>,
+    {
+        let topic = self.client.native_topic(topic)?;
+        let ret_code = unsafe {
+            rdsys::rd_kafka_seek(
+                topic.ptr(),
+                partition,
+                offset.to_raw(),
+                timeout_to_ms(timeout),
+            )
+        };
+        if ret_code.is_error() {
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
+            return Err(KafkaError::Seek(error));
+        };
+        Ok(())
+    }
+
     fn commit(
         &self,
         topic_partition_list: &TopicPartitionList,
@@ -332,7 +351,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         let mut tpl = unsafe { TopicPartitionList::from_ptr(tpl_ptr) };
 
         // Set the timestamp we want in the offset field for every partition as librdkafka expects.
-        tpl.set_all_offsets(Offset(timestamp));
+        tpl.set_all_offsets(Offset::Offset(timestamp));
 
         self.offsets_for_times(tpl, timeout)
     }

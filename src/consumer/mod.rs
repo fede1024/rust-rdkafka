@@ -19,7 +19,7 @@ use crate::util::cstr_to_owned;
 use std::ptr;
 use std::time::Duration;
 
-use crate::topic_partition_list::TopicPartitionList;
+use crate::topic_partition_list::{Offset, TopicPartitionList};
 
 /// Rebalance information.
 #[derive(Clone, Debug)]
@@ -137,6 +137,17 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// rebalance won't be activated.
     fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
         self.get_base_consumer().assign(assignment)
+    }
+
+    /// Seek to `offset` for the specified `topic` and `partition`. After a
+    /// successful call to `seek`, the next poll of the consumer will return the
+    /// message with `offset`.
+    fn seek<T>(&self, topic: &str, partition: i32, offset: Offset, timeout: T) -> KafkaResult<()>
+    where
+        T: Into<Option<Duration>>,
+    {
+        self.get_base_consumer()
+            .seek(topic, partition, offset, timeout)
     }
 
     /// Commits the offset of the specified message. The commit can be sync (blocking), or async.
