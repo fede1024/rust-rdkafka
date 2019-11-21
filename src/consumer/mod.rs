@@ -14,7 +14,7 @@ use crate::error::KafkaResult;
 use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
-use crate::util::cstr_to_owned;
+use crate::util::{cstr_to_owned, Timeout};
 
 use std::ptr;
 use std::time::Duration;
@@ -89,6 +89,28 @@ pub trait ConsumerContext: ClientContext {
     /// offset store.
     #[allow(unused_variables)]
     fn commit_callback(&self, result: KafkaResult<()>, offsets: *mut RDKafkaTopicPartitionList) {}
+
+    /// Returns the minimum interval at which to poll the main queue, which
+    /// services the logging, stats, and error callbacks.
+    ///
+    /// The main queue is polled once whenever [`Consumer.poll`] is called. If
+    /// `Consumer.poll` is called with a timeout that is larger than this
+    /// interval, then the main queue will be polled at that interval while the
+    /// consumer queue is blocked.
+    ///
+    /// For example, if the main queue's minimum poll interval is 200ms and
+    /// `Consumer.poll` is called with a timeout of 1s, then `Consumer.poll` may
+    /// block for up to 1s waiting for a message, but it will poll the main
+    /// queue every 200ms while it is waiting.
+    ///
+    /// By default, the minimum poll interval for the main queue is 1s.
+    fn main_queue_min_poll_interval(&self) -> Timeout {
+        Timeout::After(Duration::from_secs(1))
+    }
+
+    /// Message queue nonempty callback. This method will run when the
+    /// consumer's message queue switches from empty to nonempty.
+    fn message_queue_nonempty_callback(&self) {}
 }
 
 /// An empty consumer context that can be user when no context is needed.
@@ -142,10 +164,13 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// Seek to `offset` for the specified `topic` and `partition`. After a
     /// successful call to `seek`, the next poll of the consumer will return the
     /// message with `offset`.
-    fn seek<T>(&self, topic: &str, partition: i32, offset: Offset, timeout: T) -> KafkaResult<()>
-    where
-        T: Into<Option<Duration>>,
-    {
+    fn seek<T: Into<Timeout>>(
+        &self,
+        topic: &str,
+        partition: i32,
+        offset: Offset,
+        timeout: T,
+    ) -> KafkaResult<()> {
         self.get_base_consumer()
             .seek(topic, partition, offset, timeout)
     }
@@ -200,7 +225,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// Retrieve committed offsets for topics and partitions.
     fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer().committed(timeout)
@@ -213,7 +238,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         timeout: T,
     ) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
     {
         self.get_base_consumer().committed_offsets(tpl, timeout)
     }
@@ -225,7 +250,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         timeout: T,
     ) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -239,7 +264,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         timeout: T,
     ) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -255,7 +280,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// if no topic is specified.
     fn fetch_metadata<T>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer().fetch_metadata(topic, timeout)
@@ -269,7 +294,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         timeout: T,
     ) -> KafkaResult<(i64, i64)>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer()
@@ -280,7 +305,7 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// specified, all groups will be returned.
     fn fetch_group_list<T>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList>
     where
-        T: Into<Option<Duration>>,
+        T: Into<Timeout>,
         Self: Sized,
     {
         self.get_base_consumer().fetch_group_list(group, timeout)
