@@ -8,16 +8,40 @@ set -e
 
 git submodule update --init
 docker-compose stop
-docker-compose build
-docker-compose up --abort-on-container-exit
+docker-compose up -d
 
-failures=`docker inspect -f '{{ .State.ExitCode }}' itest`
+cargo test --no-run
 
-if [ "$failures" != "0" ]; then
-    echo -e "${RED}One or more container terminated with errors${NC}"
-    echo -e "${RED}Test suite failed${NC}"
-    docker-compose rm -f && exit 1
-else
-    echo -e "${GREEN}Test suite succeeded${NC}"
-    docker-compose rm -f && exit 0
-fi
+run_with_valgrind() {
+    if ! valgrind --error-exitcode=100 --suppressions=rdkafka.suppressions --leak-check=full "$1" --nocapture
+    then
+        echo -e "${RED}*** Failure in $1 ***${NC}"
+        exit 1
+    fi
+}
+
+# UNIT TESTS
+
+echo -e "${GREEN}*** Run unit tests ***${NC}"
+for test_file in target/debug/rdkafka-*
+do
+    if [[ -x "$test_file" ]]
+    then
+        echo -e "${GREEN}Executing "$test_file"${NC}"
+        run_with_valgrind "$test_file"
+    fi
+done
+echo -e "${GREEN}*** Unit tests succeeded ***${NC}"
+
+# INTEGRATION TESTS
+
+echo -e "${GREEN}*** Run unit tests ***${NC}"
+for test_file in target/debug/test_*
+do
+    if [[ -x "$test_file" ]]
+    then
+        echo -e "${GREEN}Executing "$test_file"${NC}"
+        run_with_valgrind "$test_file"
+    fi
+done
+echo -e "${GREEN}*** Integration tests succeeded ***${NC}"
