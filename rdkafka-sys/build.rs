@@ -88,13 +88,6 @@ fn build_librdkafka() {
     let mut cflags = Vec::new();
     let mut ldflags = Vec::new();
 
-    if env::var("CARGO_FEATURE_SASL").is_ok() {
-        configure_flags.push("--enable-sasl".into());
-        println!("cargo:rustc-link-lib=sasl2");
-    } else {
-        configure_flags.push("--disable-sasl".into());
-    }
-
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         configure_flags.push("--enable-ssl".into());
     } else {
@@ -104,6 +97,13 @@ fn build_librdkafka() {
         let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
         cflags.push(format!("-I{}/include", openssl_root));
         ldflags.push(format!("-L{}/lib", openssl_root));
+    }
+
+    if env::var("CARGO_FEATURE_SASL").is_ok() {
+        configure_flags.push("--enable-sasl".into());
+        println!("cargo:rustc-link-lib=sasl2");
+    } else {
+        configure_flags.push("--disable-sasl".into());
     }
 
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
@@ -129,7 +129,11 @@ fn build_librdkafka() {
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
 
     println!("Compiling librdkafka");
-    make_librdkafka();
+    run_command_or_fail(
+        "librdkafka",
+        if cfg!(target_os = "freebsd") { "gmake" } else { "make" },
+        &["-j", &num_cpus::get().to_string(), "libs"],
+    );
 
     println!(
         "cargo:rustc-link-search=native={}/librdkafka/src",
@@ -140,22 +144,16 @@ fn build_librdkafka() {
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
 
-#[cfg(not(feature = "cmake_build"))]
-fn make_librdkafka() {
-    run_command_or_fail(
-        "librdkafka",
-        if cfg!(target_os = "freebsd") { "gmake" } else { "make" },
-        &["-j", &num_cpus::get().to_string(), "libs"],
-    );
-}
-
 #[cfg(feature = "cmake_build")]
 fn build_librdkafka() {
     env::set_var("NUM_JOBS", num_cpus::get().to_string());
+
     let mut config = cmake::Config::new("librdkafka");
+
     config
         .define("RDKAFKA_BUILD_STATIC", "1")
         .build_target("rdkafka");
+
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         config.define("WITH_SSL", "1");
     } else {
@@ -164,26 +162,31 @@ fn build_librdkafka() {
     if env::var("DEP_OPENSSL_VENDORED").is_ok() {
         config.register_dep("openssl");
     }
+
     if env::var("CARGO_FEATURE_SASL").is_ok() {
         config.define("WITH_SASL", "1");
         println!("cargo:rustc-link-lib=sasl2");
     } else {
         config.define("WITH_SASL", "0");
     }
+
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
         config.define("WITH_ZSTD", "1");
         config.register_dep("zstd");
     } else {
         config.define("WITH_ZSTD", "0");
     }
+
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
         config.define("ENABLE_LZ4_EXT", "1");
     } else {
         config.define("ENABLE_LZ4_EXT", "0");
     }
+
     if let Ok(system_name) = env::var("CMAKE_SYSTEM_NAME") {
         config.define("CMAKE_SYSTEM_NAME", system_name);
     }
+
     // The CMake build will incorrectly use config.h from the non-CMake build,
     // if it exists, so remove it if it does.
     match std::fs::remove_file("librdkafka/config.h") {
@@ -193,16 +196,18 @@ fn build_librdkafka() {
             _ => panic!("Unable to remove config.h from non-CMake build: {}", err),
         }
     }
+
+    println!("Configuring and compiling librdkafka");
     let dst = config.build();
-    #[cfg(target_env = "msvc")]
-    {
+
+    if cfg!(target_env = "msvc") {
         let profile = match &env::var("PROFILE").expect("Cannot determine build profile")[..] {
             "release" | "bench" => "Release",
             _ => "Debug"
         };
         println!("cargo:rustc-link-search=native={}/build/src/{}", dst.display(), profile);
+    } else {
+        println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     }
-    #[cfg(not(target_env = "msvc"))]
-    println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
