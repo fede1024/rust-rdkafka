@@ -41,6 +41,12 @@
 #[cfg(feature = "ssl")]
 extern crate openssl_sys;
 
+#[cfg(feature = "zstd")]
+extern crate zstd_sys;
+
+#[cfg(feature = "external_lz4")]
+extern crate lz4_sys;
+
 extern crate libz_sys;
 
 #[allow(non_camel_case_types, non_upper_case_globals, non_snake_case, clippy::all)]

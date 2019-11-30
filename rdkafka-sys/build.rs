@@ -92,14 +92,12 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
         configure_flags.push("--enable-zstd");
-        println!("cargo:rustc-link-lib=static=zstd");
     } else {
         configure_flags.push("--disable-zstd");
     }
 
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
         configure_flags.push("--enable-lz4");
-        println!("cargo:rustc-link-lib=static=lz4");
     } else {
         configure_flags.push("--disable-lz4");
     }
@@ -142,19 +140,18 @@ fn build_librdkafka() {
     }
     if env::var("CARGO_FEATURE_SASL").is_ok() {
         config.define("WITH_SASL", "1");
+        println!("cargo:rustc-link-lib=sasl2");
     } else {
         config.define("WITH_SASL", "0");
     }
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
         config.define("WITH_ZSTD", "1");
         config.register_dep("zstd");
-        println!("cargo:rustc-link-lib=static=zstd");
     } else {
         config.define("WITH_ZSTD", "0");
     }
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
         config.define("ENABLE_LZ4_EXT", "1");
-        println!("cargo:rustc-link-lib=static=lz4");
     } else {
         config.define("ENABLE_LZ4_EXT", "0");
     }
