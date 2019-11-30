@@ -28,25 +28,20 @@ rand = "0.3.15"
 regex = "1.1.6"
 tokio = "0.1.7"
 
+# These features are re-exports of the features that the rdkafka-sys crate
+# provides. See the rdkafka-sys documentation for details.
 [features]
 default = ["libz"]
-
-# Enable ssl and sasl support
-ssl = ["rdkafka-sys/ssl"]
-sasl = ["rdkafka-sys/sasl", "ssl"]
-ssl_vendored = ["ssl", "rdkafka-sys/ssl_vendored"]
-
-# Use dynamic linking instead of static. Will fail if librdkafka is not installed.
+cmake-build = ["rdkafka-sys/cmake-build"]
+cmake_build = ["rdkafka-sys/cmake_build"]
 dynamic_linking = ["rdkafka-sys/dynamic_linking"]
-
-# Enable libz support.
+ssl = ["rdkafka-sys/ssl"]
+ssl-vendored = ["rdkafka-sys/ssl-vendored"]
+gssapi = ["rdkafka-sys/gssapi"]
+sasl = ["rdkafka-sys/sasl"]
 libz = ["rdkafka-sys/libz"]
-
-# Use external library for lz4. Use internal if not enabled.
-external_lz4 = ["rdkafka-sys/external_lz4"]
-
-# Enable support for zstd compression.
+libz-static = ["rdkafka-sys/libz-static"]
 zstd = ["rdkafka-sys/zstd"]
 zstd-pkg-config = ["rdkafka-sys/zstd-pkg-config"]
-
-cmake_build = ["rdkafka-sys/cmake_build"]
+external-lz4 = ["rdkafka-sys/external-lz4"]
+external_lz4 = ["rdkafka-sys/external_lz4"]

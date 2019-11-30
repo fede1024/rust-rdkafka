@@ -29,22 +29,49 @@ path = "src/lib.rs"
 [features]
 default = ["libz"]
 
-# Enable ssl and sasl support
-ssl = ["openssl-sys"]
-sasl = ["ssl"]
-ssl_vendored = ["ssl", "openssl-sys/vendored"]
+# Build librdkafka with its CMake build system, rather than its default "mklove"
+# build system. This feature requires that the system has CMake installed.
+cmake-build = ["cmake"]
 
-# Use dynamic linking instead of static. Will fail if librdkafka is not installed.
+# Deprecated alias for the `cmake-build` feature.
+cmake_build = ["cmake-build"]
+
+# Dynamically link the system's librdkafka, rather than building and linking the
+# bundled version statically. This feature requires that the system has
+# librdkafka installed somewhere where pkg-config can find it.
 dynamic_linking = []
+
+# Enable SSL support.
+ssl = ["openssl-sys"]
+
+# Build and link against the version of OpenSSL bundled with the openssl-sys
+# crate.
+ssl-vendored = ["ssl", "openssl-sys/vendored"]
+
+# Enable SASL GSSAPI support with Cyrus libsasl2.
+gssapi = ["ssl"]
+
+# Deprecated alias for the `gssapi` feature.
+sasl = ["gssapi"]
 
 # Enable support for libz compression.
 libz = ["libz-sys"]
 
-# Use external library for lz4. Use internal if not enabled.
-external_lz4 = ["lz4-sys"]
+# Link against the version of libz bundled with the libz-sys crate, rather than
+# the system's version.
+libz-static = ["libz", "libz-sys/static"]
 
 # Enable support for zstd compression.
 zstd = ["zstd-sys"]
-zstd-pkg-config = ["zstd-sys/pkg-config"]
 
-cmake_build = ["cmake"]
+# Link against the system's version of libzstd, rather than the version bundled
+# with the zstd-sys crate.
+zstd-pkg-config = ["zstd", "zstd-sys/pkg-config"]
+
+# Link against the lz4 compression library that is bundled with the lz4-sys
+# crate. By default, librdkafka builds and statically links against its own
+# bundled copy of lz4.
+external-lz4 = ["lz4-sys"]
+
+# Deprecated alias for the `external-lz4` feature.
+external_lz4 = ["external-lz4"]

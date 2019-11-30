@@ -82,7 +82,7 @@ fn main() {
     }
 }
 
-#[cfg(not(feature = "cmake_build"))]
+#[cfg(not(feature = "cmake-build"))]
 fn build_librdkafka() {
     let mut configure_flags: Vec<String> = Vec::new();
     let mut cflags = Vec::new();
@@ -99,11 +99,11 @@ fn build_librdkafka() {
         ldflags.push(format!("-L{}/lib", openssl_root));
     }
 
-    if env::var("CARGO_FEATURE_SASL").is_ok() {
-        configure_flags.push("--enable-sasl".into());
+    if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
+        configure_flags.push("--enable-gssapi".into());
         println!("cargo:rustc-link-lib=sasl2");
     } else {
-        configure_flags.push("--disable-sasl".into());
+        configure_flags.push("--disable-gssapi".into());
     }
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
@@ -119,9 +119,9 @@ fn build_librdkafka() {
     }
 
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
-        configure_flags.push("--enable-lz4".into());
+        configure_flags.push("--enable-lz4-ext".into());
     } else {
-        configure_flags.push("--disable-lz4".into());
+        configure_flags.push("--disable-lz4-ext".into());
     }
 
     if !cflags.is_empty() {
@@ -151,7 +151,7 @@ fn build_librdkafka() {
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
 
-#[cfg(feature = "cmake_build")]
+#[cfg(feature = "cmake-build")]
 fn build_librdkafka() {
     let mut config = cmake::Config::new("librdkafka");
 
@@ -161,7 +161,7 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         config.define("WITH_ZLIB", "1");
-        config.register_dep("libz");
+        config.register_dep("z");
     } else {
         config.define("WITH_ZLIB", "0");
     }
@@ -175,7 +175,7 @@ fn build_librdkafka() {
         config.register_dep("openssl");
     }
 
-    if env::var("CARGO_FEATURE_SASL").is_ok() {
+    if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
         config.define("WITH_SASL", "1");
         println!("cargo:rustc-link-lib=sasl2");
     } else {

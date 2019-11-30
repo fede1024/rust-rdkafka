@@ -8,8 +8,8 @@
 //!
 //! ``` bash
 //! git submodule update --init
-//! cargo install bindgen --vers 0.30.0
-//! bindgen --builtins --no-doc-comments librdkafka/src/rdkafka.h -o src/bindings/{platform}.rs
+//! cargo install bindgen
+//! ./update-bindings.sh
 //! ```
 //!
 //! ## Version
@@ -41,14 +41,14 @@
 #[cfg(feature = "ssl")]
 extern crate openssl_sys;
 
+#[cfg(feature = "libz")]
+extern crate libz_sys;
+
 #[cfg(feature = "zstd")]
 extern crate zstd_sys;
 
 #[cfg(feature = "external_lz4")]
 extern crate lz4_sys;
-
-#[cfg(feature = "libz")]
-extern crate libz_sys;
 
 #[allow(non_camel_case_types, non_upper_case_globals, non_snake_case, clippy::all)]
 pub mod bindings;
