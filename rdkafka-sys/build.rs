@@ -106,6 +106,12 @@ fn build_librdkafka() {
         configure_flags.push("--disable-sasl".into());
     }
 
+    if env::var("CARGO_FEATURE_LIBZ").is_ok() {
+        // There is no --enable-zlib option, but it is enabled by default.
+    } else {
+        configure_flags.push("--disable-zlib".into());
+    }
+
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
         configure_flags.push("--enable-zstd".into());
     } else {
@@ -152,6 +158,13 @@ fn build_librdkafka() {
     config
         .define("RDKAFKA_BUILD_STATIC", "1")
         .build_target("rdkafka");
+
+    if env::var("CARGO_FEATURE_LIBZ").is_ok() {
+        config.define("WITH_ZLIB", "1");
+        config.register_dep("libz");
+    } else {
+        config.define("WITH_ZLIB", "0");
+    }
 
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         config.define("WITH_SSL", "1");

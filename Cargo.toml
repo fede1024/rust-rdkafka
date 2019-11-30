@@ -11,7 +11,7 @@ categories = ["api-bindings"]
 edition = "2018"
 
 [dependencies]
-rdkafka-sys = { path = "rdkafka-sys", version = "1.2.1" }
+rdkafka-sys = { path = "rdkafka-sys", version = "1.2.1", default-features = false }
 futures = "0.1.21"
 libc = "0.2.0"
 log = "0.4.8"
@@ -29,7 +29,7 @@ regex = "1.1.6"
 tokio = "0.1.7"
 
 [features]
-default = []
+default = ["libz"]
 
 # Enable ssl and sasl support
 ssl = ["rdkafka-sys/ssl"]
@@ -38,6 +38,9 @@ ssl_vendored = ["ssl", "rdkafka-sys/ssl_vendored"]
 
 # Use dynamic linking instead of static. Will fail if librdkafka is not installed.
 dynamic_linking = ["rdkafka-sys/dynamic_linking"]
+
+# Enable libz support.
+libz = ["rdkafka-sys/libz"]
 
 # Use external library for lz4. Use internal if not enabled.
 external_lz4 = ["rdkafka-sys/external_lz4"]
