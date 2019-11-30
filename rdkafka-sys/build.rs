@@ -129,10 +129,11 @@ fn build_librdkafka() {
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
 
     println!("Compiling librdkafka");
+    env::set_var("MAKEFLAGS", env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"));
     run_command_or_fail(
         "librdkafka",
         if cfg!(target_os = "freebsd") { "gmake" } else { "make" },
-        &["-j", &num_cpus::get().to_string(), "libs"],
+        &["libs"],
     );
 
     println!(
@@ -146,8 +147,6 @@ fn build_librdkafka() {
 
 #[cfg(feature = "cmake_build")]
 fn build_librdkafka() {
-    env::set_var("NUM_JOBS", num_cpus::get().to_string());
-
     let mut config = cmake::Config::new("librdkafka");
 
     config
