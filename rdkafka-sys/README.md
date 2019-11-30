@@ -20,6 +20,29 @@ rust bindings.
 
 ## Build
 
+### Known issues
+
+* When any of librdkafka's optional dependencies are enabled, like libz or
+  OpenSSL, if you have multiple versions of that library installed upon your
+  system, librdkafka's build system may disagree with Cargo about which version
+  of the library to use! **This can result in subtly broken builds,** if
+  librdkafka compiles against the headers for one version but Cargo links
+  against a different version.  For complete confidence when building release
+  binaries, use an environment like a Docker container or a chroot jail where
+  you can guarantee that only one version of each dependency is present.
+  Unfortunately, the current design of Cargo makes this nearly impossible to
+  fix.
+
+* librdkafka's default build system, which uses a bespoke tool called mklove, is
+  somewhat unreliable, as it does not support out-of-tree builds. This means
+  that if you have multiple projects that depend on the same version of
+  `librdkafka`, they will share a build directory in `~/.cargo/registry`, and
+  builds from one project may corrupt builds from the other. **Using the CMake
+  based build system is strongly encouraged**, if you can take the dependency on
+  CMake.
+
+### Features
+
 By default a submodule with the librdkafka sources pinned to a specific commit
 will be used to compile and statically link the library.
 
@@ -29,10 +52,8 @@ will use `pkg-config` to check the version of the library installed in the
 system, and it will configure the compiler to dynamically link against it.
 
 The **`cmake-build`** feature builds librdkafka with its [CMake] build system,
-rather than its default build system, which uses a bespoke tool called [mklove].
-The CMake build system is more reliable and should be preferred, as it supports
-out-of-tree builds and cross-compilation, but it requires that CMake be
-installed on the system.
+rather than its default [mklove]-based build system. This feature requires that
+CMake is installed on the build machine.
 
 The following features directly correspond to librdkafka features (i.e., flags
 you would pass to `configure` if you were compiling manually).
@@ -61,11 +82,11 @@ you would pass to `configure` if you were compiling manually).
 All features are disabled by default unless noted otherwise above. The build
 process is defined in [`build.rs`](build.rs).
 
-[CMake]: https://cmake.org
-[mklove]: https://github.com/edenhill/mklove
-
 ## Updating
 
 To upgrade change the git submodule in `librdkafka`, check if new errors
 need to be added to `helpers::primive_to_rd_kafka_resp_err_t` and update
 the version in `Cargo.toml`.
+
+[CMake]: https://cmake.org
+[mklove]: https://github.com/edenhill/mklove
