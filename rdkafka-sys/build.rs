@@ -166,6 +166,15 @@ fn build_librdkafka() {
     if let Ok(system_name) = env::var("CMAKE_SYSTEM_NAME") {
         config.define("CMAKE_SYSTEM_NAME", system_name);
     }
+    // The CMake build will incorrectly use config.h from the non-CMake build,
+    // if it exists, so remove it if it does.
+    match std::fs::remove_file("librdkafka/config.h") {
+        Ok(()) => (),
+        Err(err) => match err.kind() {
+            std::io::ErrorKind::NotFound => (),
+            _ => panic!("Unable to remove config.h from non-CMake build: {}", err),
+        }
+    }
     let dst = config.build();
     #[cfg(target_env = "msvc")]
     {
