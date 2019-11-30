@@ -1,8 +1,3 @@
-#[cfg(feature = "cmake_build")]
-extern crate cmake;
-extern crate num_cpus;
-extern crate pkg_config;
-
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};

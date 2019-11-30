@@ -1,7 +1,7 @@
-use types::RDKafkaError;
-use types::RDKafkaError::*;
-use types::RDKafkaRespErr;
-use types::RDKafkaRespErr::*;
+use crate::types::RDKafkaError;
+use crate::types::RDKafkaError::*;
+use crate::types::RDKafkaRespErr;
+use crate::types::RDKafkaRespErr::*;
 
 /// This is not great. For legacy reasons some usage of rd_kafka_resp_err_t is
 /// passed as an integer in some places. There seems to be no easy way in Rust to
