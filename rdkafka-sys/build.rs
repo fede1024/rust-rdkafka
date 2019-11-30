@@ -85,18 +85,25 @@ fn main() {
 #[cfg(not(feature = "cmake-build"))]
 fn build_librdkafka() {
     let mut configure_flags: Vec<String> = Vec::new();
+
     let mut cflags = Vec::new();
+    if let Ok(var) = env::var("CFLAGS") {
+        cflags.push(var);
+    }
+
     let mut ldflags = Vec::new();
+    if let Ok(var) = env::var("LDFLAGS") {
+        ldflags.push(var);
+    }
 
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         configure_flags.push("--enable-ssl".into());
+        if let Ok(openssl_root) = env::var("DEP_OPENSSL_ROOT") {
+            cflags.push(format!("-I{}/include", openssl_root));
+            ldflags.push(format!("-L{}/lib", openssl_root));
+        }
     } else {
         configure_flags.push("--disable-ssl".into());
-    }
-    if env::var("DEP_OPENSSL_VENDORED").is_ok() {
-        let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
-        cflags.push(format!("-I{}/include", openssl_root));
-        ldflags.push(format!("-L{}/lib", openssl_root));
     }
 
     if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
@@ -108,28 +115,36 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         // There is no --enable-zlib option, but it is enabled by default.
+        if let Ok(z_root) = env::var("DEP_Z_ROOT") {
+            cflags.push(format!("-I{}/include", z_root));
+            ldflags.push(format!("-L{}/build", z_root));
+        }
     } else {
         configure_flags.push("--disable-zlib".into());
     }
 
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
         configure_flags.push("--enable-zstd".into());
+        if let Ok(zstd_root) = env::var("DEP_ZSTD_ROOT") {
+            cflags.push(format!("-I{}/include", zstd_root));
+            ldflags.push(format!("-L{}", zstd_root));
+        }
     } else {
         configure_flags.push("--disable-zstd".into());
     }
 
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
         configure_flags.push("--enable-lz4-ext".into());
+        if let Ok(lz4_root) = env::var("DEP_LZ4_ROOT") {
+            cflags.push(format!("-I{}/include", lz4_root));
+            ldflags.push(format!("-L{}", lz4_root));
+        }
     } else {
         configure_flags.push("--disable-lz4-ext".into());
     }
 
-    if !cflags.is_empty() {
-        configure_flags.push(format!("--CFLAGS={}", cflags.join(" ")));
-    }
-    if !ldflags.is_empty() {
-        configure_flags.push(format!("--LDFLAGS={}", ldflags.join(" ")));
-    }
+    env::set_var("CFLAGS", cflags.join(" "));
+    env::set_var("LDFLAGS", ldflags.join(" "));
 
     println!("Configuring librdkafka");
     run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
@@ -149,6 +164,7 @@ fn build_librdkafka() {
             .display()
     );
     println!("cargo:rustc-link-lib=static=rdkafka");
+    println!("cargo:root={}", env::var("OUT_DIR").expect("OUT_DIR missing"));
 }
 
 #[cfg(feature = "cmake-build")]
@@ -162,17 +178,18 @@ fn build_librdkafka() {
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         config.define("WITH_ZLIB", "1");
         config.register_dep("z");
+        if let Ok(z_root) = env::var("DEP_Z_ROOT") {
+            env::set_var("CMAKE_LIBRARY_PATH", format!("{}/build", z_root));
+        }
     } else {
         config.define("WITH_ZLIB", "0");
     }
 
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         config.define("WITH_SSL", "1");
+        config.register_dep("openssl");
     } else {
         config.define("WITH_SSL", "0");
-    }
-    if env::var("DEP_OPENSSL_VENDORED").is_ok() {
-        config.register_dep("openssl");
     }
 
     if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
@@ -191,6 +208,7 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
         config.define("ENABLE_LZ4_EXT", "1");
+        config.register_dep("lz4");
     } else {
         config.define("ENABLE_LZ4_EXT", "0");
     }
