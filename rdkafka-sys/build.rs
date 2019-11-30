@@ -167,6 +167,15 @@ fn build_librdkafka() {
         config.define("CMAKE_SYSTEM_NAME", system_name);
     }
     let dst = config.build();
+    #[cfg(target_env = "msvc")]
+    {
+        let profile = match &env::var("PROFILE").expect("Cannot determine build profile")[..] {
+            "release" | "bench" => "Release",
+            _ => "Debug"
+        };
+        println!("cargo:rustc-link-search=native={}/build/src/{}", dst.display(), profile);
+    }
+    #[cfg(not(target_env = "msvc"))]
     println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
