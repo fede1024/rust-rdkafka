@@ -1,14 +1,44 @@
 # Changelog
 
-## Unreleased
+<a name="0.2120"></a>
+## 0.22.0 (2019-12-01)
 
-* Bump librdkafka to v1.2.1.
+* Add a client for Kafka's Admin API, which allows actions like creating and
+  deleting Kafka topics and changing configuration parameters. ([#122])
+* Fix compliation on ARM, and ensure it stays fixed by adding an ARM builder
+  to CI. ([#134], [#162])
 * Stop automatically generating librdkafka bindings. Platform-independent
-  bindings are now checked in to the repository.
-* Remove build-time dependency on bindgen, clang, and libclang.
-* Move zstd compression support behind the `zstd` feature flag.
-* Ensure all features are honored in the CMake build system.
-* Add [`Consumer::seek`] method.
+  bindings are now checked in to the repository. ([#163])
+* Move zstd compression support behind the `zstd` feature flag. ([#163])
+* Remove build-time dependency on bindgen, clang, and libclang. ([#163])
+* Support `Consumer::pause` and `Consumer::resume`. ([#167])
+* Expose the `message_queue_nonempty` callback, which allows clients to put
+  their poll thread to sleep and be woken up when new data arrives. ([#164])
+* Implement `IntoOpaque` for `Arc<T>`. ([#171])
+* Add `Consumer::seek` method. ([#172])
+* Support building with Microsoft Visual C++ (MSVC) on Windows. ([#176])
+* Bump librdkafka to v1.2.2. ([#177])
+* Run tests against multiple Kafka versions in CI. ([#182])
+* Standardize feature names. All feature names now use hyphens instead of
+  underscores, as is conventional, though the old names remain for
+  backwards compatibility. ([#183])
+* Optionalize libz via a new `libz` feature. The new feature is a default
+  feature for backwards compatibility. ([#183])
+* Better attempt to make build systems agree on what version of a dependency
+  to compile and link against, and document this hazard. ([#183])
+
+[#122]: https://github.com/fede1024/rust-rdkafka/pull/122
+[#134]: https://github.com/fede1024/rust-rdkafka/pull/134
+[#162]: https://github.com/fede1024/rust-rdkafka/pull/162
+[#163]: https://github.com/fede1024/rust-rdkafka/pull/163
+[#164]: https://github.com/fede1024/rust-rdkafka/pull/164
+[#167]: https://github.com/fede1024/rust-rdkafka/pull/167
+[#171]: https://github.com/fede1024/rust-rdkafka/pull/171
+[#172]: https://github.com/fede1024/rust-rdkafka/pull/172
+[#176]: https://github.com/fede1024/rust-rdkafka/pull/176
+[#177]: https://github.com/fede1024/rust-rdkafka/pull/177
+[#182]: https://github.com/fede1024/rust-rdkafka/pull/182
+[#183]: https://github.com/fede1024/rust-rdkafka/pull/183
 
 
 <a name="0.21.0"></a>

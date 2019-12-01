@@ -9,7 +9,7 @@
 A fully asynchronous, [futures]-based Kafka client library for Rust based on [librdkafka].
 
 ## The library
-`rust-rdkafka` provides a safe Rust interface to librdkafka. The master branch is currently based on librdkafka 0.11.6.
+`rust-rdkafka` provides a safe Rust interface to librdkafka. The master branch is currently based on librdkafka 1.2.2.
 
 ### Documentation
 
@@ -114,33 +114,38 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdkafka = "~0.21"
+rdkafka = { version = "0.22", features = ["cmake-build"] }
 ```
 
-This crate will compile librdkafka from sources and link it statically to your executable. To compile librdkafka you'll need:
+This crate will compile librdkafka from sources and link it statically to your
+executable. To compile librdkafka you'll need:
 
 * the GNU toolchain
 * GNU `make`
 * `pthreads`
-* `zlib`
-* `libssl-dev`: optional, *not* included by default (feature: `ssl`).
-* `libsasl2-dev`: optional, *not* included by default (feature: `sasl`).
+* `zlib`: optional, but included by default (feature: `libz`)
+* `cmake`: optional, *not* included by default (feature: `cmake-build`)
+* `libssl-dev`: optional, *not* included by default (feature: `ssl`)
+* `libsasl2-dev`: optional, *not* included by default (feature: `gssapi`)
+* `libzstd-dev`: optional, *not* included by default (feature: `zstd-pkg-config`)
 
-To enable ssl and sasl, use the `features` field in `Cargo.toml`. Example:
+Note that using the CMake build system, via the `cmake-build` feature, is
+**strongly** encouraged. The default build system has a [known
+issue](rdkafka-sys/README.md#known-issues) that can cause corrupted builds.
+
+By default a submodule with the librdkafka sources pinned to a specific commit
+will be used to compile and statically link the library. The `dynamic-linking`
+feature can be used to instead dynamically link rdkafka to the system's version
+of librdkafka. Example:
 
 ```toml
-[dependencies.rdkafka]
-version = "~0.21"
-features = ["ssl", "sasl"]
+[dependencies]
+rdkafka = { version = "0.22", features = ["dynamic-linking"] }
 ```
 
-By default a submodule with the librdkafka sources pinned to a specific commit will
-be used to compile and statically link the library.
-
-The `dynamic_linking` feature can be used to link rdkafka to a locally installed
-version of librdkafka: if the feature is enabled, the build script will use `pkg-config`
-to check the version of the library installed in the system, and it will configure the
-compiler to use dynamic linking.
+For a full listing of features, consult the [rdkafka-sys crate's
+documentation](rdkafka-sys/README.md#features). All of rdkafka-sys features are
+re-exported as rdkafka features.
 
 ## Compiling from sources
 
@@ -153,7 +158,7 @@ git submodule update --init
 and then compile using `cargo`, selecting the features that you want. Example:
 
 ```bash
-cargo build --features "ssl sasl"
+cargo build --features "ssl gssapi"
 ```
 
 ## Examples

@@ -2,8 +2,8 @@
 use std::ffi::CStr;
 use std::{error, fmt};
 
-use bindings;
-use helpers;
+use crate::bindings;
+use crate::helpers;
 
 // TYPES
 
