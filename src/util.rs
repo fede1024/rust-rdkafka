@@ -1,13 +1,17 @@
 //! Utility functions
 use crate::rdsys;
 
+use std::io::{Cursor, BufRead};
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
 use std::slice;
+use std::str;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use byteorder::{BigEndian, ReadBytesExt};
 
 /// Return a tuple representing the version of `librdkafka` in
 /// hexadecimal and string format.
@@ -212,6 +216,14 @@ impl<T: WrappedCPointer> AsCArray<T> for Vec<T> {
     fn as_c_array(&self) -> *mut *mut T::Target {
         self.as_ptr() as *mut *mut T::Target
     }
+}
+
+pub(crate) fn read_str<'a>(rdr: &'a mut Cursor<&[u8]>) -> Result<&'a str, Box<dyn std::error::Error>> {
+    let len = (rdr.read_i16::<BigEndian>())? as usize;
+    let pos = rdr.position() as usize;
+    let slice = str::from_utf8(&rdr.get_ref()[pos..(pos + len)])?;
+    rdr.consume(len);
+    Ok(slice)
 }
 
 #[cfg(test)]

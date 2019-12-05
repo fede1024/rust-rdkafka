@@ -54,6 +54,8 @@ pub enum KafkaError {
     MessageProduction(RDKafkaError),
     /// Metadata fetch error.
     MetadataFetch(RDKafkaError),
+    /// Member assignment parsing failed
+    MemberAssignment(String),
     /// No message was received.
     NoMessageReceived,
     /// Unexpected null pointer
@@ -106,6 +108,9 @@ impl fmt::Debug for KafkaError {
             KafkaError::MetadataFetch(err) => {
                 write!(f, "KafkaError (Metadata fetch error: {})", err)
             }
+            KafkaError::MemberAssignment(ref err) => {
+                write!(f, "KafkaError (Member assignment parsing error: {})", err)
+            }
             KafkaError::NoMessageReceived => {
                 write!(f, "No message received within the given poll interval")
             }
@@ -145,6 +150,7 @@ impl fmt::Display for KafkaError {
             KafkaError::MessageConsumption(err) => write!(f, "Message consumption error: {}", err),
             KafkaError::MessageProduction(err) => write!(f, "Message production error: {}", err),
             KafkaError::MetadataFetch(err) => write!(f, "Meta data fetch error: {}", err),
+            KafkaError::MemberAssignment(ref err) => write!(f, "Member assignment parsing error: {}", err),
             KafkaError::NoMessageReceived => {
                 write!(f, "No message received within the given poll interval")
             }
@@ -174,6 +180,7 @@ impl error::Error for KafkaError {
             KafkaError::MessageConsumption(_) => "Message consumption error",
             KafkaError::MessageProduction(_) => "Message production error",
             KafkaError::MetadataFetch(_) => "Meta data fetch error",
+            KafkaError::MemberAssignment(_) => "Member assignment parsing error",
             KafkaError::NoMessageReceived => "No message received within the given poll interval",
             KafkaError::Nul(_) => "FFI nul error",
             KafkaError::OffsetFetch(_) => "Offset fetch error",
@@ -200,6 +207,7 @@ impl error::Error for KafkaError {
             KafkaError::MessageConsumption(ref err) => Some(err),
             KafkaError::MessageProduction(ref err) => Some(err),
             KafkaError::MetadataFetch(ref err) => Some(err),
+            KafkaError::MemberAssignment(_) => None,
             KafkaError::NoMessageReceived => None,
             KafkaError::Nul(_) => None,
             KafkaError::OffsetFetch(ref err) => Some(err),

@@ -1,10 +1,25 @@
 //! Group membership API.
 use crate::rdsys;
 use crate::rdsys::types::*;
+use crate::error::{KafkaResult, KafkaError};
+use crate::util::read_str;
 
 use std::ffi::CStr;
 use std::fmt;
 use std::slice;
+use std::io::Cursor;
+
+use byteorder::{BigEndian, ReadBytesExt};
+use serde::{Serialize, Deserialize};
+
+/// Group member assignment
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MemberAssignment {
+    /// Kafka topic name
+    pub topic: String,
+    /// Assigned partitions
+    pub partitions: Vec<i32>,
+}
 
 /// Group member information container.
 pub struct GroupMemberInfo(RDKafkaGroupMemberInfo);
@@ -52,17 +67,37 @@ impl GroupMemberInfo {
     }
 
     /// Return the assignment of the member
-    pub fn assignment(&self) -> Option<&[u8]> {
-        unsafe {
-            if self.0.member_assignment.is_null() {
-                None
-            } else {
-                Some(slice::from_raw_parts::<u8>(
-                    self.0.member_assignment as *const u8,
-                    self.0.member_assignment_size as usize,
-                ))
-            }
+    pub fn assignment(&self) -> KafkaResult<Vec<MemberAssignment>> {
+        if self.0.member_assignment.is_null() {
+            return Ok(Vec::new());
         }
+        let payload = unsafe {
+            slice::from_raw_parts::<u8>(
+                self.0.member_assignment as *const u8,
+                self.0.member_assignment_size as usize,
+            )
+        };
+        let mut cursor = Cursor::new(payload);
+        let _version = cursor.read_i16::<BigEndian>()
+            .map_err(|e| KafkaError::MemberAssignment(format!("{}", e)))?;
+        let assign_len = cursor.read_i32::<BigEndian>()
+            .map_err(|e| KafkaError::MemberAssignment(format!("{}", e)))?;
+        let mut assigns = Vec::with_capacity(assign_len as usize);
+        for _ in 0..assign_len {
+            let topic = read_str(&mut cursor)
+                .map_err(|e| KafkaError::MemberAssignment(format!("{}", e)))?
+                .to_string();
+            let partition_len = cursor.read_i32::<BigEndian>()
+                .map_err(|e| KafkaError::MemberAssignment(format!("{}", e)))?;
+            let mut partitions = Vec::with_capacity(partition_len as usize);
+            for _ in 0..partition_len {
+                let partition = cursor.read_i32::<BigEndian>()
+                    .map_err(|e| KafkaError::MemberAssignment(format!("{}", e)))?;
+                partitions.push(partition);
+            }
+            assigns.push(MemberAssignment { topic, partitions })
+        }
+        Ok(assigns)
     }
 }
 
