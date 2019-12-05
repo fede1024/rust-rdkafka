@@ -1,6 +1,4 @@
 //! Common client functionalities.
-use crate::rdsys;
-use crate::rdsys::types::*;
 
 use std::ffi::{CStr, CString};
 use std::mem;
@@ -10,7 +8,11 @@ use std::ptr;
 use std::slice;
 use std::string::ToString;
 
+use log::{debug, error, info, trace, warn};
 use serde_json;
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
 
 use crate::config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 use crate::error::{IsError, KafkaError, KafkaResult};

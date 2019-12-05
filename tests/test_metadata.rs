@@ -1,8 +1,6 @@
 //! Test metadata fetch, group membership, consumer metadata.
-extern crate env_logger;
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
+
+use std::time::Duration;
 
 use futures::*;
 
@@ -10,10 +8,9 @@ use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::topic_partition_list::TopicPartitionList;
 
-use std::time::Duration;
+use crate::utils::*;
 
 mod utils;
-use crate::utils::*;
 
 fn create_consumer(group_id: &str) -> StreamConsumer {
     ClientConfig::new()

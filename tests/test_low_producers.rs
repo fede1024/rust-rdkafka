@@ -1,7 +1,10 @@
 //! Test data production using low level producers.
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
+
+use std::collections::{HashMap, HashSet};
+use std::error::Error;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Duration;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaError};
@@ -12,15 +15,9 @@ use rdkafka::producer::{
 use rdkafka::util::current_time_millis;
 use rdkafka::{ClientContext, Statistics};
 
-#[macro_use]
-mod utils;
 use crate::utils::*;
 
-use std::collections::{HashMap, HashSet};
-use std::error::Error;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Duration;
+mod utils;
 
 struct PrintingContext {
     _n: i64, // Add data for memory access validation

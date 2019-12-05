@@ -1,13 +1,9 @@
-#[macro_use]
-extern crate log;
-extern crate clap;
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
-extern crate tokio;
+use std::thread;
+use std::time::Duration;
 
 use clap::{App, Arg};
 use futures::{future, TryStreamExt};
+use log::{info, warn};
 
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -16,11 +12,9 @@ use rdkafka::message::OwnedMessage;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::Message;
 
-use std::thread;
-use std::time::Duration;
+use crate::example_utils::setup_logger;
 
 mod example_utils;
-use crate::example_utils::setup_logger;
 
 // Emulates an expensive, synchronous computation.
 fn expensive_computation<'a>(msg: OwnedMessage) -> String {

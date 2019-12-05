@@ -1,14 +1,11 @@
 //! Test data production using high level producers.
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
+
+use std::error::Error;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::message::{Headers, Message, OwnedHeaders};
 use rdkafka::producer::future_producer::FutureRecord;
 use rdkafka::producer::FutureProducer;
-
-use std::error::Error;
 
 #[tokio::test]
 async fn test_future_producer_send_fail() {

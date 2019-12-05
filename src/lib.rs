@@ -209,22 +209,7 @@
 
 #![warn(missing_docs)]
 
-//>alloc_system
-
-//use std::alloc::System;
-//#[global_allocator]
-//static A: System = System;
-
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde_derive;
-extern crate futures;
-extern crate serde_json;
-
-extern crate rdkafka_sys as rdsys;
-
-pub use crate::rdsys::types;
+pub use rdkafka_sys::types;
 
 pub mod admin;
 pub mod client;

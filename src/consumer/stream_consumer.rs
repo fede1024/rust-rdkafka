@@ -1,18 +1,5 @@
 //! Stream-based consumer implementation.
 
-use crate::rdsys;
-use crate::rdsys::types::*;
-
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use crate::consumer::base_consumer::BaseConsumer;
-use crate::consumer::{Consumer, ConsumerContext, DefaultConsumerContext};
-use crate::error::{KafkaError, KafkaResult};
-use crate::message::BorrowedMessage;
-use crate::util::Timeout;
-
-use futures::channel::mpsc;
-use futures::{SinkExt, Stream, StreamExt};
-
 use std::pin::Pin;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,6 +7,20 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
+
+use futures::channel::mpsc;
+use futures::{SinkExt, Stream, StreamExt};
+use log::{debug, trace, warn};
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
+
+use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::consumer::base_consumer::BaseConsumer;
+use crate::consumer::{Consumer, ConsumerContext, DefaultConsumerContext};
+use crate::error::{KafkaError, KafkaResult};
+use crate::message::BorrowedMessage;
+use crate::util::Timeout;
 
 /// Default channel size for the stream consumer. The number of context switches
 /// seems to decrease exponentially as the channel size is increased, and it stabilizes when

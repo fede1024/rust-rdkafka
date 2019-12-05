@@ -3,6 +3,15 @@
 //! A high level producer that returns a Future for every produced message.
 // TODO: extend docs
 
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::{Context, Poll};
+use std::time::{Duration, Instant};
+
+use futures::channel::oneshot;
+use futures::FutureExt;
+
 use crate::client::{ClientContext, DefaultClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use crate::error::{KafkaError, KafkaResult, RDKafkaError};
@@ -10,15 +19,6 @@ use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
 use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
 use crate::statistics::Statistics;
 use crate::util::{IntoOpaque, Timeout};
-
-use futures::channel::oneshot;
-use futures::FutureExt;
-
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::task::{Context, Poll};
-use std::time::{Duration, Instant};
 
 //
 // ********** FUTURE PRODUCER **********
