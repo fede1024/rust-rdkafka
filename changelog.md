@@ -1,6 +1,33 @@
 # Changelog
 
-<a name="0.2120"></a>
+## Unreleased
+
+* Upgrade to the async/await ecosystem, including `std::future::Future`, v0.3
+  of the futures crate, and v0.2 of Tokio. The minimum supported Rust version
+  is now Rust 1.39. Special thanks to [@sd2k] and [@dbcfd]. ([#186])
+
+  The main difference is that functions that previously returned
+  ```rust
+  futures01::Future<Item = T, Error = E>
+  ```
+  now return:
+  ```rust
+  std::future::Future<Output = Result<T, E>>
+  ```
+  In the special case when the error was `()`, the new signature is further
+  simplified to:
+  ```rust
+  std::future::Future<Output = T>
+  ```
+  Functions that return `future::Stream`s have had the analogous transformation
+  applied.
+
+[#186]: https://github.com/fede1024/rust-rdkafka/pull/183
+
+[@sd2k]: https://github.com/sd2k
+[@dbcfd]: https://github.com/dbcfd
+
+<a name="0.22.0"></a>
 ## 0.22.0 (2019-12-01)
 
 * Add a client for Kafka's Admin API, which allows actions like creating and

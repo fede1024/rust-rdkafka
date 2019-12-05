@@ -3,8 +3,6 @@ extern crate futures;
 extern crate rand;
 extern crate rdkafka;
 
-use futures::Future;
-
 use rdkafka::config::ClientConfig;
 use rdkafka::message::{Headers, Message, OwnedHeaders};
 use rdkafka::producer::future_producer::FutureRecord;
@@ -12,8 +10,8 @@ use rdkafka::producer::FutureProducer;
 
 use std::error::Error;
 
-#[test]
-fn test_future_producer_send_fail() {
+#[tokio::test]
+async fn test_future_producer_send_fail() {
     let producer = ClientConfig::new()
         .set("bootstrap.servers", "localhost")
         .set("message.timeout.ms", "5000")
@@ -34,7 +32,7 @@ fn test_future_producer_send_fail() {
         10000,
     );
 
-    match future.wait() {
+    match future.await {
         Ok(Err((kafka_error, owned_message))) => {
             assert_eq!(kafka_error.description(), "Message production error");
             assert_eq!(owned_message.topic(), "topic");

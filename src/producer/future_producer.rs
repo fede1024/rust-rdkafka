@@ -11,9 +11,13 @@ use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProdu
 use crate::statistics::Statistics;
 use crate::util::{IntoOpaque, Timeout};
 
-use futures::{self, Canceled, Complete, Future, Oneshot, Poll};
+use futures::channel::oneshot;
+use futures::FutureExt;
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
 
 //
@@ -137,9 +141,13 @@ impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
 }
 
 impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
-    type DeliveryOpaque = Box<Complete<OwnedDeliveryResult>>;
+    type DeliveryOpaque = Box<oneshot::Sender<OwnedDeliveryResult>>;
 
-    fn delivery(&self, delivery_result: &DeliveryResult, tx: Box<Complete<OwnedDeliveryResult>>) {
+    fn delivery(
+        &self,
+        delivery_result: &DeliveryResult,
+        tx: Box<oneshot::Sender<OwnedDeliveryResult>>,
+    ) {
         let owned_delivery_result = match *delivery_result {
             Ok(ref message) => Ok((message.partition(), message.offset())),
             Err((ref error, ref message)) => Err((error.clone(), message.detach())),
@@ -195,15 +203,14 @@ impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProduce
 /// Once completed, the future will contain an `OwnedDeliveryResult` with information on the
 /// delivery status of the message.
 pub struct DeliveryFuture {
-    rx: Oneshot<OwnedDeliveryResult>,
+    rx: oneshot::Receiver<OwnedDeliveryResult>,
 }
 
 impl Future for DeliveryFuture {
-    type Item = OwnedDeliveryResult;
-    type Error = Canceled;
+    type Output = Result<OwnedDeliveryResult, oneshot::Canceled>;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.rx.poll()
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        self.rx.poll_unpin(cx)
     }
 }
 
@@ -220,7 +227,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     {
         let start_time = Instant::now();
 
-        let (tx, rx) = futures::oneshot();
+        let (tx, rx) = oneshot::channel();
         let mut base_record = record.into_base_record(Box::new(tx));
 
         loop {
@@ -266,7 +273,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         K: ToBytes + ?Sized,
         P: ToBytes + ?Sized,
     {
-        let (tx, rx) = futures::oneshot();
+        let (tx, rx) = oneshot::channel();
         let base_record = record.into_base_record(Box::new(tx));
         self.producer
             .send(base_record)

@@ -6,7 +6,7 @@ extern crate rdkafka;
 extern crate rdkafka_sys;
 
 use clap::{App, Arg};
-use futures::stream::Stream;
+use futures::StreamExt;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
@@ -47,7 +47,7 @@ impl ConsumerContext for CustomContext {
 // A type alias with your custom consumer can be created for convenience.
 type LoggingConsumer = StreamConsumer<CustomContext>;
 
-fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
+async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
     let context = CustomContext;
 
     let consumer: LoggingConsumer = ClientConfig::new()
@@ -68,13 +68,12 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
 
     // consumer.start() returns a stream. The stream can be used ot chain together expensive steps,
     // such as complex computations on a thread pool or asynchronous IO.
-    let message_stream = consumer.start();
+    let mut message_stream = consumer.start();
 
-    for message in message_stream.wait() {
+    while let Some(message) = message_stream.next().await {
         match message {
-            Err(_) => warn!("Error while reading from stream."),
-            Ok(Err(e)) => warn!("Kafka error: {}", e),
-            Ok(Ok(m)) => {
+            Err(e) => warn!("Kafka error: {}", e),
+            Ok(m) => {
                 let payload = match m.payload_view::<str>() {
                     None => "",
                     Some(Ok(s)) => s,
@@ -97,7 +96,8 @@ fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let matches = App::new("consumer example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Simple command line consumer")
@@ -143,5 +143,5 @@ fn main() {
     let brokers = matches.value_of("brokers").unwrap();
     let group_id = matches.value_of("group-id").unwrap();
 
-    consume_and_print(brokers, group_id, &topics);
+    consume_and_print(brokers, group_id, &topics).await
 }

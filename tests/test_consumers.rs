@@ -107,13 +107,13 @@ fn create_base_consumer(
 }
 
 // All produced messages should be consumed.
-#[test]
-fn test_produce_consume_iter() {
+#[tokio::test]
+async fn test_produce_consume_iter() {
     let _r = env_logger::try_init();
 
     let start_time = current_time_millis();
     let topic_name = rand_test_topic();
-    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None);
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
     let consumer = create_base_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -135,13 +135,13 @@ fn test_produce_consume_iter() {
 }
 
 // All produced messages should be consumed.
-#[test]
-fn test_produce_consume_base() {
+#[tokio::test]
+async fn test_produce_consume_base() {
     let _r = env_logger::try_init();
 
     let start_time = current_time_millis();
     let topic_name = rand_test_topic();
-    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None);
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -162,18 +162,18 @@ fn test_produce_consume_base() {
                 }
                 Err(e) => panic!("Error receiving message: {:?}", e),
             };
-            Ok(())
+            future::ready(())
         })
-        .wait();
+        .await;
 }
 
 // Seeking should allow replaying messages and skipping messages.
-#[test]
-fn test_produce_consume_seek() {
+#[tokio::test]
+async fn test_produce_consume_seek() {
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    populate_topic(&topic_name, 5, &value_fn, &key_fn, Some(0), None);
+    populate_topic(&topic_name, 5, &value_fn, &key_fn, Some(0), None).await;
     let consumer = create_base_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -201,14 +201,14 @@ fn test_produce_consume_seek() {
 }
 
 // All produced messages should be consumed.
-#[test]
-fn test_produce_consume_base_assign() {
+#[tokio::test]
+async fn test_produce_consume_base_assign() {
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None);
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None).await;
     let consumer = create_stream_consumer(&rand_test_group(), None);
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
@@ -226,20 +226,21 @@ fn test_produce_consume_base_assign() {
                 Ok(m) => partition_count[m.partition() as usize] += 1,
                 Err(e) => panic!("Error receiving message: {:?}", e),
             };
-            Ok(())
+            future::ready(())
         })
-        .wait();
+        .await;
 
     assert_eq!(partition_count, vec![10, 8, 1]);
 }
 
 // All produced messages should be consumed.
-#[test]
-fn test_produce_consume_with_timestamp() {
+#[tokio::test]
+async fn test_produce_consume_with_timestamp() {
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111));
+    let message_map =
+        populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111)).await;
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -256,11 +257,11 @@ fn test_produce_consume_with_timestamp() {
                 }
                 Err(e) => panic!("Error receiving message: {:?}", e),
             };
-            Ok(())
+            future::ready(())
         })
-        .wait();
+        .await;
 
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999_999));
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999_999)).await;
 
     // Lookup the offsets
     let tpl = consumer
@@ -273,19 +274,19 @@ fn test_produce_consume_with_timestamp() {
     assert_eq!(tp.error(), Ok(()));
 }
 
-#[test]
-fn test_consume_with_no_message_error() {
+#[tokio::test]
+async fn test_consume_with_no_message_error() {
     let _r = env_logger::try_init();
 
     let consumer = create_stream_consumer(&rand_test_group(), None);
 
-    let message_stream = consumer.start_with(Duration::from_millis(200), true);
+    let mut message_stream = consumer.start_with(Duration::from_millis(200), true);
 
     let mut first_poll_time = None;
     let mut timeouts_count = 0;
-    for message in message_stream.wait() {
+    while let Some(message) = message_stream.next().await {
         match message {
-            Ok(Err(KafkaError::NoMessageReceived)) => {
+            Err(KafkaError::NoMessageReceived) => {
                 // TODO: use entry interface for Options once available
                 if first_poll_time.is_none() {
                     first_poll_time = Some(Instant::now());
@@ -308,14 +309,14 @@ fn test_consume_with_no_message_error() {
 }
 
 // TODO: add check that commit cb gets called correctly
-#[test]
-fn test_consumer_commit_message() {
+#[tokio::test]
+async fn test_consumer_commit_message() {
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
-    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
-    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None).await;
     let consumer = create_stream_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
@@ -331,9 +332,9 @@ fn test_consumer_commit_message() {
                 }
                 Err(e) => panic!("error receiving message: {:?}", e),
             };
-            Ok(())
+            future::ready(())
         })
-        .wait();
+        .await;
 
     let timeout = Duration::from_secs(5);
     assert_eq!(
@@ -368,14 +369,14 @@ fn test_consumer_commit_message() {
     assert_eq!(position, consumer.position().unwrap());
 }
 
-#[test]
-fn test_consumer_store_offset_commit() {
+#[tokio::test]
+async fn test_consumer_store_offset_commit() {
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None);
-    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None);
-    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None).await;
     let mut config = HashMap::new();
     config.insert("enable.auto.offset.store", "false");
     config.insert("enable.partition.eof", "true");
@@ -395,9 +396,9 @@ fn test_consumer_store_offset_commit() {
                 Err(KafkaError::PartitionEOF(_)) => {}
                 Err(e) => panic!("Error receiving message: {:?}", e),
             };
-            Ok(())
+            future::ready(())
         })
-        .wait();
+        .await;
 
     // Commit the whole current state
     consumer.commit_consumer_state(CommitMode::Sync).unwrap();
@@ -443,8 +444,8 @@ fn ensure_empty<C: ConsumerContext>(consumer: &BaseConsumer<C>, err_msg: &str) {
     }
 }
 
-#[test]
-fn test_pause_resume_consumer_iter() {
+#[tokio::test]
+async fn test_pause_resume_consumer_iter() {
     const PAUSE_COUNT: i32 = 3;
     const MESSAGE_COUNT: i32 = 300;
     const MESSAGES_PER_PAUSE: i32 = MESSAGE_COUNT / PAUSE_COUNT;
@@ -459,7 +460,8 @@ fn test_pause_resume_consumer_iter() {
         &key_fn,
         Some(0),
         None,
-    );
+    )
+    .await;
     let group_id = rand_test_group();
     let consumer = create_base_consumer(&group_id, None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
@@ -488,8 +490,8 @@ fn test_pause_resume_consumer_iter() {
 }
 
 // All produced messages should be consumed.
-#[test]
-fn test_produce_consume_message_queue_nonempty_callback() {
+#[tokio::test]
+async fn test_produce_consume_message_queue_nonempty_callback() {
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
@@ -534,7 +536,7 @@ fn test_produce_consume_message_queue_nonempty_callback() {
     assert!(consumer.poll(Duration::from_secs(0)).is_none());
 
     // Populate the topic, and expect a wakeup notifying us of the new messages.
-    populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None);
+    populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None).await;
     wait_for_wakeups(2);
 
     // Read one of the messages.
@@ -542,7 +544,7 @@ fn test_produce_consume_message_queue_nonempty_callback() {
 
     // Add more messages to the topic. Expect no additional wakeups, as the
     // queue is not fully drained, for 1s.
-    populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None);
+    populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None).await;
     std::thread::sleep(Duration::from_secs(1));
     assert_eq!(wakeups.load(Ordering::SeqCst), 2);
 
@@ -554,6 +556,6 @@ fn test_produce_consume_message_queue_nonempty_callback() {
     assert_eq!(wakeups.load(Ordering::SeqCst), 2);
 
     // Add another message, and expect a wakeup.
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None);
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None).await;
     wait_for_wakeups(3);
 }
