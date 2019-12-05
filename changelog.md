@@ -4,7 +4,7 @@
 
 * Upgrade to the async/await ecosystem, including `std::future::Future`, v0.3
   of the futures crate, and v0.2 of Tokio. The minimum supported Rust version
-  is now Rust 1.39. Special thanks to [@sd2k] and [@dbcfd]. ([#186])
+  is now Rust 1.39. Special thanks to [@sd2k] and [@dbcfd]. ([#187])
 
   The main difference is that functions that previously returned
   ```rust
@@ -22,7 +22,7 @@
   Functions that return `future::Stream`s have had the analogous transformation
   applied.
 
-[#186]: https://github.com/fede1024/rust-rdkafka/pull/183
+[#187]: https://github.com/fede1024/rust-rdkafka/pull/187
 
 [@sd2k]: https://github.com/sd2k
 [@dbcfd]: https://github.com/dbcfd
