@@ -28,14 +28,14 @@ fn create_consumer(group_id: &str) -> StreamConsumer {
         .expect("Failed to create StreamConsumer")
 }
 
-#[test]
-fn test_metadata() {
+#[tokio::test]
+async fn test_metadata() {
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None).await;
     let consumer = create_consumer(&rand_test_group());
 
     let metadata = consumer
@@ -89,36 +89,37 @@ fn test_metadata() {
     assert_eq!(metadata_one_topic.topics().len(), 1);
 }
 
-#[test]
-fn test_subscription() {
+#[tokio::test]
+async fn test_subscription() {
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None);
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None).await;
     let consumer = create_consumer(&rand_test_group());
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    let _consumer_future = consumer.start().take(10).wait();
+    // Make sure the consumer joins the group.
+    let _consumer_future = consumer.start().next().await;
 
     let mut tpl = TopicPartitionList::new();
     tpl.add_topic_unassigned(&topic_name);
     assert_eq!(tpl, consumer.subscription().unwrap());
 }
 
-#[test]
-fn test_group_membership() {
+#[tokio::test]
+async fn test_group_membership() {
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
     let group_name = rand_test_group();
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None);
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None);
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None);
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None).await;
     let consumer = create_consumer(&group_name);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
-    // Make sure the consumer joins the group
-    let _consumer_future = consumer.start().take(1).for_each(|_| Ok(())).wait();
+    // Make sure the consumer joins the group.
+    let _consumer_future = consumer.start().next().await;
 
     let group_list = consumer
         .fetch_group_list(None, Duration::from_secs(5))

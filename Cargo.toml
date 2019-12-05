@@ -12,7 +12,7 @@ edition = "2018"
 
 [dependencies]
 rdkafka-sys = { path = "rdkafka-sys", version = "1.2.1", default-features = false }
-futures = "0.1.21"
+futures = "0.3.0"
 libc = "0.2.0"
 log = "0.4.8"
 serde = "1.0.0"
@@ -26,7 +26,7 @@ clap = "2.18.0"
 env_logger = "0.7.1"
 rand = "0.3.15"
 regex = "1.1.6"
-tokio = "0.1.7"
+tokio = { version = "0.2", features = ["blocking", "macros", "rt-core", "time"] }
 
 # These features are re-exports of the features that the rdkafka-sys crate
 # provides. See the rdkafka-sys documentation for details.

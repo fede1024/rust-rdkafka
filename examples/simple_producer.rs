@@ -15,7 +15,7 @@ mod example_utils;
 use crate::example_utils::setup_logger;
 use rdkafka::message::OwnedHeaders;
 
-fn produce(brokers: &str, topic_name: &str) {
+async fn produce(brokers: &str, topic_name: &str) {
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .set("message.timeout.ms", "5000")
@@ -46,11 +46,12 @@ fn produce(brokers: &str, topic_name: &str) {
 
     // This loop will wait until all delivery statuses have been received received.
     for future in futures {
-        info!("Future completed. Result: {:?}", future.wait());
+        info!("Future completed. Result: {:?}", future.await);
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let matches = App::new("producer example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Simple command line producer")
@@ -86,5 +87,5 @@ fn main() {
     let topic = matches.value_of("topic").unwrap();
     let brokers = matches.value_of("brokers").unwrap();
 
-    produce(brokers, topic);
+    produce(brokers, topic).await;
 }

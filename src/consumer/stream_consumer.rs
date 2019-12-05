@@ -1,8 +1,7 @@
 //! Stream-based consumer implementation.
+
 use crate::rdsys;
 use crate::rdsys::types::*;
-use futures::sync::mpsc;
-use futures::{Future, Poll, Sink, Stream};
 
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::consumer::base_consumer::BaseConsumer;
@@ -11,9 +10,14 @@ use crate::error::{KafkaError, KafkaResult};
 use crate::message::BorrowedMessage;
 use crate::util::Timeout;
 
+use futures::channel::mpsc;
+use futures::{SinkExt, Stream, StreamExt};
+
+use std::pin::Pin;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -90,15 +94,12 @@ impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
 
 impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
     type Item = KafkaResult<BorrowedMessage<'a>>;
-    type Error = ();
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        self.receiver.poll().map(|ready| {
-            ready.map(|option| {
-                option.map(|polled_ptr_opt| {
-                    polled_ptr_opt.map_or(Err(KafkaError::NoMessageReceived), |polled_ptr| {
-                        polled_ptr.into_message_of(self.consumer)
-                    })
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        self.receiver.poll_next_unpin(cx).map(|ready| {
+            ready.map(|polled_ptr_opt| {
+                polled_ptr_opt.map_or(Err(KafkaError::NoMessageReceived), |polled_ptr| {
+                    polled_ptr.into_message_of(self.consumer)
                 })
             })
         })
@@ -109,27 +110,26 @@ impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
 /// If `send_none` is true, the loop will send a None into the sender every time the poll times out.
 fn poll_loop<C: ConsumerContext>(
     consumer: &BaseConsumer<C>,
-    sender: mpsc::Sender<Option<PolledMessagePtr>>,
+    mut sender: mpsc::Sender<Option<PolledMessagePtr>>,
     should_stop: &AtomicBool,
     poll_interval: Duration,
     send_none: bool,
 ) {
     trace!("Polling thread loop started");
-    let mut curr_sender = sender;
     while !should_stop.load(Ordering::Relaxed) {
         trace!("Polling base consumer");
         let future_sender = match consumer.poll_raw(Timeout::After(poll_interval)) {
             None => {
                 if send_none {
-                    curr_sender.send(None)
+                    sender.send(None)
                 } else {
                     continue; // TODO: check stream closed
                 }
             }
-            Some(m_ptr) => curr_sender.send(Some(PolledMessagePtr::new(m_ptr))),
+            Some(m_ptr) => sender.send(Some(PolledMessagePtr::new(m_ptr))),
         };
-        match future_sender.wait() {
-            Ok(new_sender) => curr_sender = new_sender,
+        match futures::executor::block_on(future_sender) {
+            Ok(()) => (),
             Err(e) => {
                 debug!("Sender not available: {:?}", e);
                 break;

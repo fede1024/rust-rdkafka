@@ -19,9 +19,8 @@ extern crate rdkafka;
 extern crate rdkafka_sys;
 
 use clap::{App, Arg};
-use futures::future::join_all;
-use futures::stream::Stream;
-use futures::Future;
+use futures::future;
+use futures::stream::StreamExt;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
@@ -89,7 +88,8 @@ fn create_producer(brokers: &str) -> FutureProducer {
         .expect("Producer creation failed")
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let matches = App::new("at-least-once")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("At-least-once delivery example")
@@ -148,18 +148,17 @@ fn main() {
     let consumer = create_consumer(brokers, group_id, input_topic);
     let producer = create_producer(brokers);
 
-    for message in consumer.start().wait() {
+    let mut stream = consumer.start();
+
+    while let Some(message) = stream.next().await {
         match message {
-            Err(()) => {
-                warn!("Error while reading from stream");
-            }
-            Ok(Err(e)) => {
+            Err(e) => {
                 warn!("Kafka error: {}", e);
             }
-            Ok(Ok(m)) => {
+            Ok(m) => {
                 // Send a copy to the message to every output topic in parallel, and wait for the
                 // delivery report to be received.
-                join_all(output_topics.iter().map(|output_topic| {
+                future::try_join_all(output_topics.iter().map(|output_topic| {
                     let mut record = FutureRecord::to(output_topic);
                     if let Some(p) = m.payload() {
                         record = record.payload(p);
@@ -169,7 +168,7 @@ fn main() {
                     }
                     producer.send(record, 1000)
                 }))
-                .wait()
+                .await
                 .expect("Message delivery failed for some topic");
                 // Now that the message is completely processed, add it's position to the offset
                 // store. The actual offset will be committed every 5 seconds.
