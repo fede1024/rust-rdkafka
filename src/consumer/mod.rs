@@ -1,25 +1,27 @@
 //! Base trait and common functionality for all consumers.
-pub mod base_consumer;
-pub mod stream_consumer;
 
-// Re-export
-pub use self::base_consumer::BaseConsumer;
-pub use self::stream_consumer::{MessageStream, StreamConsumer};
+use std::ptr;
+use std::time::Duration;
 
-use crate::rdsys;
-use crate::rdsys::types::*;
+use log::{error, trace};
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
 
 use crate::client::{ClientContext, NativeClient};
 use crate::error::KafkaResult;
 use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
+use crate::topic_partition_list::{Offset, TopicPartitionList};
 use crate::util::{cstr_to_owned, Timeout};
 
-use std::ptr;
-use std::time::Duration;
+pub mod base_consumer;
+pub mod stream_consumer;
 
-use crate::topic_partition_list::{Offset, TopicPartitionList};
+// Re-exports.
+pub use self::base_consumer::BaseConsumer;
+pub use self::stream_consumer::{MessageStream, StreamConsumer};
 
 /// Rebalance information.
 #[derive(Clone, Debug)]

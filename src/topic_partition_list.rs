@@ -1,15 +1,18 @@
 //! A data structure representing topic, partitions and offsets, compatible with the
 //! `RDKafkaTopicPartitionList` exported by `rdkafka-sys`.
-use crate::rdsys;
-use crate::rdsys::types::*;
-
-use crate::error::{IsError, KafkaError, KafkaResult};
 
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::ptr;
 use std::slice;
+
+use log::trace;
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
+
+use crate::error::{IsError, KafkaError, KafkaResult};
 
 const PARTITION_UNASSIGNED: i32 = -1;
 

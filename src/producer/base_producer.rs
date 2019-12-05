@@ -34,16 +34,6 @@
 //! If this error is returned, the producer should wait and try again.
 //!
 
-use crate::rdsys;
-use crate::rdsys::rd_kafka_vtype_t::*;
-use crate::rdsys::types::*;
-
-use crate::client::{Client, ClientContext};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
-use crate::util::{IntoOpaque, Timeout};
-
 use std::ffi::CString;
 use std::mem;
 use std::os::raw::c_void;
@@ -52,6 +42,18 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
+
+use log::{trace, warn};
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::rd_kafka_vtype_t::*;
+use rdkafka_sys::types::*;
+
+use crate::client::{Client, ClientContext};
+use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
+use crate::util::{IntoOpaque, Timeout};
 
 pub use crate::message::DeliveryResult;
 

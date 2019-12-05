@@ -1,8 +1,4 @@
 #![allow(dead_code)]
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
-extern crate regex;
 
 use rand::Rng;
 use regex::Regex;

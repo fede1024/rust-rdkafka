@@ -1,10 +1,11 @@
 //! Group membership API.
-use crate::rdsys;
-use crate::rdsys::types::*;
 
 use std::ffi::CStr;
 use std::fmt;
 use std::slice;
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
 
 /// Group member information container.
 pub struct GroupMemberInfo(RDKafkaGroupMemberInfo);

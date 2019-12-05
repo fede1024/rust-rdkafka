@@ -4,18 +4,6 @@
 //!
 //! [`AdminClient`]: struct.AdminClient.html
 
-use crate::rdsys;
-use crate::rdsys::types::*;
-
-use crate::client::{Client, ClientContext, DefaultClientContext, NativeQueue};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, Timeout, WrappedCPointer};
-
-use futures::channel::oneshot;
-use futures::future::{self, Either};
-use futures::FutureExt;
-
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::future::Future;
@@ -26,6 +14,18 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
+
+use futures::channel::oneshot;
+use futures::future::{self, Either, FutureExt};
+use log::{trace, warn};
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
+
+use crate::client::{Client, ClientContext, DefaultClientContext, NativeQueue};
+use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, Timeout, WrappedCPointer};
 
 //
 // ********** ADMIN CLIENT **********

@@ -1,26 +1,20 @@
-/// This example shows how to achieve at-least-once message delivery semantics. This stream
-/// processing code will simply read from an input topic, and duplicate the content to any number of
-/// output topics. In case of failure (client or server side), messages might be duplicated,
-/// but they won't be lost.
-///
-/// The key point is committing the offset only once the message has been fully processed.
-/// Note that this technique only works when messages are processed in order. If a message with
-/// offset `i+n` is processed and committed before message `i`, in case of failure messages in
-/// the interval `[i, i+n)` might be lost.
-///
-/// For a simpler example of consumers and producers, check the `simple_consumer` and
-/// `simple_producer` files in the example folder.
-///
-#[macro_use]
-extern crate log;
-extern crate clap;
-extern crate futures;
-extern crate rdkafka;
-extern crate rdkafka_sys;
+//! This example shows how to achieve at-least-once message delivery semantics. This stream
+//! processing code will simply read from an input topic, and duplicate the content to any number of
+//! output topics. In case of failure (client or server side), messages might be duplicated,
+//! but they won't be lost.
+//!
+//! The key point is committing the offset only once the message has been fully processed.
+//! Note that this technique only works when messages are processed in order. If a message with
+//! offset `i+n` is processed and committed before message `i`, in case of failure messages in
+//! the interval `[i, i+n)` might be lost.
+//!
+//! For a simpler example of consumers and producers, check the `simple_consumer` and
+//! `simple_producer` files in the example folder.
 
 use clap::{App, Arg};
 use futures::future;
 use futures::stream::StreamExt;
+use log::{info, warn};
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
@@ -31,8 +25,9 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::get_rdkafka_version;
 use rdkafka::Message;
 
-mod example_utils;
 use crate::example_utils::setup_logger;
+
+mod example_utils;
 
 // A simple context to customize the consumer behavior and print a log line every time
 // offsets are committed

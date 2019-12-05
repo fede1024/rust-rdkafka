@@ -1,11 +1,12 @@
 //! Test data consumption using low level and high level consumers.
-extern crate env_logger;
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
-extern crate rdkafka_sys;
 
-use futures::*;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time::{Duration, Instant};
+
+use futures::{future, StreamExt};
 
 use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, ConsumerContext, StreamConsumer};
 use rdkafka::error::{KafkaError, KafkaResult};
@@ -13,14 +14,9 @@ use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::current_time_millis;
 use rdkafka::{ClientConfig, ClientContext, Message, Statistics, Timestamp};
 
-mod utils;
 use crate::utils::*;
 
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
-use std::thread;
-use std::time::{Duration, Instant};
+mod utils;
 
 struct TestContext {
     _n: i64, // Add data for memory access validation

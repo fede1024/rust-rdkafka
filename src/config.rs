@@ -18,17 +18,18 @@
 //! - `statistics.interval.ms` (0 - disabled): how often the statistic callback specified in the `Context` will be called.
 //!
 
-use crate::rdsys;
-use crate::rdsys::types::*;
-use log::Level;
+use std::collections::HashMap;
+use std::ffi::CString;
+use std::mem;
+
+use log::{log_enabled, trace, Level};
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
 
 use crate::client::ClientContext;
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::util::ErrBuf;
-
-use std::collections::HashMap;
-use std::ffi::CString;
-use std::mem;
 
 /// The log levels supported by librdkafka.
 #[derive(Copy, Clone, Debug)]

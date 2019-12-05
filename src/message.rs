@@ -1,6 +1,4 @@
 //! Store and manipulate Kafka messages.
-use crate::rdsys;
-use crate::rdsys::types::*;
 
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -10,10 +8,13 @@ use std::ptr;
 use std::str;
 use std::time::SystemTime;
 
-use crate::util;
+use log::trace;
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
 
 use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::util::millis_to_epoch;
+use crate::util::{self, millis_to_epoch};
 
 /// Timestamp of a message
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

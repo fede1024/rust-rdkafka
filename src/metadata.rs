@@ -1,9 +1,10 @@
 //! Cluster metadata.
+
 use std::ffi::CStr;
 use std::slice;
 
-use crate::rdsys;
-use crate::rdsys::types::*;
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
 
 use crate::error::IsError;
 

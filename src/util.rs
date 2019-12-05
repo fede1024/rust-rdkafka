@@ -1,5 +1,4 @@
 //! Utility functions
-use crate::rdsys;
 
 use std::ffi::CStr;
 use std::os::raw::c_char;
@@ -8,6 +7,8 @@ use std::ptr;
 use std::slice;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use rdkafka_sys as rdsys;
 
 /// Return a tuple representing the version of `librdkafka` in
 /// hexadecimal and string format.

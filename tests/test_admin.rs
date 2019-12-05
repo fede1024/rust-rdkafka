@@ -1,8 +1,8 @@
 //! Test administrative commands using the admin API.
 
-use backoff::{ExponentialBackoff, Operation};
-
 use std::time::Duration;
+
+use backoff::{ExponentialBackoff, Operation};
 
 use rdkafka::admin::{
     AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, NewPartitions, NewTopic,
@@ -14,8 +14,9 @@ use rdkafka::error::{KafkaError, RDKafkaError};
 use rdkafka::metadata::Metadata;
 use rdkafka::ClientConfig;
 
-mod utils;
 use crate::utils::*;
+
+mod utils;
 
 fn create_config() -> ClientConfig {
     let mut config = ClientConfig::new();

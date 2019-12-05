@@ -1,19 +1,15 @@
-#[macro_use]
-extern crate log;
-extern crate clap;
-extern crate futures;
-extern crate rdkafka;
-
-use clap::{App, Arg};
+use clap::{value_t, App, Arg};
 use futures::*;
+use log::info;
 
 use rdkafka::config::ClientConfig;
+use rdkafka::message::OwnedHeaders;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::get_rdkafka_version;
 
-mod example_utils;
 use crate::example_utils::setup_logger;
-use rdkafka::message::OwnedHeaders;
+
+mod example_utils;
 
 async fn produce(brokers: &str, topic_name: &str) {
     let producer: FutureProducer = ClientConfig::new()

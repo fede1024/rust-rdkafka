@@ -1,6 +1,14 @@
 //! Low level consumer wrapper.
-use crate::rdsys;
-use crate::rdsys::types::*;
+
+use std::cmp;
+use std::mem;
+use std::os::raw::c_void;
+use std::ptr;
+
+use log::trace;
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
 
 use crate::client::{Client, NativeClient, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
@@ -11,11 +19,6 @@ use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
 use crate::util::{cstr_to_owned, Timeout};
-
-use std::cmp;
-use std::mem;
-use std::os::raw::c_void;
-use std::ptr;
 
 pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     _conf: *mut RDKafka,
@@ -176,7 +179,6 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// All these are equivalent and will receive messages without timing out.
     ///
     /// ```rust,no_run
-    /// # extern crate rdkafka;
     /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
     /// #    .create()
     /// #    .unwrap();
@@ -188,7 +190,6 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// ```
     ///
     /// ```rust,no_run
-    /// # extern crate rdkafka;
     /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
     /// #    .create()
     /// #    .unwrap();
@@ -199,7 +200,6 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// ```
     ///
     /// ```rust,no_run
-    /// # extern crate rdkafka;
     /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
     /// #    .create()
     /// #    .unwrap();

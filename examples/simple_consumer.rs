@@ -1,12 +1,6 @@
-#[macro_use]
-extern crate log;
-extern crate clap;
-extern crate futures;
-extern crate rdkafka;
-extern crate rdkafka_sys;
-
 use clap::{App, Arg};
 use futures::StreamExt;
+use log::{info, warn};
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
@@ -16,8 +10,9 @@ use rdkafka::error::KafkaResult;
 use rdkafka::message::{Headers, Message};
 use rdkafka::util::get_rdkafka_version;
 
-mod example_utils;
 use crate::example_utils::setup_logger;
+
+mod example_utils;
 
 // A context can be used to change the behavior of producers and consumers by adding callbacks
 // that will be executed by librdkafka.
