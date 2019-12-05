@@ -45,3 +45,8 @@ zstd = ["rdkafka-sys/zstd"]
 zstd-pkg-config = ["rdkafka-sys/zstd-pkg-config"]
 external-lz4 = ["rdkafka-sys/external-lz4"]
 external_lz4 = ["rdkafka-sys/external_lz4"]
+
+[package.metadata.docs.rs]
+# docs.rs doesn't allow writing to ~/.cargo/registry (reasonably), so we have to
+# use the CMake build for a proper out-of-tree build.
+features = ["cmake_build"]
