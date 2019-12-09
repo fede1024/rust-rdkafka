@@ -362,6 +362,9 @@ impl<'a> Drop for BorrowedMessage<'a> {
     }
 }
 
+unsafe impl<'a> Send for BorrowedMessage<'a> {}
+unsafe impl<'a> Sync for BorrowedMessage<'a> {}
+
 //
 // ********** OWNED MESSAGE **********
 //
