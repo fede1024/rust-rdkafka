@@ -1,5 +1,6 @@
 //! Common client functionalities.
 
+use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 use std::mem;
 use std::os::raw::c_char;
@@ -420,8 +421,7 @@ pub(crate) unsafe extern "C" fn native_error_cb<C: ClientContext>(
     reason: *const c_char,
     opaque: *mut c_void,
 ) {
-    let err = rdsys::primitive_to_rd_kafka_resp_err_t(err)
-        .expect("global error not an rd_kafka_resp_err_t");
+    let err = RDKafkaRespErr::try_from(err).expect("global error not an rd_kafka_resp_err_t");
     let error = KafkaError::Global(err.into());
     let reason = CStr::from_ptr(reason).to_string_lossy();
 
