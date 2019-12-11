@@ -27,7 +27,13 @@ jobs:
     env: FEATURES=cmake_build,libz-static
 
 script:
-  - if [[ "$RDKAFKA_RUN_TESTS" ]]; then ./test_suite.sh; else cargo build --verbose --features "$FEATURES"; fi
+  - |
+    if [[ "$RDKAFKA_RUN_TESTS" ]]; then
+      ./test_suite.sh
+    else
+      cargo build --all-targets --verbose --features "$FEATURES"
+      cargo build --all-targets --verbose --features "$FEATURES" --release
+    fi
 
 cache: cargo
 
