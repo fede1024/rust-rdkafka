@@ -171,9 +171,7 @@ fn build_librdkafka() {
 fn build_librdkafka() {
     let mut config = cmake::Config::new("librdkafka");
 
-    config
-        .define("RDKAFKA_BUILD_STATIC", "1")
-        .build_target("rdkafka");
+    config.define("RDKAFKA_BUILD_STATIC", "1");
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         config.define("WITH_ZLIB", "1");
@@ -230,14 +228,6 @@ fn build_librdkafka() {
     println!("Configuring and compiling librdkafka");
     let dst = config.build();
 
-    if cfg!(target_env = "msvc") {
-        let profile = match &env::var("PROFILE").expect("Cannot determine build profile")[..] {
-            "release" | "bench" => "Release",
-            _ => "Debug"
-        };
-        println!("cargo:rustc-link-search=native={}/build/src/{}", dst.display(), profile);
-    } else {
-        println!("cargo:rustc-link-search=native={}/build/src", dst.display());
-    }
+    println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
