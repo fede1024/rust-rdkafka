@@ -11,6 +11,10 @@ A fully asynchronous, [futures]-based Kafka client library for Rust based on [li
 ## The library
 `rust-rdkafka` provides a safe Rust interface to librdkafka. The master branch is currently based on librdkafka 1.2.2.
 
+> *NOTE*: rust-rdkafka's master branch is currently preparing
+  for breaking changes. For the most recently released code,
+  see the [v0.22.0](https://github.com/fede1024/rust-rdkafka/tree/v0.22.0) tag.
+
 ### Documentation
 
 - [Current master branch](https://fede1024.github.io/rust-rdkafka/)
