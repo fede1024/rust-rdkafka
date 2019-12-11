@@ -1,4 +1,6 @@
 //! This module contains type aliases for types defined in the auto-generated bindings.
+
+use std::convert::TryFrom;
 use std::ffi::CStr;
 use std::{error, fmt};
 
@@ -395,14 +397,14 @@ impl From<RDKafkaRespErr> for RDKafkaError {
 
 impl fmt::Display for RDKafkaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let description = match helpers::primitive_to_rd_kafka_resp_err_t(*self as i32) {
-            Some(err) => {
+        let description = match RDKafkaRespErr::try_from(*self as i32) {
+            Ok(err) => {
                 let cstr = unsafe { bindings::rd_kafka_err2str(err) };
                 unsafe { CStr::from_ptr(cstr) }
                     .to_string_lossy()
                     .into_owned()
             }
-            None => "Unknown error".to_owned(),
+            Err(_) => "Unknown error".to_owned(),
         };
 
         write!(f, "{:?} ({})", self, description)
