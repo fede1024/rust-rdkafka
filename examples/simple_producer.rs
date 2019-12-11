@@ -1,4 +1,4 @@
-use clap::{value_t, App, Arg};
+use clap::{App, Arg};
 use futures::*;
 use log::info;
 
