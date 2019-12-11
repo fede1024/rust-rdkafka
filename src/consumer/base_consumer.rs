@@ -5,7 +5,8 @@ use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
 
-use log::trace;
+use futures::channel::oneshot::Sender;
+use log::{error, trace};
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
@@ -125,10 +126,55 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     }
 }
 
+pub(crate) struct MessageBox(*mut rdsys::rd_kafka_message_t);
+
+unsafe impl Send for MessageBox {}
+unsafe impl Sync for MessageBox {}
+
+impl MessageBox {
+    pub fn into_inner(self) -> *mut rdsys::rd_kafka_message_t {
+        self.0
+    }
+}
+
+extern "C" fn queue_callback(
+    rkmessage: *mut rdsys::rd_kafka_message_t,
+    commit_opaque: *mut ::std::os::raw::c_void,
+) {
+    if commit_opaque != std::ptr::null_mut() {
+        let sender = commit_opaque as *mut Sender<Option<MessageBox>>;
+        unsafe {
+            let sender = Box::from_raw(sender);
+            if let Err(_) = sender.send(Some(MessageBox(rkmessage))) {
+                error!("Failed to forward message");
+            }
+        }
+    }
+}
+
 impl<C: ConsumerContext> BaseConsumer<C> {
     /// Returns the context used to create this consumer.
     pub fn context(&self) -> &C {
         self.client.context()
+    }
+
+    pub(crate) fn poll_with_sender(&self,
+        sender: Sender<Option<MessageBox>>,
+        timeout: Timeout,
+    ) {
+        if let Some(ref q) = self._queue {
+            unsafe { rdsys::rd_kafka_poll(self.client.native_ptr(), 0) };
+            let sender = Box::new(sender);
+            unsafe {
+                let sender = Box::into_raw(sender) as *const Sender<MessageBox> as *mut std::os::raw::c_void;
+                rdsys::rd_kafka_consume_callback_queue(
+                    q.ptr(),
+                    timeout.as_millis(),
+                    Some(queue_callback),
+                    sender,
+                );
+            }
+        }
     }
 
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
