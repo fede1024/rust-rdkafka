@@ -22,10 +22,17 @@
   Functions that return `future::Stream`s have had the analogous transformation
   applied.
 
+* Change the signature of `ConsumerContext::commit_callback` so that the
+  offsets are passed via a safe `TopicPartitionList` struct, and not a
+  raw `*mut rdkafka_sys::RDKafkaPartitionList` pointer. Thanks, [@scrogson]!
+  ([#198]).
+
 [#187]: https://github.com/fede1024/rust-rdkafka/pull/187
+[#198]: https://github.com/fede1024/rust-rdkafka/pull/198
 
 [@sd2k]: https://github.com/sd2k
 [@dbcfd]: https://github.com/dbcfd
+[@scrogson]: https://github.com/scrogson
 
 <a name="0.22.0"></a>
 ## 0.22.0 (2019-12-01)

@@ -22,6 +22,7 @@ use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::error::KafkaResult;
 use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::util::get_rdkafka_version;
 use rdkafka::Message;
 
@@ -39,7 +40,7 @@ impl ConsumerContext for LoggingConsumerContext {
     fn commit_callback(
         &self,
         result: KafkaResult<()>,
-        _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList,
+        _offsets: &TopicPartitionList,
     ) {
         match result {
             Ok(_) => info!("Offsets committed successfully"),

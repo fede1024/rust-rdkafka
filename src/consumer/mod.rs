@@ -90,7 +90,7 @@ pub trait ConsumerContext: ClientContext {
     /// Post commit callback. This method will run after a group of offsets was committed to the
     /// offset store.
     #[allow(unused_variables)]
-    fn commit_callback(&self, result: KafkaResult<()>, offsets: *mut RDKafkaTopicPartitionList) {}
+    fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {}
 
     /// Returns the minimum interval at which to poll the main queue, which
     /// services the logging, stats, and error callbacks.

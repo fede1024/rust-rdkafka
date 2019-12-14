@@ -27,15 +27,16 @@ pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     opaque_ptr: *mut c_void,
 ) {
     let context = Box::from_raw(opaque_ptr as *mut C);
-
     let commit_error = if err.is_error() {
         Err(KafkaError::ConsumerCommit(err.into()))
     } else {
         Ok(())
     };
-    (*context).commit_callback(commit_error, offsets);
+    let tpl = TopicPartitionList::from_ptr(offsets);
+    (*context).commit_callback(commit_error, &tpl);
 
     mem::forget(context); // Do not free the context
+    tpl.leak() // Do not free offsets
 }
 
 /// Native rebalance callback. This callback will run on every rebalance, and it will call the
