@@ -1,5 +1,4 @@
 //! Stream-based consumer implementation.
-use std::future::Future;
 use std::pin::Pin;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -7,7 +6,6 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use futures::channel::oneshot;
 use futures::Stream;
 use log::*;
 use pin_project::pin_project;
@@ -16,7 +14,7 @@ use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use crate::consumer::base_consumer::{BaseConsumer, MessageBox};
+use crate::consumer::base_consumer::BaseConsumer;
 use crate::consumer::{Consumer, ConsumerContext, DefaultConsumerContext};
 use crate::error::{KafkaError, KafkaResult};
 use crate::message::BorrowedMessage;
@@ -79,9 +77,6 @@ pub struct MessageStream<'a, C: ConsumerContext + 'static> {
     poll_interval: Duration,
     send_none: bool,
     should_stop: Arc<AtomicBool>,
-    #[pin]
-    pending: Option<oneshot::Receiver<Option<MessageBox>>>,
-    is_complete: bool,
 }
 
 impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
@@ -96,8 +91,6 @@ impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
             poll_interval: poll_interval,
             send_none: send_none,
             should_stop: should_stop,
-            pending: None,
-            is_complete: false,
         }
     }
 }
@@ -105,47 +98,34 @@ impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
 impl<'a, C: ConsumerContext> Stream for MessageStream<'a, C> {
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
-        let mut this = self.project();
+    fn poll_next(self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let this = self.project();
         debug!("Polling stream for next message");
         loop {
             if this.should_stop.load(Ordering::Relaxed) {
                 info!("Stopping");
                 return Poll::Ready(None);
             } else {
-                if let Some(to_poll) = this.pending.as_mut().as_pin_mut() {
-                    debug!("Seeing if poll result is ready");
-                    let res = futures::ready!(to_poll.poll(cx));
-                    debug!("Poll result ready");
-                    this.pending.set(None);
-                    let opt_ret = match res {
-                        Err(_) => {
-                            debug!("Sender cancelled");
-                            *this.is_complete = true;
-                            Some(Poll::Ready(None))
-                        },
-                        Ok(None) => {
-                            if *this.send_none {
-                                debug!("No message polled, but forwarding none as requested");
-                                Some(Poll::Ready(Some(Err(KafkaError::NoMessageReceived))))
-                            } else {
-                                None
-                            }
-                        },
-                        Ok(Some(ptr)) => {
-                            let polled_ptr = PolledMessagePtr::new(ptr.into_inner());
-                            Some(Poll::Ready(Some(polled_ptr.into_message_of(this.consumer))))
-                        },
-                    };
-                    if let Some(ret) = opt_ret {
-                        return ret;
+                let timeout = crate::util::Timeout::After(*this.poll_interval);
+                let res = this.consumer.consumer.poll(timeout);
+                let opt_ret = match res {
+                    None => {
+                        if *this.send_none {
+                            debug!("No message polled, but forwarding none as requested");
+                            Some(Poll::Ready(Some(Err(KafkaError::NoMessageReceived))))
+                        } else {
+                            None
+                        }
+                    },
+                    Some(Err(e)) => {
+                        Some(Poll::Ready(Some(Err(e))))
                     }
-                } else {
-                    debug!("Requesting next poll result");
-                    let (tx, rx) = futures::channel::oneshot::channel();
-                    let timeout = crate::util::Timeout::After(*this.poll_interval);
-                    this.consumer.get_base_consumer().poll_with_sender(tx, timeout);
-                    this.pending.replace(rx);
+                    Some(Ok(msg)) => {
+                        Some(Poll::Ready(Some(Ok(msg))))
+                    },
+                };
+                if let Some(ret) = opt_ret {
+                    return ret;
                 }
             }
         }
