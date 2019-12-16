@@ -171,7 +171,15 @@ fn build_librdkafka() {
 fn build_librdkafka() {
     let mut config = cmake::Config::new("librdkafka");
 
-    config.define("RDKAFKA_BUILD_STATIC", "1");
+    config
+        .define("RDKAFKA_BUILD_STATIC", "1")
+        .define("RDKAFKA_BUILD_TESTS", "0")
+        .define("RDKAFKA_BUILD_EXAMPLES", "0")
+        // CMAKE_INSTALL_LIBDIR is inferred as "lib64" on some platforms, but we
+        // want a stable location that we can add to the linker search path.
+        // Since we're not actually installing to /usr or /usr/local, there's no
+        // harm to always using "lib" here.
+        .define("CMAKE_INSTALL_LIBDIR", "lib");
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         config.define("WITH_ZLIB", "1");
