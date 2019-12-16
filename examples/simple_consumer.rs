@@ -6,6 +6,7 @@ use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext, Rebalance};
+use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::error::KafkaResult;
 use rdkafka::message::{Headers, Message};
 use rdkafka::util::get_rdkafka_version;
@@ -33,7 +34,7 @@ impl ConsumerContext for CustomContext {
     fn commit_callback(
         &self,
         result: KafkaResult<()>,
-        _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList,
+        _offsets: &TopicPartitionList,
     ) {
         info!("Committing offsets: {:?}", result);
     }
