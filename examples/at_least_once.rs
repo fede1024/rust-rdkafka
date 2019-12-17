@@ -37,11 +37,7 @@ struct LoggingConsumerContext;
 impl ClientContext for LoggingConsumerContext {}
 
 impl ConsumerContext for LoggingConsumerContext {
-    fn commit_callback(
-        &self,
-        result: KafkaResult<()>,
-        _offsets: &TopicPartitionList,
-    ) {
+    fn commit_callback(&self, result: KafkaResult<()>, _offsets: &TopicPartitionList) {
         match result {
             Ok(_) => info!("Offsets committed successfully"),
             Err(e) => warn!("Error while committing offsets: {}", e),

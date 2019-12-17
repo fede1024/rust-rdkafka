@@ -6,9 +6,9 @@ use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext, Rebalance};
-use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::error::KafkaResult;
 use rdkafka::message::{Headers, Message};
+use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::util::get_rdkafka_version;
 
 use crate::example_utils::setup_logger;
@@ -31,11 +31,7 @@ impl ConsumerContext for CustomContext {
         info!("Post rebalance {:?}", rebalance);
     }
 
-    fn commit_callback(
-        &self,
-        result: KafkaResult<()>,
-        _offsets: &TopicPartitionList,
-    ) {
+    fn commit_callback(&self, result: KafkaResult<()>, _offsets: &TopicPartitionList) {
         info!("Committing offsets: {:?}", result);
     }
 }

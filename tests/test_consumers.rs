@@ -32,11 +32,7 @@ impl ClientContext for TestContext {
 }
 
 impl ConsumerContext for TestContext {
-    fn commit_callback(
-        &self,
-        result: KafkaResult<()>,
-        _offsets: &TopicPartitionList,
-    ) {
+    fn commit_callback(&self, result: KafkaResult<()>, _offsets: &TopicPartitionList) {
         println!("Committing offsets: {:?}", result);
     }
 
