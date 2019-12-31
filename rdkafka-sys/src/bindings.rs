@@ -4,8 +4,8 @@ use num_enum::TryFromPrimitive;
 type FILE = libc::FILE;
 type sockaddr = libc::sockaddr;
 
-pub const RD_KAFKA_VERSION: u32 = 16909055;
-pub const RD_KAFKA_DEBUG_CONTEXTS : & 'static [ u8 ; 119usize ] = b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer,admin,eos\0" ;
+pub const RD_KAFKA_VERSION: u32 = 16974079;
+pub const RD_KAFKA_DEBUG_CONTEXTS : & 'static [ u8 ; 124usize ] = b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer,admin,eos,mock\0" ;
 pub const RD_KAFKA_DESTROY_F_NO_CONSUMER_CLOSE: u32 = 8;
 pub const RD_KAFKA_OFFSET_BEGINNING: i32 = -2;
 pub const RD_KAFKA_OFFSET_END: i32 = -1;
@@ -154,6 +154,7 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__INCONSISTENT = -149,
     RD_KAFKA_RESP_ERR__GAPLESS_GUARANTEE = -148,
     RD_KAFKA_RESP_ERR__MAX_POLL_EXCEEDED = -147,
+    RD_KAFKA_RESP_ERR__UNKNOWN_BROKER = -146,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,
@@ -170,9 +171,9 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR_STALE_CTRL_EPOCH = 11,
     RD_KAFKA_RESP_ERR_OFFSET_METADATA_TOO_LARGE = 12,
     RD_KAFKA_RESP_ERR_NETWORK_EXCEPTION = 13,
-    RD_KAFKA_RESP_ERR_GROUP_LOAD_IN_PROGRESS = 14,
-    RD_KAFKA_RESP_ERR_GROUP_COORDINATOR_NOT_AVAILABLE = 15,
-    RD_KAFKA_RESP_ERR_NOT_COORDINATOR_FOR_GROUP = 16,
+    RD_KAFKA_RESP_ERR_COORDINATOR_LOAD_IN_PROGRESS = 14,
+    RD_KAFKA_RESP_ERR_COORDINATOR_NOT_AVAILABLE = 15,
+    RD_KAFKA_RESP_ERR_NOT_COORDINATOR = 16,
     RD_KAFKA_RESP_ERR_TOPIC_EXCEPTION = 17,
     RD_KAFKA_RESP_ERR_RECORD_LIST_TOO_LARGE = 18,
     RD_KAFKA_RESP_ERR_NOT_ENOUGH_REPLICAS = 19,
