@@ -214,6 +214,8 @@ pub enum RDKafkaError {
     GaplessGuarantee = -148,
     /// Maximum poll interval exceeded
     PollExceeded = -147,
+    /// Unknown broker
+    UnknownBroker = -146,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error
@@ -246,12 +248,12 @@ pub enum RDKafkaError {
     OffsetMetadataTooLarge = 12,
     /// Broker disconnected before response received
     NetworkException = 13,
-    /// Group coordinator load in progress
-    GroupLoadInProgress = 14,
-    /// Group coordinator not available
-    GroupCoordinatorNotAvailable = 15,
-    /// Not coordinator for group
-    NotCoordinatorForGroup = 16,
+    /// Coordinator load in progress
+    CoordinatorLoadInProgress = 14,
+    /// Coordinator not available
+    CoordinatorNotAvailable = 15,
+    /// Not coordinator
+    NotCoordinator = 16,
     /// Invalid topic
     InvalidTopic = 17,
     /// Message batch larger than configured server segment size
