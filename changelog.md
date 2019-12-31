@@ -1,6 +1,7 @@
 # Changelog
 
-## Unreleased
+<a name="0.23.0"></a>
+## 0.23.0 (2019-12-31)
 
 * Upgrade to the async/await ecosystem, including `std::future::Future`, v0.3
   of the futures crate, and v0.2 of Tokio. The minimum supported Rust version
@@ -22,13 +23,28 @@
   Functions that return `future::Stream`s have had the analogous transformation
   applied.
 
+* Implement `Send` and `Sync` on `BorrowedMessage`, so that holding a reference
+  to a `BorrowedMessage` across an await point is possible. ([#190])
+
+* Implement `Sync` on `OwnedHeaders`, which applies transitively to
+  `OwnedMessage`, so that holding a reference to an `OwnedMessage` across an
+  await point is possible. ([#203])
+
+* Bump librdkafka to v1.3.0. ([#202])
+
 * Change the signature of `ConsumerContext::commit_callback` so that the
   offsets are passed via a safe `TopicPartitionList` struct, and not a
   raw `*mut rdkafka_sys::RDKafkaPartitionList` pointer. Thanks, [@scrogson]!
   ([#198]).
 
+* Fix CMake build on Windows when debug information is enabled ([#194]).
+
 [#187]: https://github.com/fede1024/rust-rdkafka/pull/187
+[#190]: https://github.com/fede1024/rust-rdkafka/pull/190
+[#194]: https://github.com/fede1024/rust-rdkafka/pull/194
 [#198]: https://github.com/fede1024/rust-rdkafka/pull/198
+[#202]: https://github.com/fede1024/rust-rdkafka/pull/202
+[#203]: https://github.com/fede1024/rust-rdkafka/pull/203
 
 [@sd2k]: https://github.com/sd2k
 [@dbcfd]: https://github.com/dbcfd
