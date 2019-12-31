@@ -146,25 +146,36 @@ fn build_librdkafka() {
     env::set_var("CFLAGS", cflags.join(" "));
     env::set_var("LDFLAGS", ldflags.join(" "));
 
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR missing");
+
+    if !Path::new(&out_dir).join("LICENSE").exists() {
+        // We're not allowed to build in-tree directly, as ~/.cargo/registry is
+        // globally shared. mklove doesn't support out-of-tree builds [0], so we
+        // work around the issue by creating a clone of librdkafka inside of
+        // OUT_DIR, and build inside of *that* tree.
+        //
+        // https://github.com/edenhill/mklove/issues/17
+        println!("Cloning librdkafka");
+        run_command_or_fail("librdkafka", "git", &["clone", ".", &out_dir]);
+    }
+
     println!("Configuring librdkafka");
-    run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
+    run_command_or_fail(&out_dir, "./configure", configure_flags.as_slice());
 
     println!("Compiling librdkafka");
     env::set_var("MAKEFLAGS", env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"));
     run_command_or_fail(
-        "librdkafka",
+        &out_dir,
         if cfg!(target_os = "freebsd") { "gmake" } else { "make" },
         &["libs"],
     );
 
     println!(
-        "cargo:rustc-link-search=native={}/librdkafka/src",
-        env::current_dir()
-            .expect("Can't find current dir")
-            .display()
+        "cargo:rustc-link-search=native={}/src",
+        out_dir,
     );
     println!("cargo:rustc-link-lib=static=rdkafka");
-    println!("cargo:root={}", env::var("OUT_DIR").expect("OUT_DIR missing"));
+    println!("cargo:root={}", out_dir);
 }
 
 #[cfg(feature = "cmake-build")]

@@ -9,11 +9,7 @@
 A fully asynchronous, [futures]-based Kafka client library for Rust based on [librdkafka].
 
 ## The library
-`rust-rdkafka` provides a safe Rust interface to librdkafka. The master branch is currently based on librdkafka 1.2.2.
-
-> *NOTE*: rust-rdkafka's master branch is currently preparing
-  for breaking changes. For the most recently released code,
-  see the [v0.22.0](https://github.com/fede1024/rust-rdkafka/tree/v0.22.0) tag.
+`rust-rdkafka` provides a safe Rust interface to librdkafka. The master branch is currently based on librdkafka 1.3.0.
 
 ### Documentation
 
@@ -118,7 +114,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.22", features = ["cmake-build"] }
+rdkafka = { version = "0.23", features = ["cmake-build"] }
 ```
 
 This crate will compile librdkafka from sources and link it statically to your
@@ -144,7 +140,7 @@ of librdkafka. Example:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.22", features = ["dynamic-linking"] }
+rdkafka = { version = "0.23", features = ["dynamic-linking"] }
 ```
 
 For a full listing of features, consult the [rdkafka-sys crate's

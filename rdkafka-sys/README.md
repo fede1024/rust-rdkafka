@@ -34,12 +34,10 @@ rust bindings.
   fix.
 
 * librdkafka's default build system, which uses a bespoke tool called mklove, is
-  somewhat unreliable, as it does not support out-of-tree builds. This means
-  that if you have multiple projects that depend on the same version of
-  `librdkafka`, they will share a build directory in `~/.cargo/registry`, and
-  builds from one project may corrupt builds from the other. **Using the CMake
-  based build system is strongly encouraged**, if you can take the dependency on
-  CMake.
+  somewhat unreliable, as enabling optional features is best-effort. If a
+  required dependency for an optional feature is not found, the feature will be
+  silently disabled ([details][mklove-bug]). **Using the CMake based build
+  system is strongly encouraged**, if you can take the dependency on CMake.
 
 ### Features
 
@@ -90,3 +88,4 @@ the version in `Cargo.toml`.
 
 [CMake]: https://cmake.org
 [mklove]: https://github.com/edenhill/mklove
+[mklove-bug]: https://github.com/edenhill/librdkafka/pull/2640
