@@ -23,7 +23,7 @@ jobs:
     rust: stable
   - os: windows
     arch: amd64
-    rust: stable
+    rust: stable-msvc
     env: FEATURES=cmake_build,libz-static
 
 script:
