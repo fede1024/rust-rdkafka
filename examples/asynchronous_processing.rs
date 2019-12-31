@@ -17,10 +17,16 @@ use crate::example_utils::setup_logger;
 
 mod example_utils;
 
-async fn record_message_receipt(msg: &BorrowedMessage<'_>) {
+async fn record_borrowed_message_receipt(msg: &BorrowedMessage<'_>) {
     // Simulate some work that must be done in the same order as messages are
     // received; i.e., before truly parallel processing can begin.
     info!("Message received: {}", msg.offset());
+}
+
+async fn record_owned_message_receipt(msg: &OwnedMessage) {
+    // Like `record_borrowed_message_receipt`, but takes an `OwnedMessage`
+    // instead, as in a real-world use case  an `OwnedMessage` might be more
+    // convenient than a `BorrowedMessage`.
 }
 
 // Emulates an expensive, synchronous computation.
@@ -79,10 +85,11 @@ async fn run_async_processor(
         let output_topic = output_topic.to_string();
         async move {
             // Process each message
-            record_message_receipt(&borrowed_message).await;
+            record_borrowed_message_receipt(&borrowed_message).await;
             // Borrowed messages can't outlive the consumer they are received from, so they need to
             // be owned in order to be sent to a separate thread.
             let owned_message = borrowed_message.detach();
+            record_owned_message_receipt(&owned_message).await;
             tokio::spawn(async move {
                 // The body of this block will be executed on the main thread pool,
                 // but we perform `expensive_computation` on a separate thread pool
