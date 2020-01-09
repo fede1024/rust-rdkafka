@@ -23,7 +23,7 @@ async fn record_borrowed_message_receipt(msg: &BorrowedMessage<'_>) {
     info!("Message received: {}", msg.offset());
 }
 
-async fn record_owned_message_receipt(msg: &OwnedMessage) {
+async fn record_owned_message_receipt(_msg: &OwnedMessage) {
     // Like `record_borrowed_message_receipt`, but takes an `OwnedMessage`
     // instead, as in a real-world use case  an `OwnedMessage` might be more
     // convenient than a `BorrowedMessage`.

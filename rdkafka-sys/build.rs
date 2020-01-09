@@ -156,7 +156,7 @@ fn build_librdkafka() {
         //
         // https://github.com/edenhill/mklove/issues/17
         println!("Cloning librdkafka");
-        run_command_or_fail("librdkafka", "git", &["clone", ".", &out_dir]);
+        run_command_or_fail(".", "cp", &["-a", "librdkafka/.", &out_dir]);
     }
 
     println!("Configuring librdkafka");
