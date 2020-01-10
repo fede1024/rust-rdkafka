@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/client.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>client.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/client.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>client.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -331,26 +331,151 @@
 <span id="331">331</span>
 <span id="332">332</span>
 <span id="333">333</span>
-</pre><pre class="rust ">
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+</pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Common client functionalities.</span>
-<span class="kw">use</span> <span class="ident">rdsys</span>;
-<span class="kw">use</span> <span class="ident">rdsys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::{<span class="ident">CString</span>, <span class="ident">CStr</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">slice</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::{<span class="ident">CStr</span>, <span class="ident">CString</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">mem</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">raw</span>::<span class="ident">c_char</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">raw</span>::<span class="ident">c_void</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">slice</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">ToString</span>;
 
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">serde_json</span>;
 
-<span class="kw">use</span> <span class="ident">config</span>::{<span class="ident">ClientConfig</span>, <span class="ident">NativeClientConfig</span>, <span class="ident">RDKafkaLogLevel</span>};
-<span class="kw">use</span> <span class="ident">error</span>::{<span class="ident">IsError</span>, <span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
-<span class="kw">use</span> <span class="ident">groups</span>::<span class="ident">GroupList</span>;
-<span class="kw">use</span> <span class="ident">metadata</span>::<span class="ident">Metadata</span>;
-<span class="kw">use</span> <span class="ident">statistics</span>::<span class="ident">Statistics</span>;
-<span class="kw">use</span> <span class="ident">util</span>::{<span class="ident">bytes_cstr_to_owned</span>, <span class="ident">timeout_to_ms</span>};
+<span class="kw">use</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
+<span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
+
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::{<span class="ident">ClientConfig</span>, <span class="ident">NativeClientConfig</span>, <span class="ident">RDKafkaLogLevel</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::{<span class="ident">IsError</span>, <span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">groups</span>::<span class="ident">GroupList</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">metadata</span>::<span class="ident">Metadata</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">statistics</span>::<span class="ident">Statistics</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::{<span class="ident">ErrBuf</span>, <span class="ident">Timeout</span>};
 
 <span class="doccomment">/// Client-level context</span>
 <span class="doccomment">///</span>
@@ -367,13 +492,21 @@
             <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Emerg</span>
             <span class="op">|</span> <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Alert</span>
             <span class="op">|</span> <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Critical</span>
-            <span class="op">|</span> <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Error</span> <span class="op">=&gt;</span> {
+            <span class="op">|</span> <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Error</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="ident">target</span>: <span class="string">&quot;librdkafka&quot;</span>, <span class="string">&quot;librdkafka: {} {}&quot;</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>)
-            },
-            <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Warning</span> <span class="op">=&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="ident">target</span>: <span class="string">&quot;librdkafka&quot;</span>, <span class="string">&quot;librdkafka: {} {}&quot;</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>),
-            <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Notice</span> <span class="op">=&gt;</span> <span class="macro">info</span><span class="macro">!</span>(<span class="ident">target</span>: <span class="string">&quot;librdkafka&quot;</span>, <span class="string">&quot;librdkafka: {} {}&quot;</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>),
-            <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Info</span> <span class="op">=&gt;</span> <span class="macro">info</span><span class="macro">!</span>(<span class="ident">target</span>: <span class="string">&quot;librdkafka&quot;</span>, <span class="string">&quot;librdkafka: {} {}&quot;</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>),
-            <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Debug</span> <span class="op">=&gt;</span> <span class="macro">debug</span><span class="macro">!</span>(<span class="ident">target</span>: <span class="string">&quot;librdkafka&quot;</span>, <span class="string">&quot;librdkafka: {} {}&quot;</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>),
+            }
+            <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Warning</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">warn</span><span class="macro">!</span>(<span class="ident">target</span>: <span class="string">&quot;librdkafka&quot;</span>, <span class="string">&quot;librdkafka: {} {}&quot;</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>)
+            }
+            <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Notice</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">info</span><span class="macro">!</span>(<span class="ident">target</span>: <span class="string">&quot;librdkafka&quot;</span>, <span class="string">&quot;librdkafka: {} {}&quot;</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>)
+            }
+            <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Info</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">info</span><span class="macro">!</span>(<span class="ident">target</span>: <span class="string">&quot;librdkafka&quot;</span>, <span class="string">&quot;librdkafka: {} {}&quot;</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>)
+            }
+            <span class="ident">RDKafkaLogLevel</span>::<span class="ident">Debug</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="ident">target</span>: <span class="string">&quot;librdkafka&quot;</span>, <span class="string">&quot;librdkafka: {} {}&quot;</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>)
+            }
         }
     }
 
@@ -397,7 +530,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DefaultClientContext</span>;
 
-<span class="kw">impl</span> <span class="ident">ClientContext</span> <span class="kw">for</span> <span class="ident">DefaultClientContext</span> { }
+<span class="kw">impl</span> <span class="ident">ClientContext</span> <span class="kw">for</span> <span class="ident">DefaultClientContext</span> {}
 
 <span class="comment">//</span>
 <span class="comment">// ********** CLIENT **********</span>
@@ -415,12 +548,12 @@
 
 <span class="kw">impl</span> <span class="ident">NativeClient</span> {
     <span class="doccomment">/// Wraps a pointer to an RDKafka object and returns a new NativeClient.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>) <span class="op">-&gt;</span> <span class="ident">NativeClient</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NativeClient</span> {
         <span class="ident">NativeClient</span> { <span class="ident">ptr</span> }
     }
 
     <span class="doccomment">/// Returns the wrapped pointer to RDKafka.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span> {
         <span class="self">self</span>.<span class="ident">ptr</span>
     }
 }
@@ -438,31 +571,47 @@
 <span class="doccomment">/// A low level rdkafka client. This client shouldn&#39;t be used directly. The producer and consumer modules</span>
 <span class="doccomment">/// provide different producer and consumer implementations based on top of `Client` that can be</span>
 <span class="doccomment">/// used instead.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ClientContext</span><span class="op">=</span><span class="ident">DefaultClientContext</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ClientContext</span> <span class="op">=</span> <span class="ident">DefaultClientContext</span><span class="op">&gt;</span> {
     <span class="ident">native</span>: <span class="ident">NativeClient</span>,
     <span class="ident">context</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ClientContext</span><span class="op">&gt;</span> <span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Creates a new `Client` given a configuration, a client type and a context.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>, <span class="ident">native_config</span>: <span class="ident">NativeClientConfig</span>, <span class="ident">rd_kafka_type</span>: <span class="ident">RDKafkaType</span>,
-               <span class="ident">context</span>: <span class="ident">C</span>)
-            <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;&gt;</span> {
-        <span class="kw">let</span> <span class="ident">errstr</span> <span class="op">=</span> [<span class="number">0i8</span>; <span class="number">1024</span>];
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>,
+        <span class="ident">native_config</span>: <span class="ident">NativeClientConfig</span>,
+        <span class="ident">rd_kafka_type</span>: <span class="ident">RDKafkaType</span>,
+        <span class="ident">context</span>: <span class="ident">C</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">boxed_context</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">context</span>);
-        <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_conf_set_opaque</span>(<span class="ident">native_config</span>.<span class="ident">ptr</span>(), (<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">boxed_context</span>) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">C</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>) };
+        <span class="kw">unsafe</span> {
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_conf_set_opaque</span>(
+                <span class="ident">native_config</span>.<span class="ident">ptr</span>(),
+                (<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">boxed_context</span>) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">C</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>,
+            )
+        };
         <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_conf_set_log_cb</span>(<span class="ident">native_config</span>.<span class="ident">ptr</span>(), <span class="prelude-val">Some</span>(<span class="ident">native_log_cb</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>)) };
-        <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_conf_set_stats_cb</span>(<span class="ident">native_config</span>.<span class="ident">ptr</span>(), <span class="prelude-val">Some</span>(<span class="ident">native_stats_cb</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>)) };
-        <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_conf_set_error_cb</span>(<span class="ident">native_config</span>.<span class="ident">ptr</span>(), <span class="prelude-val">Some</span>(<span class="ident">native_error_cb</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>)) };
+        <span class="kw">unsafe</span> {
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_conf_set_stats_cb</span>(<span class="ident">native_config</span>.<span class="ident">ptr</span>(), <span class="prelude-val">Some</span>(<span class="ident">native_stats_cb</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>))
+        };
+        <span class="kw">unsafe</span> {
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_conf_set_error_cb</span>(<span class="ident">native_config</span>.<span class="ident">ptr</span>(), <span class="prelude-val">Some</span>(<span class="ident">native_error_cb</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>))
+        };
 
         <span class="kw">let</span> <span class="ident">client_ptr</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_new</span>(<span class="ident">rd_kafka_type</span>, <span class="ident">native_config</span>.<span class="ident">ptr_move</span>(), <span class="ident">errstr</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i8</span>, <span class="ident">errstr</span>.<span class="ident">len</span>())
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_new</span>(
+                <span class="ident">rd_kafka_type</span>,
+                <span class="ident">native_config</span>.<span class="ident">ptr_move</span>(),
+                <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
+                <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+            )
         };
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Create new librdkafka client {:p}&quot;</span>, <span class="ident">client_ptr</span>);
 
         <span class="kw">if</span> <span class="ident">client_ptr</span>.<span class="ident">is_null</span>() {
-            <span class="kw">let</span> <span class="ident">descr</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">bytes_cstr_to_owned</span>(<span class="kw-2">&amp;</span><span class="ident">errstr</span>) };
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">ClientCreation</span>(<span class="ident">descr</span>));
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">ClientCreation</span>(<span class="ident">err_buf</span>.<span class="ident">to_string</span>()));
         }
 
         <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_set_log_level</span>(<span class="ident">client_ptr</span>, <span class="ident">config</span>.<span class="ident">log_level</span> <span class="kw">as</span> <span class="ident">i32</span>) };
@@ -474,23 +623,27 @@
     }
 
     <span class="doccomment">/// Returns a reference to the native rdkafka-sys client.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">native_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">NativeClient</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">native_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">NativeClient</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">native</span>
     }
 
     <span class="doccomment">/// Returns a pointer to the native rdkafka-sys client.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">native_ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">native_ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span> {
         <span class="self">self</span>.<span class="ident">native</span>.<span class="ident">ptr</span>
     }
 
     <span class="doccomment">/// Returns a reference to the context.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">context</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">C</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">context</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">C</span> {
         <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">as_ref</span>()
     }
 
     <span class="doccomment">/// Returns the metadata information for the specified topic, or for all topics in the cluster</span>
     <span class="doccomment">/// if no topic is specified.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fetch_metadata</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topic</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Metadata</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fetch_metadata</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">topic</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Metadata</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">metadata_ptr</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafkaMetadata</span> <span class="op">=</span> <span class="ident">ptr</span>::<span class="ident">null_mut</span>();
         <span class="kw">let</span> (<span class="ident">flag</span>, <span class="ident">native_topic</span>) <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">topic_name</span>) <span class="op">=</span> <span class="ident">topic</span> {
             (<span class="number">0</span>, <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">native_topic</span>(<span class="ident">topic_name</span>)<span class="question-mark">?</span>))
@@ -502,9 +655,12 @@
             <span class="ident">rdsys</span>::<span class="ident">rd_kafka_metadata</span>(
                 <span class="self">self</span>.<span class="ident">native_ptr</span>(),
                 <span class="ident">flag</span>,
-                <span class="ident">native_topic</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">t</span><span class="op">|</span> <span class="ident">t</span>.<span class="ident">ptr</span>()).<span class="ident">unwrap_or_else</span>(<span class="ident">NativeTopic</span>::<span class="ident">null</span>),
+                <span class="ident">native_topic</span>
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">t</span><span class="op">|</span> <span class="ident">t</span>.<span class="ident">ptr</span>())
+                    .<span class="ident">unwrap_or_else</span>(<span class="ident">NativeTopic</span>::<span class="ident">null</span>),
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">metadata_ptr</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafkaMetadata</span>,
-                <span class="ident">timeout_to_ms</span>(<span class="ident">timeout</span>))
+                <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>(),
+            )
         };
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Metadata fetch completed&quot;</span>);
         <span class="kw">if</span> <span class="ident">ret</span>.<span class="ident">is_error</span>() {
@@ -515,13 +671,24 @@
     }
 
     <span class="doccomment">/// Returns high and low watermark for the specified topic and partition.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fetch_watermarks</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">partition</span>: <span class="ident">i32</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>(<span class="ident">i64</span>, <span class="ident">i64</span>)<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fetch_watermarks</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">partition</span>: <span class="ident">i32</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>(<span class="ident">i64</span>, <span class="ident">i64</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">low</span> <span class="op">=</span> <span class="op">-</span><span class="number">1</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">high</span> <span class="op">=</span> <span class="op">-</span><span class="number">1</span>;
         <span class="kw">let</span> <span class="ident">topic_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">topic</span>.<span class="ident">to_string</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_query_watermark_offsets</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>(), <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(), <span class="ident">partition</span>,
-                                                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">low</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i64</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">high</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i64</span>, <span class="ident">timeout_to_ms</span>(<span class="ident">timeout</span>))
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_query_watermark_offsets</span>(
+                <span class="self">self</span>.<span class="ident">native_ptr</span>(),
+                <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(),
+                <span class="ident">partition</span>,
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">low</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i64</span>,
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">high</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i64</span>,
+                <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>(),
+            )
         };
         <span class="kw">if</span> <span class="ident">ret</span>.<span class="ident">is_error</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">MetadataFetch</span>(<span class="ident">ret</span>.<span class="ident">into</span>()));
@@ -531,9 +698,13 @@
 
     <span class="doccomment">/// Returns the group membership information for the given group. If no group is</span>
     <span class="doccomment">/// specified, all groups will be returned.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fetch_group_list</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">group</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">GroupList</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fetch_group_list</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">group</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">GroupList</span><span class="op">&gt;</span> {
         <span class="comment">// Careful with group_c getting freed before time</span>
-        <span class="kw">let</span> <span class="ident">group_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">group</span>.<span class="ident">map_or</span>(<span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(), <span class="op">|</span><span class="ident">g</span><span class="op">|</span> <span class="ident">g</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">group_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">group</span>.<span class="ident">map_or</span>(<span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(), <span class="ident">ToString</span>::<span class="ident">to_string</span>))<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">group_c_ptr</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">group</span>.<span class="ident">is_some</span>() {
             <span class="ident">group_c</span>.<span class="ident">as_ptr</span>()
         } <span class="kw">else</span> {
@@ -546,7 +717,8 @@
                 <span class="self">self</span>.<span class="ident">native_ptr</span>(),
                 <span class="ident">group_c_ptr</span>,
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">group_list_ptr</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafkaGroupList</span>,
-                <span class="ident">timeout_to_ms</span>(<span class="ident">timeout</span>))
+                <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>(),
+            )
         };
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Group list fetch completed&quot;</span>);
         <span class="kw">if</span> <span class="ident">ret</span>.<span class="ident">is_error</span>() {
@@ -558,17 +730,36 @@
 
     <span class="doccomment">/// Returns a NativeTopic from the current client. The NativeTopic shouldn&#39;t outlive the client</span>
     <span class="doccomment">/// it was generated from.</span>
-    <span class="kw">fn</span> <span class="ident">native_topic</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">NativeTopic</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">native_topic</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">NativeTopic</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">topic_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">topic</span>.<span class="ident">to_string</span>())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="kw">unsafe</span> {
-            <span class="ident">NativeTopic</span>::<span class="ident">from_ptr</span>(
-                <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_new</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>(), <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(), <span class="ident">ptr</span>::<span class="ident">null_mut</span>())
-            )}
-        )
+            <span class="ident">NativeTopic</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_new</span>(
+                <span class="self">self</span>.<span class="ident">native_ptr</span>(),
+                <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(),
+                <span class="ident">ptr</span>::<span class="ident">null_mut</span>(),
+            ))
+        })
+    }
+
+    <span class="doccomment">/// Returns a NativeQueue from the current client. The NativeQueue shouldn&#39;t</span>
+    <span class="doccomment">/// outlive the client it was generated from.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new_native_queue</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NativeQueue</span> {
+        <span class="kw">unsafe</span> { <span class="ident">NativeQueue</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_queue_new</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>())) }
+    }
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">consumer_queue</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NativeQueue</span><span class="op">&gt;</span> {
+        <span class="kw">unsafe</span> {
+            <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_queue_get_consumer</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>());
+            <span class="kw">if</span> <span class="ident">ptr</span>.<span class="ident">is_null</span>() {
+                <span class="prelude-val">None</span>
+            } <span class="kw">else</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">NativeQueue</span>::<span class="ident">from_ptr</span>(<span class="ident">ptr</span>))
+            }
+        }
     }
 }
 
-<span class="kw">struct</span> <span class="ident">NativeTopic</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">NativeTopic</span> {
     <span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopic</span>,
 }
 
@@ -577,17 +768,17 @@
 
 <span class="kw">impl</span> <span class="ident">NativeTopic</span> {
     <span class="doccomment">/// Wraps a pointer to an `RDKafkaTopic` object and returns a new `NativeTopic`.</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopic</span>) <span class="op">-&gt;</span> <span class="ident">NativeTopic</span> {
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopic</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NativeTopic</span> {
         <span class="ident">NativeTopic</span> { <span class="ident">ptr</span> }
     }
 
     <span class="doccomment">/// Returns the pointer to the librdkafka RDKafkaTopic structure.</span>
-    <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopic</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopic</span> {
         <span class="self">self</span>.<span class="ident">ptr</span>
     }
 
     <span class="doccomment">/// Returns a null pointer.</span>
-    <span class="kw">fn</span> <span class="ident">null</span>() <span class="op">-&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopic</span> {
+    <span class="kw">fn</span> <span class="ident">null</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopic</span> {
         <span class="ident">ptr</span>::<span class="ident">null</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopic</span>
     }
 }
@@ -602,49 +793,96 @@
     }
 }
 
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">NativeQueue</span> {
+    <span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaQueue</span>,
+}
+
+<span class="comment">// The library is completely thread safe, according to the documentation.</span>
+<span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Sync</span> <span class="kw">for</span> <span class="ident">NativeQueue</span> {}
+<span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Send</span> <span class="kw">for</span> <span class="ident">NativeQueue</span> {}
+
+<span class="kw">impl</span> <span class="ident">NativeQueue</span> {
+    <span class="doccomment">/// Wraps a pointer to an `RDKafkaQueue` object and returns a new</span>
+    <span class="doccomment">/// `NativeQueue`.</span>
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaQueue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NativeQueue</span> {
+        <span class="ident">NativeQueue</span> { <span class="ident">ptr</span> }
+    }
+
+    <span class="doccomment">/// Returns the pointer to the librdkafka RDKafkaQueue structure.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaQueue</span> {
+        <span class="self">self</span>.<span class="ident">ptr</span>
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">t</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaEvent</span> {
+        <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_queue_poll</span>(<span class="self">self</span>.<span class="ident">ptr</span>, <span class="ident">t</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>()) }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">NativeQueue</span> {
+    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Destroying queue: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">ptr</span>);
+        <span class="kw">unsafe</span> {
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_queue_destroy</span>(<span class="self">self</span>.<span class="ident">ptr</span>);
+        }
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Queue destroyed: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">ptr</span>);
+    }
+}
+
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">native_log_cb</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ClientContext</span><span class="op">&gt;</span>(
-        <span class="ident">client</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafka</span>, <span class="ident">level</span>: <span class="ident">i32</span>,
-        <span class="ident">fac</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">i8</span>, <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">i8</span>) {
+    <span class="ident">client</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafka</span>,
+    <span class="ident">level</span>: <span class="ident">i32</span>,
+    <span class="ident">fac</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_char</span>,
+    <span class="ident">buf</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_char</span>,
+) {
     <span class="kw">let</span> <span class="ident">fac</span> <span class="op">=</span> <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">fac</span>).<span class="ident">to_string_lossy</span>();
     <span class="kw">let</span> <span class="ident">log_message</span> <span class="op">=</span> <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">buf</span>).<span class="ident">to_string_lossy</span>();
 
     <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">from_raw</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_opaque</span>(<span class="ident">client</span>) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">C</span>);
-    (<span class="kw-2">*</span><span class="ident">context</span>).<span class="ident">log</span>(<span class="ident">RDKafkaLogLevel</span>::<span class="ident">from_int</span>(<span class="ident">level</span>), <span class="ident">fac</span>.<span class="ident">trim</span>(), <span class="ident">log_message</span>.<span class="ident">trim</span>());
-    <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">context</span>);   <span class="comment">// Do not free the context</span>
+    (<span class="kw-2">*</span><span class="ident">context</span>).<span class="ident">log</span>(
+        <span class="ident">RDKafkaLogLevel</span>::<span class="ident">from_int</span>(<span class="ident">level</span>),
+        <span class="ident">fac</span>.<span class="ident">trim</span>(),
+        <span class="ident">log_message</span>.<span class="ident">trim</span>(),
+    );
+    <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">context</span>); <span class="comment">// Do not free the context</span>
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">native_stats_cb</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ClientContext</span><span class="op">&gt;</span>(
-        <span class="ident">_conf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>, <span class="ident">json</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i8</span>, <span class="ident">json_len</span>: <span class="ident">usize</span>,
-        <span class="ident">opaque</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+    <span class="ident">_conf</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>,
+    <span class="ident">json</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_char</span>,
+    <span class="ident">json_len</span>: <span class="ident">usize</span>,
+    <span class="ident">opaque</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i32</span> {
     <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">from_raw</span>(<span class="ident">opaque</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">C</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes_vec</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
     <span class="ident">bytes_vec</span>.<span class="ident">extend_from_slice</span>(<span class="ident">slice</span>::<span class="ident">from_raw_parts</span>(<span class="ident">json</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>, <span class="ident">json_len</span>));
     <span class="kw">let</span> <span class="ident">json_string</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">from_vec_unchecked</span>(<span class="ident">bytes_vec</span>).<span class="ident">into_string</span>();
     <span class="kw">match</span> <span class="ident">json_string</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">json</span>) <span class="op">=&gt;</span> <span class="kw">match</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">json</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">stats</span>) <span class="op">=&gt;</span> (<span class="kw-2">*</span><span class="ident">context</span>).<span class="ident">stats</span>(<span class="ident">stats</span>),
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Could not parse statistics JSON: {}&quot;</span>, <span class="ident">e</span>)
+        <span class="prelude-val">Ok</span>(<span class="ident">json</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">json</span>) {
+            <span class="prelude-val">Ok</span>(<span class="ident">stats</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="kw-2">*</span><span class="ident">context</span>).<span class="ident">stats</span>(<span class="ident">stats</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Could not parse statistics JSON: {}&quot;</span>, <span class="ident">e</span>),
         },
-        <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Statistics JSON string is not UTF-8: {:?}&quot;</span>, <span class="ident">e</span>)
+        <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Statistics JSON string is not UTF-8: {:?}&quot;</span>, <span class="ident">e</span>),
     }
 
-    <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">context</span>);   <span class="comment">// Do not free the context</span>
+    <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">context</span>); <span class="comment">// Do not free the context</span>
 
     <span class="number">0</span> <span class="comment">// librdkafka will free the json buffer</span>
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">native_error_cb</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ClientContext</span><span class="op">&gt;</span>(
-        <span class="ident">_client</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>, <span class="ident">err</span>: <span class="ident">i32</span>, <span class="ident">reason</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">i8</span>,
-        <span class="ident">opaque</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>) {
-    <span class="kw">let</span> <span class="ident">err</span> <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">primitive_to_rd_kafka_resp_err_t</span>(<span class="ident">err</span>)
-        .<span class="ident">expect</span>(<span class="string">&quot;global error not an rd_kafka_resp_err_t&quot;</span>);
+    <span class="ident">_client</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>,
+    <span class="ident">err</span>: <span class="ident">i32</span>,
+    <span class="ident">reason</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_char</span>,
+    <span class="ident">opaque</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>,
+) {
+    <span class="kw">let</span> <span class="ident">err</span> <span class="op">=</span> <span class="ident">RDKafkaRespErr</span>::<span class="ident">try_from</span>(<span class="ident">err</span>).<span class="ident">expect</span>(<span class="string">&quot;global error not an rd_kafka_resp_err_t&quot;</span>);
     <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="ident">KafkaError</span>::<span class="ident">Global</span>(<span class="ident">err</span>.<span class="ident">into</span>());
     <span class="kw">let</span> <span class="ident">reason</span> <span class="op">=</span> <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">reason</span>).<span class="ident">to_string_lossy</span>();
 
     <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">from_raw</span>(<span class="ident">opaque</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">C</span>);
     (<span class="kw-2">*</span><span class="ident">context</span>).<span class="ident">error</span>(<span class="ident">error</span>, <span class="ident">reason</span>.<span class="ident">trim</span>());
-    <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">context</span>);   <span class="comment">// Do not free the context</span>
+    <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">context</span>); <span class="comment">// Do not free the context</span>
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -652,18 +890,22 @@
     <span class="comment">// Just call everything to test there no panics by default, behavior</span>
     <span class="comment">// is tested in the integrations tests.</span>
 
-    <span class="kw">use</span> <span class="ident">rdsys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">config</span>::<span class="ident">ClientConfig</span>;
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::<span class="ident">ClientConfig</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_client</span>() {
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">ClientConfig</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="ident">native_config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">create_native_config</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="ident">native_config</span>, <span class="ident">RDKafkaType</span>::<span class="ident">RD_KAFKA_PRODUCER</span>,
-                                 <span class="ident">DefaultClientContext</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(
+            <span class="kw-2">&amp;</span><span class="ident">config</span>,
+            <span class="ident">native_config</span>,
+            <span class="ident">RDKafkaType</span>::<span class="ident">RD_KAFKA_PRODUCER</span>,
+            <span class="ident">DefaultClientContext</span>,
+        )
+        .<span class="ident">unwrap</span>();
         <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">client</span>.<span class="ident">native_ptr</span>().<span class="ident">is_null</span>());
     }
 }
-</pre>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "rdkafka";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "rdkafka";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

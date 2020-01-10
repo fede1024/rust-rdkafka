@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/consumer/stream_consumer.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>stream_consumer.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/consumer/stream_consumer.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>stream_consumer.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../rdkafka/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -220,26 +220,45 @@
 <span id="220">220</span>
 <span id="221">221</span>
 <span id="222">222</span>
-</pre><pre class="rust ">
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+</pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Stream-based consumer implementation.</span>
-<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">Future</span>, <span class="ident">Poll</span>, <span class="ident">Sink</span>, <span class="ident">Stream</span>};
-<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">sync</span>::<span class="ident">mpsc</span>;
-<span class="kw">use</span> <span class="ident">rdsys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">rdsys</span>;
 
-<span class="kw">use</span> <span class="ident">config</span>::{<span class="ident">FromClientConfig</span>, <span class="ident">FromClientConfigAndContext</span>, <span class="ident">ClientConfig</span>};
-<span class="kw">use</span> <span class="ident">consumer</span>::<span class="ident">base_consumer</span>::<span class="ident">BaseConsumer</span>;
-<span class="kw">use</span> <span class="ident">consumer</span>::{<span class="ident">Consumer</span>, <span class="ident">ConsumerContext</span>, <span class="ident">DefaultConsumerContext</span>};
-<span class="kw">use</span> <span class="ident">error</span>::{<span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
-<span class="kw">use</span> <span class="ident">message</span>::<span class="ident">BorrowedMessage</span>;
-<span class="kw">use</span> <span class="ident">util</span>::<span class="ident">duration_to_millis</span>;
-
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">pin</span>::<span class="ident">Pin</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>::{<span class="self">self</span>, <span class="ident">JoinHandle</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 
+<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">channel</span>::<span class="ident">mpsc</span>;
+<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">SinkExt</span>, <span class="ident">Stream</span>, <span class="ident">StreamExt</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
+
+<span class="kw">use</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
+<span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
+
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::{<span class="ident">ClientConfig</span>, <span class="ident">FromClientConfig</span>, <span class="ident">FromClientConfigAndContext</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">consumer</span>::<span class="ident">base_consumer</span>::<span class="ident">BaseConsumer</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">consumer</span>::{<span class="ident">Consumer</span>, <span class="ident">ConsumerContext</span>, <span class="ident">DefaultConsumerContext</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::{<span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">message</span>::<span class="ident">BorrowedMessage</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::<span class="ident">Timeout</span>;
 
 <span class="doccomment">/// Default channel size for the stream consumer. The number of context switches</span>
 <span class="doccomment">/// seems to decrease exponentially as the channel size is increased, and it stabilizes when</span>
@@ -259,7 +278,7 @@
 
 <span class="kw">impl</span> <span class="ident">PolledMessagePtr</span> {
     <span class="doccomment">/// Creates a new PolledPtr from a message pointer. It takes the ownership of the message.</span>
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">message_ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaMessage</span>) <span class="op">-&gt;</span> <span class="ident">PolledMessagePtr</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">message_ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaMessage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PolledMessagePtr</span> {
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;New polled ptr {:?}&quot;</span>, <span class="ident">message_ptr</span>);
         <span class="ident">PolledMessagePtr</span> { <span class="ident">message_ptr</span> }
     }
@@ -267,7 +286,10 @@
     <span class="doccomment">/// Transforms the `PolledMessagePtr` into a message whose lifetime will be bound to the</span>
     <span class="doccomment">/// lifetime of the provided consumer. If the librdkafka message represents an error, the error</span>
     <span class="doccomment">/// will be returned instead.</span>
-    <span class="kw">fn</span> <span class="ident">into_message_of</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_message_of</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span>(
+        <span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">BorrowedMessage</span>::<span class="ident">from_consumer</span>(<span class="self">self</span>.<span class="ident">message_ptr</span>, <span class="ident">consumer</span>) };
         <span class="self">self</span>.<span class="ident">message_ptr</span> <span class="op">=</span> <span class="ident">ptr</span>::<span class="ident">null_mut</span>();
         <span class="ident">msg</span>
@@ -297,27 +319,29 @@
 <span class="doccomment">/// function on `Consumer`.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
     <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">receiver</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PolledMessagePtr</span><span class="op">&gt;&gt;</span>,
+    <span class="ident">receiver</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PolledMessagePtr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">receiver</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PolledMessagePtr</span><span class="op">&gt;&gt;</span>) <span class="op">-&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+        <span class="ident">receiver</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PolledMessagePtr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
         <span class="ident">MessageStream</span> { <span class="ident">consumer</span>, <span class="ident">receiver</span> }
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Stream</span> <span class="kw">for</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;&gt;</span>;
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> ();
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Item</span><span class="op">&gt;</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">receiver</span>.<span class="ident">poll</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ready</span><span class="op">|</span>
-                <span class="ident">ready</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">option</span><span class="op">|</span>
-                    <span class="ident">option</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">polled_ptr_opt</span><span class="op">|</span>
-                        <span class="ident">polled_ptr_opt</span>.<span class="ident">map_or</span>(
-                            <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">NoMessageReceived</span>),
-                            <span class="op">|</span><span class="ident">polled_ptr</span><span class="op">|</span> <span class="ident">polled_ptr</span>.<span class="ident">into_message_of</span>(<span class="self">self</span>.<span class="ident">consumer</span>)))))
+    <span class="kw">fn</span> <span class="ident">poll_next</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Item</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">receiver</span>.<span class="ident">poll_next_unpin</span>(<span class="ident">cx</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">ready</span><span class="op">|</span> {
+            <span class="ident">ready</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">polled_ptr_opt</span><span class="op">|</span> {
+                <span class="ident">polled_ptr_opt</span>.<span class="ident">map_or</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">NoMessageReceived</span>), <span class="op">|</span><span class="ident">polled_ptr</span><span class="op">|</span> {
+                    <span class="ident">polled_ptr</span>.<span class="ident">into_message_of</span>(<span class="self">self</span>.<span class="ident">consumer</span>)
+                })
+            })
+        })
     }
 }
 
@@ -325,29 +349,27 @@
 <span class="doccomment">/// If `send_none` is true, the loop will send a None into the sender every time the poll times out.</span>
 <span class="kw">fn</span> <span class="ident">poll_loop</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span>(
     <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">sender</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PolledMessagePtr</span><span class="op">&gt;&gt;</span>,
+    <span class="kw-2">mut</span> <span class="ident">sender</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PolledMessagePtr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">should_stop</span>: <span class="kw-2">&amp;</span><span class="ident">AtomicBool</span>,
     <span class="ident">poll_interval</span>: <span class="ident">Duration</span>,
     <span class="ident">send_none</span>: <span class="ident">bool</span>,
 ) {
     <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling thread loop started&quot;</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_sender</span> <span class="op">=</span> <span class="ident">sender</span>;
-    <span class="kw">let</span> <span class="ident">poll_interval_ms</span> <span class="op">=</span> <span class="ident">duration_to_millis</span>(<span class="ident">poll_interval</span>) <span class="kw">as</span> <span class="ident">i32</span>;
     <span class="kw">while</span> <span class="op">!</span><span class="ident">should_stop</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Relaxed</span>) {
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling base consumer&quot;</span>);
-        <span class="kw">let</span> <span class="ident">future_sender</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">consumer</span>.<span class="ident">poll_raw</span>(<span class="ident">poll_interval_ms</span>) {
-            <span class="prelude-val">None</span> <span class="op">=&gt;</span> {
+        <span class="kw">let</span> <span class="ident">future_sender</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">consumer</span>.<span class="ident">poll_raw</span>(<span class="ident">Timeout</span>::<span class="ident">After</span>(<span class="ident">poll_interval</span>)) {
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="ident">send_none</span> {
-                    <span class="ident">curr_sender</span>.<span class="ident">send</span>(<span class="prelude-val">None</span>)
+                    <span class="ident">sender</span>.<span class="ident">send</span>(<span class="prelude-val">None</span>)
                 } <span class="kw">else</span> {
-                    <span class="kw">continue</span> <span class="comment">// TODO: check stream closed</span>
+                    <span class="kw">continue</span>; <span class="comment">// TODO: check stream closed</span>
                 }
-            },
-            <span class="prelude-val">Some</span>(<span class="ident">m_ptr</span>) <span class="op">=&gt;</span> <span class="ident">curr_sender</span>.<span class="ident">send</span>(<span class="prelude-val">Some</span>(<span class="ident">PolledMessagePtr</span>::<span class="ident">new</span>(<span class="ident">m_ptr</span>))),
+            }
+            <span class="prelude-val">Some</span>(<span class="ident">m_ptr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">sender</span>.<span class="ident">send</span>(<span class="prelude-val">Some</span>(<span class="ident">PolledMessagePtr</span>::<span class="ident">new</span>(<span class="ident">m_ptr</span>))),
         };
-        <span class="kw">match</span> <span class="ident">future_sender</span>.<span class="ident">wait</span>() {
-            <span class="prelude-val">Ok</span>(<span class="ident">new_sender</span>) <span class="op">=&gt;</span> <span class="ident">curr_sender</span> <span class="op">=</span> <span class="ident">new_sender</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> {
+        <span class="kw">match</span> <span class="ident">futures</span>::<span class="ident">executor</span>::<span class="ident">block_on</span>(<span class="ident">future_sender</span>) {
+            <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> (),
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sender not available: {:?}&quot;</span>, <span class="ident">e</span>);
                 <span class="kw">break</span>;
             }
@@ -365,26 +387,29 @@
 <span class="doccomment">/// `Consumer`.</span>
 <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;Consumer polling thread will stop immediately if unused&quot;</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> <span class="op">=</span> <span class="ident">DefaultConsumerContext</span><span class="op">&gt;</span> {
-    <span class="ident">consumer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;&gt;</span>,
+    <span class="ident">consumer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">should_stop</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicBool</span><span class="op">&gt;</span>,
-    <span class="ident">handle</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">handle</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">Consumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">get_base_consumer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_base_consumer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
         <span class="ident">Arc</span>::<span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">consumer</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">FromClientConfig</span> <span class="kw">for</span> <span class="ident">StreamConsumer</span> {
-    <span class="kw">fn</span> <span class="ident">from_config</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">StreamConsumer</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from_config</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">StreamConsumer</span><span class="op">&gt;</span> {
         <span class="ident">StreamConsumer</span>::<span class="ident">from_config_and_context</span>(<span class="ident">config</span>, <span class="ident">DefaultConsumerContext</span>)
     }
 }
 
 <span class="doccomment">/// Creates a new `StreamConsumer` starting from a `ClientConfig`.</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">FromClientConfigAndContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from_config_and_context</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>, <span class="ident">context</span>: <span class="ident">C</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from_config_and_context</span>(
+        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>,
+        <span class="ident">context</span>: <span class="ident">C</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">stream_consumer</span> <span class="op">=</span> <span class="ident">StreamConsumer</span> {
             <span class="ident">consumer</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">BaseConsumer</span>::<span class="ident">from_config_and_context</span>(<span class="ident">config</span>, <span class="ident">context</span>)<span class="question-mark">?</span>),
             <span class="ident">should_stop</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>)),
@@ -397,7 +422,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Starts the StreamConsumer with default configuration (100ms polling interval and no</span>
     <span class="doccomment">/// `NoMessageReceived` notifications).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">start_with</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>), <span class="bool-val">false</span>)
     }
 
@@ -405,15 +430,21 @@
     <span class="doccomment">/// `no_message_error` is set to true, it will return an error of type</span>
     <span class="doccomment">/// `KafkaError::NoMessageReceived` every time the poll interval is reached and no message has</span>
     <span class="doccomment">/// been received.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_with</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">poll_interval</span>: <span class="ident">Duration</span>, <span class="ident">no_message_error</span>: <span class="ident">bool</span>) <span class="op">-&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_with</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">poll_interval</span>: <span class="ident">Duration</span>, <span class="ident">no_message_error</span>: <span class="ident">bool</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
         <span class="comment">// TODO: verify called once</span>
         <span class="kw">let</span> (<span class="ident">sender</span>, <span class="ident">receiver</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>(<span class="ident">CONSUMER_CHANNEL_SIZE</span>);
         <span class="kw">let</span> <span class="ident">consumer</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">consumer</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">should_stop</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">should_stop</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
             .<span class="ident">name</span>(<span class="string">&quot;poll&quot;</span>.<span class="ident">to_string</span>())
-            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">||</span> {
-                <span class="ident">poll_loop</span>(<span class="ident">consumer</span>.<span class="ident">as_ref</span>(), <span class="ident">sender</span>, <span class="ident">should_stop</span>.<span class="ident">as_ref</span>(), <span class="ident">poll_interval</span>, <span class="ident">no_message_error</span>);
+            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
+                <span class="ident">poll_loop</span>(
+                    <span class="ident">consumer</span>.<span class="ident">as_ref</span>(),
+                    <span class="ident">sender</span>,
+                    <span class="ident">should_stop</span>.<span class="ident">as_ref</span>(),
+                    <span class="ident">poll_interval</span>,
+                    <span class="ident">no_message_error</span>,
+                );
             })
             .<span class="ident">expect</span>(<span class="string">&quot;Failed to start polling thread&quot;</span>);
         <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>() <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">handle</span>);
@@ -427,8 +458,8 @@
             <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Stopping polling&quot;</span>);
             <span class="self">self</span>.<span class="ident">should_stop</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>);
             <span class="kw">match</span> <span class="ident">handle</span>.<span class="ident">join</span>() {
-                <span class="prelude-val">Ok</span>(()) <span class="op">=&gt;</span> <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling stopped&quot;</span>),
-                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failure while terminating thread: {:?}&quot;</span>, <span class="ident">e</span>),
+                <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling stopped&quot;</span>),
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failure while terminating thread: {:?}&quot;</span>, <span class="ident">e</span>),
             };
         }
     }
@@ -442,6 +473,5 @@
         <span class="self">self</span>.<span class="ident">stop</span>();
     }
 }
-
-</pre>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../../";window.currentCrate = "rdkafka";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script defer src="../../../search-index.js"></script></body></html>
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "rdkafka";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

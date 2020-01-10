@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/consumer/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/consumer/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../rdkafka/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -236,29 +236,118 @@
 <span id="236">236</span>
 <span id="237">237</span>
 <span id="238">238</span>
-</pre><pre class="rust ">
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+</pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Base trait and common functionality for all consumers.</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">base_consumer</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">stream_consumer</span>;
-
-<span class="comment">// Re-export</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">base_consumer</span>::<span class="ident">BaseConsumer</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">stream_consumer</span>::{<span class="ident">MessageStream</span>, <span class="ident">StreamConsumer</span>};
-
-<span class="kw">use</span> <span class="ident">rdsys</span>;
-<span class="kw">use</span> <span class="ident">rdsys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
-
-<span class="kw">use</span> <span class="ident">client</span>::{<span class="ident">ClientContext</span>, <span class="ident">NativeClient</span>};
-<span class="kw">use</span> <span class="ident">error</span>::<span class="ident">KafkaResult</span>;
-<span class="kw">use</span> <span class="ident">groups</span>::<span class="ident">GroupList</span>;
-<span class="kw">use</span> <span class="ident">message</span>::<span class="ident">BorrowedMessage</span>;
-<span class="kw">use</span> <span class="ident">metadata</span>::<span class="ident">Metadata</span>;
-<span class="kw">use</span> <span class="ident">util</span>::<span class="ident">cstr_to_owned</span>;
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 
-<span class="kw">use</span> <span class="ident">topic_partition_list</span>::<span class="ident">TopicPartitionList</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">trace</span>};
+
+<span class="kw">use</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
+<span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
+
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">client</span>::{<span class="ident">ClientContext</span>, <span class="ident">NativeClient</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::<span class="ident">KafkaResult</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">groups</span>::<span class="ident">GroupList</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">message</span>::<span class="ident">BorrowedMessage</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">metadata</span>::<span class="ident">Metadata</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">topic_partition_list</span>::{<span class="ident">Offset</span>, <span class="ident">TopicPartitionList</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::{<span class="ident">cstr_to_owned</span>, <span class="ident">Timeout</span>};
+
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">base_consumer</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">stream_consumer</span>;
+
+<span class="comment">// Re-exports.</span>
+<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">base_consumer</span>::<span class="ident">BaseConsumer</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">stream_consumer</span>::{<span class="ident">MessageStream</span>, <span class="ident">StreamConsumer</span>};
 
 <span class="doccomment">/// Rebalance information.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
@@ -281,15 +370,12 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">native_client</span>: <span class="kw-2">&amp;</span><span class="ident">NativeClient</span>,
         <span class="ident">err</span>: <span class="ident">RDKafkaRespErr</span>,
-        <span class="ident">tpl</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>,
+        <span class="ident">tpl</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TopicPartitionList</span>,
     ) {
-
         <span class="kw">let</span> <span class="ident">rebalance</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">err</span> {
-            <span class="ident">RDKafkaRespErr</span>::<span class="ident">RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS</span> <span class="op">=&gt;</span> {
-                <span class="ident">Rebalance</span>::<span class="ident">Assign</span>(<span class="ident">tpl</span>)
-            }
-            <span class="ident">RDKafkaRespErr</span>::<span class="ident">RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS</span> <span class="op">=&gt;</span> <span class="ident">Rebalance</span>::<span class="ident">Revoke</span>,
-            <span class="kw">_</span> <span class="op">=&gt;</span> {
+            <span class="ident">RDKafkaRespErr</span>::<span class="ident">RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Rebalance</span>::<span class="ident">Assign</span>(<span class="ident">tpl</span>),
+            <span class="ident">RDKafkaRespErr</span>::<span class="ident">RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Rebalance</span>::<span class="ident">Revoke</span>,
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_err2str</span>(<span class="ident">err</span>)) };
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error rebalancing: {}&quot;</span>, <span class="ident">error</span>);
                 <span class="ident">Rebalance</span>::<span class="ident">Error</span>(<span class="ident">error</span>)
@@ -303,10 +389,11 @@
         <span class="comment">// Execute rebalance</span>
         <span class="kw">unsafe</span> {
             <span class="kw">match</span> <span class="ident">err</span> {
-                <span class="ident">RDKafkaRespErr</span>::<span class="ident">RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS</span> <span class="op">=&gt;</span> {
+                <span class="ident">RDKafkaRespErr</span>::<span class="ident">RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="ident">rdsys</span>::<span class="ident">rd_kafka_assign</span>(<span class="ident">native_client</span>.<span class="ident">ptr</span>(), <span class="ident">tpl</span>.<span class="ident">ptr</span>());
-                },
-                <span class="kw">_</span> <span class="op">=&gt;</span> {  <span class="comment">// Also for RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS</span>
+                }
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="comment">// Also for RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS</span>
                     <span class="ident">rdsys</span>::<span class="ident">rd_kafka_assign</span>(<span class="ident">native_client</span>.<span class="ident">ptr</span>(), <span class="ident">ptr</span>::<span class="ident">null</span>());
                 }
             }
@@ -329,7 +416,29 @@
     <span class="doccomment">/// Post commit callback. This method will run after a group of offsets was committed to the</span>
     <span class="doccomment">/// offset store.</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">commit_callback</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">result</span>: <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">offsets</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartitionList</span>) {}
+    <span class="kw">fn</span> <span class="ident">commit_callback</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">result</span>: <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">offsets</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>) {}
+
+    <span class="doccomment">/// Returns the minimum interval at which to poll the main queue, which</span>
+    <span class="doccomment">/// services the logging, stats, and error callbacks.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The main queue is polled once whenever [`Consumer.poll`] is called. If</span>
+    <span class="doccomment">/// `Consumer.poll` is called with a timeout that is larger than this</span>
+    <span class="doccomment">/// interval, then the main queue will be polled at that interval while the</span>
+    <span class="doccomment">/// consumer queue is blocked.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// For example, if the main queue&#39;s minimum poll interval is 200ms and</span>
+    <span class="doccomment">/// `Consumer.poll` is called with a timeout of 1s, then `Consumer.poll` may</span>
+    <span class="doccomment">/// block for up to 1s waiting for a message, but it will poll the main</span>
+    <span class="doccomment">/// queue every 200ms while it is waiting.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// By default, the minimum poll interval for the main queue is 1s.</span>
+    <span class="kw">fn</span> <span class="ident">main_queue_min_poll_interval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Timeout</span> {
+        <span class="ident">Timeout</span>::<span class="ident">After</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>))
+    }
+
+    <span class="doccomment">/// Message queue nonempty callback. This method will run when the</span>
+    <span class="doccomment">/// consumer&#39;s message queue switches from empty to nonempty.</span>
+    <span class="kw">fn</span> <span class="ident">message_queue_nonempty_callback</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
 }
 
 <span class="doccomment">/// An empty consumer context that can be user when no context is needed.</span>
@@ -358,14 +467,14 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// If there&#39;s still the need to erase the type, the generic methods can still be reached through</span>
 <span class="doccomment">/// the [`get_base_consumer`](#method.get_base_consumer) method.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Consumer</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">=</span><span class="ident">DefaultConsumerContext</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Consumer</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">=</span> <span class="ident">DefaultConsumerContext</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Returns a reference to the BaseConsumer.</span>
-    <span class="kw">fn</span> <span class="ident">get_base_consumer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">get_base_consumer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>;
 
     <span class="comment">// Default implementations</span>
 
     <span class="doccomment">/// Subscribe the consumer to a list of topics.</span>
-    <span class="kw">fn</span> <span class="ident">subscribe</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topics</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">subscribe</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topics</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">subscribe</span>(<span class="ident">topics</span>)
     }
 
@@ -376,14 +485,32 @@
 
     <span class="doccomment">/// Manually assign topics and partitions to the consumer. If used, automatic consumer</span>
     <span class="doccomment">/// rebalance won&#39;t be activated.</span>
-    <span class="kw">fn</span> <span class="ident">assign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">assignment</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">assign</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">assignment</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">assign</span>(<span class="ident">assignment</span>)
+    }
+
+    <span class="doccomment">/// Seek to `offset` for the specified `topic` and `partition`. After a</span>
+    <span class="doccomment">/// successful call to `seek`, the next poll of the consumer will return the</span>
+    <span class="doccomment">/// message with `offset`.</span>
+    <span class="kw">fn</span> <span class="ident">seek</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">partition</span>: <span class="ident">i32</span>,
+        <span class="ident">offset</span>: <span class="ident">Offset</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">get_base_consumer</span>()
+            .<span class="ident">seek</span>(<span class="ident">topic</span>, <span class="ident">partition</span>, <span class="ident">offset</span>, <span class="ident">timeout</span>)
     }
 
     <span class="doccomment">/// Commits the offset of the specified message. The commit can be sync (blocking), or async.</span>
     <span class="doccomment">/// Notice that when a specific offset is committed, all the previous offsets are considered</span>
     <span class="doccomment">/// committed as well. Use this method only if you are processing messages in order.</span>
-    <span class="kw">fn</span> <span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topic_partition_list</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>, <span class="ident">mode</span>: <span class="ident">CommitMode</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">commit</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">topic_partition_list</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>,
+        <span class="ident">mode</span>: <span class="ident">CommitMode</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">commit</span>(<span class="ident">topic_partition_list</span>, <span class="ident">mode</span>)
     }
 
@@ -391,73 +518,111 @@
     <span class="doccomment">/// has been received, but before the message has been processed by the user code,</span>
     <span class="doccomment">/// this might lead to data loss. Check the &quot;at-least-once delivery&quot; section in the readme</span>
     <span class="doccomment">/// for more information.</span>
-    <span class="kw">fn</span> <span class="ident">commit_consumer_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">mode</span>: <span class="ident">CommitMode</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">commit_consumer_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">mode</span>: <span class="ident">CommitMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">commit_consumer_state</span>(<span class="ident">mode</span>)
     }
 
     <span class="doccomment">/// Commit the provided message. Note that this will also automatically commit every</span>
     <span class="doccomment">/// message with lower offset within the same partition.</span>
-    <span class="kw">fn</span> <span class="ident">commit_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">BorrowedMessage</span>, <span class="ident">mode</span>: <span class="ident">CommitMode</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">commit_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">BorrowedMessage</span>, <span class="ident">mode</span>: <span class="ident">CommitMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">commit_message</span>(<span class="ident">message</span>, <span class="ident">mode</span>)
     }
 
     <span class="doccomment">/// Store offset for this message to be used on the next (auto)commit.</span>
     <span class="doccomment">/// When using this `enable.auto.offset.store` should be set to `false` in the config.</span>
-    <span class="kw">fn</span> <span class="ident">store_offset</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">BorrowedMessage</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">store_offset</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">BorrowedMessage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">store_offset</span>(<span class="ident">message</span>)
     }
 
+    <span class="doccomment">/// Store offsets to be used on the next (auto)commit.</span>
+    <span class="doccomment">/// When using this `enable.auto.offset.store` should be set to `false` in the config.</span>
+    <span class="kw">fn</span> <span class="ident">store_offsets</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tpl</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">store_offsets</span>(<span class="ident">tpl</span>)
+    }
+
     <span class="doccomment">/// Returns the current topic subscription.</span>
-    <span class="kw">fn</span> <span class="ident">subscription</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">subscription</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">subscription</span>()
     }
 
     <span class="doccomment">/// Returns the current partition assignment.</span>
-    <span class="kw">fn</span> <span class="ident">assignment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">assignment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">assignment</span>()
     }
 
     <span class="doccomment">/// Retrieve committed offsets for topics and partitions.</span>
-    <span class="kw">fn</span> <span class="ident">committed</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span>
+    <span class="kw">fn</span> <span class="ident">committed</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;&gt;</span>,
+        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span>,
         <span class="self">Self</span>: <span class="ident">Sized</span>,
     {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">committed</span>(<span class="ident">timeout</span>)
     }
 
-    <span class="doccomment">/// Lookup the offsets for this consumer&#39;s partitions by timestamp.</span>
-    <span class="kw">fn</span> <span class="ident">offsets_for_timestamp</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timestamp</span>: <span class="ident">i64</span>, <span class="ident">timeout</span>: <span class="ident">T</span>)
-        <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span>
+    <span class="doccomment">/// Retrieve committed offsets for specified topics and partitions.</span>
+    <span class="kw">fn</span> <span class="ident">committed_offsets</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">tpl</span>: <span class="ident">TopicPartitionList</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;&gt;</span>,
+        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span>,
+    {
+        <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">committed_offsets</span>(<span class="ident">tpl</span>, <span class="ident">timeout</span>)
+    }
+
+    <span class="doccomment">/// Lookup the offsets for this consumer&#39;s partitions by timestamp.</span>
+    <span class="kw">fn</span> <span class="ident">offsets_for_timestamp</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">timestamp</span>: <span class="ident">i64</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span>,
         <span class="self">Self</span>: <span class="ident">Sized</span>,
     {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>()
             .<span class="ident">offsets_for_timestamp</span>(<span class="ident">timestamp</span>, <span class="ident">timeout</span>)
     }
 
+    <span class="doccomment">/// Look up the offsets for the specified partitions by timestamp.</span>
+    <span class="kw">fn</span> <span class="ident">offsets_for_times</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">timestamps</span>: <span class="ident">TopicPartitionList</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span>,
+        <span class="self">Self</span>: <span class="ident">Sized</span>,
+    {
+        <span class="self">self</span>.<span class="ident">get_base_consumer</span>()
+            .<span class="ident">offsets_for_times</span>(<span class="ident">timestamps</span>, <span class="ident">timeout</span>)
+    }
+
     <span class="doccomment">/// Retrieve current positions (offsets) for topics and partitions.</span>
-    <span class="kw">fn</span> <span class="ident">position</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">position</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">position</span>()
     }
 
     <span class="doccomment">/// Returns the metadata information for the specified topic, or for all topics in the cluster</span>
     <span class="doccomment">/// if no topic is specified.</span>
-    <span class="kw">fn</span> <span class="ident">fetch_metadata</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topic</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Metadata</span><span class="op">&gt;</span>
+    <span class="kw">fn</span> <span class="ident">fetch_metadata</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topic</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Metadata</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;&gt;</span>,
+        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span>,
         <span class="self">Self</span>: <span class="ident">Sized</span>,
     {
-        <span class="self">self</span>.<span class="ident">get_base_consumer</span>()
-            .<span class="ident">fetch_metadata</span>(<span class="ident">topic</span>, <span class="ident">timeout</span>)
+        <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">fetch_metadata</span>(<span class="ident">topic</span>, <span class="ident">timeout</span>)
     }
 
     <span class="doccomment">/// Returns the metadata information for all the topics in the cluster.</span>
-    <span class="kw">fn</span> <span class="ident">fetch_watermarks</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">partition</span>: <span class="ident">i32</span>, <span class="ident">timeout</span>: <span class="ident">T</span>)
-        <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>(<span class="ident">i64</span>, <span class="ident">i64</span>)<span class="op">&gt;</span>
+    <span class="kw">fn</span> <span class="ident">fetch_watermarks</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">partition</span>: <span class="ident">i32</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>(<span class="ident">i64</span>, <span class="ident">i64</span>)<span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;&gt;</span>,
+        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span>,
         <span class="self">Self</span>: <span class="ident">Sized</span>,
     {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>()
@@ -466,14 +631,23 @@
 
     <span class="doccomment">/// Returns the group membership information for the given group. If no group is</span>
     <span class="doccomment">/// specified, all groups will be returned.</span>
-    <span class="kw">fn</span> <span class="ident">fetch_group_list</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">group</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">GroupList</span><span class="op">&gt;</span>
+    <span class="kw">fn</span> <span class="ident">fetch_group_list</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">group</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">GroupList</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;&gt;</span>,
+        <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span>,
         <span class="self">Self</span>: <span class="ident">Sized</span>,
     {
-        <span class="self">self</span>.<span class="ident">get_base_consumer</span>()
-            .<span class="ident">fetch_group_list</span>(<span class="ident">group</span>, <span class="ident">timeout</span>)
+        <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">fetch_group_list</span>(<span class="ident">group</span>, <span class="ident">timeout</span>)
+    }
+
+    <span class="doccomment">/// Pause consumption for the provided list of partitions.</span>
+    <span class="kw">fn</span> <span class="ident">pause</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">partitions</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">pause</span>(<span class="ident">partitions</span>)
+    }
+
+    <span class="doccomment">/// Resume consumption for the provided list of partitions.</span>
+    <span class="kw">fn</span> <span class="ident">resume</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">partitions</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">resume</span>(<span class="ident">partitions</span>)
     }
 }
-</pre>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../../";window.currentCrate = "rdkafka";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script defer src="../../../search-index.js"></script></body></html>
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "rdkafka";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

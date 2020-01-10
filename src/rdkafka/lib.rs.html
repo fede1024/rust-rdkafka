@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -231,26 +231,12 @@
 <span id="231">231</span>
 <span id="232">232</span>
 <span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
-<span id="240">240</span>
-<span id="241">241</span>
-<span id="242">242</span>
-<span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-</pre><pre class="rust ">
+</pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! # rust-rdkafka</span>
 <span class="doccomment">//! A fully asynchronous, [futures]-based Kafka client library for Rust based on [librdkafka].</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## The library</span>
-<span class="doccomment">//! `rust-rdkafka` provides a safe Rust interface to librdkafka. The master branch is currently based on librdkafka 0.11.4.</span>
+<span class="doccomment">//! `rust-rdkafka` provides a safe Rust interface to librdkafka. The master branch is currently based on librdkafka 0.11.6.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ### Documentation</span>
 <span class="doccomment">//!</span>
@@ -355,7 +341,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```toml</span>
 <span class="doccomment">//! [dependencies]</span>
-<span class="doccomment">//! rdkafka = &quot;0.17.0&quot;</span>
+<span class="doccomment">//! rdkafka = &quot;~0.21&quot;</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! This crate will compile librdkafka from sources and link it statically to your executable. To compile librdkafka you&#39;ll need:</span>
@@ -371,7 +357,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```toml</span>
 <span class="doccomment">//! [dependencies.rdkafka]</span>
-<span class="doccomment">//! version = &quot;0.17.0&quot;</span>
+<span class="doccomment">//! version = &quot;~0.21&quot;</span>
 <span class="doccomment">//! features = [&quot;ssl&quot;, &quot;sasl&quot;]</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
@@ -457,23 +443,9 @@
 
 <span class="attribute">#![<span class="ident">warn</span>(<span class="ident">missing_docs</span>)]</span>
 
-<span class="comment">//&gt;alloc_system</span>
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>;
 
-<span class="comment">//#![feature(alloc_system, global_allocator, allocator_api)]</span>
-<span class="comment">//extern crate alloc_system;</span>
-<span class="comment">//use alloc_system::System;</span>
-<span class="comment">//#[global_allocator]</span>
-<span class="comment">//static A: System = System;</span>
-
-<span class="attribute">#[<span class="ident">macro_use</span>]</span> <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">log</span>;
-<span class="attribute">#[<span class="ident">macro_use</span>]</span> <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">serde_derive</span>;
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">serde_json</span>;
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">futures</span>;
-
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
-
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">rdsys</span>::<span class="ident">types</span> <span class="kw">as</span> <span class="ident">types</span>;
-
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">admin</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">client</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">config</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">consumer</span>;
@@ -487,11 +459,11 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">util</span>;
 
 <span class="comment">// Re-export</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">client</span>::<span class="ident">ClientContext</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::<span class="ident">ClientConfig</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">message</span>::{<span class="ident">Message</span>, <span class="ident">Timestamp</span>};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">statistics</span>::<span class="ident">Statistics</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">topic_partition_list</span>::{<span class="ident">Offset</span>, <span class="ident">TopicPartitionList</span>};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">util</span>::<span class="ident">IntoOpaque</span>;
-</pre>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "rdkafka";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">client</span>::<span class="ident">ClientContext</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::<span class="ident">ClientConfig</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">message</span>::{<span class="ident">Message</span>, <span class="ident">Timestamp</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">statistics</span>::<span class="ident">Statistics</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">topic_partition_list</span>::{<span class="ident">Offset</span>, <span class="ident">TopicPartitionList</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::<span class="ident">IntoOpaque</span>;
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "rdkafka";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

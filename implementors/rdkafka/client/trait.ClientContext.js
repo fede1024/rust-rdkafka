@@ -6,5 +6,4 @@ implementors["rdkafka"] = [];
             } else {
                 window.pending_implementors = implementors;
             }
-        
-})()
+        })()

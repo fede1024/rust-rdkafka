@@ -1,58 +1,116 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `rdkafka-sys/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1"> 1</span>
-<span id="2"> 2</span>
-<span id="3"> 3</span>
-<span id="4"> 4</span>
-<span id="5"> 5</span>
-<span id="6"> 6</span>
-<span id="7"> 7</span>
-<span id="8"> 8</span>
-<span id="9"> 9</span>
-<span id="10">10</span>
-<span id="11">11</span>
-<span id="12">12</span>
-<span id="13">13</span>
-<span id="14">14</span>
-<span id="15">15</span>
-<span id="16">16</span>
-<span id="17">17</span>
-<span id="18">18</span>
-<span id="19">19</span>
-<span id="20">20</span>
-<span id="21">21</span>
-<span id="22">22</span>
-<span id="23">23</span>
-<span id="24">24</span>
-<span id="25">25</span>
-<span id="26">26</span>
-<span id="27">27</span>
-<span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-</pre><pre class="rust ">
-<span class="doccomment">//! # rdkafka-sys</span>
-<span class="doccomment">//!</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `rdkafka-sys/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../rdkafka_sys/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+</pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Low level bindings to [librdkafka](https://github.com/edenhill/librdkafka).</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Bindings</span>
@@ -61,8 +119,8 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ``` bash</span>
 <span class="doccomment">//! git submodule update --init</span>
-<span class="doccomment">//! cargo install bindgen --vers 0.30.0</span>
-<span class="doccomment">//! bindgen --builtins --no-doc-comments librdkafka/src/rdkafka.h -o src/bindings/{platform}.rs</span>
+<span class="doccomment">//! cargo install bindgen</span>
+<span class="doccomment">//! ./update-bindings.sh</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Version</span>
@@ -73,29 +131,91 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Build</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! By default a submodule with the librdkafka sources pinned to a specific commit will</span>
-<span class="doccomment">//! be used to compile and statically link the library.</span>
+<span class="doccomment">//! ### Known issues</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The `dynamic_linking` feature can be used to link rdkafka to a locally installed</span>
-<span class="doccomment">//! version of librdkafka: if the feature is enabled, the build script will use `pkg-config`</span>
-<span class="doccomment">//! to check the version of the library installed in the system, and it will configure the</span>
-<span class="doccomment">//! compiler to use dynamic linking.</span>
+<span class="doccomment">//! * When any of librdkafka&#39;s optional dependencies are enabled, like libz or</span>
+<span class="doccomment">//!   OpenSSL, if you have multiple versions of that library installed upon your</span>
+<span class="doccomment">//!   system, librdkafka&#39;s build system may disagree with Cargo about which version</span>
+<span class="doccomment">//!   of the library to use! **This can result in subtly broken builds,** if</span>
+<span class="doccomment">//!   librdkafka compiles against the headers for one version but Cargo links</span>
+<span class="doccomment">//!   against a different version.  For complete confidence when building release</span>
+<span class="doccomment">//!   binaries, use an environment like a Docker container or a chroot jail where</span>
+<span class="doccomment">//!   you can guarantee that only one version of each dependency is present.</span>
+<span class="doccomment">//!   Unfortunately, the current design of Cargo makes this nearly impossible to</span>
+<span class="doccomment">//!   fix.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The build process is defined in [`build.rs`].</span>
+<span class="doccomment">//! * librdkafka&#39;s default build system, which uses a bespoke tool called mklove, is</span>
+<span class="doccomment">//!   somewhat unreliable, as it does not support out-of-tree builds. This means</span>
+<span class="doccomment">//!   that if you have multiple projects that depend on the same version of</span>
+<span class="doccomment">//!   `librdkafka`, they will share a build directory in `~/.cargo/registry`, and</span>
+<span class="doccomment">//!   builds from one project may corrupt builds from the other. **Using the CMake</span>
+<span class="doccomment">//!   based build system is strongly encouraged**, if you can take the dependency on</span>
+<span class="doccomment">//!   CMake.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! [`build.rs`]: https://github.com/fede1024/rust-rdkafka/blob/master/rdkafka-sys/build.rs</span>
+<span class="doccomment">//! ### Features</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! By default a submodule with the librdkafka sources pinned to a specific commit</span>
+<span class="doccomment">//! will be used to compile and statically link the library.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! The **`dynamic-linking`** feature can be used to link rdkafka to a locally</span>
+<span class="doccomment">//! installed version of librdkafka: if the feature is enabled, the build script</span>
+<span class="doccomment">//! will use `pkg-config` to check the version of the library installed in the</span>
+<span class="doccomment">//! system, and it will configure the compiler to dynamically link against it.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! The **`cmake-build`** feature builds librdkafka with its [CMake] build system,</span>
+<span class="doccomment">//! rather than its default [mklove]-based build system. This feature requires that</span>
+<span class="doccomment">//! CMake is installed on the build machine.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! The following features directly correspond to librdkafka features (i.e., flags</span>
+<span class="doccomment">//! you would pass to `configure` if you were compiling manually).</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!   * The **`ssl`** feature enables SSL support. By default, the system&#39;s OpenSSL</span>
+<span class="doccomment">//!     library is dynamically linked, but static linking of the version bundled</span>
+<span class="doccomment">//!     with the openssl-sys crate can be requested with the `ssl-vendored` feature.</span>
+<span class="doccomment">//!   * The **`gssapi`** feature enables SASL GSSAPI support with Cyrus libsasl2.</span>
+<span class="doccomment">//!     This feature requires that libsasl2 is installed on the system, as there is</span>
+<span class="doccomment">//!     not yet a libsasl2-sys crate that can build and link against a bundled</span>
+<span class="doccomment">//!     copy of the library.</span>
+<span class="doccomment">//!   * The **`libz`** feature enables support for zlib compression. This</span>
+<span class="doccomment">//!     feature is enabled by default. By default, the system&#39;s libz is dynamically</span>
+<span class="doccomment">//!     linked, but static linking of the version bundled with the libz-sys crate</span>
+<span class="doccomment">//!     can be requested with the `libz-static` feature.</span>
+<span class="doccomment">//!   * The **`zstd`** feature enables support for ZSTD compression. By default,</span>
+<span class="doccomment">//!     this builds and statically links the version bundled with the zstd-sys</span>
+<span class="doccomment">//!     crate, but dynamic linking of the system&#39;s version can be requested with the</span>
+<span class="doccomment">//!     `zstd-pkg-config` feature.</span>
+<span class="doccomment">//!   * The **`external-lz4`** feature statically links against the copy of liblz4</span>
+<span class="doccomment">//!     bundled with the lz4-sys crate. By default, librdkafka statically links</span>
+<span class="doccomment">//!     against its own bundled version of liblz4. Due to limitations with lz4-sys,</span>
+<span class="doccomment">//!     it is not yet possible to dynamically link against the system&#39;s version of</span>
+<span class="doccomment">//!     liblz4.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! All features are disabled by default unless noted otherwise above. The build</span>
+<span class="doccomment">//! process is defined in [`build.rs`].</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Updating</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! To upgrade change the git submodule in `librdkafka`, check if new errors</span>
 <span class="doccomment">//! need to be added to `helpers::primive_to_rd_kafka_resp_err_t` and update</span>
 <span class="doccomment">//! the version in `Cargo.toml`.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! [CMake]: https://cmake.org</span>
+<span class="doccomment">//! [mklove]: https://github.com/edenhill/mklove</span>
+<span class="doccomment">//! [`build.rs`]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/build.rs</span>
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ssl&quot;</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">openssl_sys</span>;
 
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;libz&quot;</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">libz_sys</span>;
 
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;zstd&quot;</span>)]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">zstd_sys</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;external_lz4&quot;</span>)]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">lz4_sys</span>;
+
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_camel_case_types</span>, <span class="ident">non_upper_case_globals</span>, <span class="ident">non_snake_case</span>, <span class="ident">clippy</span>::<span class="ident">all</span>)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">bindings</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">helpers</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">types</span>;
@@ -103,5 +223,5 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">bindings</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">helpers</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">types</span>::<span class="kw-2">*</span>;
-</pre>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "rdkafka_sys";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "rdkafka_sys";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

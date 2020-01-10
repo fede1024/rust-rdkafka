@@ -7,5 +7,4 @@ implementors["rdkafka_sys"] = [{text:"impl <a class=\"trait\" href=\"https://doc
             } else {
                 window.pending_implementors = implementors;
             }
-        
-})()
+        })()
