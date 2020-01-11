@@ -1,6 +1,6 @@
 [package]
 name = "rdkafka-sys"
-version = "1.3.0"
+version = "1.3.1"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 build = "build.rs"
 links = "rdkafka"
@@ -42,6 +42,10 @@ cmake_build = ["cmake-build"]
 # librdkafka installed somewhere where pkg-config can find it.
 dynamic_linking = []
 
+# Do not build nor link librdkafka. This option should only be used when
+# building non-binary targets, such as docs.
+no_librdkafka = []
+
 # Enable SSL support.
 ssl = ["openssl-sys"]
 
@@ -78,6 +82,5 @@ external-lz4 = ["lz4-sys"]
 external_lz4 = ["external-lz4"]
 
 [package.metadata.docs.rs]
-# docs.rs doesn't allow writing to ~/.cargo/registry (reasonably), so we have to
-# use the CMake build for a proper out-of-tree build.
-features = ["cmake_build"]
+# Don't link librdkafka when building for docs.rs.
+features = ["no_librdkafka"]

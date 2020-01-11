@@ -43,6 +43,13 @@ fn main() {
         .next()
         .expect("Crate version is not valid");
 
+    if env::var("CARGO_FEATURE_NO_LIBRDKAFKA").is_ok() {
+        eprintln!("rdkafka-sys won't be linked to librdkafka.");
+        eprintln!("This build mode should only be used for ");
+        eprintln!("building non-binary targets (example: rust docs)");
+        return;
+    }
+
     if env::var("DEP_OPENSSL_VENDORED").is_ok() {
         let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
         env::set_var("CFLAGS", format!("-I{}/include", openssl_root));
