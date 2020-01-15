@@ -105,7 +105,7 @@ impl Drop for NativeClientConfig {
 }
 
 /// Client configuration.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
     /// The librdkafka logging level. Refer to `RDKafkaLogLevel` for the list of available levels.
