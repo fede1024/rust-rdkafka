@@ -76,7 +76,9 @@
 
 pub mod base_producer;
 pub mod future_producer;
+pub mod aggregated_producer;
 
+pub use self::aggregated_producer::{AggregatedProducer, AggregatedDeliveryResult, AggregatedRecord};
 pub use self::base_producer::{
     BaseProducer, BaseRecord, DefaultProducerContext, DeliveryResult, ProducerContext,
     ThreadedProducer,
