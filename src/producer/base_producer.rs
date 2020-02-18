@@ -158,6 +158,9 @@ pub struct BaseRecord<
     /// Optional key
     pub key: Option<&'a K>,
     /// Optional timestamp
+    ///
+    /// Note that Kafka represents timestamps as the number of milliseconds
+    /// since the Unix epoch.
     pub timestamp: Option<i64>,
     /// Optional message headers
     pub headers: Option<OwnedHeaders>,
@@ -198,6 +201,9 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized, D: IntoOpaque> BaseRecord<'a,
     }
 
     /// Set the timestamp of the record.
+    ///
+    /// Note that Kafka represents timestamps as the number of milliseconds
+    /// since the Unix epoch.
     pub fn timestamp(mut self, timestamp: i64) -> BaseRecord<'a, K, P, D> {
         self.timestamp = Some(timestamp);
         self
