@@ -234,6 +234,11 @@ fn build_librdkafka() {
         config.define("CMAKE_SYSTEM_NAME", system_name);
     }
 
+    if env::var("CARGO_FEATURE_MUSL").is_ok() {
+        config.define("CC", "musl-gcc -static -Os");
+        config.define("CMAKE_CXX_COMPILER", "/usr/bin/g++");
+    }
+
     println!("Configuring and compiling librdkafka");
     let dst = config.build();
 

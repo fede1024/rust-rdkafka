@@ -76,6 +76,7 @@ you would pass to `configure` if you were compiling manually).
     against its own bundled version of liblz4. Due to limitations with lz4-sys,
     it is not yet possible to dynamically link against the system's version of
     liblz4.
+  * The **`musl`** feature statically links against the musl libc library
 
 All features are disabled by default unless noted otherwise above. The build
 process is defined in [`build.rs`](build.rs).
