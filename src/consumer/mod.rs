@@ -116,7 +116,7 @@ pub trait ConsumerContext: ClientContext {
 }
 
 /// An empty consumer context that can be user when no context is needed.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct DefaultConsumerContext;
 
 impl ClientContext for DefaultConsumerContext {}

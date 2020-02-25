@@ -457,7 +457,7 @@ impl Drop for OwnedHeaders {
 /// An [OwnedMessage] can be created from a [BorrowedMessage] using the [BorrowedMessage::detach]
 /// method. [OwnedMessage]s don't hold any reference to the consumer and don't use any memory inside the
 /// consumer buffer.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OwnedMessage {
     payload: Option<Vec<u8>>,
     key: Option<Vec<u8>>,
