@@ -233,18 +233,20 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         loop {
             match self.producer.send(base_record) {
                 Ok(_) => break DeliveryFuture { rx },
-                Err((KafkaError::MessageProduction(RDKafkaError::QueueFull), record)) => {
-                    base_record = record;
-                    if block_ms == -1 {
-                        continue;
-                    } else if block_ms > 0
-                        && start_time.elapsed() < Duration::from_millis(block_ms as u64)
-                    {
-                        self.poll(Duration::from_millis(100));
-                        continue;
-                    }
-                }
                 Err((e, record)) => {
+                    if e == KafkaError::MessageProduction(RDKafkaError::QueueFull) {
+                        if block_ms == -1 {
+                            base_record = record;
+                            continue;
+                        } else if block_ms > 0
+                            && start_time.elapsed() < Duration::from_millis(block_ms as u64)
+                        {
+                            self.poll(Duration::from_millis(100));
+                            base_record = record;
+                            continue;
+                        }
+                    }
+
                     let owned_message = OwnedMessage::new(
                         record.payload.map(|p| p.to_bytes().to_vec()),
                         record.key.map(|k| k.to_bytes().to_vec()),
