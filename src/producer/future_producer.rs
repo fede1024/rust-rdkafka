@@ -235,13 +235,15 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
                 Ok(_) => break DeliveryFuture { rx },
                 Err((e, record)) => {
                     if e == KafkaError::MessageProduction(RDKafkaError::QueueFull) {
+                        const POLL_TIMEOUT_MILLISECONDS: u64 = 100;
                         if block_ms == -1 {
+                            self.poll(Duration::from_millis(POLL_TIMEOUT_MILLISECONDS));
                             base_record = record;
                             continue;
                         } else if block_ms > 0
                             && start_time.elapsed() < Duration::from_millis(block_ms as u64)
                         {
-                            self.poll(Duration::from_millis(100));
+                            self.poll(Duration::from_millis(POLL_TIMEOUT_MILLISECONDS));
                             base_record = record;
                             continue;
                         }
