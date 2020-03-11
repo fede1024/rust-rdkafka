@@ -26,16 +26,15 @@ pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     offsets: *mut RDKafkaTopicPartitionList,
     opaque_ptr: *mut c_void,
 ) {
-    let context = Box::from_raw(opaque_ptr as *mut C);
+    let context = &mut *(opaque_ptr as *mut C);
     let commit_error = if err.is_error() {
         Err(KafkaError::ConsumerCommit(err.into()))
     } else {
         Ok(())
     };
     let tpl = TopicPartitionList::from_ptr(offsets);
-    (*context).commit_callback(commit_error, &tpl);
+    context.commit_callback(commit_error, &tpl);
 
-    mem::forget(context); // Do not free the context
     tpl.leak() // Do not free offsets
 }
 
@@ -48,13 +47,12 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     opaque_ptr: *mut c_void,
 ) {
     // let context: &C = &*(opaque_ptr as *const C);
-    let context = Box::from_raw(opaque_ptr as *mut C);
+    let context = &mut *(opaque_ptr as *mut C);
     let native_client = NativeClient::from_ptr(rk);
     let mut tpl = TopicPartitionList::from_ptr(native_tpl);
 
     context.rebalance(&native_client, err, &mut tpl);
 
-    mem::forget(context); // Do not free the context
     mem::forget(native_client); // Do not free native client
     tpl.leak() // Do not free native topic partition list
 }
@@ -65,11 +63,9 @@ unsafe extern "C" fn native_message_queue_nonempty_cb<C: ConsumerContext>(
     _: *mut RDKafka,
     opaque_ptr: *mut c_void,
 ) {
-    let context = Box::from_raw(opaque_ptr as *mut C);
+    let context = &mut *(opaque_ptr as *mut C);
 
     (*context).message_queue_nonempty_callback();
-
-    mem::forget(context); // Do not free the context
 }
 
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled

@@ -382,13 +382,12 @@ pub(crate) unsafe extern "C" fn native_log_cb<C: ClientContext>(
     let fac = CStr::from_ptr(fac).to_string_lossy();
     let log_message = CStr::from_ptr(buf).to_string_lossy();
 
-    let context = Box::from_raw(rdsys::rd_kafka_opaque(client) as *mut C);
-    (*context).log(
+    let context = &mut *(rdsys::rd_kafka_opaque(client) as *mut C);
+    context.log(
         RDKafkaLogLevel::from_int(level),
         fac.trim(),
         log_message.trim(),
     );
-    mem::forget(context); // Do not free the context
 }
 
 pub(crate) unsafe extern "C" fn native_stats_cb<C: ClientContext>(
@@ -397,20 +396,18 @@ pub(crate) unsafe extern "C" fn native_stats_cb<C: ClientContext>(
     json_len: usize,
     opaque: *mut c_void,
 ) -> i32 {
-    let context = Box::from_raw(opaque as *mut C);
+    let context = &mut *(opaque as *mut C);
 
     let mut bytes_vec = Vec::new();
     bytes_vec.extend_from_slice(slice::from_raw_parts(json as *mut u8, json_len));
     let json_string = CString::from_vec_unchecked(bytes_vec).into_string();
     match json_string {
         Ok(json) => match serde_json::from_str(&json) {
-            Ok(stats) => (*context).stats(stats),
+            Ok(stats) => context.stats(stats),
             Err(e) => error!("Could not parse statistics JSON: {}", e),
         },
         Err(e) => error!("Statistics JSON string is not UTF-8: {:?}", e),
     }
-
-    mem::forget(context); // Do not free the context
 
     0 // librdkafka will free the json buffer
 }
@@ -425,9 +422,8 @@ pub(crate) unsafe extern "C" fn native_error_cb<C: ClientContext>(
     let error = KafkaError::Global(err.into());
     let reason = CStr::from_ptr(reason).to_string_lossy();
 
-    let context = Box::from_raw(opaque as *mut C);
-    (*context).error(error, reason.trim());
-    mem::forget(context); // Do not free the context
+    let context = &mut *(opaque as *mut C);
+    context.error(error, reason.trim());
 }
 
 #[cfg(test)]
