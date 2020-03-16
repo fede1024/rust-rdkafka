@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use futures::channel::oneshot;
 use futures::FutureExt;
 
-use crate::client::{ClientContext, DefaultClientContext};
+use crate::client::{Client, ClientContext, DefaultClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use crate::error::{KafkaError, KafkaResult, RDKafkaError};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
@@ -114,7 +114,7 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
 /// The `ProducerContext` used by the `FutureProducer`. This context will use a Future as its
 /// `DeliveryOpaque` and will complete the future when the message is delivered (or failed to).
 #[derive(Clone)]
-struct FutureProducerContext<C: ClientContext + 'static> {
+pub struct FutureProducerContext<C: ClientContext + 'static> {
     wrapped_context: C,
 }
 
@@ -295,6 +295,11 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.
     pub fn in_flight_count(&self) -> i32 {
         self.producer.in_flight_count()
+    }
+
+    /// Returns the [`Client`] underlying this producer.
+    pub fn client(&self) -> &Client<FutureProducerContext<C>> {
+        self.producer.client()
     }
 }
 

@@ -8,7 +8,7 @@ use log::{error, trace};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{ClientContext, NativeClient};
+use crate::client::{Client, ClientContext, NativeClient};
 use crate::error::KafkaResult;
 use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
@@ -321,5 +321,10 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// Resume consumption for the provided list of partitions.
     fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
         self.get_base_consumer().resume(partitions)
+    }
+
+    /// Returns the [`Client`] underlying this consumer.
+    fn client(&self) -> &Client<C> {
+        self.get_base_consumer().client()
     }
 }
