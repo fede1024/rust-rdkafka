@@ -350,6 +350,9 @@ impl fmt::Debug for TopicPartitionList {
     }
 }
 
+unsafe impl Send for TopicPartitionList {}
+unsafe impl Sync for TopicPartitionList {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
