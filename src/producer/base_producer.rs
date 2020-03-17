@@ -391,6 +391,11 @@ impl<C: ProducerContext> BaseProducer<C> {
     pub fn in_flight_count(&self) -> i32 {
         unsafe { rdsys::rd_kafka_outq_len(self.native_ptr()) }
     }
+
+    /// Returns the [`Client`] underlying this producer.
+    pub fn client(&self) -> &Client<C> {
+        &*self.client_arc
+    }
 }
 
 impl<C: ProducerContext> Clone for BaseProducer<C> {
@@ -510,6 +515,11 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.
     pub fn in_flight_count(&self) -> i32 {
         self.producer.in_flight_count()
+    }
+
+    /// Returns the [`Client`] underlying this producer.
+    pub fn client(&self) -> &Client<C> {
+        self.producer.client()
     }
 }
 
