@@ -90,16 +90,19 @@
 //! [mklove]: https://github.com/edenhill/mklove
 //! [`build.rs`]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/build.rs
 
-#[cfg(feature = "ssl")]
+#[cfg(feature = "openssl-sys")]
 extern crate openssl_sys;
 
-#[cfg(feature = "libz")]
+#[cfg(feature = "sasl2-sys")]
+extern crate sasl2_sys;
+
+#[cfg(feature = "libz-sys")]
 extern crate libz_sys;
 
-#[cfg(feature = "zstd")]
+#[cfg(feature = "zstd-sys")]
 extern crate zstd_sys;
 
-#[cfg(feature = "external_lz4")]
+#[cfg(feature = "lz4-sys")]
 extern crate lz4_sys;
 
 #[allow(non_camel_case_types, non_upper_case_globals, non_snake_case, clippy::all)]
