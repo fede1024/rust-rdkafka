@@ -108,7 +108,10 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
         configure_flags.push("--enable-gssapi".into());
-        println!("cargo:rustc-link-lib=sasl2");
+        if let Ok(sasl2_root) = env::var("DEP_SASL2_ROOT") {
+            cflags.push(format!("-I{}/include", sasl2_root));
+            ldflags.push(format!("-L{}/build", sasl2_root));
+        }
     } else {
         configure_flags.push("--disable-gssapi".into());
     }
@@ -211,7 +214,7 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
         config.define("WITH_SASL", "1");
-        println!("cargo:rustc-link-lib=sasl2");
+        config.register_dep("sasl2");
     } else {
         config.define("WITH_SASL", "0");
     }
