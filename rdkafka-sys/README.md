@@ -60,9 +60,9 @@ you would pass to `configure` if you were compiling manually).
     library is dynamically linked, but static linking of the version bundled
     with the openssl-sys crate can be requested with the `ssl-vendored` feature.
   * The **`gssapi`** feature enables SASL GSSAPI support with Cyrus libsasl2.
-    This feature requires that libsasl2 is installed on the system, as there is
-    not yet a libsasl2-sys crate that can build and link against a bundled
-    copy of the library.
+    By default the system's libsasl2 is dynamically linked, but static linking
+    of the version bundled with the sasl2-sys crate can be requested with the
+    `gssapi-static` feature.
   * The **`libz`** feature enables support for zlib compression. This
     feature is enabled by default. By default, the system's libz is dynamically
     linked, but static linking of the version bundled with the libz-sys crate
