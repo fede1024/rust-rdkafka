@@ -215,6 +215,10 @@ fn build_librdkafka() {
     if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
         config.define("WITH_SASL", "1");
         config.register_dep("sasl2");
+        if let Ok(sasl2_root) = env::var("DEP_SASL2_ROOT") {
+            config.cflag(format!("-I{}/include", sasl2_root));
+            config.cxxflag(format!("-I{}/include", sasl2_root));
+        }
     } else {
         config.define("WITH_SASL", "0");
     }
