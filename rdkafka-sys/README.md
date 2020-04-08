@@ -62,7 +62,7 @@ you would pass to `configure` if you were compiling manually).
   * The **`gssapi`** feature enables SASL GSSAPI support with Cyrus libsasl2.
     By default the system's libsasl2 is dynamically linked, but static linking
     of the version bundled with the sasl2-sys crate can be requested with the
-    `gssapi-static` feature.
+    `gssapi-vendored` feature.
   * The **`libz`** feature enables support for zlib compression. This
     feature is enabled by default. By default, the system's libz is dynamically
     linked, but static linking of the version bundled with the libz-sys crate
