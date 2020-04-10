@@ -4,7 +4,7 @@ use num_enum::TryFromPrimitive;
 type FILE = libc::FILE;
 type sockaddr = libc::sockaddr;
 
-pub const RD_KAFKA_VERSION: u32 = 16974079;
+pub const RD_KAFKA_VERSION: u32 = 17039615;
 pub const RD_KAFKA_DEBUG_CONTEXTS : & 'static [ u8 ; 124usize ] = b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer,admin,eos,mock\0" ;
 pub const RD_KAFKA_DESTROY_F_NO_CONSUMER_CLOSE: u32 = 8;
 pub const RD_KAFKA_OFFSET_BEGINNING: i32 = -2;
@@ -97,6 +97,18 @@ pub struct rd_kafka_topic_result_s {
     _unused: [u8; 0],
 }
 pub type rd_kafka_topic_result_t = rd_kafka_topic_result_s;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_consumer_group_metadata_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_consumer_group_metadata_t = rd_kafka_consumer_group_metadata_s;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_error_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_error_t = rd_kafka_error_s;
 #[repr(i32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, TryFromPrimitive)]
 pub enum rd_kafka_resp_err_t {
@@ -155,6 +167,9 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__GAPLESS_GUARANTEE = -148,
     RD_KAFKA_RESP_ERR__MAX_POLL_EXCEEDED = -147,
     RD_KAFKA_RESP_ERR__UNKNOWN_BROKER = -146,
+    RD_KAFKA_RESP_ERR__NOT_CONFIGURED = -145,
+    RD_KAFKA_RESP_ERR__FENCED = -144,
+    RD_KAFKA_RESP_ERR__APPLICATION = -143,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,
@@ -239,7 +254,8 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR_MEMBER_ID_REQUIRED = 79,
     RD_KAFKA_RESP_ERR_PREFERRED_LEADER_NOT_AVAILABLE = 80,
     RD_KAFKA_RESP_ERR_GROUP_MAX_SIZE_REACHED = 81,
-    RD_KAFKA_RESP_ERR_END_ALL = 82,
+    RD_KAFKA_RESP_ERR_FENCED_INSTANCE_ID = 82,
+    RD_KAFKA_RESP_ERR_END_ALL = 83,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -279,6 +295,36 @@ extern "C" {
         err: rd_kafka_resp_err_t,
         reason: *const ::std::os::raw::c_char,
     ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_error_code(error: *const rd_kafka_error_t) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_error_name(error: *const rd_kafka_error_t) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn rd_kafka_error_string(error: *const rd_kafka_error_t) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn rd_kafka_error_is_fatal(error: *const rd_kafka_error_t) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn rd_kafka_error_is_retriable(error: *const rd_kafka_error_t) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn rd_kafka_error_txn_requires_abort(
+        error: *const rd_kafka_error_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn rd_kafka_error_destroy(error: *mut rd_kafka_error_t);
+}
+extern "C" {
+    pub fn rd_kafka_error_new(
+        code: rd_kafka_resp_err_t,
+        fmt: *const ::std::os::raw::c_char,
+        ...
+    ) -> *mut rd_kafka_error_t;
 }
 #[repr(C)]
 pub struct rd_kafka_topic_partition_s {
@@ -923,6 +969,26 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
+    pub fn rd_kafka_msg_partitioner_fnv1a(
+        rkt: *const rd_kafka_topic_t,
+        key: *const ::std::os::raw::c_void,
+        keylen: usize,
+        partition_cnt: i32,
+        rkt_opaque: *mut ::std::os::raw::c_void,
+        msg_opaque: *mut ::std::os::raw::c_void,
+    ) -> i32;
+}
+extern "C" {
+    pub fn rd_kafka_msg_partitioner_fnv1a_random(
+        rkt: *const rd_kafka_topic_t,
+        key: *const ::std::os::raw::c_void,
+        keylen: usize,
+        partition_cnt: i32,
+        rkt_opaque: *mut ::std::os::raw::c_void,
+        msg_opaque: *mut ::std::os::raw::c_void,
+    ) -> i32;
+}
+extern "C" {
     pub fn rd_kafka_new(
         type_: rd_kafka_type_t,
         conf: *mut rd_kafka_conf_t,
@@ -1248,6 +1314,33 @@ extern "C" {
         rk: *mut rd_kafka_t,
         partitions: *mut rd_kafka_topic_partition_list_t,
     ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_consumer_group_metadata(
+        rk: *mut rd_kafka_t,
+    ) -> *mut rd_kafka_consumer_group_metadata_t;
+}
+extern "C" {
+    pub fn rd_kafka_consumer_group_metadata_new(
+        group_id: *const ::std::os::raw::c_char,
+    ) -> *mut rd_kafka_consumer_group_metadata_t;
+}
+extern "C" {
+    pub fn rd_kafka_consumer_group_metadata_destroy(arg1: *mut rd_kafka_consumer_group_metadata_t);
+}
+extern "C" {
+    pub fn rd_kafka_consumer_group_metadata_write(
+        cgmd: *const rd_kafka_consumer_group_metadata_t,
+        bufferp: *mut *mut ::std::os::raw::c_void,
+        sizep: *mut usize,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_consumer_group_metadata_read(
+        cgmdp: *mut *mut rd_kafka_consumer_group_metadata_t,
+        buffer: *const ::std::os::raw::c_void,
+        size: usize,
+    ) -> *mut rd_kafka_error_t;
 }
 extern "C" {
     pub fn rd_kafka_produce(
@@ -2137,4 +2230,33 @@ extern "C" {
         rk: *mut rd_kafka_t,
         errstr: *const ::std::os::raw::c_char,
     ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_init_transactions(
+        rk: *mut rd_kafka_t,
+        timeout_ms: ::std::os::raw::c_int,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_begin_transaction(rk: *mut rd_kafka_t) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_send_offsets_to_transaction(
+        rk: *mut rd_kafka_t,
+        offsets: *const rd_kafka_topic_partition_list_t,
+        cgmetadata: *const rd_kafka_consumer_group_metadata_t,
+        timeout_ms: ::std::os::raw::c_int,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_commit_transaction(
+        rk: *mut rd_kafka_t,
+        timeout_ms: ::std::os::raw::c_int,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_abort_transaction(
+        rk: *mut rd_kafka_t,
+        timeout_ms: ::std::os::raw::c_int,
+    ) -> *mut rd_kafka_error_t;
 }

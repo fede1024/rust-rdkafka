@@ -14,9 +14,12 @@ cargo install bindgen
 
 ## Version
 
-The rdkafka-sys version number is in the format `X.Y.Z-P`, where `X.Y.Z`
-corresponds to the librdkafka version, and `P` indicates the version of the
-rust bindings.
+The rdkafka-sys version number is in the format `X.Y.Z+RX.RY.RZ`, where `X.Y.Z`
+is the version of this crate and follows SemVer conventions, while `RX.RY.RZ`
+is the version of the bundled librdkafka.
+
+Note that versions before v1.4.0+1.4.0 did not follow this convention, and
+instead directly corresponded to the bundled librdkafka version.
 
 ## Build
 

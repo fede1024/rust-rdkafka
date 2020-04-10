@@ -193,7 +193,9 @@ fn build_librdkafka() {
         // want a stable location that we can add to the linker search path.
         // Since we're not actually installing to /usr or /usr/local, there's no
         // harm to always using "lib" here.
-        .define("CMAKE_INSTALL_LIBDIR", "lib");
+        .define("CMAKE_INSTALL_LIBDIR", "lib")
+        // Workaround for https://github.com/edenhill/librdkafka/pull/2640.
+        .define("ENABLE_DEVEL", "0");
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         config.define("WITH_ZLIB", "1");
