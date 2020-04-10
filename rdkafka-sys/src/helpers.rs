@@ -60,6 +60,9 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR__GAPLESS_GUARANTEE => GaplessGuarantee,
         RD_KAFKA_RESP_ERR__MAX_POLL_EXCEEDED => PollExceeded,
         RD_KAFKA_RESP_ERR__UNKNOWN_BROKER => UnknownBroker,
+        RD_KAFKA_RESP_ERR__NOT_CONFIGURED => NotConfigured,
+        RD_KAFKA_RESP_ERR__FENCED => Fenced,
+        RD_KAFKA_RESP_ERR__APPLICATION => Application,
         RD_KAFKA_RESP_ERR__END => End,
         RD_KAFKA_RESP_ERR_UNKNOWN => Unknown,
         RD_KAFKA_RESP_ERR_NO_ERROR => NoError,
@@ -148,6 +151,7 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR_MEMBER_ID_REQUIRED => MemberIdRequired,
         RD_KAFKA_RESP_ERR_PREFERRED_LEADER_NOT_AVAILABLE => PreferredLeaderNotAvailable,
         RD_KAFKA_RESP_ERR_GROUP_MAX_SIZE_REACHED => GroupMaxSizeReached,
+        RD_KAFKA_RESP_ERR_FENCED_INSTANCE_ID => FencedInstanceId,
         RD_KAFKA_RESP_ERR_END_ALL => EndAll,
     }
 }

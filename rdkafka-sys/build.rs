@@ -38,11 +38,6 @@ where
 }
 
 fn main() {
-    let librdkafka_version = env!("CARGO_PKG_VERSION")
-        .split('-')
-        .next()
-        .expect("Crate version is not valid");
-
     if env::var("DEP_OPENSSL_VENDORED").is_ok() {
         let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
         env::set_var("CFLAGS", format!("-I{}/include", openssl_root));
@@ -51,6 +46,16 @@ fn main() {
 
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
         eprintln!("librdkafka will be linked dynamically");
+
+        let librdkafka_version = match env!("CARGO_PKG_VERSION")
+            .split('+')
+            .collect::<Vec<_>>()
+            .as_slice()
+        {
+            [_rdsys_version, librdkafka_version] => *librdkafka_version,
+            _ => panic!("Version format is not valid"),
+        };
+
         let pkg_probe = pkg_config::Config::new()
             .cargo_metadata(true)
             .atleast_version(librdkafka_version)

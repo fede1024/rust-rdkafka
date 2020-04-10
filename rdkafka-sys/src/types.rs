@@ -216,6 +216,12 @@ pub enum RDKafkaError {
     PollExceeded = -147,
     /// Unknown broker
     UnknownBroker = -146,
+    /// Functionality not configured
+    NotConfigured,
+    /// Instance has been fenced
+    Fenced,
+    /// Application generated error
+    Application,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error
@@ -387,6 +393,8 @@ pub enum RDKafkaError {
     PreferredLeaderNotAvailable = 80,
     /// Consumer group has reached maximum size
     GroupMaxSizeReached = 81,
+    /// Static consumer fenced by other consumer with same group.instance.id
+    FencedInstanceId = 82,
     #[doc(hidden)]
     EndAll,
 }
