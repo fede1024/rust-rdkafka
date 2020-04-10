@@ -150,3 +150,6 @@ impl Drop for Metadata {
         unsafe { rdsys::rd_kafka_metadata_destroy(self.0) };
     }
 }
+
+unsafe impl Send for Metadata {}
+unsafe impl Sync for Metadata {}
