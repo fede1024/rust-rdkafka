@@ -46,7 +46,6 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     native_tpl: *mut RDKafkaTopicPartitionList,
     opaque_ptr: *mut c_void,
 ) {
-    // let context: &C = &*(opaque_ptr as *const C);
     let context = &mut *(opaque_ptr as *mut C);
     let native_client = NativeClient::from_ptr(rk);
     let mut tpl = TopicPartitionList::from_ptr(native_tpl);

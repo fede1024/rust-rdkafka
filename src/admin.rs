@@ -5,9 +5,8 @@
 //! [`AdminClient`]: struct.AdminClient.html
 
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+use std::ffi::{c_void, CStr, CString};
 use std::future::Future;
-use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -518,11 +517,8 @@ impl AdminOptions {
         }
 
         let (tx, rx) = oneshot::channel();
-        let tx = Box::new(tx);
-        unsafe {
-            rdsys::rd_kafka_AdminOptions_set_opaque(native_opts.ptr, IntoOpaque::as_ptr(&tx))
-        };
-        mem::forget(tx);
+        let tx = Box::into_raw(Box::new(tx)) as *mut c_void;
+        unsafe { rdsys::rd_kafka_AdminOptions_set_opaque(native_opts.ptr, tx) };
 
         Ok((native_opts, rx))
     }

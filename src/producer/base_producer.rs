@@ -91,17 +91,16 @@ impl ProducerContext for DefaultProducerContext {
 unsafe extern "C" fn delivery_cb<C: ProducerContext>(
     _client: *mut RDKafka,
     msg: *const RDKafkaMessage,
-    _opaque: *mut c_void,
+    opaque: *mut c_void,
 ) {
-    let producer_context = Box::from_raw(_opaque as *mut C);
+    let producer_context = &mut *(opaque as *mut C);
     let delivery_opaque = C::DeliveryOpaque::from_ptr((*msg)._private);
     let owner = 42u8;
     // Wrap the message pointer into a BorrowedMessage that will only live for the body of this
     // function.
     let delivery_result = BorrowedMessage::from_dr_callback(msg as *mut RDKafkaMessage, &owner);
     trace!("Delivery event received: {:?}", delivery_result);
-    (*producer_context).delivery(&delivery_result, delivery_opaque);
-    mem::forget(producer_context); // Do not free the producer context
+    producer_context.delivery(&delivery_result, delivery_opaque);
     match delivery_result {
         // Do not free the message, librdkafka will do it for us
         Ok(message) | Err((_, message)) => mem::forget(message),
