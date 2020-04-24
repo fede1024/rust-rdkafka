@@ -61,6 +61,15 @@ pub struct Window {
     pub avg: i64,
     pub sum: i64,
     pub cnt: i64,
+    pub stddev: i64,
+    pub hdrsize: i64,
+    pub p50: i64,
+    pub p75: i64,
+    pub p90: i64,
+    pub p95: i64,
+    pub p99: i64,
+    pub p99_99: i64,
+    pub outofrange: i64,
 }
 
 #[derive(Deserialize, Debug)]
@@ -176,21 +185,48 @@ mod tests {
                 "max": 0,
                 "avg": 0,
                 "sum": 0,
-                "cnt": 0
+                "cnt": 0,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "rtt": {
                 "min": 0,
                 "max": 0,
                 "avg": 0,
                 "sum": 0,
-                "cnt": 0
+                "cnt": 0,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "throttle": {
                 "min": 0,
                 "max": 0,
                 "avg": 0,
                 "sum": 0,
-                "cnt": 0
+                "cnt": 0,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "toppars": {}
             },
@@ -221,21 +257,48 @@ mod tests {
                 "max": 0,
                 "avg": 0,
                 "sum": 0,
-                "cnt": 0
+                "cnt": 0,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "rtt": {
                 "min": 721,
                 "max": 106064,
                 "avg": 87530,
                 "sum": 1925664,
-                "cnt": 22
+                "cnt": 22,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "throttle": {
                 "min": 0,
                 "max": 0,
                 "avg": 0,
                 "sum": 0,
-                "cnt": 19
+                "cnt": 19,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "toppars": {
                 "test-1": {
@@ -271,21 +334,48 @@ mod tests {
                 "max": 0,
                 "avg": 0,
                 "sum": 0,
-                "cnt": 0
+                "cnt": 0,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "rtt": {
                 "min": 100169,
                 "max": 101198,
                 "avg": 100730,
                 "sum": 2014600,
-                "cnt": 20
+                "cnt": 20,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "throttle": {
                 "min": 0,
                 "max": 0,
                 "avg": 0,
                 "sum": 0,
-                "cnt": 20
+                "cnt": 20,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "toppars": {
                 "test-3": {
@@ -325,21 +415,48 @@ mod tests {
                 "max": 0,
                 "avg": 0,
                 "sum": 0,
-                "cnt": 0
+                "cnt": 0,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "rtt": {
                 "min": 99647,
                 "max": 101254,
                 "avg": 100612,
                 "sum": 2012247,
-                "cnt": 20
+                "cnt": 20,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "throttle": {
                 "min": 0,
                 "max": 0,
                 "avg": 0,
                 "sum": 0,
-                "cnt": 20
+                "cnt": 20,
+                "stddev": 0,
+                "p50": 0,
+                "p75": 0,
+                "p90": 0,
+                "p95": 0,
+                "p99": 0,
+                "p99_99": 0,
+                "outofrange": 0,
+                "hdrsize": 0
               },
               "toppars": {
                 "test-2": {
