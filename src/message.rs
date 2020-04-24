@@ -140,7 +140,9 @@ impl BorrowedHeaders {
         self as *const BorrowedHeaders as *const RDKafkaHeaders
     }
 
-    fn detach(&self) -> OwnedHeaders {
+    /// Clones the content of `BorrowedHeaders` and returns an `OwnedMessage`,
+    /// that can outlive the consumer. This operation requires memory allocation and can be expensive.
+    pub fn detach(&self) -> OwnedHeaders {
         OwnedHeaders {
             ptr: unsafe { rdsys::rd_kafka_headers_copy(self.as_native_ptr()) },
         }
