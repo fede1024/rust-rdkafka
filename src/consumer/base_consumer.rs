@@ -18,7 +18,7 @@ use crate::groups::GroupList;
 use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{cstr_to_owned, Timeout};
+use crate::util::{cstr_to_owned, NativePtr, Timeout};
 
 pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     _conf: *mut RDKafka,
@@ -35,7 +35,7 @@ pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     let tpl = TopicPartitionList::from_ptr(offsets);
     context.commit_callback(commit_error, &tpl);
 
-    tpl.leak() // Do not free offsets
+    mem::forget(tpl); // Do not free offsets
 }
 
 /// Native rebalance callback. This callback will run on every rebalance, and it will call the
@@ -53,7 +53,7 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     context.rebalance(&native_client, err, &mut tpl);
 
     mem::forget(native_client); // Do not free native client
-    tpl.leak() // Do not free native topic partition list
+    mem::forget(tpl); // Do not free native topic partition list
 }
 
 /// Native message queue nonempty callback. This callback will run whenever the
@@ -129,14 +129,17 @@ impl<C: ConsumerContext> BaseConsumer<C> {
 
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
     /// This method is for internal use only. Use poll instead.
-    pub(crate) fn poll_raw(&self, mut timeout: Timeout) -> Option<*mut RDKafkaMessage> {
+    pub(crate) fn poll_raw(&self, mut timeout: Timeout) -> Option<NativePtr<RDKafkaMessage>> {
         loop {
             unsafe { rdsys::rd_kafka_poll(self.client.native_ptr(), 0) };
             let op_timeout = cmp::min(timeout, self.main_queue_min_poll_interval);
             let message_ptr = unsafe {
-                rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), op_timeout.as_millis())
+                NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(
+                    self.client.native_ptr(),
+                    op_timeout.as_millis(),
+                ))
             };
-            if !message_ptr.is_null() {
+            if let Some(message_ptr) = message_ptr {
                 break Some(message_ptr);
             }
             if op_timeout >= timeout {

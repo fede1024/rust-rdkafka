@@ -24,7 +24,7 @@ use rdkafka_sys::types::*;
 use crate::client::{Client, ClientContext, DefaultClientContext, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, Timeout, WrappedCPointer};
+use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, KafkaDrop, NativePtr, Timeout};
 
 //
 // ********** ADMIN CLIENT **********
@@ -113,7 +113,7 @@ impl<C: ClientContext> AdminClient<C> {
         for tn in topic_names {
             let tn_c = CString::new(*tn)?;
             let native_topic = unsafe {
-                NativeDeleteTopic::from_ptr(rdsys::rd_kafka_DeleteTopic_new(tn_c.as_ptr()))
+                NativeDeleteTopic::from_ptr(rdsys::rd_kafka_DeleteTopic_new(tn_c.as_ptr())).unwrap()
             };
             native_topics.push(native_topic);
         }
@@ -226,6 +226,7 @@ impl<C: ClientContext> AdminClient<C> {
                     typ,
                     name.as_ptr(),
                 ))
+                .unwrap()
             });
         }
         let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
@@ -346,7 +347,7 @@ fn start_poll_thread(queue: Arc<NativeQueue>, should_stop: Arc<AtomicBool>) -> J
                     }
                     continue;
                 }
-                let event = unsafe { NativeEvent::from_ptr(event) };
+                let event = unsafe { NativeEvent::from_ptr(event).unwrap() };
                 let tx: Box<oneshot::Sender<NativeEvent>> =
                     unsafe { IntoOpaque::from_ptr(rdsys::rd_kafka_event_opaque(event.ptr())) };
                 let _ = tx.send(event);
@@ -356,21 +357,19 @@ fn start_poll_thread(queue: Arc<NativeQueue>, should_stop: Arc<AtomicBool>) -> J
         .expect("Failed to start polling thread")
 }
 
-struct NativeEvent {
-    ptr: *mut RDKafkaEvent,
+type NativeEvent = NativePtr<RDKafkaEvent>;
+
+unsafe impl KafkaDrop for RDKafkaEvent {
+    const TYPE: &'static str = "event";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_event_destroy;
 }
 
-impl NativeEvent {
-    unsafe fn from_ptr(ptr: *mut RDKafkaEvent) -> NativeEvent {
-        NativeEvent { ptr }
-    }
+unsafe impl Send for NativeEvent {}
+unsafe impl Sync for NativeEvent {}
 
-    fn ptr(&self) -> *mut RDKafkaEvent {
-        self.ptr
-    }
-
+impl NativePtr<RDKafkaEvent> {
     fn check_error(&self) -> KafkaResult<()> {
-        let err = unsafe { rdsys::rd_kafka_event_error(self.ptr) };
+        let err = unsafe { rdsys::rd_kafka_event_error(self.ptr()) };
         if err.is_error() {
             Err(KafkaError::AdminOp(err.into()))
         } else {
@@ -378,19 +377,6 @@ impl NativeEvent {
         }
     }
 }
-
-impl Drop for NativeEvent {
-    fn drop(&mut self) {
-        trace!("Destroying event: {:?}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_event_destroy(self.ptr);
-        }
-        trace!("Event destroyed: {:?}", self.ptr);
-    }
-}
-
-unsafe impl Sync for NativeEvent {}
-unsafe impl Send for NativeEvent {}
 
 //
 // ********** ADMIN OPTIONS **********
@@ -466,6 +452,7 @@ impl AdminOptions {
                 client,
                 RDKafkaAdminOp::RD_KAFKA_ADMIN_OP_ANY,
             ))
+            .unwrap()
         };
 
         if let Some(timeout) = self.request_timeout {
@@ -518,35 +505,18 @@ impl AdminOptions {
 
         let (tx, rx) = oneshot::channel();
         let tx = Box::into_raw(Box::new(tx)) as *mut c_void;
-        unsafe { rdsys::rd_kafka_AdminOptions_set_opaque(native_opts.ptr, tx) };
+        unsafe { rdsys::rd_kafka_AdminOptions_set_opaque(native_opts.ptr(), tx) };
 
         Ok((native_opts, rx))
     }
 }
 
-struct NativeAdminOptions {
-    ptr: *mut RDKafkaAdminOptions,
+unsafe impl KafkaDrop for RDKafkaAdminOptions {
+    const TYPE: &'static str = "admin options";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_AdminOptions_destroy;
 }
 
-impl NativeAdminOptions {
-    unsafe fn from_ptr(ptr: *mut RDKafkaAdminOptions) -> NativeAdminOptions {
-        NativeAdminOptions { ptr }
-    }
-
-    fn ptr(&self) -> *mut RDKafkaAdminOptions {
-        self.ptr
-    }
-}
-
-impl Drop for NativeAdminOptions {
-    fn drop(&mut self) {
-        trace!("Destroying admin options: {:?}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_AdminOptions_destroy(self.ptr);
-        }
-        trace!("Admin options destroyed: {:?}", self.ptr);
-    }
-}
+type NativeAdminOptions = NativePtr<RDKafkaAdminOptions>;
 
 fn check_rdkafka_invalid_arg(res: RDKafkaRespErr, err_buf: &ErrBuf) -> KafkaResult<()> {
     match res.into() {
@@ -644,22 +614,20 @@ impl<'a> NewTopic<'a> {
                 -1
             }
         };
+        // N.B.: we wrap topic immediately, so that it is destroyed via the
+        // NativeNewTopic's Drop implementation if replica assignment or config
+        // installation fails.
         let topic = unsafe {
-            rdsys::rd_kafka_NewTopic_new(
+            NativeNewTopic::from_ptr(rdsys::rd_kafka_NewTopic_new(
                 name.as_ptr(),
                 self.num_partitions,
                 repl,
                 err_buf.as_mut_ptr(),
                 err_buf.len(),
-            )
-        };
-        if topic.is_null() {
-            return Err(KafkaError::AdminOpCreation(err_buf.to_string()));
+            ))
         }
-        // N.B.: we wrap topic immediately, so that it is destroyed via the
-        // NativeNewTopic's Drop implementation if replica assignment or config
-        // installation fails.
-        let topic = unsafe { NativeNewTopic::from_ptr(topic) };
+        .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
+
         if let TopicReplication::Variable(assignment) = self.replication {
             for (partition_id, broker_ids) in assignment.into_iter().enumerate() {
                 let res = unsafe {
@@ -704,33 +672,11 @@ pub enum TopicReplication<'a> {
     Variable(PartitionAssignment<'a>),
 }
 
-#[repr(transparent)]
-struct NativeNewTopic {
-    ptr: *mut RDKafkaNewTopic,
-}
+type NativeNewTopic = NativePtr<RDKafkaNewTopic>;
 
-impl NativeNewTopic {
-    unsafe fn from_ptr(ptr: *mut RDKafkaNewTopic) -> NativeNewTopic {
-        NativeNewTopic { ptr }
-    }
-}
-
-impl WrappedCPointer for NativeNewTopic {
-    type Target = RDKafkaNewTopic;
-
-    fn ptr(&self) -> *mut RDKafkaNewTopic {
-        self.ptr
-    }
-}
-
-impl Drop for NativeNewTopic {
-    fn drop(&mut self) {
-        trace!("Destroying new topic: {:?}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_NewTopic_destroy(self.ptr);
-        }
-        trace!("New topic destroyed: {:?}", self.ptr);
-    }
+unsafe impl KafkaDrop for RDKafkaNewTopic {
+    const TYPE: &'static str = "new topic";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_NewTopic_destroy;
 }
 
 struct CreateTopicsFuture {
@@ -766,33 +712,11 @@ impl Future for CreateTopicsFuture {
 // Delete topic handling
 //
 
-#[repr(transparent)]
-struct NativeDeleteTopic {
-    ptr: *mut RDKafkaDeleteTopic,
-}
+type NativeDeleteTopic = NativePtr<RDKafkaDeleteTopic>;
 
-impl NativeDeleteTopic {
-    unsafe fn from_ptr(ptr: *mut RDKafkaDeleteTopic) -> NativeDeleteTopic {
-        NativeDeleteTopic { ptr }
-    }
-}
-
-impl WrappedCPointer for NativeDeleteTopic {
-    type Target = RDKafkaDeleteTopic;
-
-    fn ptr(&self) -> *mut RDKafkaDeleteTopic {
-        self.ptr
-    }
-}
-
-impl Drop for NativeDeleteTopic {
-    fn drop(&mut self) {
-        trace!("Destroying delete topic: {:?}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_DeleteTopic_destroy(self.ptr);
-        }
-        trace!("Delete topic destroyed: {:?}", self.ptr);
-    }
+unsafe impl KafkaDrop for RDKafkaDeleteTopic {
+    const TYPE: &'static str = "delete topic";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_DeleteTopic_destroy;
 }
 
 struct DeleteTopicsFuture {
@@ -875,21 +799,19 @@ impl<'a> NewPartitions<'a> {
                 )));
             }
         }
+        // N.B.: we wrap partition immediately, so that it is destroyed via
+        // NativeNewPartitions's Drop implementation if replica assignment or
+        // config installation fails.
         let partitions = unsafe {
-            rdsys::rd_kafka_NewPartitions_new(
+            NativeNewPartitions::from_ptr(rdsys::rd_kafka_NewPartitions_new(
                 name.as_ptr(),
                 self.new_partition_count,
                 err_buf.as_mut_ptr(),
                 err_buf.len(),
-            )
-        };
-        if partitions.is_null() {
-            return Err(KafkaError::AdminOpCreation(err_buf.to_string()));
+            ))
         }
-        // N.B.: we wrap partition immediately, so that it is destroyed via
-        // NativeNewPartitions's Drop implementation if replica assignment or
-        // config installation fails.
-        let partitions = unsafe { NativeNewPartitions::from_ptr(partitions) };
+        .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
+
         if let Some(assignment) = self.assignment {
             for (partition_id, broker_ids) in assignment.into_iter().enumerate() {
                 let res = unsafe {
@@ -909,33 +831,11 @@ impl<'a> NewPartitions<'a> {
     }
 }
 
-#[repr(transparent)]
-struct NativeNewPartitions {
-    ptr: *mut RDKafkaNewPartitions,
-}
+type NativeNewPartitions = NativePtr<RDKafkaNewPartitions>;
 
-impl NativeNewPartitions {
-    unsafe fn from_ptr(ptr: *mut RDKafkaNewPartitions) -> NativeNewPartitions {
-        NativeNewPartitions { ptr }
-    }
-}
-
-impl WrappedCPointer for NativeNewPartitions {
-    type Target = RDKafkaNewPartitions;
-
-    fn ptr(&self) -> *mut RDKafkaNewPartitions {
-        self.ptr
-    }
-}
-
-impl Drop for NativeNewPartitions {
-    fn drop(&mut self) {
-        trace!("Destroying new partitions: {:?}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_NewPartitions_destroy(self.ptr);
-        }
-        trace!("New partitions destroyed: {:?}", self.ptr);
-    }
+unsafe impl KafkaDrop for RDKafkaNewPartitions {
+    const TYPE: &'static str = "new partitions";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_NewPartitions_destroy;
 }
 
 struct CreatePartitionsFuture {
@@ -1056,33 +956,11 @@ impl ConfigResource {
     }
 }
 
-#[repr(transparent)]
-struct NativeConfigResource {
-    ptr: *mut RDKafkaConfigResource,
-}
+type NativeConfigResource = NativePtr<RDKafkaConfigResource>;
 
-impl NativeConfigResource {
-    unsafe fn from_ptr(ptr: *mut RDKafkaConfigResource) -> NativeConfigResource {
-        NativeConfigResource { ptr }
-    }
-}
-
-impl WrappedCPointer for NativeConfigResource {
-    type Target = RDKafkaConfigResource;
-
-    fn ptr(&self) -> *mut RDKafkaConfigResource {
-        self.ptr
-    }
-}
-
-impl Drop for NativeConfigResource {
-    fn drop(&mut self) {
-        trace!("Destroying config resource: {:?}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_ConfigResource_destroy(self.ptr);
-        }
-        trace!("Config resource destroyed: {:?}", self.ptr);
-    }
+unsafe impl KafkaDrop for RDKafkaConfigResource {
+    const TYPE: &'static str = "config resource";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_ConfigResource_destroy;
 }
 
 fn extract_config_specifier(
@@ -1260,6 +1138,7 @@ impl<'a> AlterConfig<'a> {
         // NativeNewTopic's Drop implementation if config installation fails.
         let config = unsafe {
             NativeConfigResource::from_ptr(rdsys::rd_kafka_ConfigResource_new(typ, name.as_ptr()))
+                .unwrap()
         };
         for (key, val) in &self.entries {
             let key_c = CString::new(*key)?;
