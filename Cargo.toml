@@ -10,6 +10,9 @@ keywords = ["kafka", "rdkafka"]
 categories = ["api-bindings"]
 edition = "2018"
 
+[workspace]
+members = ["rdkafka-sys"]
+
 [dependencies]
 rdkafka-sys = { path = "rdkafka-sys", version = "2.0.0", default-features = false }
 futures = "0.3.0"

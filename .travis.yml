@@ -33,6 +33,7 @@ script:
     else
       cargo build --all-targets --verbose --features "$FEATURES"
     fi
+    (cd rdkafka-sys && cargo test --features "$FEATURES")
 
 notifications:
   webhooks:
