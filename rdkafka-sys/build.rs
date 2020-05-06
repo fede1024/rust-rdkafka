@@ -171,17 +171,21 @@ fn build_librdkafka() {
     run_command_or_fail(&out_dir, "./configure", configure_flags.as_slice());
 
     println!("Compiling librdkafka");
-    env::set_var("MAKEFLAGS", env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"));
+    env::set_var(
+        "MAKEFLAGS",
+        env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"),
+    );
     run_command_or_fail(
         &out_dir,
-        if cfg!(target_os = "freebsd") { "gmake" } else { "make" },
+        if cfg!(target_os = "freebsd") {
+            "gmake"
+        } else {
+            "make"
+        },
         &["libs"],
     );
 
-    println!(
-        "cargo:rustc-link-search=native={}/src",
-        out_dir,
-    );
+    println!("cargo:rustc-link-search=native={}/src", out_dir);
     println!("cargo:rustc-link-lib=static=rdkafka");
     println!("cargo:root={}", out_dir);
 }

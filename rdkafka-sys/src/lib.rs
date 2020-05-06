@@ -108,7 +108,12 @@ extern crate zstd_sys;
 #[cfg(feature = "lz4-sys")]
 extern crate lz4_sys;
 
-#[allow(non_camel_case_types, non_upper_case_globals, non_snake_case, clippy::all)]
+#[allow(
+    non_camel_case_types,
+    non_upper_case_globals,
+    non_snake_case,
+    clippy::all
+)]
 pub mod bindings;
 pub mod helpers;
 pub mod types;
