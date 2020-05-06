@@ -12,9 +12,12 @@
 //!
 //! ## Version
 //!
-//! The rdkafka-sys version number is in the format `X.Y.Z-P`, where `X.Y.Z`
-//! corresponds to the librdkafka version, and `P` indicates the version of the
-//! rust bindings.
+//! The rdkafka-sys version number is in the format `X.Y.Z+RX.RY.RZ`, where `X.Y.Z`
+//! is the version of this crate and follows SemVer conventions, while `RX.RY.RZ`
+//! is the version of the bundled librdkafka.
+//!
+//! Note that versions before v2.0.0+1.4.2 did not follow this convention, and
+//! instead directly corresponded to the bundled librdkafka version.
 //!
 //! ## Build
 //!
@@ -105,7 +108,12 @@ extern crate zstd_sys;
 #[cfg(feature = "lz4-sys")]
 extern crate lz4_sys;
 
-#[allow(non_camel_case_types, non_upper_case_globals, non_snake_case, clippy::all)]
+#[allow(
+    non_camel_case_types,
+    non_upper_case_globals,
+    non_snake_case,
+    clippy::all
+)]
 pub mod bindings;
 pub mod helpers;
 pub mod types;

@@ -1,5 +1,21 @@
 # Changelog
 
+See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
+
+<a name="0.24.0"></a>
+## 0.24.0 (Unreleased)
+
+* Decouple versioning of rdkafka-sys from rdkafka. rdkafka-sys now has its
+  own [changelog](rdkafka-sys/changelog.md) and will follow SemVer conventions.
+  ([#211])
+
+[#211]: https://github.com/fede1024/rust-rdkafka/issues/211
+
+<a name="0.23.1"></a>
+## 0.23.1 (2020-01-13)
+
+* Fix build on docs.rs.
+
 <a name="0.23.0"></a>
 ## 0.23.0 (2019-12-31)
 

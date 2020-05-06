@@ -38,11 +38,6 @@ where
 }
 
 fn main() {
-    let librdkafka_version = env!("CARGO_PKG_VERSION")
-        .split('-')
-        .next()
-        .expect("Crate version is not valid");
-
     if env::var("DEP_OPENSSL_VENDORED").is_ok() {
         let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
         env::set_var("CFLAGS", format!("-I{}/include", openssl_root));
@@ -51,6 +46,16 @@ fn main() {
 
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
         eprintln!("librdkafka will be linked dynamically");
+
+        let librdkafka_version = match env!("CARGO_PKG_VERSION")
+            .split('+')
+            .collect::<Vec<_>>()
+            .as_slice()
+        {
+            [_rdsys_version, librdkafka_version] => *librdkafka_version,
+            _ => panic!("Version format is not valid"),
+        };
+
         let pkg_probe = pkg_config::Config::new()
             .cargo_metadata(true)
             .atleast_version(librdkafka_version)
@@ -166,17 +171,21 @@ fn build_librdkafka() {
     run_command_or_fail(&out_dir, "./configure", configure_flags.as_slice());
 
     println!("Compiling librdkafka");
-    env::set_var("MAKEFLAGS", env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"));
+    env::set_var(
+        "MAKEFLAGS",
+        env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"),
+    );
     run_command_or_fail(
         &out_dir,
-        if cfg!(target_os = "freebsd") { "gmake" } else { "make" },
+        if cfg!(target_os = "freebsd") {
+            "gmake"
+        } else {
+            "make"
+        },
         &["libs"],
     );
 
-    println!(
-        "cargo:rustc-link-search=native={}/src",
-        out_dir,
-    );
+    println!("cargo:rustc-link-search=native={}/src", out_dir);
     println!("cargo:rustc-link-lib=static=rdkafka");
     println!("cargo:root={}", out_dir);
 }
