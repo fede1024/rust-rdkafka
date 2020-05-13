@@ -5,7 +5,7 @@ use std::ffi::{CStr, CString};
 use std::mem;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
-use std::ptr;
+use std::ptr::{self, NonNull};
 use std::slice;
 use std::string::ToString;
 
@@ -84,7 +84,7 @@ impl ClientContext for DefaultClientContext {}
 /// A native rdkafka-sys client. This struct shouldn't be used directly. Use higher level `Client`
 /// or producers and consumers.
 pub struct NativeClient {
-    ptr: *mut RDKafka,
+    ptr: NonNull<RDKafka>,
 }
 
 // The library is completely thread safe, according to the documentation.
@@ -94,12 +94,14 @@ unsafe impl Send for NativeClient {}
 impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
     pub(crate) unsafe fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
-        NativeClient { ptr }
+        NativeClient {
+            ptr: NonNull::new(ptr).expect("rdkafka client pointer unexpectedly null"),
+        }
     }
 
     /// Returns the wrapped pointer to RDKafka.
     pub fn ptr(&self) -> *mut RDKafka {
-        self.ptr
+        self.ptr.as_ptr()
     }
 }
 
@@ -107,7 +109,7 @@ impl Drop for NativeClient {
     fn drop(&mut self) {
         trace!("Destroying client: {:p}", self.ptr);
         unsafe {
-            rdsys::rd_kafka_destroy(self.ptr);
+            rdsys::rd_kafka_destroy(self.ptr.as_ptr());
         }
         trace!("Client destroyed: {:?}", self.ptr);
     }
@@ -174,7 +176,7 @@ impl<C: ClientContext> Client<C> {
 
     /// Returns a pointer to the native rdkafka-sys client.
     pub fn native_ptr(&self) -> *mut RDKafka {
-        self.native.ptr
+        self.native.ptr.as_ptr()
     }
 
     /// Returns a reference to the context.
