@@ -2,7 +2,6 @@
 
 use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
-use std::mem;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr::{self, NonNull};

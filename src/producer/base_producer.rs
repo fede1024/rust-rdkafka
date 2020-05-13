@@ -334,14 +334,14 @@ impl<C: ProducerContext> BaseProducer<C> {
         K: ToBytes + ?Sized,
         P: ToBytes + ?Sized,
     {
-        let (payload_ptr, payload_len) = match record.payload.map(P::to_bytes) {
-            None => (ptr::null_mut(), 0),
-            Some(p) => (p.as_ptr() as *mut c_void, p.len()),
-        };
-        let (key_ptr, key_len) = match record.key.map(K::to_bytes) {
-            None => (ptr::null_mut(), 0),
-            Some(k) => (k.as_ptr() as *mut c_void, k.len()),
-        };
+        fn as_bytes(opt: Option<&(impl ?Sized + ToBytes)>) -> (*mut c_void, usize) {
+            match opt.map(ToBytes::to_bytes) {
+                None => (ptr::null_mut(), 0),
+                Some(p) => (p.as_ptr() as *mut c_void, p.len()),
+            }
+        }
+        let (payload_ptr, payload_len) = as_bytes(record.payload);
+        let (key_ptr, key_len) = as_bytes(record.key);
         let topic_cstring = CString::new(record.topic.to_owned()).unwrap();
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(

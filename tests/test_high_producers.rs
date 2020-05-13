@@ -1,7 +1,5 @@
 //! Test data production using high level producers.
 
-use std::error::Error;
-
 use rdkafka::config::ClientConfig;
 use rdkafka::message::{Headers, Message, OwnedHeaders};
 use rdkafka::producer::future_producer::FutureRecord;
@@ -31,7 +29,10 @@ async fn test_future_producer_send_fail() {
 
     match future.await {
         Ok(Err((kafka_error, owned_message))) => {
-            assert_eq!(kafka_error.description(), "Message production error");
+            assert_eq!(
+                kafka_error.to_string(),
+                "Message production error: UnknownPartition (Local: Unknown partition)"
+            );
             assert_eq!(owned_message.topic(), "topic");
             let headers = owned_message.headers().unwrap();
             assert_eq!(headers.count(), 3);
