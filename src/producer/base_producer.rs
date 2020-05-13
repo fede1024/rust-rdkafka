@@ -39,7 +39,7 @@ use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -419,7 +419,7 @@ impl<C: ProducerContext> Clone for BaseProducer<C> {
 pub struct ThreadedProducer<C: ProducerContext + 'static> {
     producer: BaseProducer<C>,
     should_stop: Arc<AtomicBool>,
-    handle: RwLock<Option<JoinHandle<()>>>,
+    handle: Option<JoinHandle<()>>,
 }
 
 impl FromClientConfig for ThreadedProducer<DefaultProducerContext> {
@@ -433,59 +433,40 @@ impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for ThreadedPro
         config: &ClientConfig,
         context: C,
     ) -> KafkaResult<ThreadedProducer<C>> {
-        let threaded_producer = ThreadedProducer {
-            producer: BaseProducer::from_config_and_context(config, context)?,
-            should_stop: Arc::new(AtomicBool::new(false)),
-            handle: RwLock::new(None),
+        let producer = BaseProducer::from_config_and_context(config, context)?;
+        let should_stop = Arc::new(AtomicBool::new(false));
+        let thread = {
+            let producer = producer.clone();
+            let should_stop = should_stop.clone();
+            thread::Builder::new()
+                .name("producer polling thread".to_string())
+                .spawn(move || {
+                    trace!("Polling thread loop started");
+                    loop {
+                        let n = producer.poll(Duration::from_millis(100));
+                        if n == 0 {
+                            if should_stop.load(Ordering::Relaxed) {
+                                // We received nothing and the thread should
+                                // stop, so break the loop.
+                                break;
+                            }
+                        } else {
+                            trace!("Received {} events", n);
+                        }
+                    }
+                    trace!("Polling thread loop terminated");
+                })
+                .expect("Failed to start polling thread")
         };
-        threaded_producer.start();
-        Ok(threaded_producer)
+        Ok(ThreadedProducer {
+            producer,
+            should_stop,
+            handle: Some(thread),
+        })
     }
 }
 
 impl<C: ProducerContext + 'static> ThreadedProducer<C> {
-    /// Starts the polling thread that will drive the producer. The thread is already started by
-    /// default.
-    fn start(&self) {
-        let producer_clone = self.producer.clone();
-        let should_stop = self.should_stop.clone();
-        let handle = thread::Builder::new()
-            .name("producer polling thread".to_string())
-            .spawn(move || {
-                trace!("Polling thread loop started");
-                loop {
-                    let n = producer_clone.poll(Duration::from_millis(100));
-                    if n == 0 {
-                        if should_stop.load(Ordering::Relaxed) {
-                            // We received nothing and the thread should
-                            // stop, so break the loop.
-                            break;
-                        }
-                    } else {
-                        trace!("Received {} events", n);
-                    }
-                }
-                trace!("Polling thread loop terminated");
-            })
-            .expect("Failed to start polling thread");
-        let mut handle_store = self.handle.write().expect("poison error");
-        *handle_store = Some(handle);
-    }
-
-    /// Stops the polling thread. This method will be called during destruction.
-    fn stop(&self) {
-        let mut handle_store = self.handle.write().expect("poison error");
-        if (*handle_store).is_some() {
-            trace!("Stopping polling");
-            self.should_stop.store(true, Ordering::Relaxed);
-            trace!("Waiting for polling thread termination");
-            match (*handle_store).take().unwrap().join() {
-                Ok(()) => trace!("Polling stopped"),
-                Err(e) => warn!("Failure while terminating thread: {:?}", e),
-            };
-        }
-    }
-
     /// Sends a message to Kafka. See the documentation in `BaseProducer`.
     // Simplifying the return type requires generic associated types, which are
     // unstable.
@@ -526,7 +507,15 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
 impl<C: ProducerContext + 'static> Drop for ThreadedProducer<C> {
     fn drop(&mut self) {
         trace!("Destroy ThreadedProducer");
-        self.stop();
+        if let Some(handle) = self.handle.take() {
+            trace!("Stopping polling");
+            self.should_stop.store(true, Ordering::Relaxed);
+            trace!("Waiting for polling thread termination");
+            match handle.join() {
+                Ok(()) => trace!("Polling stopped"),
+                Err(e) => warn!("Failure while terminating thread: {:?}", e),
+            };
+        }
         trace!("ThreadedProducer destroyed");
     }
 }
