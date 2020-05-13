@@ -16,6 +16,7 @@ use std::time::Duration;
 
 use futures::channel::oneshot;
 use futures::future::{self, Either, FutureExt};
+use futures::ready;
 use log::{trace, warn};
 
 use rdkafka_sys as rdsys;
@@ -741,24 +742,19 @@ impl Future for CreateTopicsFuture {
     type Output = KafkaResult<Vec<TopicResult>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        match self.rx.poll_unpin(cx) {
-            Poll::Ready(Ok(event)) => {
-                event.check_error()?;
-                let res = unsafe { rdsys::rd_kafka_event_CreateTopics_result(event.ptr()) };
-                if res.is_null() {
-                    let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
-                        "create topics request received response of incorrect type ({})",
-                        typ
-                    ))));
-                }
-                let mut n = 0;
-                let topics = unsafe { rdsys::rd_kafka_CreateTopics_result_topics(res, &mut n) };
-                Poll::Ready(Ok(build_topic_results(topics, n)))
-            }
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Err(oneshot::Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_CreateTopics_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "create topics request received response of incorrect type ({})",
+                typ
+            ))));
         }
+        let mut n = 0;
+        let topics = unsafe { rdsys::rd_kafka_CreateTopics_result_topics(res, &mut n) };
+        Poll::Ready(Ok(build_topic_results(topics, n)))
     }
 }
 
@@ -803,24 +799,19 @@ impl Future for DeleteTopicsFuture {
     type Output = KafkaResult<Vec<TopicResult>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        match self.rx.poll_unpin(cx) {
-            Poll::Ready(Ok(event)) => {
-                event.check_error()?;
-                let res = unsafe { rdsys::rd_kafka_event_DeleteTopics_result(event.ptr()) };
-                if res.is_null() {
-                    let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
-                        "delete topics request received response of incorrect type ({})",
-                        typ
-                    ))));
-                }
-                let mut n = 0;
-                let topics = unsafe { rdsys::rd_kafka_DeleteTopics_result_topics(res, &mut n) };
-                Poll::Ready(Ok(build_topic_results(topics, n)))
-            }
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Err(oneshot::Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_DeleteTopics_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "delete topics request received response of incorrect type ({})",
+                typ
+            ))));
         }
+        let mut n = 0;
+        let topics = unsafe { rdsys::rd_kafka_DeleteTopics_result_topics(res, &mut n) };
+        Poll::Ready(Ok(build_topic_results(topics, n)))
     }
 }
 
@@ -946,24 +937,19 @@ impl Future for CreatePartitionsFuture {
     type Output = KafkaResult<Vec<TopicResult>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        match self.rx.poll_unpin(cx) {
-            Poll::Ready(Ok(event)) => {
-                event.check_error()?;
-                let res = unsafe { rdsys::rd_kafka_event_CreatePartitions_result(event.ptr()) };
-                if res.is_null() {
-                    let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
-                        "create partitions request received response of incorrect type ({})",
-                        typ
-                    ))));
-                }
-                let mut n = 0;
-                let topics = unsafe { rdsys::rd_kafka_CreatePartitions_result_topics(res, &mut n) };
-                Poll::Ready(Ok(build_topic_results(topics, n)))
-            }
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Err(oneshot::Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_CreatePartitions_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "create partitions request received response of incorrect type ({})",
+                typ
+            ))));
         }
+        let mut n = 0;
+        let topics = unsafe { rdsys::rd_kafka_CreatePartitions_result_topics(res, &mut n) };
+        Poll::Ready(Ok(build_topic_results(topics, n)))
     }
 }
 
@@ -1147,66 +1133,53 @@ impl Future for DescribeConfigsFuture {
     type Output = KafkaResult<Vec<ConfigResourceResult>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        match self.rx.poll_unpin(cx) {
-            Poll::Ready(Ok(event)) => {
-                event.check_error()?;
-                let res = unsafe { rdsys::rd_kafka_event_DescribeConfigs_result(event.ptr()) };
-                if res.is_null() {
-                    let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
-                        "describe configs request received response of incorrect type ({})",
-                        typ
-                    ))));
-                }
-                let mut n = 0;
-                let resources =
-                    unsafe { rdsys::rd_kafka_DescribeConfigs_result_resources(res, &mut n) };
-                let mut out = Vec::with_capacity(n);
-                for i in 0..n {
-                    let resource = unsafe { *resources.offset(i as isize) };
-                    let specifier = extract_config_specifier(resource)?;
-                    let mut entries_out = Vec::new();
-                    let mut n = 0;
-                    let entries =
-                        unsafe { rdsys::rd_kafka_ConfigResource_configs(resource, &mut n) };
-                    for j in 0..n {
-                        let entry = unsafe { *entries.offset(j as isize) };
-                        let name =
-                            unsafe { cstr_to_owned(rdsys::rd_kafka_ConfigEntry_name(entry)) };
-                        let value = unsafe {
-                            let value = rdsys::rd_kafka_ConfigEntry_value(entry);
-                            if value.is_null() {
-                                None
-                            } else {
-                                Some(cstr_to_owned(value))
-                            }
-                        };
-                        entries_out.push(ConfigEntry {
-                            name,
-                            value,
-                            source: extract_config_source(unsafe {
-                                rdsys::rd_kafka_ConfigEntry_source(entry)
-                            })?,
-                            is_read_only: unsafe {
-                                rdsys::rd_kafka_ConfigEntry_is_read_only(entry)
-                            } != 0,
-                            is_default: unsafe { rdsys::rd_kafka_ConfigEntry_is_default(entry) }
-                                != 0,
-                            is_sensitive: unsafe {
-                                rdsys::rd_kafka_ConfigEntry_is_sensitive(entry)
-                            } != 0,
-                        });
-                    }
-                    out.push(Ok(ConfigResource {
-                        specifier: specifier,
-                        entries: entries_out,
-                    }))
-                }
-                Poll::Ready(Ok(out))
-            }
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Err(oneshot::Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_DescribeConfigs_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "describe configs request received response of incorrect type ({})",
+                typ
+            ))));
         }
+        let mut n = 0;
+        let resources = unsafe { rdsys::rd_kafka_DescribeConfigs_result_resources(res, &mut n) };
+        let mut out = Vec::with_capacity(n);
+        for i in 0..n {
+            let resource = unsafe { *resources.offset(i as isize) };
+            let specifier = extract_config_specifier(resource)?;
+            let mut entries_out = Vec::new();
+            let mut n = 0;
+            let entries = unsafe { rdsys::rd_kafka_ConfigResource_configs(resource, &mut n) };
+            for j in 0..n {
+                let entry = unsafe { *entries.offset(j as isize) };
+                let name = unsafe { cstr_to_owned(rdsys::rd_kafka_ConfigEntry_name(entry)) };
+                let value = unsafe {
+                    let value = rdsys::rd_kafka_ConfigEntry_value(entry);
+                    if value.is_null() {
+                        None
+                    } else {
+                        Some(cstr_to_owned(value))
+                    }
+                };
+                entries_out.push(ConfigEntry {
+                    name,
+                    value,
+                    source: extract_config_source(unsafe {
+                        rdsys::rd_kafka_ConfigEntry_source(entry)
+                    })?,
+                    is_read_only: unsafe { rdsys::rd_kafka_ConfigEntry_is_read_only(entry) } != 0,
+                    is_default: unsafe { rdsys::rd_kafka_ConfigEntry_is_default(entry) } != 0,
+                    is_sensitive: unsafe { rdsys::rd_kafka_ConfigEntry_is_sensitive(entry) } != 0,
+                });
+            }
+            out.push(Ok(ConfigResource {
+                specifier: specifier,
+                entries: entries_out,
+            }))
+        }
+        Poll::Ready(Ok(out))
     }
 }
 
@@ -1285,30 +1258,24 @@ impl Future for AlterConfigsFuture {
     type Output = KafkaResult<Vec<AlterConfigsResult>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        match self.rx.poll_unpin(cx) {
-            Poll::Ready(Ok(event)) => {
-                event.check_error()?;
-                let res = unsafe { rdsys::rd_kafka_event_AlterConfigs_result(event.ptr()) };
-                if res.is_null() {
-                    let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                    return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
-                        "alter configs request received response of incorrect type ({})",
-                        typ
-                    ))));
-                }
-                let mut n = 0;
-                let resources =
-                    unsafe { rdsys::rd_kafka_AlterConfigs_result_resources(res, &mut n) };
-                let mut out = Vec::with_capacity(n);
-                for i in 0..n {
-                    let resource = unsafe { *resources.offset(i as isize) };
-                    let specifier = extract_config_specifier(resource)?;
-                    out.push(Ok(specifier));
-                }
-                Poll::Ready(Ok(out))
-            }
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Err(oneshot::Canceled)) => Poll::Ready(Err(KafkaError::Canceled)),
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_AlterConfigs_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "alter configs request received response of incorrect type ({})",
+                typ
+            ))));
         }
+        let mut n = 0;
+        let resources = unsafe { rdsys::rd_kafka_AlterConfigs_result_resources(res, &mut n) };
+        let mut out = Vec::with_capacity(n);
+        for i in 0..n {
+            let resource = unsafe { *resources.offset(i as isize) };
+            let specifier = extract_config_specifier(resource)?;
+            out.push(Ok(specifier));
+        }
+        Poll::Ready(Ok(out))
     }
 }
