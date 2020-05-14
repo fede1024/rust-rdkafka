@@ -4,15 +4,13 @@
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
-use std::ptr;
 use std::slice;
-
-use log::trace;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::util::{KafkaDrop, NativePtr};
 
 const PARTITION_UNASSIGNED: i32 = -1;
 
@@ -63,25 +61,22 @@ impl Offset {
 // TODO: implement Debug
 /// One element of the topic partition list.
 pub struct TopicPartitionListElem<'a> {
-    ptr: *mut RDKafkaTopicPartition,
-    _owner_list: &'a TopicPartitionList,
+    ptr: &'a mut RDKafkaTopicPartition,
 }
 
 impl<'a> TopicPartitionListElem<'a> {
-    unsafe fn from_ptr(
-        list: &'a TopicPartitionList,
-        ptr: *mut RDKafkaTopicPartition,
-    ) -> TopicPartitionListElem {
-        TopicPartitionListElem {
-            ptr,
-            _owner_list: list,
-        }
+    // _owner_list serves as a marker so that the lifetime isn't to long
+    fn from_ptr(
+        _owner_list: &'a TopicPartitionList,
+        ptr: &'a mut RDKafkaTopicPartition,
+    ) -> TopicPartitionListElem<'a> {
+        TopicPartitionListElem { ptr }
     }
 
     /// Returns the topic name.
     pub fn topic(&self) -> &str {
         unsafe {
-            let c_str = (*self.ptr).topic;
+            let c_str = self.ptr.topic;
             CStr::from_ptr(c_str)
                 .to_str()
                 .expect("Topic name is not UTF-8")
@@ -90,7 +85,7 @@ impl<'a> TopicPartitionListElem<'a> {
 
     /// Returns the optional error associated to the specific entry in the TPL.
     pub fn error(&self) -> KafkaResult<()> {
-        let kafka_err = unsafe { (*self.ptr).err };
+        let kafka_err = self.ptr.err;
         if kafka_err.is_error() {
             Err(KafkaError::OffsetFetch(kafka_err.into()))
         } else {
@@ -100,19 +95,19 @@ impl<'a> TopicPartitionListElem<'a> {
 
     /// Returns the partition number.
     pub fn partition(&self) -> i32 {
-        unsafe { (*self.ptr).partition }
+        self.ptr.partition
     }
 
     /// Returns the offset.
     pub fn offset(&self) -> Offset {
-        let raw_offset = unsafe { (*self.ptr).offset };
+        let raw_offset = self.ptr.offset;
         Offset::from_raw(raw_offset)
     }
 
     /// Sets the offset.
-    pub fn set_offset(&self, offset: Offset) {
+    pub fn set_offset(&mut self, offset: Offset) {
         let raw_offset = offset.to_raw();
-        unsafe { (*self.ptr).offset = raw_offset };
+        self.ptr.offset = raw_offset;
     }
 }
 
@@ -126,12 +121,17 @@ impl<'a> PartialEq for TopicPartitionListElem<'a> {
 
 /// A structure to store and manipulate a list of topics and partitions with optional offsets.
 pub struct TopicPartitionList {
-    ptr: *mut RDKafkaTopicPartitionList,
+    ptr: NativePtr<RDKafkaTopicPartitionList>,
+}
+
+unsafe impl KafkaDrop for RDKafkaTopicPartitionList {
+    const TYPE: &'static str = "topic partition list";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_topic_partition_list_destroy;
 }
 
 impl Clone for TopicPartitionList {
     fn clone(&self) -> Self {
-        let new_tpl = unsafe { rdsys::rd_kafka_topic_partition_list_copy(self.ptr) };
+        let new_tpl = unsafe { rdsys::rd_kafka_topic_partition_list_copy(self.ptr()) };
         unsafe { TopicPartitionList::from_ptr(new_tpl) }
     }
 }
@@ -151,7 +151,9 @@ impl TopicPartitionList {
     /// Transforms a pointer to the native librdkafka RDTopicPartitionList into a
     /// managed `TopicPartitionList` instance.
     pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList {
-        TopicPartitionList { ptr }
+        TopicPartitionList {
+            ptr: NativePtr::from_ptr(ptr).unwrap(),
+        }
     }
 
     /// Given a topic map, generates a new `TopicPartitionList`.
@@ -167,23 +169,17 @@ impl TopicPartitionList {
 
     /// Returns the pointer to the internal librdkafka structure.
     pub fn ptr(&self) -> *mut RDKafkaTopicPartitionList {
-        self.ptr
-    }
-
-    /// Capture the instance without calling the destructor on the internal librdkafka
-    /// structure.
-    pub(crate) unsafe fn leak(mut self) {
-        self.ptr = ptr::null_mut();
+        self.ptr.ptr()
     }
 
     /// Returns the number of elements in the list.
     pub fn count(&self) -> usize {
-        unsafe { (*self.ptr).cnt as usize }
+        self.ptr.cnt as usize
     }
 
     /// Returns the capacity of the list.
     pub fn capacity(&self) -> usize {
-        unsafe { (*self.ptr).size as usize }
+        self.ptr.size as usize
     }
 
     /// Adds a topic with unassigned partitions to the list.
@@ -199,9 +195,9 @@ impl TopicPartitionList {
     ) -> TopicPartitionListElem<'a> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let tp_ptr = unsafe {
-            rdsys::rd_kafka_topic_partition_list_add(self.ptr, topic_c.as_ptr(), partition)
+            rdsys::rd_kafka_topic_partition_list_add(self.ptr(), topic_c.as_ptr(), partition)
         };
-        unsafe { TopicPartitionListElem::from_ptr(self, tp_ptr) }
+        unsafe { TopicPartitionListElem::from_ptr(self, &mut *tp_ptr) }
     }
 
     /// Adds a topic and partition range to the list.
@@ -209,7 +205,7 @@ impl TopicPartitionList {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         unsafe {
             rdsys::rd_kafka_topic_partition_list_add_range(
-                self.ptr,
+                self.ptr(),
                 topic_c.as_ptr(),
                 start_partition,
                 stop_partition,
@@ -228,7 +224,7 @@ impl TopicPartitionList {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let kafka_err = unsafe {
             rdsys::rd_kafka_topic_partition_list_set_offset(
-                self.ptr,
+                self.ptr(),
                 topic_c.as_ptr(),
                 partition,
                 offset.to_raw(),
@@ -253,12 +249,12 @@ impl TopicPartitionList {
     pub fn find_partition(&self, topic: &str, partition: i32) -> Option<TopicPartitionListElem> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let elem_ptr = unsafe {
-            rdsys::rd_kafka_topic_partition_list_find(self.ptr, topic_c.as_ptr(), partition)
+            rdsys::rd_kafka_topic_partition_list_find(self.ptr(), topic_c.as_ptr(), partition)
         };
         if elem_ptr.is_null() {
             None
         } else {
-            Some(unsafe { TopicPartitionListElem::from_ptr(self, elem_ptr) })
+            Some(unsafe { TopicPartitionListElem::from_ptr(self, &mut *elem_ptr) })
         }
     }
 
@@ -266,7 +262,7 @@ impl TopicPartitionList {
     pub fn set_all_offsets(&mut self, offset: Offset) {
         let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
         for elem_ptr in slice {
-            let elem = unsafe { TopicPartitionListElem::from_ptr(self, &mut *elem_ptr) };
+            let mut elem = TopicPartitionListElem::from_ptr(self, &mut *elem_ptr);
             elem.set_offset(offset);
         }
     }
@@ -276,7 +272,7 @@ impl TopicPartitionList {
         let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
         let mut vec = Vec::with_capacity(slice.len());
         for elem_ptr in slice {
-            vec.push(unsafe { TopicPartitionListElem::from_ptr(self, &mut *elem_ptr) });
+            vec.push(TopicPartitionListElem::from_ptr(self, &mut *elem_ptr));
         }
         vec
     }
@@ -286,7 +282,7 @@ impl TopicPartitionList {
         let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
         let mut vec = Vec::with_capacity(slice.len());
         for elem_ptr in slice {
-            let tp = unsafe { TopicPartitionListElem::from_ptr(self, &mut *elem_ptr) };
+            let tp = TopicPartitionListElem::from_ptr(self, &mut *elem_ptr);
             if tp.topic() == topic {
                 vec.push(tp);
             }
@@ -300,16 +296,6 @@ impl TopicPartitionList {
             .iter()
             .map(|elem| ((elem.topic().to_owned(), elem.partition()), elem.offset()))
             .collect()
-    }
-}
-
-impl Drop for TopicPartitionList {
-    fn drop(&mut self) {
-        if !self.ptr.is_null() {
-            trace!("Destroying TPL: {:?}", self.ptr);
-            unsafe { rdsys::rd_kafka_topic_partition_list_destroy(self.ptr) }
-            trace!("TPL destroyed: {:?}", self.ptr);
-        }
     }
 }
 
@@ -388,7 +374,7 @@ mod tests {
         let tp0 = tpl.find_partition("topic1", 0).unwrap();
         let tp1 = tpl.find_partition("topic1", 1).unwrap();
         let tp2 = tpl.find_partition("topic2", 0).unwrap();
-        let tp3 = tpl.find_partition("topic2", 1).unwrap();
+        let mut tp3 = tpl.find_partition("topic2", 1).unwrap();
 
         assert_eq!(tp0.topic(), "topic1");
         assert_eq!(tp0.partition(), 0);

@@ -1,12 +1,17 @@
 //! Utility functions
 
 use std::ffi::CStr;
+use std::fmt;
+use std::ops::Deref;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
+use std::ptr::NonNull;
 use std::slice;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use log::trace;
 
 use rdkafka_sys as rdsys;
 
@@ -212,6 +217,72 @@ pub(crate) trait AsCArray<T: WrappedCPointer> {
 impl<T: WrappedCPointer> AsCArray<T> for Vec<T> {
     fn as_c_array(&self) -> *mut *mut T::Target {
         self.as_ptr() as *mut *mut T::Target
+    }
+}
+
+pub(crate) struct NativePtr<T>
+where
+    T: KafkaDrop,
+{
+    ptr: NonNull<T>,
+}
+
+impl<T> Drop for NativePtr<T>
+where
+    T: KafkaDrop,
+{
+    fn drop(&mut self) {
+        trace!("Destroying {}: {:?}", T::TYPE, self.ptr);
+        unsafe { T::DROP(self.ptr.as_ptr()) }
+        trace!("Destroyed {}: {:?}", T::TYPE, self.ptr);
+    }
+}
+
+pub(crate) unsafe trait KafkaDrop {
+    const TYPE: &'static str;
+    const DROP: unsafe extern "C" fn(*mut Self);
+}
+
+impl<T> WrappedCPointer for NativePtr<T>
+where
+    T: KafkaDrop,
+{
+    type Target = T;
+
+    fn ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+}
+
+impl<T> Deref for NativePtr<T>
+where
+    T: KafkaDrop,
+{
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        unsafe { self.ptr.as_ref() }
+    }
+}
+
+impl<T> fmt::Debug for NativePtr<T>
+where
+    T: KafkaDrop,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.ptr.fmt(f)
+    }
+}
+
+impl<T> NativePtr<T>
+where
+    T: KafkaDrop,
+{
+    pub(crate) unsafe fn from_ptr(ptr: *mut T) -> Option<Self> {
+        NonNull::new(ptr).map(|ptr| Self { ptr })
+    }
+
+    pub(crate) fn ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
     }
 }
 

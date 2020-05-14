@@ -7,6 +7,8 @@ use std::slice;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
+use crate::util::{KafkaDrop, NativePtr};
+
 /// Group member information container.
 pub struct GroupMemberInfo(RDKafkaGroupMemberInfo);
 
@@ -126,27 +128,27 @@ impl fmt::Debug for GroupInfo {
 
 /// List of groups. This structure wraps the  pointer returned by rdkafka-sys, and deallocates all
 /// the native resources when dropped.
-pub struct GroupList(*const RDKafkaGroupList);
+pub struct GroupList(NativePtr<RDKafkaGroupList>);
+
+unsafe impl KafkaDrop for RDKafkaGroupList {
+    const TYPE: &'static str = "group";
+    const DROP: unsafe extern "C" fn(*mut Self) = drop_group_list;
+}
+
+unsafe extern "C" fn drop_group_list(ptr: *mut RDKafkaGroupList) {
+    rdsys::rd_kafka_group_list_destroy(ptr as *const _)
+}
 
 impl GroupList {
     /// Creates a new group list given a pointer to the native rdkafka-sys group list structure.
     pub(crate) unsafe fn from_ptr(ptr: *const RDKafkaGroupList) -> GroupList {
-        GroupList(ptr)
+        GroupList(NativePtr::from_ptr(ptr as *mut _).unwrap())
     }
 
     /// Returns all the groups in the list.
     pub fn groups(&self) -> &[GroupInfo] {
         unsafe {
-            slice::from_raw_parts(
-                (*self.0).groups as *const GroupInfo,
-                (*self.0).group_cnt as usize,
-            )
+            slice::from_raw_parts(self.0.groups as *const GroupInfo, self.0.group_cnt as usize)
         }
-    }
-}
-
-impl Drop for GroupList {
-    fn drop(&mut self) {
-        unsafe { rdsys::rd_kafka_group_list_destroy(self.0) };
     }
 }

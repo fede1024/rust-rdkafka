@@ -22,14 +22,14 @@ use std::collections::HashMap;
 use std::ffi::CString;
 use std::mem;
 
-use log::{log_enabled, trace, Level};
+use log::{log_enabled, Level};
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::client::ClientContext;
 use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::util::ErrBuf;
+use crate::util::{ErrBuf, KafkaDrop, NativePtr};
 
 /// The log levels supported by librdkafka.
 #[derive(Copy, Clone, Debug)]
@@ -73,34 +73,34 @@ impl RDKafkaLogLevel {
 
 /// A native rdkafka-sys client config.
 pub struct NativeClientConfig {
-    ptr: *mut RDKafkaConf,
+    ptr: NativePtr<RDKafkaConf>,
+}
+
+unsafe impl KafkaDrop for RDKafkaConf {
+    const TYPE: &'static str = "client config";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_conf_destroy;
 }
 
 impl NativeClientConfig {
     /// Wraps a pointer to an `RDKafkaConfig` object and returns a new `NativeClientConfig`.
     pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaConf) -> NativeClientConfig {
-        NativeClientConfig { ptr }
+        NativeClientConfig {
+            ptr: NativePtr::from_ptr(ptr).unwrap(),
+        }
     }
 
     /// Returns the pointer to the librdkafka RDKafkaConf structure.
     pub fn ptr(&self) -> *mut RDKafkaConf {
-        self.ptr
+        self.ptr.ptr()
     }
 
     /// Returns the pointer to the librdkafka RDKafkaConf structure. This method should be used when
     /// the native pointer is intended to be moved. The destructor won't be executed automatically;
     /// the caller should take care of deallocating the resource when no longer needed.
     pub fn ptr_move(self) -> *mut RDKafkaConf {
-        let ptr = self.ptr;
+        let ptr = self.ptr();
         mem::forget(self);
         ptr
-    }
-}
-
-impl Drop for NativeClientConfig {
-    fn drop(&mut self) {
-        trace!("Drop NativeClientConfig {:p}", self.ptr());
-        unsafe { rdsys::rd_kafka_conf_destroy(self.ptr) }
     }
 }
 
@@ -142,14 +142,14 @@ impl ClientConfig {
 
     /// Returns the native rdkafka-sys configuration.
     pub fn create_native_config(&self) -> KafkaResult<NativeClientConfig> {
-        let conf = unsafe { rdsys::rd_kafka_conf_new() };
+        let conf = unsafe { NativeClientConfig::from_ptr(rdsys::rd_kafka_conf_new()) };
         let mut err_buf = ErrBuf::new();
         for (key, value) in &self.conf_map {
             let key_c = CString::new(key.to_string())?;
             let value_c = CString::new(value.to_string())?;
             let ret = unsafe {
                 rdsys::rd_kafka_conf_set(
-                    conf,
+                    conf.ptr(),
                     key_c.as_ptr(),
                     value_c.as_ptr(),
                     err_buf.as_mut_ptr(),
@@ -165,7 +165,7 @@ impl ClientConfig {
                 ));
             }
         }
-        Ok(unsafe { NativeClientConfig::from_ptr(conf) })
+        Ok(conf)
     }
 
     /// Uses the current configuration to create a new Consumer or Producer.

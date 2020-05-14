@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::os::raw::c_void;
-use std::ptr::{self, NonNull};
+use std::ptr;
 use std::slice;
 use std::string::ToString;
 
@@ -19,7 +19,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::metadata::Metadata;
 use crate::statistics::Statistics;
-use crate::util::{ErrBuf, Timeout};
+use crate::util::{ErrBuf, KafkaDrop, NativePtr, Timeout};
 
 /// Client-level context
 ///
@@ -83,7 +83,12 @@ impl ClientContext for DefaultClientContext {}
 /// A native rdkafka-sys client. This struct shouldn't be used directly. Use higher level `Client`
 /// or producers and consumers.
 pub struct NativeClient {
-    ptr: NonNull<RDKafka>,
+    ptr: NativePtr<RDKafka>,
+}
+
+unsafe impl KafkaDrop for RDKafka {
+    const TYPE: &'static str = "client";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_destroy;
 }
 
 // The library is completely thread safe, according to the documentation.
@@ -94,23 +99,13 @@ impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
     pub(crate) unsafe fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
         NativeClient {
-            ptr: NonNull::new(ptr).expect("rdkafka client pointer unexpectedly null"),
+            ptr: NativePtr::from_ptr(ptr).unwrap(),
         }
     }
 
     /// Returns the wrapped pointer to RDKafka.
     pub fn ptr(&self) -> *mut RDKafka {
-        self.ptr.as_ptr()
-    }
-}
-
-impl Drop for NativeClient {
-    fn drop(&mut self) {
-        trace!("Destroying client: {:p}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_destroy(self.ptr.as_ptr());
-        }
-        trace!("Client destroyed: {:?}", self.ptr);
+        self.ptr.ptr()
     }
 }
 
@@ -175,7 +170,7 @@ impl<C: ClientContext> Client<C> {
 
     /// Returns a pointer to the native rdkafka-sys client.
     pub fn native_ptr(&self) -> *mut RDKafka {
-        self.native.ptr.as_ptr()
+        self.native.ptr.ptr()
     }
 
     /// Returns a reference to the context.
@@ -201,9 +196,7 @@ impl<C: ClientContext> Client<C> {
             rdsys::rd_kafka_metadata(
                 self.native_ptr(),
                 flag,
-                native_topic
-                    .map(|t| t.ptr())
-                    .unwrap_or_else(NativeTopic::null),
+                native_topic.map(|t| t.ptr()).unwrap_or_else(ptr::null_mut),
                 &mut metadata_ptr as *mut *const RDKafkaMetadata,
                 timeout.into().as_millis(),
             )
@@ -284,63 +277,36 @@ impl<C: ClientContext> Client<C> {
                 topic_c.as_ptr(),
                 ptr::null_mut(),
             ))
+            .unwrap()
         })
     }
 
     /// Returns a NativeQueue from the current client. The NativeQueue shouldn't
     /// outlive the client it was generated from.
     pub(crate) fn new_native_queue(&self) -> NativeQueue {
-        unsafe { NativeQueue::from_ptr(rdsys::rd_kafka_queue_new(self.native_ptr())) }
+        unsafe { NativeQueue::from_ptr(rdsys::rd_kafka_queue_new(self.native_ptr())).unwrap() }
     }
 
     pub(crate) fn consumer_queue(&self) -> Option<NativeQueue> {
-        unsafe {
-            let ptr = rdsys::rd_kafka_queue_get_consumer(self.native_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(NativeQueue::from_ptr(ptr))
-            }
-        }
+        unsafe { NativeQueue::from_ptr(rdsys::rd_kafka_queue_get_consumer(self.native_ptr())) }
     }
 }
 
-pub(crate) struct NativeTopic {
-    ptr: *mut RDKafkaTopic,
+pub(crate) type NativeTopic = NativePtr<RDKafkaTopic>;
+
+unsafe impl KafkaDrop for RDKafkaTopic {
+    const TYPE: &'static str = "native topic";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_topic_destroy;
 }
 
 unsafe impl Send for NativeTopic {}
 unsafe impl Sync for NativeTopic {}
 
-impl NativeTopic {
-    /// Wraps a pointer to an `RDKafkaTopic` object and returns a new `NativeTopic`.
-    unsafe fn from_ptr(ptr: *mut RDKafkaTopic) -> NativeTopic {
-        NativeTopic { ptr }
-    }
+pub(crate) type NativeQueue = NativePtr<RDKafkaQueue>;
 
-    /// Returns the pointer to the librdkafka RDKafkaTopic structure.
-    pub fn ptr(&self) -> *mut RDKafkaTopic {
-        self.ptr
-    }
-
-    /// Returns a null pointer.
-    fn null() -> *mut RDKafkaTopic {
-        ptr::null::<u8>() as *mut RDKafkaTopic
-    }
-}
-
-impl Drop for NativeTopic {
-    fn drop(&mut self) {
-        trace!("Destroying NativeTopic: {:?}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_topic_destroy(self.ptr);
-        }
-        trace!("NativeTopic destroyed: {:?}", self.ptr);
-    }
-}
-
-pub(crate) struct NativeQueue {
-    ptr: *mut RDKafkaQueue,
+unsafe impl KafkaDrop for RDKafkaQueue {
+    const TYPE: &'static str = "queue";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_queue_destroy;
 }
 
 // The library is completely thread safe, according to the documentation.
@@ -348,29 +314,8 @@ unsafe impl Sync for NativeQueue {}
 unsafe impl Send for NativeQueue {}
 
 impl NativeQueue {
-    /// Wraps a pointer to an `RDKafkaQueue` object and returns a new
-    /// `NativeQueue`.
-    unsafe fn from_ptr(ptr: *mut RDKafkaQueue) -> NativeQueue {
-        NativeQueue { ptr }
-    }
-
-    /// Returns the pointer to the librdkafka RDKafkaQueue structure.
-    pub fn ptr(&self) -> *mut RDKafkaQueue {
-        self.ptr
-    }
-
     pub fn poll<T: Into<Timeout>>(&self, t: T) -> *mut RDKafkaEvent {
-        unsafe { rdsys::rd_kafka_queue_poll(self.ptr, t.into().as_millis()) }
-    }
-}
-
-impl Drop for NativeQueue {
-    fn drop(&mut self) {
-        trace!("Destroying queue: {:?}", self.ptr);
-        unsafe {
-            rdsys::rd_kafka_queue_destroy(self.ptr);
-        }
-        trace!("Queue destroyed: {:?}", self.ptr);
+        unsafe { rdsys::rd_kafka_queue_poll(self.ptr(), t.into().as_millis()) }
     }
 }
 

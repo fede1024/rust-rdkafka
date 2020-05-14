@@ -1,7 +1,6 @@
 //! Stream-based consumer implementation.
 
 use std::pin::Pin;
-use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
@@ -12,7 +11,6 @@ use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt};
 use log::{debug, trace, warn};
 
-use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
@@ -20,7 +18,7 @@ use crate::consumer::base_consumer::BaseConsumer;
 use crate::consumer::{Consumer, ConsumerContext, DefaultConsumerContext};
 use crate::error::{KafkaError, KafkaResult};
 use crate::message::BorrowedMessage;
-use crate::util::Timeout;
+use crate::util::{NativePtr, Timeout};
 
 /// Default channel size for the stream consumer. The number of context switches
 /// seems to decrease exponentially as the channel size is increased, and it stabilizes when
@@ -35,37 +33,19 @@ const CONSUMER_CHANNEL_SIZE: usize = 10;
 /// is terminated before the consumer is actually dropped, ensuring that the messages
 /// are safe to be used for their entire lifetime.
 struct PolledMessagePtr {
-    message_ptr: *mut RDKafkaMessage,
+    message_ptr: NativePtr<RDKafkaMessage>,
 }
 
 impl PolledMessagePtr {
-    /// Creates a new PolledPtr from a message pointer. It takes the ownership of the message.
-    fn new(message_ptr: *mut RDKafkaMessage) -> PolledMessagePtr {
-        trace!("New polled ptr {:?}", message_ptr);
-        PolledMessagePtr { message_ptr }
-    }
-
     /// Transforms the `PolledMessagePtr` into a message whose lifetime will be bound to the
     /// lifetime of the provided consumer. If the librdkafka message represents an error, the error
     /// will be returned instead.
     fn into_message_of<C: ConsumerContext>(
-        mut self,
+        self,
         consumer: &StreamConsumer<C>,
     ) -> KafkaResult<BorrowedMessage> {
         let msg = unsafe { BorrowedMessage::from_consumer(self.message_ptr, consumer) };
-        self.message_ptr = ptr::null_mut();
         msg
-    }
-}
-
-impl Drop for PolledMessagePtr {
-    /// If the `PolledMessagePtr` is hasn't been transformed into a message and the pointer is
-    /// still available, it will free the underlying resources.
-    fn drop(&mut self) {
-        if !self.message_ptr.is_null() {
-            trace!("Destroy PolledPtr {:?}", self.message_ptr);
-            unsafe { rdsys::rd_kafka_message_destroy(self.message_ptr) };
-        }
     }
 }
 
@@ -127,7 +107,7 @@ fn poll_loop<C: ConsumerContext>(
                     continue; // TODO: check stream closed
                 }
             }
-            Some(m_ptr) => sender.send(Some(PolledMessagePtr::new(m_ptr))),
+            Some(message_ptr) => sender.send(Some(PolledMessagePtr { message_ptr })),
         };
         match futures::executor::block_on(future_sender) {
             Ok(()) => (),
