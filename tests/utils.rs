@@ -1,16 +1,21 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+use std::env::{self, VarError};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+
 use rand::Rng;
 use regex::Regex;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::ClientConfig;
+use rdkafka::consumer::ConsumerContext;
+use rdkafka::error::KafkaResult;
 use rdkafka::message::ToBytes;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::statistics::Statistics;
-
-use std::collections::HashMap;
-use std::env::{self, VarError};
+use rdkafka::TopicPartitionList;
 
 #[macro_export]
 macro_rules! map(
@@ -74,11 +79,11 @@ pub fn get_broker_version() -> KafkaVersion {
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct KafkaVersion(pub u32, pub u32, pub u32, pub u32);
 
-pub struct TestContext {
+pub struct ProducerTestContext {
     _some_data: i64, // Add some data so that valgrind can check proper allocation
 }
 
-impl ClientContext for TestContext {
+impl ClientContext for ProducerTestContext {
     fn stats(&self, _: Statistics) {} // Don't print stats
 }
 
@@ -99,7 +104,7 @@ where
     J: ToBytes,
     Q: ToBytes,
 {
-    let prod_context = TestContext { _some_data: 1234 };
+    let prod_context = ProducerTestContext { _some_data: 1234 };
 
     // Produce some messages
     let producer = ClientConfig::new()
@@ -108,7 +113,7 @@ where
         .set("api.version.request", "true")
         .set("debug", "all")
         .set("message.timeout.ms", "30000")
-        .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
+        .create_with_context::<ProducerTestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 
     let futures = (0..count)
@@ -167,4 +172,53 @@ mod tests {
         ids.sort();
         assert_eq!(ids, (0..100).collect::<Vec<_>>());
     }
+}
+
+pub struct ConsumerTestContext {
+    pub _n: i64, // Add data for memory access validation
+    pub wakeups: Arc<AtomicUsize>,
+}
+
+impl ClientContext for ConsumerTestContext {
+    // Access stats
+    fn stats(&self, stats: Statistics) {
+        let stats_str = format!("{:?}", stats);
+        println!("Stats received: {} bytes", stats_str.len());
+    }
+}
+
+impl ConsumerContext for ConsumerTestContext {
+    fn commit_callback(&self, result: KafkaResult<()>, _offsets: &TopicPartitionList) {
+        println!("Committing offsets: {:?}", result);
+    }
+
+    fn message_queue_nonempty_callback(&self) {
+        self.wakeups.fetch_add(1, Ordering::SeqCst);
+    }
+}
+
+pub fn consumer_config(
+    group_id: &str,
+    config_overrides: Option<HashMap<&str, &str>>,
+) -> ClientConfig {
+    let mut config = ClientConfig::new();
+
+    config.set("group.id", group_id);
+    config.set("client.id", "rdkafka_integration_test_client");
+    config.set("bootstrap.servers", get_bootstrap_server().as_str());
+    config.set("enable.partition.eof", "false");
+    config.set("session.timeout.ms", "6000");
+    config.set("enable.auto.commit", "false");
+    config.set("statistics.interval.ms", "500");
+    config.set("api.version.request", "true");
+    config.set("debug", "all");
+    config.set("auto.offset.reset", "earliest");
+
+    if let Some(overrides) = config_overrides {
+        for (key, value) in overrides {
+            config.set(key, value);
+        }
+    }
+
+    config
 }

@@ -5,6 +5,11 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 <a name="0.24.0"></a>
 ## 0.24.0 (Unreleased)
 
+* **Breaking change.** Introduce a dependency on Tokio for the `StreamConsumer`.
+  The new implementation is more efficient and is backed by a single Tokio task.
+  The old implementation required a separate thread and a separate futures
+  executor.
+
 * Decouple versioning of rdkafka-sys from rdkafka. rdkafka-sys now has its
   own [changelog](rdkafka-sys/changelog.md) and will follow SemVer conventions.
   ([#211])

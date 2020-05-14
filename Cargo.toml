@@ -21,6 +21,7 @@ log = "0.4.8"
 serde = { version = "1.0.0", features = ["derive"] }
 serde_derive = "1.0.0"
 serde_json = "1.0.0"
+tokio = { version = "0.2", features = ["rt-core", "time"], optional = true }
 
 [dev-dependencies]
 backoff = "0.1.5"
@@ -31,10 +32,30 @@ rand = "0.3.15"
 regex = "1.1.6"
 tokio = { version = "0.2", features = ["blocking", "macros", "rt-core", "time"] }
 
+[[example]]
+name = "asynchronous_processing"
+required-features = ["tokio"]
+
+[[example]]
+name = "at_least_once"
+required-features = ["tokio"]
+
+[[example]]
+name = "simple_consumer"
+required-features = ["tokio"]
+
+[[test]]
+name = "test_high_consumers"
+required-features = ["tokio"]
+
+[[test]]
+name = "test_metadata"
+required-features = ["tokio"]
+
 # These features are re-exports of the features that the rdkafka-sys crate
 # provides. See the rdkafka-sys documentation for details.
 [features]
-default = ["libz"]
+default = ["libz", "tokio"]
 cmake-build = ["rdkafka-sys/cmake-build"]
 cmake_build = ["rdkafka-sys/cmake_build"]
 dynamic_linking = ["rdkafka-sys/dynamic_linking"]
@@ -53,4 +74,5 @@ external_lz4 = ["rdkafka-sys/external_lz4"]
 [package.metadata.docs.rs]
 # docs.rs doesn't allow writing to ~/.cargo/registry (reasonably), so we have to
 # use the CMake build for a proper out-of-tree build.
-features = ["cmake_build"]
+features = ["cmake_build", "tokio"]
+rustdoc-args = ["--cfg", "docsrs"]

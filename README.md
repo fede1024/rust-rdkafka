@@ -62,24 +62,14 @@ High level:
 
 For more information about consumers and producers, refer to their module-level documentation.
 
-[`BaseConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/base_consumer/struct.BaseConsumer.html
-[`BaseProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.BaseProducer.html
-[`ThreadedProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.ThreadedProducer.html
-[`StreamConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html
-[`FutureProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/future_producer/struct.FutureProducer.html
-[librdkafka]: https://github.com/edenhill/librdkafka
-[futures]: https://github.com/alexcrichton/futures-rs
-[`future`]: https://docs.rs/futures/0.1.3/futures/trait.Future.html
-[`stream`]: https://docs.rs/futures/0.1.3/futures/stream/trait.Stream.html
-
 *Warning*: the library is under active development and the APIs are likely to change.
 
-### Asynchronous data processing with tokio-rs
-[tokio-rs] is a platform for fast processing of asynchronous events in Rust. The interfaces exposed by the [`StreamConsumer`] and the [`FutureProducer`] allow rust-rdkafka users to easily integrate Kafka consumers and producers within the tokio-rs platform, and write asynchronous message processing code. Note that rust-rdkafka can be used without tokio-rs.
+### Asynchronous data processing with Tokio
+[Tokio] is a platform for fast processing of asynchronous events in Rust. The interfaces exposed by the [`StreamConsumer`] and the [`FutureProducer`] allow rust-rdkafka users to easily integrate Kafka consumers and producers within the Tokio platform, and write asynchronous message processing code. Note that rust-rdkafka can be used without Tokio.
 
-To see rust-rdkafka in action with tokio-rs, check out the [asynchronous processing example] in the examples folder.
+To see rust-rdkafka in action with Tokio, check out the [asynchronous processing example] in the examples folder.
 
-[tokio-rs]: https://tokio.rs/
+[Tokio]: https://tokio.rs/
 [asynchronous processing example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs
 
 ### At-least-once delivery
@@ -146,6 +136,20 @@ rdkafka = { version = "0.23", features = ["dynamic-linking"] }
 For a full listing of features, consult the [rdkafka-sys crate's
 documentation](rdkafka-sys/README.md#features). All of rdkafka-sys features are
 re-exported as rdkafka features.
+
+### Tokio dependency
+
+The [`StreamConsumer`] and [`FutureProducer`] depend on Tokio, which can be a
+heavyweight dependency for users who only intend to use the non-async/await
+consumers or producers.
+
+The `tokio` feature is enabled by default. To disable it, turn off default
+features like so:
+
+```toml
+[dependencies]
+rdkafka = { version = "0.23", default-features = false }
+```
 
 ## Compiling from sources
 
@@ -217,6 +221,16 @@ set the `debug` option in the producer or consumer configuration (see librdkafka
 
 To enable debugging in your project, make sure you initialize the logger with
 `env_logger::init()` or equivalent.
+
+[`BaseConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/base_consumer/struct.BaseConsumer.html
+[`BaseProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.BaseProducer.html
+[`ThreadedProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.ThreadedProducer.html
+[`StreamConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html
+[`FutureProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/future_producer/struct.FutureProducer.html
+[librdkafka]: https://github.com/edenhill/librdkafka
+[futures]: https://github.com/alexcrichton/futures-rs
+[`future`]: https://docs.rs/futures/0.1.3/futures/trait.Future.html
+[`stream`]: https://docs.rs/futures/0.1.3/futures/stream/trait.Stream.html
 
 ## rdkafka-sys
 

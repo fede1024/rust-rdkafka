@@ -286,6 +286,19 @@ where
     }
 }
 
+pub(crate) struct OnDrop<F>(pub F)
+where
+    F: Fn();
+
+impl<F> Drop for OnDrop<F>
+where
+    F: Fn(),
+{
+    fn drop(&mut self) {
+        (self.0)()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
