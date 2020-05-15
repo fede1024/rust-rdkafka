@@ -1,5 +1,5 @@
 use std::convert::TryInto;
-use std::time::{SystemTime, UNIX_EPOCH, Instant, Duration};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use clap::{App, Arg};
 use futures::stream::StreamExt;

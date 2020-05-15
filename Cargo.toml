@@ -31,7 +31,7 @@ env_logger = "0.7.1"
 hdrhistogram = "7.0.0"
 rand = "0.3.15"
 regex = "1.1.6"
-tokio = { version = "0.2", features = ["blocking", "macros", "rt-core", "time"] }
+tokio = { version = "0.2", features = ["blocking", "macros", "rt-threaded", "time"] }
 
 [[example]]
 name = "asynchronous_processing"
