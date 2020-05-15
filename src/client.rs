@@ -65,7 +65,8 @@ pub trait ClientContext: Send + Sync {
         error!("librdkafka: {}: {}", error, reason);
     }
 
-    // NOTE: when adding a new method, remember to add it to the FutureProducerContext as well.
+    // NOTE: when adding a new method, remember to add it to the
+    // StreamConsumerContext and FutureProducerContext as well.
     // https://github.com/rust-lang/rfcs/pull/1406 will maybe help in the future.
 }
 

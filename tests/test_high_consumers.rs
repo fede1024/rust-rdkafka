@@ -41,7 +41,7 @@ fn create_stream_consumer_with_context<C: ConsumerContext>(
 }
 
 // All produced messages should be consumed.
-#[tokio::test]
+#[tokio::test(threaded_scheduler)]
 async fn test_produce_consume_base() {
     let _r = env_logger::try_init();
 
@@ -74,7 +74,7 @@ async fn test_produce_consume_base() {
 }
 
 // All produced messages should be consumed.
-#[tokio::test]
+#[tokio::test(threaded_scheduler)]
 async fn test_produce_consume_base_assign() {
     let _r = env_logger::try_init();
 
@@ -107,7 +107,7 @@ async fn test_produce_consume_base_assign() {
 }
 
 // All produced messages should be consumed.
-#[tokio::test]
+#[tokio::test(threaded_scheduler)]
 async fn test_produce_consume_with_timestamp() {
     let _r = env_logger::try_init();
 
@@ -147,7 +147,7 @@ async fn test_produce_consume_with_timestamp() {
     assert_eq!(tp.error(), Ok(()));
 }
 
-#[tokio::test]
+#[tokio::test(threaded_scheduler)]
 async fn test_consume_with_no_message_error() {
     let _r = env_logger::try_init();
 
@@ -179,10 +179,28 @@ async fn test_consume_with_no_message_error() {
     println!("Duration: {:?}", first_poll_time.unwrap().elapsed());
     assert!(first_poll_time.unwrap().elapsed() < Duration::from_millis(7000));
     assert!(first_poll_time.unwrap().elapsed() > Duration::from_millis(4500));
+
+    // Subscribe to a topic with one record.
+    let topic_name = rand_test_topic();
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None).await;
+    consumer.subscribe(&[&topic_name]).unwrap();
+
+    // Assert that we see that record eventually.
+    while let Some(message) = message_stream.next().await {
+        if let Ok(_) = message {
+            break;
+        }
+    }
+
+    // Assert that we receive a few NoMessageReceived errors after we see the
+    // one record.
+    assert!(matches!(message_stream.next().await, Some(Err(KafkaError::NoMessageReceived))));
+    assert!(matches!(message_stream.next().await, Some(Err(KafkaError::NoMessageReceived))));
+    assert!(matches!(message_stream.next().await, Some(Err(KafkaError::NoMessageReceived))));
 }
 
 // TODO: add check that commit cb gets called correctly
-#[tokio::test]
+#[tokio::test(threaded_scheduler)]
 async fn test_consumer_commit_message() {
     let _r = env_logger::try_init();
 
@@ -242,7 +260,7 @@ async fn test_consumer_commit_message() {
     assert_eq!(position, consumer.position().unwrap());
 }
 
-#[tokio::test]
+#[tokio::test(threaded_scheduler)]
 async fn test_consumer_store_offset_commit() {
     let _r = env_logger::try_init();
 

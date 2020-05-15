@@ -117,6 +117,9 @@ pub trait ConsumerContext: ClientContext {
     /// Message queue nonempty callback. This method will run when the
     /// consumer's message queue switches from empty to nonempty.
     fn message_queue_nonempty_callback(&self) {}
+
+    // NOTE: when adding a new method, remember to add it to the
+    // StreamConsumerContext as well.
 }
 
 /// An empty consumer context that can be user when no context is needed.

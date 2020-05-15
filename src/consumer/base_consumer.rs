@@ -122,6 +122,11 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
 }
 
 impl<C: ConsumerContext> BaseConsumer<C> {
+    /// Returns the client underlying this consumer.
+    pub fn client(&self) -> &Client<C> {
+        &self.client
+    }
+
     /// Returns the context used to create this consumer.
     pub fn context(&self) -> &C {
         self.client.context()
