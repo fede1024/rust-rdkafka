@@ -194,9 +194,18 @@ async fn test_consume_with_no_message_error() {
 
     // Assert that we receive a few NoMessageReceived errors after we see the
     // one record.
-    assert!(matches!(message_stream.next().await, Some(Err(KafkaError::NoMessageReceived))));
-    assert!(matches!(message_stream.next().await, Some(Err(KafkaError::NoMessageReceived))));
-    assert!(matches!(message_stream.next().await, Some(Err(KafkaError::NoMessageReceived))));
+    assert!(matches!(
+        message_stream.next().await,
+        Some(Err(KafkaError::NoMessageReceived))
+    ));
+    assert!(matches!(
+        message_stream.next().await,
+        Some(Err(KafkaError::NoMessageReceived))
+    ));
+    assert!(matches!(
+        message_stream.next().await,
+        Some(Err(KafkaError::NoMessageReceived))
+    ));
 }
 
 // TODO: add check that commit cb gets called correctly

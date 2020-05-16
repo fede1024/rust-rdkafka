@@ -117,7 +117,11 @@ impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
     }
 
     fn set_waker(&self, waker: Waker) {
-        self.context().waker.lock().expect("lock poisoned").replace(waker);
+        self.context()
+            .waker
+            .lock()
+            .expect("lock poisoned")
+            .replace(waker);
     }
 
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
@@ -140,7 +144,9 @@ impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
                 if let Some(err_interval) = self.err_interval {
                     // We've been asked to periodically report that there are no
                     // new messages. Check if it's time to do so.
-                    let mut err_delay = self.err_delay.get_or_insert_with(|| time::delay_for(err_interval));
+                    let mut err_delay = self
+                        .err_delay
+                        .get_or_insert_with(|| time::delay_for(err_interval));
                     ready!(Pin::new(&mut err_delay).poll(cx));
                     err_delay.reset(Instant::now() + err_interval);
                     Poll::Ready(Some(Err(KafkaError::NoMessageReceived)))
