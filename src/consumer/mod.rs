@@ -1,4 +1,4 @@
-//! Base trait and common functionality for all consumers.
+//! Kafka consumers.
 
 use std::ptr;
 use std::time::Duration;
@@ -38,12 +38,19 @@ pub enum Rebalance<'a> {
     Error(String),
 }
 
-/// Consumer specific Context. This user-defined object can be used to provide custom callbacks to
-/// consumer events. Refer to the list of methods to check which callbacks can be specified.
+/// Consumer-specific context.
+///
+/// This user-defined object can be used to provide custom callbacks for
+/// consumer events. Refer to the list of methods to check which callbacks can
+/// be specified.
+///
+/// See also the [`ClientContext`] trait.
 pub trait ConsumerContext: ClientContext {
-    /// Implements the default rebalancing strategy and calls the `pre_rebalance` and
-    /// `post_rebalance` methods. If this method is overridden, it will be responsibility
-    /// of the user to call them if needed.
+    /// Implements the default rebalancing strategy and calls the
+    /// [`pre_rebalance`](ConsumerContext::pre_rebalance) and
+    /// [`post_rebalance`](ConsumerContext::post_rebalance) methods. If this
+    /// method is overridden, it will be responsibility of the user to call them
+    /// if needed.
     fn rebalance(
         &self,
         native_client: &NativeClient,
@@ -80,34 +87,34 @@ pub trait ConsumerContext: ClientContext {
         self.post_rebalance(&rebalance);
     }
 
-    /// Pre-rebalance callback. This method will run before the rebalance and should
-    /// terminate its execution quickly.
+    /// Pre-rebalance callback. This method will run before the rebalance and
+    /// should terminate its execution quickly.
     #[allow(unused_variables)]
     fn pre_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
 
-    /// Post-rebalance callback. This method will run after the rebalance and should
-    /// terminate its execution quickly.
+    /// Post-rebalance callback. This method will run after the rebalance and
+    /// should terminate its execution quickly.
     #[allow(unused_variables)]
     fn post_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
 
     // TODO: convert pointer to structure
-    /// Post commit callback. This method will run after a group of offsets was committed to the
-    /// offset store.
+    /// Post commit callback. This method will run after a group of offsets was
+    /// committed to the offset store.
     #[allow(unused_variables)]
     fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {}
 
     /// Returns the minimum interval at which to poll the main queue, which
     /// services the logging, stats, and error callbacks.
     ///
-    /// The main queue is polled once whenever [`Consumer.poll`] is called. If
-    /// `Consumer.poll` is called with a timeout that is larger than this
-    /// interval, then the main queue will be polled at that interval while the
-    /// consumer queue is blocked.
+    /// The main queue is polled once whenever [`BaseConsumer::poll`] is called.
+    /// If `poll` is called with a timeout that is larger than this interval,
+    /// then the main queue will be polled at that interval while the consumer
+    /// queue is blocked.
     ///
     /// For example, if the main queue's minimum poll interval is 200ms and
-    /// `Consumer.poll` is called with a timeout of 1s, then `Consumer.poll` may
-    /// block for up to 1s waiting for a message, but it will poll the main
-    /// queue every 200ms while it is waiting.
+    /// `poll` is called with a timeout of 1s, then `poll` may block for up to
+    /// 1s waiting for a message, but it will poll the main queue every 200ms
+    /// while it is waiting.
     ///
     /// By default, the minimum poll interval for the main queue is 1s.
     fn main_queue_min_poll_interval(&self) -> Timeout {
@@ -122,7 +129,8 @@ pub trait ConsumerContext: ClientContext {
     // StreamConsumerContext as well.
 }
 
-/// An empty consumer context that can be user when no context is needed.
+/// An empty consumer context that can be user when no customizations are
+/// needed.
 #[derive(Clone, Default)]
 pub struct DefaultConsumerContext;
 

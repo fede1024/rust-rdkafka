@@ -26,7 +26,8 @@ use crate::util::{NativePtr, OnDrop, Timeout};
 /// The [`ConsumerContext`] used by the [`StreamConsumer`]. This context will
 /// automatically wake up the message stream when new data is available.
 ///
-/// This type is not intended to be used directly.
+/// This type is not intended to be used directly. It will be automatically
+/// created by the `StreamConsumer` when necessary.
 pub struct StreamConsumerContext<C: ConsumerContext + 'static> {
     inner: C,
     waker: Arc<Mutex<Option<Waker>>>,
@@ -162,7 +163,7 @@ impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
     }
 }
 
-/// A Kafka Consumer providing a [`futures::Stream`] interface.
+/// A Kafka consumer providing a [`futures::Stream`] interface.
 ///
 /// This consumer doesn't need to be polled manually since
 /// [`StreamConsumer::start`] will launch a background polling task.
@@ -200,7 +201,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
 }
 
 impl<C: ConsumerContext> StreamConsumer<C> {
-    /// Starts the `StreamConsumer` with default configuration (100ms polling
+    /// Starts the stream consumer with default configuration (100ms polling
     /// interval and no `NoMessageReceived` notifications).
     ///
     /// **Note:** this method must be called from within the context of a Tokio
@@ -209,7 +210,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         self.start_with(Duration::from_millis(100), false)
     }
 
-    /// Starts the `StreamConsumer` with the specified poll interval.
+    /// Starts the stream consumer with the specified poll interval.
     ///
     /// If `no_message_error` is set to true, the returned `MessageStream` will
     /// yield an error of type `KafkaError::NoMessageReceived` every time the
@@ -235,7 +236,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         MessageStream::new(self, no_message_interval)
     }
 
-    /// Stops the `StreamConsumer`.
+    /// Stops the stream consumer.
     pub fn stop(&self) {
         self.should_stop.store(true, Ordering::Relaxed);
     }

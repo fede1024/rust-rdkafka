@@ -1,4 +1,15 @@
-//! Common client functionalities.
+//! Common client functionality.
+//!
+//! In librdkafka parlance, a client is either a consumer or a producer. This
+//! module's [`Client`] type provides the functionality that is common to both
+//! consumers and producers.
+//!
+//! Typically you will not want to construct a client directly. Construct one of
+//! the consumers in the [`consumer`] module or one of the producers in the
+//! [`producer`] modules instead.
+//!
+//! [`consumer`]: crate::consumer
+//! [`producer`]: crate::producer
 
 use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
@@ -21,16 +32,27 @@ use crate::metadata::Metadata;
 use crate::statistics::Statistics;
 use crate::util::{ErrBuf, KafkaDrop, NativePtr, Timeout};
 
-/// Client-level context
+/// Client-level context.
 ///
-/// Each client (consumers and producers included) has a context object that can be used to
-/// customize its behavior. Implementing `ClientContext` enables the customization of
-/// methods common to all clients, while `ProducerContext` and `ConsumerContext` are specific to
-/// producers and consumers. Refer to the list of methods to see which callbacks can currently
-/// be overridden. Implementations of `ClientContext` must be thread safe, as they might be owned by
-/// multiple threads.
+/// Each client (consumers and producers included) has a context object that can
+/// be used to customize its behavior. Implementing `ClientContext` enables the
+/// customization of methods common to all clients, while [`ProducerContext`]
+/// and [`ConsumerContext`] are specific to producers and consumers. Refer to
+/// the list of methods to see which callbacks can currently be overridden.
+///
+/// **Important**: implementations of `ClientContext` must be thread safe, as
+/// they might be shared between multiple threads.
+///
+/// [`ConsumerContext`]: crate::consumer::ConsumerContext
+/// [`ProducerContext`]: crate::producer::ProducerContext
 pub trait ClientContext: Send + Sync {
     /// Receives log lines from librdkafka.
+    ///
+    /// The default implementation forwards the log lines to the appropriate
+    /// [`log`] crate macro. Consult the [`RDKafkaLogLevel`] documentation for
+    /// details about the log level mapping.
+    ///
+    /// [`log`]: https://docs.rs/log
     fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
         match level {
             RDKafkaLogLevel::Emerg
@@ -55,12 +77,16 @@ pub trait ClientContext: Send + Sync {
     }
 
     /// Receives the statistics of the librdkafka client. To enable, the
-    /// "statistics.interval.ms" configuration parameter must be specified.
+    /// `statistics.interval.ms` configuration parameter must be specified.
+    ///
+    /// The default implementation logs the statistics at the `info` log level.
     fn stats(&self, statistics: Statistics) {
         info!("Client stats: {:?}", statistics);
     }
 
     /// Receives global errors from the librdkafka client.
+    ///
+    /// The default implementation logs the error at the `error` log level.
     fn error(&self, error: KafkaError, reason: &str) {
         error!("librdkafka: {}: {}", error, reason);
     }
@@ -70,8 +96,10 @@ pub trait ClientContext: Send + Sync {
     // https://github.com/rust-lang/rfcs/pull/1406 will maybe help in the future.
 }
 
-/// An empty `ClientContext` that can be used when no context is needed. Default
-/// callback implementations will be used.
+/// An empty [`ClientContext`] that can be used when no customizations are
+/// needed.
+///
+/// Uses the default callback implementations provided by `ClientContext`.
 #[derive(Clone, Default)]
 pub struct DefaultClientContext;
 
@@ -81,8 +109,9 @@ impl ClientContext for DefaultClientContext {}
 // ********** CLIENT **********
 //
 
-/// A native rdkafka-sys client. This struct shouldn't be used directly. Use higher level `Client`
-/// or producers and consumers.
+/// A native rdkafka-sys client. This struct shouldn't be used directly. Use
+/// higher level `Client` or producers and consumers.
+// TODO(benesch): this should be `pub(crate)`.
 pub struct NativeClient {
     ptr: NativePtr<RDKafka>,
 }
@@ -110,9 +139,17 @@ impl NativeClient {
     }
 }
 
-/// A low level rdkafka client. This client shouldn't be used directly. The producer and consumer modules
-/// provide different producer and consumer implementations based on top of `Client` that can be
-/// used instead.
+/// A low-level rdkafka client.
+///
+/// This type is the basis of the consumers and producers in the [`consumer`]
+/// and [`producer`] modules, respectively.
+///
+/// Typically you do not want to construct a `Client` directly, but instead
+/// construct a consumer or producer. A `Client` can be used, however, when
+/// only access to cluster metadata and watermarks is required.
+///
+/// [`consumer`]: crate::consumer
+/// [`producer`]: crate::producer
 pub struct Client<C: ClientContext = DefaultClientContext> {
     native: NativeClient,
     context: Box<C>,

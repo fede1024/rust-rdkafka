@@ -1,5 +1,6 @@
-//! A data structure representing topic, partitions and offsets, compatible with the
-//! `RDKafkaTopicPartitionList` exported by `rdkafka-sys`.
+//! Data structures representing topic, partitions and offsets.
+//!
+//! Compatible with the `RDKafkaTopicPartitionList` exported by `rdkafka-sys`.
 
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -19,7 +20,7 @@ const OFFSET_END: i64 = rdsys::RD_KAFKA_OFFSET_END as i64;
 const OFFSET_STORED: i64 = rdsys::RD_KAFKA_OFFSET_STORED as i64;
 const OFFSET_INVALID: i64 = rdsys::RD_KAFKA_OFFSET_INVALID as i64;
 
-/// A librdkafka offset.
+/// A Kafka offset.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Offset {
     /// Start consuming from the beginning of the partition.
@@ -35,7 +36,8 @@ pub enum Offset {
 }
 
 impl Offset {
-    /// Converts the integer representation of an offset use by librdkafka to an `Offset`.
+    /// Converts the integer representation of an offset used by librdkafka to
+    /// an `Offset`.
     pub fn from_raw(raw_offset: i64) -> Offset {
         match raw_offset {
             OFFSET_BEGINNING => Offset::Beginning,
@@ -46,7 +48,8 @@ impl Offset {
         }
     }
 
-    /// Converts the `Offset` to the internal integer representation used by librdkafka.
+    /// Converts the `Offset` to the internal integer representation used by
+    /// librdkafka.
     pub fn to_raw(&self) -> i64 {
         match *self {
             Offset::Beginning => OFFSET_BEGINNING,
@@ -65,7 +68,7 @@ pub struct TopicPartitionListElem<'a> {
 }
 
 impl<'a> TopicPartitionListElem<'a> {
-    // _owner_list serves as a marker so that the lifetime isn't to long
+    // _owner_list serves as a marker so that the lifetime isn't too long
     fn from_ptr(
         _owner_list: &'a TopicPartitionList,
         ptr: &'a mut RDKafkaTopicPartition,
