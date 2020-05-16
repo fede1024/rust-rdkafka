@@ -223,7 +223,7 @@
 //! [timely-dataflow]: https://github.com/frankmcsherry/timely-dataflow
 //! [Tokio]: https://tokio.rs/
 
-#![warn(missing_docs)]
+#![forbid(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub use rdkafka_sys::types;
