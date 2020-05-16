@@ -654,17 +654,14 @@ array_impls! {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::util::duration_to_millis;
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::time::SystemTime;
 
     #[test]
     fn test_timestamp_creation() {
         let now = SystemTime::now();
         let t1 = Timestamp::now();
         let t2 = Timestamp::from(now);
-        let expected = Timestamp::CreateTime(duration_to_millis(
-            now.duration_since(UNIX_EPOCH).unwrap(),
-        ) as i64);
+        let expected = Timestamp::CreateTime(util::millis_to_epoch(now));
 
         assert_eq!(t2, expected);
         assert!(t1.to_millis().unwrap() - t2.to_millis().unwrap() < 10);

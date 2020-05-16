@@ -67,17 +67,11 @@ impl From<Option<Duration>> for Timeout {
     }
 }
 
-/// Converts a [`Duration`] into milliseconds.
-pub fn duration_to_millis(duration: Duration) -> u64 {
-    duration.as_secs() * 1000 + u64::from(duration.subsec_nanos()) / 1_000_000
-}
-
 /// Converts the given time to the number of milliseconds since the Unix epoch.
 pub fn millis_to_epoch(time: SystemTime) -> i64 {
-    duration_to_millis(
-        time.duration_since(UNIX_EPOCH)
-            .unwrap_or_else(|_| Duration::from_secs(0)),
-    ) as i64
+    time.duration_since(UNIX_EPOCH)
+        .unwrap_or_else(|_| Duration::from_secs(0))
+        .as_millis() as i64
 }
 
 /// Returns the current time in milliseconds since the Unix epoch.
@@ -299,18 +293,5 @@ where
 {
     fn drop(&mut self) {
         (self.0)()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::time::Duration;
-
-    #[test]
-    fn test_duration_to_millis() {
-        assert_eq!(duration_to_millis(Duration::from_secs(1)), 1000);
-        assert_eq!(duration_to_millis(Duration::from_millis(1500)), 1500);
-        assert_eq!(duration_to_millis(Duration::new(5, 123_000_000)), 5123);
     }
 }

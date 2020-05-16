@@ -10,11 +10,16 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   The old implementation required a separate thread and a separate futures
   executor.
 
+* **Breaking change.** Remove the `util::duration_to_millis` function. This
+  functionality is now available in the standard library as
+  [`std::time::Duration::as_millis`].
+
 * Decouple versioning of rdkafka-sys from rdkafka. rdkafka-sys now has its
   own [changelog](rdkafka-sys/changelog.md) and will follow SemVer conventions.
   ([#211])
 
 [#211]: https://github.com/fede1024/rust-rdkafka/issues/211
+[`std::time::Duration::as_millis`]: https://doc.rust-lang.org/stable/std/time/struct.Duration.html#method.as_millis
 
 <a name="0.23.1"></a>
 ## 0.23.1 (2020-01-13)
