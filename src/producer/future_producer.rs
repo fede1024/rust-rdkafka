@@ -7,10 +7,10 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use std::time::{Duration, Instant};
 
 use futures::channel::oneshot;
 use futures::FutureExt;
+use tokio::time::{self, Duration, Instant};
 
 use crate::client::{Client, ClientContext, DefaultClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
@@ -208,10 +208,12 @@ impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProduce
     }
 }
 
-/// A [Future] wrapping the result of the message production.
+/// A [`Future`] wrapping the result of the message production.
 ///
-/// Once completed, the future will contain an `OwnedDeliveryResult` with information on the
-/// delivery status of the message.
+/// Once completed, the future will contain an `OwnedDeliveryResult` with
+/// information on the delivery status of the message. If the producer is
+/// dropped before the delivery status is received, the future will instead
+/// resolve with [`oneshot::Canceled`].
 pub struct DeliveryFuture {
     rx: oneshot::Receiver<OwnedDeliveryResult>,
 }
@@ -225,36 +227,59 @@ impl Future for DeliveryFuture {
 }
 
 impl<C: ClientContext + 'static> FutureProducer<C> {
-    /// Sends a message to Kafka, returning a [`DeliveryFuture`] that will
-    /// resolve with the result of the send.
+    /// Sends a message to Kafka, returning the result of the send.
     ///
-    /// The `block_ms` parameter will control for how long the producer is
-    /// allowed to block if the queue is full. Set it to -1 to block forever, or
-    /// 0 to never block. If `block_ms` is reached and the queue is still full,
-    /// a [RDKafkaError::QueueFull] will be reported in the [DeliveryFuture].
-    pub fn send<K, P>(&self, record: FutureRecord<K, P>, block_ms: i64) -> DeliveryFuture
+    /// The `queue_timeout` parameter controls how long to retry for if the
+    /// librdkafka producer queue is full. Set it to `Timeout::Never` to retry
+    /// forever or `Timeout::After(0)` to never block. If the timeout is reached
+    /// and the queue is still full, an [`RDKafkaError::QueueFull`] error will
+    /// be reported in the [`OwnedDeliveryResult`].
+    ///
+    /// Keep in mind that `queue_timeout` only applies to the first phase of the
+    /// send operation. Once the message is queued, the underlying librdkafka
+    /// client has separate timeout parameters that apply, like
+    /// `delivery.timeout.ms`.
+    ///
+    /// See also the [`FutureProducer::send_result`] method, which will not
+    /// retry the queue operation if the queue is full.
+    ///
+    /// **Note:** this method must be called from within the context of a Tokio
+    /// runtime.
+    pub async fn send<K, P, T>(
+        &self,
+        record: FutureRecord<'_, K, P>,
+        queue_timeout: T,
+    ) -> OwnedDeliveryResult
     where
         K: ToBytes + ?Sized,
         P: ToBytes + ?Sized,
+        T: Into<Timeout>,
     {
         let start_time = Instant::now();
+        let queue_timeout = queue_timeout.into();
+        let can_retry = || match queue_timeout.into() {
+            Timeout::Never => true,
+            Timeout::After(t) if start_time.elapsed() < t => true,
+            _ => false,
+        };
 
         let (tx, rx) = oneshot::channel();
         let mut base_record = record.into_base_record(Box::new(tx));
 
         loop {
             match self.producer.send(base_record) {
-                Ok(_) => break DeliveryFuture { rx },
-                Err((KafkaError::MessageProduction(RDKafkaError::QueueFull), record)) => {
+                Err((e, record))
+                    if e == KafkaError::MessageProduction(RDKafkaError::QueueFull)
+                        && can_retry() =>
+                {
                     base_record = record;
-                    if block_ms == -1 {
-                        continue;
-                    } else if block_ms > 0
-                        && start_time.elapsed() < Duration::from_millis(block_ms as u64)
-                    {
-                        self.poll(Duration::from_millis(100));
-                        continue;
-                    }
+                    time::delay_for(Duration::from_millis(100)).await;
+                }
+                Ok(_) => {
+                    // We hold a reference to the producer, so it should not be
+                    // possible for the producer to vanish and cancel the
+                    // oneshot.
+                    break rx.await.expect("producer unexpectedly dropped");
                 }
                 Err((e, record)) => {
                     let owned_message = OwnedMessage::new(
@@ -268,15 +293,14 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
                         0,
                         record.headers,
                     );
-                    let _ = record.delivery_opaque.send(Err((e, owned_message)));
-                    break DeliveryFuture { rx };
+                    break Err((e, owned_message));
                 }
             }
         }
     }
 
     /// Like [`FutureProducer::send`], but if enqueuing fails, an error will be
-    /// returned immediately, alongside the [FutureRecord] provided.
+    /// returned immediately, alongside the [`FutureRecord`] provided.
     pub fn send_result<'a, K, P>(
         &self,
         record: FutureRecord<'a, K, P>,

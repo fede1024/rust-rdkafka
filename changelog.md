@@ -10,6 +10,29 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   The old implementation required a separate thread and a separate futures
   executor.
 
+* **Breaking change.** Overhaul the `FutureProducer::send` method. The old
+  implementation incorrectly blocked asynchronous tasks with
+  `std::thread::sleep` and the `block_ms` parameter did not behave as
+  documented.
+
+  The new implementation:
+
+    * changes the `block_ms: i64` parameter to
+      `queue_timeout: impl Into<Timeout>`, to better match how timeouts are
+      handled elsewhere in the rust-rdkafka API,
+
+    * depends on Tokio, in order to retry enqueuing after a time interval
+      without using `std::thread::sleep`,
+
+    * returns an opaque future that borrows its input, rather than a
+      `DeliveryFuture` with no internal references,
+
+    * simplifies the output type of the returned future from
+      `Result<OwnedDeliveryResult, oneshot::Canceled>` to `OwnedDeliveryResult`.
+
+  Thanks to [@FSMaxB-dooshop] for discovering the issue and contributing the
+  initial fix.
+
 * **Breaking change.** Remove the `util::duration_to_millis` function. This
   functionality is now available in the standard library as
   [`std::time::Duration::as_millis`].
@@ -23,6 +46,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 [#211]: https://github.com/fede1024/rust-rdkafka/issues/211
 [`std::time::Duration::as_millis`]: https://doc.rust-lang.org/stable/std/time/struct.Duration.html#method.as_millis
+
+[@FSMaxB-dooshop]: https://github.com/FSMaxB-dooshop
 
 <a name="0.23.1"></a>
 ## 0.23.1 (2020-01-13)

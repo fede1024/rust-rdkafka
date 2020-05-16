@@ -1,5 +1,6 @@
+use std::time::Duration;
+
 use clap::{App, Arg};
-use futures::*;
 use log::info;
 
 use rdkafka::config::ClientConfig;
@@ -12,7 +13,7 @@ use crate::example_utils::setup_logger;
 mod example_utils;
 
 async fn produce(brokers: &str, topic_name: &str) {
-    let producer: FutureProducer = ClientConfig::new()
+    let producer: &FutureProducer = &ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .set("message.timeout.ms", "5000")
         .create()
@@ -21,26 +22,26 @@ async fn produce(brokers: &str, topic_name: &str) {
     // This loop is non blocking: all messages will be sent one after the other, without waiting
     // for the results.
     let futures = (0..5)
-        .map(|i| {
-            // The send operation on the topic returns a future, that will be completed once the
-            // result or failure from Kafka will be received.
-            producer
+        .map(|i| async move {
+            // The send operation on the topic returns a future, which will be
+            // completed once the result or failure from Kafka is received.
+            let delivery_status = producer
                 .send(
                     FutureRecord::to(topic_name)
                         .payload(&format!("Message {}", i))
                         .key(&format!("Key {}", i))
                         .headers(OwnedHeaders::new().add("header_key", "header_value")),
-                    0,
+                    Duration::from_secs(0),
                 )
-                .map(move |delivery_status| {
-                    // This will be executed onw the result is received
-                    info!("Delivery status for message {} received", i);
-                    delivery_status
-                })
+                .await;
+
+            // This will be executed when the result is received.
+            info!("Delivery status for message {} received", i);
+            delivery_status
         })
         .collect::<Vec<_>>();
 
-    // This loop will wait until all delivery statuses have been received received.
+    // This loop will wait until all delivery statuses have been received.
     for future in futures {
         info!("Future completed. Result: {:?}", future.await);
     }
