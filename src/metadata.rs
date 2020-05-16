@@ -48,7 +48,8 @@ impl MetadataPartition {
     }
 
     // TODO: return result?
-    /// Returns the metadata error for the partition, or None if there is no error.
+    /// Returns the metadata error for the partition, or `None` if there is no
+    /// error.
     pub fn error(&self) -> Option<RDKafkaRespErr> {
         if self.0.err.is_error() {
             Some(self.0.err)
@@ -57,12 +58,12 @@ impl MetadataPartition {
         }
     }
 
-    /// Returns the broker ids of the replicas.
+    /// Returns the broker IDs of the replicas.
     pub fn replicas(&self) -> &[i32] {
         unsafe { slice::from_raw_parts(self.0.replicas, self.0.replica_cnt as usize) }
     }
 
-    /// Returns the broker ids of the in sync replicas.
+    /// Returns the broker IDs of the in-sync replicas.
     pub fn isr(&self) -> &[i32] {
         unsafe { slice::from_raw_parts(self.0.isrs, self.0.isr_cnt as usize) }
     }
@@ -91,7 +92,8 @@ impl MetadataTopic {
         }
     }
 
-    /// Returns the metadata error, or None if there was no error.
+    /// Returns the metadata error for the topic, or `None` if there was no
+    /// error.
     pub fn error(&self) -> Option<RDKafkaRespErr> {
         if self.0.err.is_error() {
             Some(self.0.err)
@@ -101,8 +103,10 @@ impl MetadataTopic {
     }
 }
 
-/// Metadata container. This structure wraps the metadata pointer returned by rdkafka-sys,
-/// and deallocates all the native resources when dropped.
+/// Metadata container.
+///
+/// This structure wraps the metadata pointer returned by rdkafka-sys, and
+/// deallocates all the native resources when dropped.
 pub struct Metadata(NativePtr<RDKafkaMetadata>);
 
 unsafe impl KafkaDrop for RDKafkaMetadata {
@@ -120,7 +124,7 @@ impl Metadata {
         Metadata(NativePtr::from_ptr(ptr as *mut _).unwrap())
     }
 
-    /// Returns the id of the broker originating this metadata.
+    /// Returns the ID of the broker originating this metadata.
     pub fn orig_broker_id(&self) -> i32 {
         self.0.orig_broker_id
     }

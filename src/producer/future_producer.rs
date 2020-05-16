@@ -1,6 +1,6 @@
-//! Future producer
+//! High-level, futures-enabled Kafka producer.
 //!
-//! A high level producer that returns a Future for every produced message.
+//! See the [`FutureProducer`] for details.
 // TODO: extend docs
 
 use std::future::Future;
@@ -24,26 +24,29 @@ use crate::util::{IntoOpaque, Timeout};
 // ********** FUTURE PRODUCER **********
 //
 
-/// Same as [BaseRecord] but specific to the [FutureProducer]. The only difference is that
-/// the [FutureRecord] doesn't provide custom delivery opaque object.
+/// A record for the future producer.
+///
+/// Like [`BaseRecord`], but specific to the [`FutureProducer`]. The only
+/// difference is that the [FutureRecord] doesn't provide custom delivery opaque
+/// object.
 #[derive(Debug)]
 pub struct FutureRecord<'a, K: ToBytes + ?Sized + 'a, P: ToBytes + ?Sized + 'a> {
-    /// Required destination topic
+    /// Required destination topic.
     pub topic: &'a str,
-    /// Optional destination partition
+    /// Optional destination partition.
     pub partition: Option<i32>,
-    /// Optional payload
+    /// Optional payload.
     pub payload: Option<&'a P>,
-    /// Optional key
+    /// Optional key.
     pub key: Option<&'a K>,
-    /// Optional timestamp
+    /// Optional timestamp.
     pub timestamp: Option<i64>,
-    /// Optional message headers
+    /// Optional message headers.
     pub headers: Option<OwnedHeaders>,
 }
 
 impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
-    /// Create a new record with the specified topic name.
+    /// Creates a new record with the specified topic name.
     pub fn to(topic: &'a str) -> FutureRecord<'a, K, P> {
         FutureRecord {
             topic,
@@ -68,31 +71,31 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
         }
     }
 
-    /// Set the destination partition of the record.
+    /// Sets the destination partition of the record.
     pub fn partition(mut self, partition: i32) -> FutureRecord<'a, K, P> {
         self.partition = Some(partition);
         self
     }
 
-    /// Set the destination payload of the record.
+    /// Sets the destination payload of the record.
     pub fn payload(mut self, payload: &'a P) -> FutureRecord<'a, K, P> {
         self.payload = Some(payload);
         self
     }
 
-    /// Set the destination key of the record.
+    /// Sets the destination key of the record.
     pub fn key(mut self, key: &'a K) -> FutureRecord<'a, K, P> {
         self.key = Some(key);
         self
     }
 
-    /// Set the destination timestamp of the record.
+    /// Sets the destination timestamp of the record.
     pub fn timestamp(mut self, timestamp: i64) -> FutureRecord<'a, K, P> {
         self.timestamp = Some(timestamp);
         self
     }
 
-    /// Set the headers of the record.
+    /// Sets the headers of the record.
     pub fn headers(mut self, headers: OwnedHeaders) -> FutureRecord<'a, K, P> {
         self.headers = Some(headers);
         self
@@ -111,18 +114,22 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
     }
 }
 
-/// The `ProducerContext` used by the `FutureProducer`. This context will use a Future as its
-/// `DeliveryOpaque` and will complete the future when the message is delivered (or failed to).
+/// The [`ProducerContext`] used by the [`FutureProducer`].
+///
+/// This context will use a [`Future`] as its `DeliveryOpaque` and will complete
+/// the future when the message is delivered (or failed to).
 #[derive(Clone)]
 pub struct FutureProducerContext<C: ClientContext + 'static> {
     wrapped_context: C,
 }
 
-/// Represents the result of message production as performed from the `FutureProducer`.
+/// Represents the result of message production as performed from the
+/// `FutureProducer`.
 ///
-/// If message delivery was successful, `OwnedDeliveryResult` will return the partition and offset
-/// of the message. If the message failed to be delivered an error will be returned, together with
-/// an owned copy of the original message.
+/// If message delivery was successful, `OwnedDeliveryResult` will return the
+/// partition and offset of the message. If the message failed to be delivered
+/// an error will be returned, together with an owned copy of the original
+/// message.
 type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
 
 // Delegates all the methods calls to the wrapped context.
@@ -156,13 +163,16 @@ impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
     }
 }
 
-/// A producer that returns a `Future` for every message being produced.
+/// A producer that returns a [`Future`] for every message being produced.
 ///
-/// Since message production in rdkafka is asynchronous, the caller cannot immediately know if the
-/// delivery of the message was successful or not. The `FutureProducer` provides this information in
-/// a `Future`, that will be completed once the information becomes available. This producer has an
-/// internal polling thread and as such it doesn't need to be polled. It can be cheaply cloned to
-/// get a reference to the same underlying producer. The internal will be terminated once the
+/// Since message production in rdkafka is asynchronous, the caller cannot
+/// immediately know if the delivery of the message was successful or not. The
+/// FutureProducer provides this information in a [`Future`], which will be
+/// completed once the information becomes available.
+///
+/// This producer has an internal polling thread and as such it doesn't need to
+/// be polled. It can be cheaply cloned to get a reference to the same
+/// underlying producer. The internal polling thread will be terminated when the
 /// `FutureProducer` goes out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
 pub struct FutureProducer<C: ClientContext + 'static = DefaultClientContext> {
@@ -215,11 +225,13 @@ impl Future for DeliveryFuture {
 }
 
 impl<C: ClientContext + 'static> FutureProducer<C> {
-    /// Sends the provided [FutureRecord]. Returns a [DeliveryFuture] that will eventually contain the
-    /// result of the send. The `block_ms` parameter will control for how long the producer
-    /// is allowed to block if the queue is full. Set it to -1 to block forever, or 0 to never block.
-    /// If `block_ms` is reached and the queue is still full, a [RDKafkaError::QueueFull] will be
-    /// reported in the [DeliveryFuture].
+    /// Sends a message to Kafka, returning a [`DeliveryFuture`] that will
+    /// resolve with the result of the send.
+    ///
+    /// The `block_ms` parameter will control for how long the producer is
+    /// allowed to block if the queue is full. Set it to -1 to block forever, or
+    /// 0 to never block. If `block_ms` is reached and the queue is still full,
+    /// a [RDKafkaError::QueueFull] will be reported in the [DeliveryFuture].
     pub fn send<K, P>(&self, record: FutureRecord<K, P>, block_ms: i64) -> DeliveryFuture
     where
         K: ToBytes + ?Sized,
@@ -263,8 +275,8 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         }
     }
 
-    /// Same as [FutureProducer::send], with the only difference that if enqueuing fails, an
-    /// error will be returned immediately, alongside the [FutureRecord] provided.
+    /// Like [`FutureProducer::send`], but if enqueuing fails, an error will be
+    /// returned immediately, alongside the [FutureRecord] provided.
     pub fn send_result<'a, K, P>(
         &self,
         record: FutureRecord<'a, K, P>,
@@ -281,18 +293,24 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
             .map_err(|(e, record)| (e, FutureRecord::from_base_record(record)))
     }
 
-    /// Polls the internal producer. This is not normally required since the `ThreadedProducer` had
-    /// a thread dedicated to calling `poll` regularly.
+    /// Polls the internal producer.
+    ///
+    /// This is not normally required since the `FutureProducer` had a thread
+    /// dedicated to calling `poll` regularly.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.poll(timeout);
     }
 
-    /// Flushes the producer. Should be called before termination.
+    /// Flushes any pending messages.
+    ///
+    /// This method should be called before termination to ensure delivery of
+    /// all enqueued messages.
     pub fn flush<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.flush(timeout);
     }
 
-    /// Returns the number of messages waiting to be sent, or send but not acknowledged yet.
+    /// Returns the number of messages that are either waiting to be sent or are
+    /// sent but are waiting to be acknowledged.
     pub fn in_flight_count(&self) -> i32 {
         self.producer.in_flight_count()
     }

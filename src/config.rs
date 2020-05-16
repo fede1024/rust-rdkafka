@@ -2,21 +2,25 @@
 //!
 //! ## C library configuration
 //!
-//! The Rust library will forward all the configuration to the C library. The most frequently
-//! used parameters are listed here.
+//! The Rust library will forward all the configuration to the C library. The
+//! most frequently used parameters are listed here.
 //!
 //! ### Frequently used parameters
 //!
-//! For producer-specific and consumer-specific parameters check the producer and consumer modules
-//! documentation. The full list of available parameters is available in the  [librdkafka
-//! documentation](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md).
+//! For producer-specific and consumer-specific parameters check the producer
+//! and consumer modules documentation. The full list of available parameters is
+//! available in the [librdkafka documentation][librdkafka-config].
 //!
-//! - `client.id` (rdkafka): Client identifier.
-//! - `bootstrap.servers`: Initial list of brokers as a CSV list of broker host or host:port.
-//! - `message.max.bytes` (1000000): Maximum message size.
-//! - `debug`: A comma-separated list of debug contexts to enable. Use 'all' to print all the debugging information.
-//! - `statistics.interval.ms` (0 - disabled): how often the statistic callback specified in the `Context` will be called.
+//! - `client.id`: Client identifier. Default: `rdkafka`.
+//! - `bootstrap.servers`: Initial list of brokers as a CSV list of broker host
+//!    or host:port. Default: empty.
+//! - `message.max.bytes`: Maximum message size. Default: 1000000.
+//! - `debug`: A comma-separated list of debug contexts to enable. Use 'all' to
+//!    print all the debugging information. Default: empty (off).
+//! - `statistics.interval.ms`: how often the statistic callback
+//!    specified in the [`ClientContext`] will be called. Default: 0 (disabled).
 //!
+//! [librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -34,21 +38,25 @@ use crate::util::{ErrBuf, KafkaDrop, NativePtr};
 /// The log levels supported by librdkafka.
 #[derive(Copy, Clone, Debug)]
 pub enum RDKafkaLogLevel {
-    /// Higher priority then Level::Error from the log crate.
+    /// Higher priority then [`Level::Error`](log::Level::Error) from the log
+    /// crate.
     Emerg = 0,
-    /// Higher priority then Level::Error from the log crate.
+    /// Higher priority then [`Level::Error`](log::Level::Error) from the log
+    /// crate.
     Alert = 1,
-    /// Higher priority then Level::Error from the log crate.
+    /// Higher priority then [`Level::Error`](log::Level::Error) from the log
+    /// crate.
     Critical = 2,
-    /// Equivalent to Level::Error from the log crate.
+    /// Equivalent to [`Level::Error`](log::Level::Error) from the log crate.
     Error = 3,
-    /// Equivalent to Level::Warning from the log crate.
+    /// Equivalent to [`Level::Warn`](log::Level::Warn) from the log crate.
     Warning = 4,
-    /// Higher priority then Level::Info from the log crate.
+    /// Higher priority then [`Level::Info`](log::Level::Info) from the log
+    /// crate.
     Notice = 5,
-    /// Equivalent to Level::Info from the log crate.
+    /// Equivalent to [`Level::Info`](log::Level::Info) from the log crate.
     Info = 6,
-    /// Equivalent to Level::Debug from the log crate.
+    /// Equivalent to [`Level::Debug`](log::Level::Debug) from the log crate.
     Debug = 7,
 }
 
@@ -108,7 +116,8 @@ impl NativeClientConfig {
 #[derive(Clone, Debug)]
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
-    /// The librdkafka logging level. Refer to `RDKafkaLogLevel` for the list of available levels.
+    /// The librdkafka logging level. Refer to [`RDKafkaLogLevel`] for the list
+    /// of available levels.
     pub log_level: RDKafkaLogLevel,
 }
 
@@ -198,12 +207,13 @@ fn log_level_from_global_config() -> RDKafkaLogLevel {
 
 /// Create a new client based on the provided configuration.
 pub trait FromClientConfig: Sized {
-    /// Create a client from client configuration. The default client context will be used.
+    /// Creates a client from a client configuration. The default client context
+    /// will be used.
     fn from_config(_: &ClientConfig) -> KafkaResult<Self>;
 }
 
 /// Create a new client based on the provided configuration and context.
 pub trait FromClientConfigAndContext<C: ClientContext>: Sized {
-    /// Create a client from client configuration and a client context.
+    /// Creates a client from a client configuration and a client context.
     fn from_config_and_context(_: &ClientConfig, _: C) -> KafkaResult<Self>;
 }

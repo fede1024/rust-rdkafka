@@ -1,1 +1,3 @@
-__INCLUDE_RUST_DOC__$src/lib.rs$# rdkafka-sys
+# rdkafka-sys
+
+__INCLUDE_RUST_DOC__$src/lib.rs

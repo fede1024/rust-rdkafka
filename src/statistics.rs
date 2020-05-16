@@ -1,3 +1,5 @@
+//! Client and broker statistics.
+
 // TODO: add documentation for all fields
 #![allow(missing_docs)]
 

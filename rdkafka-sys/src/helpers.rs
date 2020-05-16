@@ -1,3 +1,5 @@
+//! Utility functions.
+
 use crate::types::RDKafkaError;
 use crate::types::RDKafkaError::*;
 use crate::types::RDKafkaRespErr;

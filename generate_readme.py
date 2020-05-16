@@ -27,10 +27,14 @@ def parse_template_file(path):
                            if line.startswith(INCLUDE_MARKER)][0]
     except IndexError:
         raise Exception("Missing include marker")
-    include_info = content[marker_position].split('$')
+    include_info = content[marker_position].strip().split('$')
+    doc_path = include_info[1]
+    start = None
+    if len(include_info) > 2:
+        start = include_info[2]
     return Template(
         header=content[0:marker_position], footer=content[marker_position+1:],
-        doc_path=include_info[1], start=include_info[2],
+        doc_path=include_info[1], start=start,
     )
 
 
@@ -42,10 +46,11 @@ output = sys.stdout
 for line in template.header:
     output.write(line)
 
-for line in doc:
-    if line.startswith(template.start):
-        output.write(line)
-        break
+if template.start:
+    for line in doc:
+        if line.startswith(template.start):
+            output.write(line)
+            break
 
 for line in doc:
     output.write(line)

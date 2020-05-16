@@ -12,8 +12,10 @@ pub use rdsys::types::RDKafkaError;
 pub type KafkaResult<T> = Result<T, KafkaError>;
 
 /// Verify if the value represents an error condition.
+///
+/// Some librdkafka codes are informational, rather than true errors.
 pub trait IsError {
-    /// Return true if the value represents an error.
+    /// Reports whether the value represents an error.
     fn is_error(self) -> bool;
 }
 
@@ -31,7 +33,9 @@ impl IsError for RDKafkaConfRes {
 
 // TODO: consider using macro
 
-/// Represents all Kafka errors. Check the underlying `RDKafkaError` to get details.
+/// Represents all possible Kafka errors.
+///
+/// If applicable, check the underlying [`RDKafkaError`] to get details.
 #[derive(Clone, PartialEq, Eq)]
 pub enum KafkaError {
     /// Creation of admin operation failed.

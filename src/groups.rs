@@ -13,7 +13,7 @@ use crate::util::{KafkaDrop, NativePtr};
 pub struct GroupMemberInfo(RDKafkaGroupMemberInfo);
 
 impl GroupMemberInfo {
-    /// Return the id of the member.
+    /// Returns the ID of the member.
     pub fn id(&self) -> &str {
         unsafe {
             CStr::from_ptr(self.0.member_id)
@@ -22,7 +22,7 @@ impl GroupMemberInfo {
         }
     }
 
-    /// Return the client id of the member.
+    /// Returns the client ID of the member.
     pub fn client_id(&self) -> &str {
         unsafe {
             CStr::from_ptr(self.0.client_id)
@@ -40,7 +40,7 @@ impl GroupMemberInfo {
         }
     }
 
-    /// Return the metadata of the member
+    /// Return the metadata of the member.
     pub fn metadata(&self) -> Option<&[u8]> {
         unsafe {
             if self.0.member_metadata.is_null() {
@@ -54,7 +54,7 @@ impl GroupMemberInfo {
         }
     }
 
-    /// Return the assignment of the member
+    /// Return the partition assignment of the member.
     pub fn assignment(&self) -> Option<&[u8]> {
         unsafe {
             if self.0.member_assignment.is_null() {
@@ -73,7 +73,7 @@ impl GroupMemberInfo {
 pub struct GroupInfo(RDKafkaGroupInfo);
 
 impl GroupInfo {
-    /// Return the name of the group.
+    /// Returns the name of the group.
     pub fn name(&self) -> &str {
         unsafe {
             CStr::from_ptr(self.0.group)
@@ -126,8 +126,10 @@ impl fmt::Debug for GroupInfo {
     }
 }
 
-/// List of groups. This structure wraps the  pointer returned by rdkafka-sys, and deallocates all
-/// the native resources when dropped.
+/// List of groups.
+///
+/// This structure wraps the pointer returned by rdkafka-sys, and deallocates
+/// all the native resources when dropped.
 pub struct GroupList(NativePtr<RDKafkaGroupList>);
 
 unsafe impl KafkaDrop for RDKafkaGroupList {
