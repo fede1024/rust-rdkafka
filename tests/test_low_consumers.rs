@@ -7,8 +7,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext};
-use rdkafka::topic_partition_list::Offset;
-use rdkafka::util::current_time_millis;
+use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
+use rdkafka::util::{current_time_millis, Timeout};
 use rdkafka::{Message, Timestamp};
 
 use crate::utils::*;
@@ -141,7 +141,81 @@ async fn test_pause_resume_consumer_iter() {
     ensure_empty(&consumer, "There should be no messages left");
 }
 
-// All produced messages should be consumed.
+#[tokio::test]
+async fn test_consume_partition_order() {
+    let _r = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(2), None).await;
+
+    // The default settings should result in consuming all the messages in
+    // partition 0, then all the messages in partition 1, and so on.
+    {
+        let consumer = create_base_consumer(&rand_test_group(), None);
+        consumer.subscribe(&[topic_name.as_str()]).unwrap();
+        for (i, m) in consumer.iter().take(12).enumerate() {
+            match m {
+                Ok(m) => assert_eq!(m.partition(), (i as i32) / 4),
+                Err(e) => panic!("Error receiving message: {:?}", e),
+            }
+        }
+    }
+
+    // Using partition queues should allow us to consume the partitions
+    // in a round-robin fashion.
+    {
+        let consumer = create_base_consumer(&rand_test_group(), None);
+        let mut tpl = TopicPartitionList::new();
+        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
+        tpl.add_partition_offset(&topic_name, 1, Offset::Beginning);
+        tpl.add_partition_offset(&topic_name, 2, Offset::Beginning);
+        consumer.assign(&tpl).unwrap();
+
+        let partition_queues: Vec<_> = (0..3)
+            .map(|i| consumer.split_partition_queue(&topic_name, i).unwrap())
+            .collect();
+
+        for _ in 0..4 {
+            let main_message = consumer.poll(Timeout::After(Duration::from_secs(0)));
+            assert!(main_message.is_none());
+
+            for (i, queue) in partition_queues.iter().enumerate() {
+                let queue_message = queue.poll(Timeout::Never).unwrap().unwrap();
+                assert_eq!(queue_message.partition(), i as i32);
+            }
+        }
+    }
+
+    // When not all partitions have been split into separate queues, the
+    // unsplit partitions should still be accessible via the main queue.
+    {
+        let consumer = create_base_consumer(&rand_test_group(), None);
+        let mut tpl = TopicPartitionList::new();
+        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
+        tpl.add_partition_offset(&topic_name, 1, Offset::Beginning);
+        tpl.add_partition_offset(&topic_name, 2, Offset::Beginning);
+        consumer.assign(&tpl).unwrap();
+
+        let partition1 = consumer.split_partition_queue(&topic_name, 1).unwrap();
+
+        let mut i = 0;
+        while i < 12 {
+            if let Some(m) = consumer.poll(Timeout::After(Duration::from_secs(0))) {
+                let partition = m.unwrap().partition();
+                assert!(partition == 0 || partition == 2);
+                i += 1;
+            }
+
+            if let Some(m) = partition1.poll(Timeout::After(Duration::from_secs(0))) {
+                assert_eq!(m.unwrap().partition(), 1);
+                i += 1;
+            }
+        }
+    }
+}
+
 #[tokio::test]
 async fn test_produce_consume_message_queue_nonempty_callback() {
     let _r = env_logger::try_init();

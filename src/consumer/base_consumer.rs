@@ -1,6 +1,7 @@
 //! Low level consumer wrapper.
 
 use std::cmp;
+use std::ffi::CString;
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
@@ -214,6 +215,37 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// ```
     pub fn iter(&self) -> Iter<C> {
         Iter(self)
+    }
+
+    /// Splits messages for the specified partition into their own queue.
+    ///
+    /// If the `topic` or `partition` is invalid, returns `None`.
+    ///
+    /// After calling this method, newly-fetched messages for the specified
+    /// partition will be returned via [`PartitionQueue::poll`] rather than
+    /// [`BaseConsumer::poll`]. Note that there may be buffered messages for the
+    /// specified partition that will continue to be returned by
+    /// `BaseConsumer::poll`. For best results, call `split_partition_queue`
+    /// before the first call to `BaseConsumer::poll`.
+    ///
+    /// You must continue to call `BaseConsumer::poll`, even if no messages are
+    /// expected, to serve callbacks.
+    pub fn split_partition_queue(&self, topic: &str, partition: i32) -> Option<PartitionQueue<C>> {
+        let topic = match CString::new(topic) {
+            Ok(topic) => topic,
+            Err(_) => return None,
+        };
+        let queue = unsafe {
+            NativeQueue::from_ptr(rdsys::rd_kafka_queue_get_partition(
+                self.client.native_ptr(),
+                topic.as_ptr(),
+                partition,
+            ))
+        };
+        queue.map(|queue| {
+            unsafe { rdsys::rd_kafka_queue_forward(queue.ptr(), ptr::null_mut()) };
+            PartitionQueue::new(self, queue)
+        })
     }
 }
 
@@ -520,5 +552,35 @@ impl<'a, C: ConsumerContext + 'a> IntoIterator for &'a BaseConsumer<C> {
     type IntoIter = Iter<'a, C>;
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+/// A message queue for a single partition.
+pub struct PartitionQueue<'a, C: ConsumerContext> {
+    consumer: &'a BaseConsumer<C>,
+    queue: NativeQueue,
+}
+
+impl<'a, C: ConsumerContext> PartitionQueue<'a, C> {
+    fn new(consumer: &'a BaseConsumer<C>, queue: NativeQueue) -> Self {
+        PartitionQueue { consumer, queue }
+    }
+
+    /// Polls the partition for new messages.
+    ///
+    /// The `timeout` parameter controls how long to block if no messages are
+    /// available.
+    ///
+    /// Remember that you must also call [`BaseConsumer::poll`] on the
+    /// associated consumer regularly, even if no messages are expected, to
+    /// serve callbacks.
+    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage>> {
+        unsafe {
+            NativePtr::from_ptr(rdsys::rd_kafka_consume_queue(
+                self.queue.ptr(),
+                timeout.into().as_millis(),
+            ))
+        }
+        .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self.consumer) })
     }
 }

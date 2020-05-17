@@ -14,6 +14,9 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   functionality is now available in the standard library as
   [`std::time::Duration::as_millis`].
 
+* Introduce the `BaseConsumer::split_partition_queue` method to allow reading
+  messages from partitions independently of one another.
+
 * Decouple versioning of rdkafka-sys from rdkafka. rdkafka-sys now has its
   own [changelog](rdkafka-sys/changelog.md) and will follow SemVer conventions.
   ([#211])
