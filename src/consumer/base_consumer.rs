@@ -222,6 +222,10 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         self
     }
 
+    fn client(&self) -> &Client<C> {
+        &self.client
+    }
+
     fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
         let mut tpl = TopicPartitionList::new();
         for topic in topics {
