@@ -1,17 +1,56 @@
 //! Test data production using high level producers.
 
+use std::collections::HashMap;
+
+use futures::stream::{FuturesUnordered, StreamExt};
+
+use rdkafka::client::DefaultClientContext;
 use rdkafka::config::ClientConfig;
 use rdkafka::message::{Headers, Message, OwnedHeaders};
 use rdkafka::producer::future_producer::FutureRecord;
 use rdkafka::producer::FutureProducer;
 
+use crate::utils::*;
+
+mod utils;
+
+fn future_producer(config_overrides: HashMap<&str, &str>) -> FutureProducer<DefaultClientContext> {
+    let mut config = ClientConfig::new();
+    config
+        .set("bootstrap.servers", "localhost")
+        .set("message.timeout.ms", "5000");
+    for (key, value) in config_overrides {
+        config.set(key, value);
+    }
+    config.create().expect("Failed to create producer")
+}
+
+#[tokio::test]
+async fn test_future_producer_send() {
+    let producer = future_producer(HashMap::new());
+    let topic_name = rand_test_topic();
+
+    let results: FuturesUnordered<_> = (0..10)
+        .map(|_| {
+            producer.send(
+                FutureRecord::to(&topic_name).payload("A").key("B"),
+                0,
+            )
+        })
+        .collect();
+
+    let results: Vec<_> = results.collect().await;
+    assert!(results.len() == 10);
+    for (i, result) in results.into_iter().enumerate() {
+        let (partition, offset) = result.unwrap().unwrap();
+        assert_eq!(partition, 1);
+        assert_eq!(offset, i as i64);
+    }
+}
+
 #[tokio::test]
 async fn test_future_producer_send_fail() {
-    let producer = ClientConfig::new()
-        .set("bootstrap.servers", "localhost")
-        .set("message.timeout.ms", "5000")
-        .create::<FutureProducer>()
-        .expect("Failed to create producer");
+    let producer = future_producer(HashMap::new());
 
     let future = producer.send(
         FutureRecord::to("topic")
