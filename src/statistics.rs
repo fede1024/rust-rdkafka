@@ -291,9 +291,9 @@ pub struct ConsumerGroup {
     /// The local consumer group handler's state.
     pub state: String,
     /// The time elapsed since the last state change, in milliseconds.
-    pub state_age: i64,
+    pub stateage: i64,
     /// The local consumer group hander's join state.
-    pub joinstate: String,
+    pub join_state: String,
     /// The time elapsed since the last rebalance (assign or revoke), in
     /// milliseconds.
     pub rebalance_age: i64,
