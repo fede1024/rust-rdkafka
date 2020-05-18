@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::env::{self, VarError};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 use rand::Rng;
 use regex::Regex;
@@ -107,7 +108,7 @@ where
     let prod_context = ProducerTestContext { _some_data: 1234 };
 
     // Produce some messages
-    let producer = ClientConfig::new()
+    let producer = &ClientConfig::new()
         .set("bootstrap.servers", get_bootstrap_server().as_str())
         .set("statistics.interval.ms", "500")
         .set("api.version.request", "true")
@@ -118,17 +119,21 @@ where
 
     let futures = (0..count)
         .map(|id| {
-            let future = producer.send(
-                FutureRecord {
-                    topic: topic_name,
-                    payload: Some(&value_fn(id)),
-                    key: Some(&key_fn(id)),
-                    partition,
-                    timestamp,
-                    headers: None,
-                },
-                1000,
-            );
+            let future = async move {
+                producer
+                    .send(
+                        FutureRecord {
+                            topic: topic_name,
+                            payload: Some(&value_fn(id)),
+                            key: Some(&key_fn(id)),
+                            partition,
+                            timestamp,
+                            headers: None,
+                        },
+                        Duration::from_secs(1),
+                    )
+                    .await
+            };
             (id, future)
         })
         .collect::<Vec<_>>();
@@ -136,9 +141,8 @@ where
     let mut message_map = HashMap::new();
     for (id, future) in futures {
         match future.await {
-            Ok(Ok((partition, offset))) => message_map.insert((partition, offset), id),
-            Ok(Err((kafka_error, _message))) => panic!("Delivery failed: {}", kafka_error),
-            Err(e) => panic!("Waiting for future failed: {}", e),
+            Ok((partition, offset)) => message_map.insert((partition, offset), id),
+            Err((kafka_error, _message)) => panic!("Delivery failed: {}", kafka_error),
         };
     }
 

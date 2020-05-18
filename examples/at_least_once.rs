@@ -11,6 +11,8 @@
 //! For a simpler example of consumers and producers, check the `simple_consumer` and
 //! `simple_producer` files in the example folder.
 
+use std::time::Duration;
+
 use clap::{App, Arg};
 use futures::future;
 use futures::stream::StreamExt;
@@ -158,7 +160,7 @@ async fn main() {
                     if let Some(k) = m.key() {
                         record = record.key(k);
                     }
-                    producer.send(record, 1000)
+                    producer.send(record, Duration::from_secs(1))
                 }))
                 .await
                 .expect("Message delivery failed for some topic");

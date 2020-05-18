@@ -102,12 +102,11 @@ async fn run_async_processor(
                     FutureRecord::to(&output_topic)
                         .key("some key")
                         .payload(&computation_result),
-                    0,
+                    Duration::from_secs(0),
                 );
                 match produce_future.await {
-                    Ok(Ok(delivery)) => println!("Sent: {:?}", delivery),
-                    Ok(Err((e, _))) => println!("Error: {:?}", e),
-                    Err(_) => println!("Future cancelled"),
+                    Ok(delivery) => println!("Sent: {:?}", delivery),
+                    Err((e, _)) => println!("Error: {:?}", e),
                 }
             });
             Ok(())

@@ -1,17 +1,102 @@
 //! Test data production using high level producers.
 
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
+
+use futures::stream::{FuturesUnordered, StreamExt};
+
+use rdkafka::client::DefaultClientContext;
 use rdkafka::config::ClientConfig;
+use rdkafka::error::{KafkaError, RDKafkaError};
 use rdkafka::message::{Headers, Message, OwnedHeaders};
 use rdkafka::producer::future_producer::FutureRecord;
 use rdkafka::producer::FutureProducer;
 
+use crate::utils::*;
+
+mod utils;
+
+fn future_producer(config_overrides: HashMap<&str, &str>) -> FutureProducer<DefaultClientContext> {
+    let mut config = ClientConfig::new();
+    config
+        .set("bootstrap.servers", "localhost")
+        .set("message.timeout.ms", "5000");
+    for (key, value) in config_overrides {
+        config.set(key, value);
+    }
+    config.create().expect("Failed to create producer")
+}
+
+#[tokio::test]
+async fn test_future_producer_send() {
+    let producer = future_producer(HashMap::new());
+    let topic_name = rand_test_topic();
+
+    let results: FuturesUnordered<_> = (0..10)
+        .map(|_| {
+            producer.send(
+                FutureRecord::to(&topic_name).payload("A").key("B"),
+                Duration::from_secs(0),
+            )
+        })
+        .collect();
+
+    let results: Vec<_> = results.collect().await;
+    assert!(results.len() == 10);
+    for (i, result) in results.into_iter().enumerate() {
+        let (partition, offset) = result.unwrap();
+        assert_eq!(partition, 1);
+        assert_eq!(offset, i as i64);
+    }
+}
+
+#[tokio::test]
+async fn test_future_producer_send_full() {
+    // Connect to a nonexistent Kafka broker with no message timeout and a tiny
+    // producer queue, so we can permanently fill up the queue by sending a
+    // single message.
+    let mut config = HashMap::new();
+    config.insert("bootstrap.servers", "");
+    config.insert("message.timeout.ms", "0");
+    config.insert("queue.buffering.max.messages", "1");
+    let producer = &future_producer(config);
+    let topic_name = &rand_test_topic();
+
+    // Fill up the queue.
+    producer
+        .send_result(FutureRecord::to(&topic_name).payload("A").key("B"))
+        .unwrap();
+
+    let send_message = |timeout| async move {
+        let start = Instant::now();
+        let res = producer
+            .send(
+                FutureRecord::to(&topic_name).payload("A").key("B"),
+                timeout,
+            )
+            .await;
+        match res {
+            Ok(_) => panic!("send unexpectedly succeeded"),
+            Err((KafkaError::MessageProduction(RDKafkaError::QueueFull), _)) => start.elapsed(),
+            Err((e, _)) => panic!("got incorrect error: {}", e),
+        }
+    };
+
+    // Sending a message with no timeout should return a `QueueFull` error
+    // approximately immediately.
+    let elapsed = send_message(Duration::from_secs(0)).await;
+    assert!(elapsed < Duration::from_millis(10));
+
+    // Sending a message with a 1s timeout should return a `QueueFull` error
+    // in about 1s.
+    let elapsed = send_message(Duration::from_secs(1)).await;
+    assert!(elapsed > Duration::from_millis(800));
+    assert!(elapsed < Duration::from_millis(1200));
+}
+
 #[tokio::test]
 async fn test_future_producer_send_fail() {
-    let producer = ClientConfig::new()
-        .set("bootstrap.servers", "localhost")
-        .set("message.timeout.ms", "5000")
-        .create::<FutureProducer>()
-        .expect("Failed to create producer");
+    let producer = future_producer(HashMap::new());
 
     let future = producer.send(
         FutureRecord::to("topic")
@@ -24,11 +109,11 @@ async fn test_future_producer_send_fail() {
                     .add("1", "B")
                     .add("2", "C"),
             ),
-        10000,
+        Duration::from_secs(10),
     );
 
     match future.await {
-        Ok(Err((kafka_error, owned_message))) => {
+        Err((kafka_error, owned_message)) => {
             assert_eq!(
                 kafka_error.to_string(),
                 "Message production error: UnknownPartition (Local: Unknown partition)"
