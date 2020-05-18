@@ -137,12 +137,18 @@ impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        // Unconditionally store the waker so that we are woken up if the queue
+        // flips from non-empty to empty. We have to store the waker on every
+        // call to poll in case this future migrates between tasks. We also need
+        // to store the waker *before* calling poll to avoid a race where `poll`
+        // returns None to indicate that the queue is empty, but the queue
+        // becomes non-empty before we've installed the waker.
+        self.set_waker(cx.waker().clone());
+
         match self.poll() {
-            None => {
-                // The consumer queue is empty. Arrange to be notified when the
-                // queue is no longer empty.
-                self.set_waker(cx.waker().clone());
-                if let Some(err_interval) = self.err_interval {
+            None => match self.err_interval {
+                None => Poll::Pending,
+                Some(err_interval) => {
                     // We've been asked to periodically report that there are no
                     // new messages. Check if it's time to do so.
                     let mut err_delay = self
@@ -151,10 +157,8 @@ impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
                     ready!(Pin::new(&mut err_delay).poll(cx));
                     err_delay.reset(Instant::now() + err_interval);
                     Poll::Ready(Some(Err(KafkaError::NoMessageReceived)))
-                } else {
-                    Poll::Pending
                 }
-            }
+            },
             Some(message) => {
                 self.err_delay = None;
                 Poll::Ready(Some(message))
