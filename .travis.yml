@@ -14,7 +14,7 @@ jobs:
     rust: stable
   - os: linux
     arch: amd64
-    rust: nightly-2019-10-17
+    rust: nightly-2020-05-17
     env: RDKAFKA_RUN_TESTS=1
   - os: linux
     arch: arm64
@@ -27,13 +27,7 @@ jobs:
     env: FEATURES=cmake_build,libz-static
 
 script:
-  - |
-    if [[ "$RDKAFKA_RUN_TESTS" ]]; then
-      ./test_suite.sh
-    else
-      cargo build --all-targets --verbose --features "$FEATURES"
-    fi
-    (cd rdkafka-sys && cargo test --features "$FEATURES")
+  - ./test_ci.sh
 
 notifications:
   webhooks:
