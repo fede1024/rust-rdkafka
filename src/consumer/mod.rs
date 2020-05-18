@@ -17,14 +17,10 @@ use crate::topic_partition_list::{Offset, TopicPartitionList};
 use crate::util::{cstr_to_owned, Timeout};
 
 pub mod base_consumer;
-#[cfg(feature = "tokio")]
-#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
 pub mod stream_consumer;
 
 // Re-exports.
 pub use self::base_consumer::BaseConsumer;
-#[cfg(feature = "tokio")]
-#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
 pub use self::stream_consumer::{MessageStream, StreamConsumer};
 
 /// Rebalance information.

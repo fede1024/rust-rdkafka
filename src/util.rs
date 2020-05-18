@@ -2,6 +2,7 @@
 
 use std::ffi::CStr;
 use std::fmt;
+use std::future::Future;
 use std::ops::Deref;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
@@ -293,5 +294,58 @@ where
 {
     fn drop(&mut self) {
         (self.0)()
+    }
+}
+
+/// An abstraction over asynchronous runtimes.
+///
+/// There are several asynchronous runtimes available for Rust. By default
+/// rust-rdkafka uses Tokio, via the [`TokioRuntime`], but it has pluggable
+/// support for any runtime that can satisfy this trait.
+///
+/// For an example of using the [smol] runtime with rust-rdkafka, see the
+/// [smol_runtime] example.
+///
+/// [smol]: https://docs.rs/smol
+/// [smol_runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs
+pub trait AsyncRuntime {
+    /// The type of the future returned by
+    /// [`delay_for`](AsyncRuntime::delay_for).
+    type Delay: Future<Output = ()> + Send + Unpin;
+
+    /// Spawns an asynchronous task.
+    ///
+    /// The task should be be polled to completion, unless the runtime exits
+    /// first. With some runtimes this requires an explicit "detach" step.
+    fn spawn<T>(task: T)
+    where
+        T: Future<Output = ()> + Send + 'static;
+
+    /// Constructs a future that will resolve after `duration` has elapsed.
+    fn delay_for(duration: Duration) -> Self::Delay;
+}
+
+/// An [`AsyncRuntime`] implementation backed by [Tokio](tokio).
+///
+/// This runtime is used by default throughout the crate, unless the `tokio`
+/// feature is disabled.
+#[cfg(feature = "tokio")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
+pub struct TokioRuntime;
+
+#[cfg(feature = "tokio")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
+impl AsyncRuntime for TokioRuntime {
+    type Delay = tokio::time::Delay;
+
+    fn spawn<T>(task: T)
+    where
+        T: Future<Output = ()> + Send + 'static,
+    {
+        tokio::spawn(task);
+    }
+
+    fn delay_for(duration: Duration) -> Self::Delay {
+        tokio::time::delay_for(duration)
     }
 }

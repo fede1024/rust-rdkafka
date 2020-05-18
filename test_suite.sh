@@ -11,7 +11,7 @@ git submodule update --init
 cargo test --no-run
 
 run_with_valgrind() {
-    if ! valgrind --error-exitcode=100 --suppressions=rdkafka.suppressions --leak-check=full "$1" --nocapture
+    if ! valgrind --error-exitcode=100 --suppressions=rdkafka.suppressions --leak-check=full "$1" --nocapture --test-threads=1
     then
         echo -e "${RED}*** Failure in $1 ***${NC}"
         exit 1
@@ -51,6 +51,12 @@ run_tests() {
         fi
     done
     echo -e "${GREEN}*** Integration tests succeeded ***${NC}"
+
+    # SMOL RUNTIME EXAMPLE
+
+    echo -e "${GREEN}*** Run smol_runtime example ***${NC}"
+    cargo run --example smol_runtime --no-default-features --features cmake-build -- --topic smol
+    echo -e "${GREEN}*** smol_runtime example succeeded ***${NC}"
 }
 
 run_tests 5.3.1 2.3

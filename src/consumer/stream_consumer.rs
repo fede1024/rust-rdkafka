@@ -5,10 +5,10 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
+use std::time::Duration;
 
 use futures::{ready, Stream};
 use log::trace;
-use tokio::time::{self, Duration, Instant};
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
@@ -21,7 +21,9 @@ use crate::error::{KafkaError, KafkaResult};
 use crate::message::BorrowedMessage;
 use crate::statistics::Statistics;
 use crate::topic_partition_list::TopicPartitionList;
-use crate::util::{NativePtr, OnDrop, Timeout};
+#[cfg(feature = "tokio")]
+use crate::util::TokioRuntime;
+use crate::util::{AsyncRuntime, NativePtr, OnDrop, Timeout};
 
 /// The [`ConsumerContext`] used by the [`StreamConsumer`]. This context will
 /// automatically wake up the message stream when new data is available.
@@ -91,17 +93,31 @@ impl<C: ConsumerContext + 'static> ConsumerContext for StreamConsumerContext<C> 
 }
 
 /// A Kafka consumer implementing [`futures::Stream`].
-pub struct MessageStream<'a, C: ConsumerContext + 'static> {
+pub struct MessageStream<
+    'a,
+    C,
+    // Ugly, but this provides backwards compatibility when the `tokio` feature
+    // is enabled, as it is by default.
+    #[cfg(feature = "tokio")] R = TokioRuntime,
+    #[cfg(not(feature = "tokio"))] R,
+> where
+    C: ConsumerContext + 'static,
+    R: AsyncRuntime,
+{
     consumer: &'a StreamConsumer<C>,
     err_interval: Option<Duration>,
-    err_delay: Option<time::Delay>,
+    err_delay: Option<R::Delay>,
 }
 
-impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
+impl<'a, C, R> MessageStream<'a, C, R>
+where
+    C: ConsumerContext + 'static,
+    R: AsyncRuntime,
+{
     fn new(
         consumer: &'a StreamConsumer<C>,
         err_interval: Option<Duration>,
-    ) -> MessageStream<'a, C> {
+    ) -> MessageStream<'a, C, R> {
         MessageStream {
             consumer,
             err_interval,
@@ -133,7 +149,11 @@ impl<'a, C: ConsumerContext + 'static> MessageStream<'a, C> {
     }
 }
 
-impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
+impl<'a, C, R> Stream for MessageStream<'a, C, R>
+where
+    C: ConsumerContext + 'a,
+    R: AsyncRuntime,
+{
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
@@ -153,9 +173,9 @@ impl<'a, C: ConsumerContext + 'a> Stream for MessageStream<'a, C> {
                     // new messages. Check if it's time to do so.
                     let mut err_delay = self
                         .err_delay
-                        .get_or_insert_with(|| time::delay_for(err_interval));
+                        .get_or_insert_with(|| R::delay_for(err_interval));
                     ready!(Pin::new(&mut err_delay).poll(cx));
-                    err_delay.reset(Instant::now() + err_interval);
+                    *err_delay = R::delay_for(err_interval);
                     Poll::Ready(Some(Err(KafkaError::NoMessageReceived)))
                 }
             },
@@ -210,7 +230,9 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     ///
     /// **Note:** this method must be called from within the context of a Tokio
     /// runtime.
-    pub fn start(&self) -> MessageStream<C> {
+    #[cfg(feature = "tokio")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
+    pub fn start(&self) -> MessageStream<C, TokioRuntime> {
         self.start_with(Duration::from_millis(100), false)
     }
 
@@ -219,9 +241,31 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     /// If `no_message_error` is set to true, the returned `MessageStream` will
     /// yield an error of type `KafkaError::NoMessageReceived` every time the
     /// poll interval is reached and no message has been received.
-    pub fn start_with(&self, poll_interval: Duration, no_message_error: bool) -> MessageStream<C> {
+    #[cfg(feature = "tokio")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
+    pub fn start_with(
+        &self,
+        poll_interval: Duration,
+        no_message_error: bool,
+    ) -> MessageStream<C, TokioRuntime> {
         // TODO: verify called once
-        tokio::spawn({
+        self.start_with_runtime(poll_interval, no_message_error)
+    }
+
+    /// Like [`StreamConsumer::start_with`], but with a customizable
+    /// asynchronous runtime.
+    ///
+    /// See the [`AsyncRuntime`] trait for the details on the interface the
+    /// runtime must satisfy.
+    pub fn start_with_runtime<R>(
+        &self,
+        poll_interval: Duration,
+        no_message_error: bool,
+    ) -> MessageStream<C, R>
+    where
+        R: AsyncRuntime,
+    {
+        R::spawn({
             let consumer = self.consumer.clone();
             let should_stop = self.should_stop.clone();
             async move {
@@ -229,7 +273,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
                 let _on_drop = OnDrop(|| trace!("Polling task loop terminated"));
                 while !should_stop.load(Ordering::Relaxed) {
                     unsafe { rdsys::rd_kafka_poll(consumer.client().native_ptr(), 0) };
-                    time::delay_for(poll_interval).await;
+                    R::delay_for(poll_interval).await;
                 }
             }
         });
