@@ -114,14 +114,10 @@
 //!
 
 pub mod base_producer;
-#[cfg(feature = "tokio")]
-#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
 pub mod future_producer;
 
 pub use self::base_producer::{
     BaseProducer, BaseRecord, DefaultProducerContext, DeliveryResult, ProducerContext,
     ThreadedProducer,
 };
-#[cfg(feature = "tokio")]
-#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
 pub use self::future_producer::{DeliveryFuture, FutureProducer, FutureRecord};

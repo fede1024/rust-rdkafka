@@ -33,6 +33,15 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   Thanks to [@FSMaxB-dooshop] for discovering the issue and contributing the
   initial fix.
 
+* Introduce the `StreamConsumer::start_with_runtime` and
+  `FutureProducer::send_with_runtime` methods. These methods are identical to
+  their respective non-`_with_runtime` counterparts, except that they take
+  an additional `AsyncRuntime` generic parameter that permits using an
+  asynchronous runtime besides Tokio.
+
+  For an example of using rdkafka with the [smol] runtime, see the
+  new [smol_runtime] example.
+
 * **Breaking change.** Remove the `util::duration_to_millis` function. This
   functionality is now available in the standard library as
   [`std::time::Duration::as_millis`].
@@ -46,6 +55,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 [#211]: https://github.com/fede1024/rust-rdkafka/issues/211
 [`std::time::Duration::as_millis`]: https://doc.rust-lang.org/stable/std/time/struct.Duration.html#method.as_millis
+[smol_runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs
+[smol]: docs.rs/smol
 
 [@FSMaxB-dooshop]: https://github.com/FSMaxB-dooshop
 

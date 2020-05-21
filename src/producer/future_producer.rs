@@ -7,10 +7,10 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
+use std::time::{Duration, Instant};
 
 use futures::channel::oneshot;
 use futures::FutureExt;
-use tokio::time::{self, Duration, Instant};
 
 use crate::client::{Client, ClientContext, DefaultClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
@@ -18,7 +18,9 @@ use crate::error::{KafkaError, KafkaResult, RDKafkaError};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
 use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
 use crate::statistics::Statistics;
-use crate::util::{IntoOpaque, Timeout};
+#[cfg(feature = "tokio")]
+use crate::util::TokioRuntime;
+use crate::util::{AsyncRuntime, IntoOpaque, Timeout};
 
 //
 // ********** FUTURE PRODUCER **********
@@ -245,12 +247,34 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     ///
     /// **Note:** this method must be called from within the context of a Tokio
     /// runtime.
+    #[cfg(feature = "tokio")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
     pub async fn send<K, P, T>(
         &self,
         record: FutureRecord<'_, K, P>,
         queue_timeout: T,
     ) -> OwnedDeliveryResult
     where
+        K: ToBytes + ?Sized,
+        P: ToBytes + ?Sized,
+        T: Into<Timeout>,
+    {
+        self.send_with_runtime::<TokioRuntime, _, _, _>(record, queue_timeout)
+            .await
+    }
+
+    /// Like [`FutureProducer::send`], but with a customizable asynchronous
+    /// runtime.
+    ///
+    /// See the [`AsyncRuntime`] trait for the details on the interface the
+    /// runtime must satisfy.
+    pub async fn send_with_runtime<R, K, P, T>(
+        &self,
+        record: FutureRecord<'_, K, P>,
+        queue_timeout: T,
+    ) -> OwnedDeliveryResult
+    where
+        R: AsyncRuntime,
         K: ToBytes + ?Sized,
         P: ToBytes + ?Sized,
         T: Into<Timeout>,
@@ -273,7 +297,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
                         && can_retry() =>
                 {
                     base_record = record;
-                    time::delay_for(Duration::from_millis(100)).await;
+                    R::delay_for(Duration::from_millis(100)).await;
                 }
                 Ok(_) => {
                     // We hold a reference to the producer, so it should not be
