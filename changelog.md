@@ -40,7 +40,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   asynchronous runtime besides Tokio.
 
   For an example of using rdkafka with the [smol] runtime, see the
-  new [smol_runtime] example.
+  new [smol runtime] example.
 
 * **Breaking change.** Remove the `util::duration_to_millis` function. This
   functionality is now available in the standard library as
@@ -55,7 +55,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 [#211]: https://github.com/fede1024/rust-rdkafka/issues/211
 [`std::time::Duration::as_millis`]: https://doc.rust-lang.org/stable/std/time/struct.Duration.html#method.as_millis
-[smol_runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs
+[smol runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs
 [smol]: docs.rs/smol
 
 [@FSMaxB-dooshop]: https://github.com/FSMaxB-dooshop

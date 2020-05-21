@@ -156,7 +156,7 @@
 //! documentation][rdkafka-sys-features]. All of rdkafka-sys features are
 //! re-exported as rdkafka features.
 //!
-//! ### Tokio dependency
+//! ### Asynchronous runtimes
 //!
 //! Some features of the [`StreamConsumer`] and [`FutureProducer`] depend on
 //! Tokio, which can be a heavyweight dependency for users who only intend to
@@ -167,6 +167,11 @@
 //! [dependencies]
 //! rdkafka = { version = "0.23", default-features = false }
 //! ```
+//!
+//! If you would like to use an asynchronous runtime besides Tokio, you can
+//! integrate it with rust-rdkafka by providing a shim that implements the
+//! [`AsyncRuntime`] trait. See the [smol runtime example] for an example
+//! integration with [smol].
 //!
 //! ## Examples
 //!
@@ -196,6 +201,7 @@
 //! with `env_logger::init()`, or the equivalent for any `log`-compatible
 //! logging framework.
 //!
+//! [`AsyncRuntime`]: https://docs.rs/rdkafka/*/rdkafka/util/trait.AsyncRuntime.html
 //! [`BaseConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/base_consumer/struct.BaseConsumer.html
 //! [`BaseProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.BaseProducer.html
 //! [`Future`]: https://doc.rust-lang.org/stable/std/future/trait.Future.html
@@ -208,6 +214,7 @@
 //! [Apache Kafka]: https://kafka.apache.org
 //! [asynchronous processing example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs
 //! [at-least-once delivery example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/at_least_once.rs
+//! [smol runtime example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/smol_runtime.rs
 //! [broker-compat]: https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility
 //! [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
 //! [futures]: https://github.com/rust-lang/futures-rs
@@ -219,6 +226,7 @@
 //! [message delivery semantics]: https://kafka.apache.org/0101/documentation.html#semantics
 //! [rdkafka-sys-features]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#features
 //! [rdkafka-sys-known-issues]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#known-issues
+//! [smol]: https://docs.rs/smol
 //! [timely-blog]: https://github.com/frankmcsherry/blog/blob/master/posts/2017-11-08.md
 //! [timely-dataflow]: https://github.com/frankmcsherry/timely-dataflow
 //! [Tokio]: https://tokio.rs/
