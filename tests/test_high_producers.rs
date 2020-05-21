@@ -11,6 +11,7 @@ use rdkafka::error::{KafkaError, RDKafkaError};
 use rdkafka::message::{Headers, Message, OwnedHeaders};
 use rdkafka::producer::future_producer::FutureRecord;
 use rdkafka::producer::FutureProducer;
+use rdkafka::util::Timeout;
 
 use crate::utils::*;
 
@@ -52,12 +53,12 @@ async fn test_future_producer_send() {
 
 #[tokio::test]
 async fn test_future_producer_send_full() {
-    // Connect to a nonexistent Kafka broker with no message timeout and a tiny
-    // producer queue, so we can permanently fill up the queue by sending a
+    // Connect to a nonexistent Kafka broker with a long message timeout and a
+    // tiny producer queue, so we can fill up the queue for a while by sending a
     // single message.
     let mut config = HashMap::new();
     config.insert("bootstrap.servers", "");
-    config.insert("message.timeout.ms", "0");
+    config.insert("message.timeout.ms", "5000");
     config.insert("queue.buffering.max.messages", "1");
     let producer = &future_producer(config);
     let topic_name = &rand_test_topic();
@@ -82,13 +83,15 @@ async fn test_future_producer_send_full() {
     // Sending a message with no timeout should return a `QueueFull` error
     // approximately immediately.
     let elapsed = send_message(Duration::from_secs(0)).await;
-    assert!(elapsed < Duration::from_millis(10));
+    assert!(elapsed < Duration::from_millis(20));
 
     // Sending a message with a 1s timeout should return a `QueueFull` error
     // in about 1s.
     let elapsed = send_message(Duration::from_secs(1)).await;
     assert!(elapsed > Duration::from_millis(800));
     assert!(elapsed < Duration::from_millis(1200));
+
+    producer.flush(Timeout::Never);
 }
 
 #[tokio::test]
