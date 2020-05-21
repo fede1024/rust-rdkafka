@@ -166,7 +166,7 @@ async fn test_consume_partition_order() {
     // Using partition queues should allow us to consume the partitions
     // in a round-robin fashion.
     {
-        let consumer = create_base_consumer(&rand_test_group(), None);
+        let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
         tpl.add_partition_offset(&topic_name, 1, Offset::Beginning);
@@ -191,7 +191,7 @@ async fn test_consume_partition_order() {
     // When not all partitions have been split into separate queues, the
     // unsplit partitions should still be accessible via the main queue.
     {
-        let consumer = create_base_consumer(&rand_test_group(), None);
+        let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
         tpl.add_partition_offset(&topic_name, 1, Offset::Beginning);
@@ -213,6 +213,29 @@ async fn test_consume_partition_order() {
                 i += 1;
             }
         }
+    }
+
+    // Sending the queue to another thread that is likely to outlive the
+    // original thread should work. This is not idiomatic, as the consumer
+    // should be continuously polled to serve callbacks, but it should not panic
+    // or result in memory unsafety, etc.
+    {
+        let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
+        let mut tpl = TopicPartitionList::new();
+        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
+        consumer.assign(&tpl).unwrap();
+        let queue = consumer.split_partition_queue(&topic_name, 0).unwrap();
+
+        let worker = thread::spawn(move || {
+            for _ in 0..4 {
+                let queue_message = queue.poll(Timeout::Never).unwrap().unwrap();
+                assert_eq!(queue_message.partition(), 0);
+            }
+        });
+
+        consumer.poll(Duration::from_secs(0));
+        drop(consumer);
+        worker.join().unwrap();
     }
 }
 

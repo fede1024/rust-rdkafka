@@ -5,6 +5,7 @@ use std::ffi::CString;
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
+use std::sync::Arc;
 
 use log::trace;
 
@@ -230,7 +231,12 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     ///
     /// You must continue to call `BaseConsumer::poll`, even if no messages are
     /// expected, to serve callbacks.
-    pub fn split_partition_queue(&self, topic: &str, partition: i32) -> Option<PartitionQueue<C>> {
+    ///
+    /// Beware that this method is implemented for `&Arc<Self>`, not `&self`.
+    /// You will need to wrap your consumer in an `Arc` in order to call this
+    /// method. This design permits moving the partition queue to another thread
+    /// while ensuring the partition queue does not outlive the consumer.
+    pub fn split_partition_queue(self: &Arc<Self>, topic: &str, partition: i32) -> Option<PartitionQueue<C>> {
         let topic = match CString::new(topic) {
             Ok(topic) => topic,
             Err(_) => return None,
@@ -244,7 +250,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         };
         queue.map(|queue| {
             unsafe { rdsys::rd_kafka_queue_forward(queue.ptr(), ptr::null_mut()) };
-            PartitionQueue::new(self, queue)
+            PartitionQueue::new(self.clone(), queue)
         })
     }
 }
@@ -556,13 +562,13 @@ impl<'a, C: ConsumerContext + 'a> IntoIterator for &'a BaseConsumer<C> {
 }
 
 /// A message queue for a single partition.
-pub struct PartitionQueue<'a, C: ConsumerContext> {
-    consumer: &'a BaseConsumer<C>,
+pub struct PartitionQueue<C: ConsumerContext> {
+    consumer: Arc<BaseConsumer<C>>,
     queue: NativeQueue,
 }
 
-impl<'a, C: ConsumerContext> PartitionQueue<'a, C> {
-    fn new(consumer: &'a BaseConsumer<C>, queue: NativeQueue) -> Self {
+impl<C: ConsumerContext> PartitionQueue<C> {
+    fn new(consumer: Arc<BaseConsumer<C>>, queue: NativeQueue) -> Self {
         PartitionQueue { consumer, queue }
     }
 
@@ -581,6 +587,6 @@ impl<'a, C: ConsumerContext> PartitionQueue<'a, C> {
                 timeout.into().as_millis(),
             ))
         }
-        .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self.consumer) })
+        .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, &self.consumer) })
     }
 }
