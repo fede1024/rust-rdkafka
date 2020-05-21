@@ -4,6 +4,8 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+export RUST_LOG=librdkafka=debug
+
 set -e
 
 git submodule update --init
@@ -11,7 +13,7 @@ git submodule update --init
 cargo test --no-run
 
 run_with_valgrind() {
-    if ! valgrind --error-exitcode=100 --suppressions=rdkafka.suppressions --gen-suppressions=all --leak-check=full "$1" --nocapture --test-threads=1
+    if ! valgrind --error-exitcode=100 --suppressions=rdkafka.suppressions --leak-check=full "$1" --nocapture
     then
         echo -e "${RED}*** Failure in $1 ***${NC}"
         exit 1
