@@ -69,6 +69,14 @@ unsafe extern "C" fn native_message_queue_nonempty_cb<C: ConsumerContext>(
     (*context).message_queue_nonempty_callback();
 }
 
+unsafe fn enable_nonempty_callback<C: ConsumerContext>(queue: &NativeQueue, context: &C) {
+    rdsys::rd_kafka_queue_cb_event_enable(
+        queue.ptr(),
+        Some(native_message_queue_nonempty_cb::<C>),
+        context as *const C as *mut c_void,
+    )
+}
+
 /// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
 /// to make progress on rebalance, callbacks and to receive messages.
 pub struct BaseConsumer<C: ConsumerContext = DefaultConsumerContext> {
@@ -105,15 +113,8 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
             context,
         )?;
         let queue = client.consumer_queue();
-        unsafe {
-            if let Some(queue) = &queue {
-                let context_ptr = client.context() as *const C as *mut c_void;
-                rdsys::rd_kafka_queue_cb_event_enable(
-                    queue.ptr(),
-                    Some(native_message_queue_nonempty_cb::<C>),
-                    context_ptr,
-                );
-            }
+        if let Some(queue) = &queue {
+            unsafe { enable_nonempty_callback(queue, client.context()); }
         }
         Ok(BaseConsumer {
             client,
@@ -249,7 +250,10 @@ impl<C: ConsumerContext> BaseConsumer<C> {
             ))
         };
         queue.map(|queue| {
-            unsafe { rdsys::rd_kafka_queue_forward(queue.ptr(), ptr::null_mut()) };
+            unsafe {
+                enable_nonempty_callback(&queue, self.client.context());
+                rdsys::rd_kafka_queue_forward(queue.ptr(), ptr::null_mut());
+            }
             PartitionQueue::new(self.clone(), queue)
         })
     }

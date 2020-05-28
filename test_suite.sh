@@ -11,7 +11,7 @@ git submodule update --init
 cargo test --no-run
 
 run_with_valgrind() {
-    if ! valgrind --error-exitcode=100 --suppressions=rdkafka.suppressions --leak-check=full "$1" --nocapture --test-threads=1
+    if ! valgrind --error-exitcode=100 --suppressions=rdkafka.suppressions --gen-suppressions=all --leak-check=full "$1" --nocapture --test-threads=1
     then
         echo -e "${RED}*** Failure in $1 ***${NC}"
         exit 1
