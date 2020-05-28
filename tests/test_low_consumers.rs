@@ -251,6 +251,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
             wakeups: Arc::new(AtomicUsize::new(0)),
         })
         .expect("Consumer creation failed");
+    let consumer = Arc::new(consumer);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let wakeups = consumer.context().wakeups.clone();
@@ -307,4 +308,8 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     // Add another message, and expect a wakeup.
     populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None).await;
     wait_for_wakeups(3);
+
+    consumer.split_partition_queue(&topic_name, 0).unwrap();
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None).await;
+    wait_for_wakeups(4);
 }
