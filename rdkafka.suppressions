@@ -16,12 +16,12 @@
    Memcheck:Leak
    match-leak-kinds: definite
    fun:malloc
-   fun:_ZN5alloc5alloc5alloc17he087c7e38f51d006E
-   fun:_ZN62_$LT$alloc..alloc..Global$u20$as$u20$core..alloc..AllocRef$GT$5alloc17hccff2ce3ae1a6272E
-   fun:_ZN5alloc5alloc15exchange_malloc17h80754a3a25ff9f9cE
-   fun:_ZN5alloc4sync12Arc$LT$T$GT$3new17hd2c2cfd0c7bd83c0E
-   fun:_ZN5tokio4time6driver15Driver$LT$T$GT$3new17h9c908d59f58cfa85E
-   fun:_ZN5tokio7runtime4time7variant13create_driver17h16ae8147c345bc34E
-   fun:_ZN5tokio7runtime7builder7Builder22build_threaded_runtime17hf039db4dbf147207E
-   fun:_ZN5tokio7runtime7builder7Builder5build17h17906686f002965aE
+   fun:_ZN5alloc5alloc5alloc*
+   fun:_ZN62_$LT$alloc..alloc..Global$u20$as$u20$core..alloc..AllocRef$GT$5alloc*
+   fun:_ZN5alloc5alloc15exchange_malloc*
+   fun:_ZN5alloc4sync12Arc$LT$T$GT$3new*
+   fun:_ZN5tokio4time6driver15Driver$LT$T$GT$3new*
+   fun:_ZN5tokio7runtime4time7variant13create_driver*
+   fun:_ZN5tokio7runtime7builder7Builder22build_threaded_runtime*
+   fun:_ZN5tokio7runtime7builder7Builder5build*
 }
