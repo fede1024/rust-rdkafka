@@ -114,7 +114,9 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
         )?;
         let queue = client.consumer_queue();
         if let Some(queue) = &queue {
-            unsafe { enable_nonempty_callback(queue, client.context()); }
+            unsafe {
+                enable_nonempty_callback(queue, client.context());
+            }
         }
         Ok(BaseConsumer {
             client,
@@ -237,7 +239,11 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// You will need to wrap your consumer in an `Arc` in order to call this
     /// method. This design permits moving the partition queue to another thread
     /// while ensuring the partition queue does not outlive the consumer.
-    pub fn split_partition_queue(self: &Arc<Self>, topic: &str, partition: i32) -> Option<PartitionQueue<C>> {
+    pub fn split_partition_queue(
+        self: &Arc<Self>,
+        topic: &str,
+        partition: i32,
+    ) -> Option<PartitionQueue<C>> {
         let topic = match CString::new(topic) {
             Ok(topic) => topic,
             Err(_) => return None,

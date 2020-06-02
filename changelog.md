@@ -6,9 +6,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 ## 0.24.0 (Unreleased)
 
 * **Breaking change.** Introduce a dependency on Tokio for the `StreamConsumer`.
-  The new implementation is more efficient and is backed by a single Tokio task.
-  The old implementation required a separate thread and a separate futures
-  executor.
+  The new implementation is more efficient and does not require a background
+  thread and an extra futures executor.
+
+* **Breaking change.** Remove the `StreamConsumer::stop` method. To stop a
+  `StreamConsumer` after calling `start`, simply drop the resulting
+  `MessageStream`.
 
 * **Breaking change.** Overhaul the `FutureProducer::send` method. The old
   implementation incorrectly blocked asynchronous tasks with
