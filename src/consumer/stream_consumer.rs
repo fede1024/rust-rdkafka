@@ -2,13 +2,11 @@
 
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
 use futures::{ready, Stream};
-use log::trace;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
@@ -23,7 +21,7 @@ use crate::statistics::Statistics;
 use crate::topic_partition_list::TopicPartitionList;
 #[cfg(feature = "tokio")]
 use crate::util::TokioRuntime;
-use crate::util::{AsyncRuntime, NativePtr, OnDrop, Timeout};
+use crate::util::{AsyncRuntime, NativePtr, Timeout};
 
 /// The [`ConsumerContext`] used by the [`StreamConsumer`]. This context will
 /// automatically wake up the message stream when new data is available.
@@ -189,12 +187,12 @@ where
 
 /// A Kafka consumer providing a [`futures::Stream`] interface.
 ///
-/// This consumer doesn't need to be polled manually since
-/// [`StreamConsumer::start`] will launch a background polling task.
+/// This consumer doesn't need to be polled explicitly since `await`ing the
+/// stream returned by [`StreamConsumer::start`] will implicitly poll the
+/// consumer.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct StreamConsumer<C: ConsumerContext + 'static = DefaultConsumerContext> {
     consumer: Arc<BaseConsumer<StreamConsumerContext<C>>>,
-    should_stop: Arc<AtomicBool>,
 }
 
 impl<C: ConsumerContext> Consumer<StreamConsumerContext<C>> for StreamConsumer<C> {
@@ -218,7 +216,9 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
         let context = StreamConsumerContext::new(context);
         let stream_consumer = StreamConsumer {
             consumer: Arc::new(BaseConsumer::from_config_and_context(config, context)?),
-            should_stop: Arc::new(AtomicBool::new(false)),
+        };
+        unsafe {
+            rdsys::rd_kafka_poll_set_consumer(stream_consumer.consumer.client().native_ptr())
         };
         Ok(stream_consumer)
     }
@@ -265,34 +265,10 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     where
         R: AsyncRuntime,
     {
-        R::spawn({
-            let consumer = self.consumer.clone();
-            let should_stop = self.should_stop.clone();
-            async move {
-                trace!("Polling task loop started");
-                let _on_drop = OnDrop(|| trace!("Polling task loop terminated"));
-                while !should_stop.load(Ordering::Relaxed) {
-                    unsafe { rdsys::rd_kafka_poll(consumer.client().native_ptr(), 0) };
-                    R::delay_for(poll_interval).await;
-                }
-            }
-        });
         let no_message_interval = match no_message_error {
             true => Some(poll_interval),
             false => None,
         };
         MessageStream::new(self, no_message_interval)
-    }
-
-    /// Stops the stream consumer.
-    pub fn stop(&self) {
-        self.should_stop.store(true, Ordering::Relaxed);
-    }
-}
-
-impl<C: ConsumerContext> Drop for StreamConsumer<C> {
-    fn drop(&mut self) {
-        trace!("Destroy StreamConsumer");
-        self.stop();
     }
 }
