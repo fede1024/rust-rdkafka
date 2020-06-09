@@ -317,13 +317,11 @@ where
         timeout: T,
     ) -> KafkaResult<()> {
         let topic = self.client.native_topic(topic)?;
-        let ret_code = unsafe {
-            rdsys::rd_kafka_seek(
-                topic.ptr(),
-                partition,
-                offset.to_raw(),
-                timeout.into().as_millis(),
-            )
+        let ret_code = match offset.to_raw() {
+            Some(offset) => unsafe {
+                rdsys::rd_kafka_seek(topic.ptr(), partition, offset, timeout.into().as_millis())
+            },
+            None => return Err(KafkaError::Seek("Local: Unrepresentable offset".into())),
         };
         if ret_code.is_error() {
             let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
@@ -461,7 +459,7 @@ where
 
         // Set the timestamp we want in the offset field for every partition as
         // librdkafka expects.
-        tpl.set_all_offsets(Offset::Offset(timestamp));
+        tpl.set_all_offsets(Offset::Offset(timestamp))?;
 
         self.offsets_for_times(tpl, timeout)
     }
