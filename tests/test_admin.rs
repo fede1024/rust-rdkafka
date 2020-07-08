@@ -18,21 +18,23 @@ use crate::utils::*;
 
 mod utils;
 
-fn create_config() -> ClientConfig {
+fn create_config(client_id: &str) -> ClientConfig {
     let mut config = ClientConfig::new();
     config.set("bootstrap.servers", get_bootstrap_server().as_str());
+    config.set("client.id", client_id);
     config
 }
 
-fn create_admin_client() -> AdminClient<DefaultClientContext> {
-    create_config()
+fn create_admin_client(client_id: &str) -> AdminClient<DefaultClientContext> {
+    create_config(client_id)
         .create()
         .expect("admin client creation failed")
 }
 
-fn fetch_metadata(topic: &str) -> Metadata {
-    let consumer: BaseConsumer<DefaultConsumerContext> =
-        create_config().create().expect("consumer creation failed");
+fn fetch_metadata(client_id: &str, topic: &str) -> Metadata {
+    let consumer: BaseConsumer<DefaultConsumerContext> = create_config(client_id)
+        .create()
+        .expect("consumer creation failed");
     let timeout = Some(Duration::from_secs(1));
 
     let mut backoff = ExponentialBackoff::default();
@@ -54,9 +56,10 @@ fn fetch_metadata(topic: &str) -> Metadata {
     .unwrap()
 }
 
-fn verify_delete(topic: &str) {
-    let consumer: BaseConsumer<DefaultConsumerContext> =
-        create_config().create().expect("consumer creation failed");
+fn verify_delete(client_id: &str, topic: &str) {
+    let consumer: BaseConsumer<DefaultConsumerContext> = create_config(client_id)
+        .create()
+        .expect("consumer creation failed");
     let timeout = Some(Duration::from_secs(1));
 
     let mut backoff = ExponentialBackoff::default();
@@ -79,7 +82,7 @@ fn verify_delete(topic: &str) {
 
 #[tokio::test]
 async fn test_topics() {
-    let admin_client = create_admin_client();
+    let admin_client = create_admin_client("test_topics");
     let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(1)));
 
     // Verify that topics are created as specified, and that they can later
@@ -104,8 +107,8 @@ async fn test_topics() {
             .expect("topic creation failed");
         assert_eq!(res, &[Ok(name1.clone()), Ok(name2.clone())]);
 
-        let metadata1 = fetch_metadata(&name1);
-        let metadata2 = fetch_metadata(&name2);
+        let metadata1 = fetch_metadata("test_topics", &name1);
+        let metadata2 = fetch_metadata("test_topics", &name2);
         assert_eq!(1, metadata1.topics().len());
         assert_eq!(1, metadata2.topics().len());
         let metadata_topic1 = &metadata1.topics()[0];
@@ -170,7 +173,7 @@ async fn test_topics() {
 
         let mut tries = 0;
         loop {
-            let metadata = fetch_metadata(&name1);
+            let metadata = fetch_metadata("test_topics", &name1);
             let topic = &metadata.topics()[0];
             let n = topic.partitions().len();
             if n == 5 {
@@ -188,8 +191,8 @@ async fn test_topics() {
             .await
             .expect("topic deletion failed");
         assert_eq!(res, &[Ok(name1.clone()), Ok(name2.clone())]);
-        verify_delete(&name1);
-        verify_delete(&name2);
+        verify_delete("test_topics", &name1);
+        verify_delete("test_topics", &name2);
     }
 
     // Verify that incorrect replication configurations are ignored when
@@ -218,7 +221,7 @@ async fn test_topics() {
             .await
             .expect("topic creation failed");
         assert_eq!(res, &[Ok(name.clone())]);
-        let _ = fetch_metadata(&name);
+        let _ = fetch_metadata("test_topics", &name);
 
         // This partition specification is obviously garbage, and so trips
         // a client-side error.
@@ -266,7 +269,7 @@ async fn test_topics() {
             .await
             .expect("topic creation failed");
         assert_eq!(res, &[Ok(name1.clone())]);
-        let _ = fetch_metadata(&name1);
+        let _ = fetch_metadata("test_topics", &name1);
 
         let res = admin_client
             .create_topics(vec![&topic1, &topic2], &opts)
@@ -279,14 +282,14 @@ async fn test_topics() {
                 Ok(name2.clone())
             ]
         );
-        let _ = fetch_metadata(&name2);
+        let _ = fetch_metadata("test_topics", &name2);
 
         let res = admin_client
             .delete_topics(&[&name1], &opts)
             .await
             .expect("topic deletion failed");
         assert_eq!(res, &[Ok(name1.clone())]);
-        verify_delete(&name1);
+        verify_delete("test_topics", &name1);
 
         let res = admin_client
             .delete_topics(&[&name2, &name1], &opts)
@@ -304,7 +307,7 @@ async fn test_topics() {
 
 #[tokio::test]
 async fn test_configs() {
-    let admin_client = create_admin_client();
+    let admin_client = create_admin_client("test_configs");
     let opts = AdminOptions::new();
     let broker = ResourceSpecifier::Broker(0);
 

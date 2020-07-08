@@ -17,10 +17,14 @@ use crate::utils::*;
 
 mod utils;
 
-fn future_producer(config_overrides: HashMap<&str, &str>) -> FutureProducer<DefaultClientContext> {
+fn future_producer(
+    client_id: &str,
+    config_overrides: HashMap<&str, &str>,
+) -> FutureProducer<DefaultClientContext> {
     let mut config = ClientConfig::new();
     config
         .set("bootstrap.servers", "localhost")
+        .set("client.id", client_id)
         .set("message.timeout.ms", "5000");
     for (key, value) in config_overrides {
         config.set(key, value);
@@ -30,7 +34,7 @@ fn future_producer(config_overrides: HashMap<&str, &str>) -> FutureProducer<Defa
 
 #[tokio::test]
 async fn test_future_producer_send() {
-    let producer = future_producer(HashMap::new());
+    let producer = future_producer("test_future_producer_send", HashMap::new());
     let topic_name = rand_test_topic();
 
     let results: FuturesUnordered<_> = (0..10)
@@ -60,7 +64,7 @@ async fn test_future_producer_send_full() {
     config.insert("bootstrap.servers", "");
     config.insert("message.timeout.ms", "5000");
     config.insert("queue.buffering.max.messages", "1");
-    let producer = &future_producer(config);
+    let producer = &future_producer("test_future_producer_send_full", config);
     let topic_name = &rand_test_topic();
 
     // Fill up the queue.
@@ -96,7 +100,7 @@ async fn test_future_producer_send_full() {
 
 #[tokio::test]
 async fn test_future_producer_send_fail() {
-    let producer = future_producer(HashMap::new());
+    let producer = future_producer("test_future_producer_send_fail", HashMap::new());
 
     let future = producer.send(
         FutureRecord::to("topic")

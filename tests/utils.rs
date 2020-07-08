@@ -202,13 +202,14 @@ impl ConsumerContext for ConsumerTestContext {
 }
 
 pub fn consumer_config(
+    client_id: &str,
     group_id: &str,
     config_overrides: Option<HashMap<&str, &str>>,
 ) -> ClientConfig {
     let mut config = ClientConfig::new();
 
+    config.set("client.id", client_id);
     config.set("group.id", group_id);
-    config.set("client.id", "rdkafka_integration_test_client");
     config.set("bootstrap.servers", get_bootstrap_server().as_str());
     config.set("enable.partition.eof", "false");
     config.set("session.timeout.ms", "6000");

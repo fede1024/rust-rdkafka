@@ -20,6 +20,7 @@ mod utils;
 
 // Create stream consumer for tests
 fn create_stream_consumer(
+    client_id: &str,
     group_id: &str,
     config_overrides: Option<HashMap<&str, &str>>,
 ) -> StreamConsumer<ConsumerTestContext> {
@@ -27,15 +28,16 @@ fn create_stream_consumer(
         _n: 64,
         wakeups: Arc::new(AtomicUsize::new(0)),
     };
-    create_stream_consumer_with_context(group_id, config_overrides, cons_context)
+    create_stream_consumer_with_context(client_id, group_id, config_overrides, cons_context)
 }
 
 fn create_stream_consumer_with_context<C: ConsumerContext>(
+    client_id: &str,
     group_id: &str,
     config_overrides: Option<HashMap<&str, &str>>,
     context: C,
 ) -> StreamConsumer<C> {
-    consumer_config(group_id, config_overrides)
+    consumer_config(client_id, group_id, config_overrides)
         .create_with_context(context)
         .expect("Consumer creation failed")
 }
@@ -48,7 +50,7 @@ async fn test_produce_consume_base() {
     let start_time = current_time_millis();
     let topic_name = rand_test_topic();
     let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer("test_produce_consume_base", &rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
@@ -82,7 +84,8 @@ async fn test_produce_consume_base_assign() {
     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None).await;
     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer =
+        create_stream_consumer("test_produce_consume_base_assign", &rand_test_group(), None);
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
     tpl.add_partition_offset(&topic_name, 1, Offset::Offset(2));
@@ -114,7 +117,11 @@ async fn test_produce_consume_with_timestamp() {
     let topic_name = rand_test_topic();
     let message_map =
         populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111)).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer(
+        "test_produce_consume_with_timestamp",
+        &rand_test_group(),
+        None,
+    );
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
@@ -151,7 +158,11 @@ async fn test_produce_consume_with_timestamp() {
 async fn test_consume_with_no_message_error() {
     let _r = env_logger::try_init();
 
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer(
+        "test_consume_with_no_message_error",
+        &rand_test_group(),
+        None,
+    );
 
     let mut message_stream = consumer.start_with(Duration::from_millis(200), true);
 
@@ -217,7 +228,7 @@ async fn test_consumer_commit_message() {
     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
     populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None).await;
     populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let consumer = create_stream_consumer("test_consumer_commit_message", &rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
@@ -280,7 +291,11 @@ async fn test_consumer_store_offset_commit() {
     let mut config = HashMap::new();
     config.insert("enable.auto.offset.store", "false");
     config.insert("enable.partition.eof", "true");
-    let consumer = create_stream_consumer(&rand_test_group(), Some(config));
+    let consumer = create_stream_consumer(
+        "test_consumer_store_offset_commit",
+        &rand_test_group(),
+        Some(config),
+    );
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer

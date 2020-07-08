@@ -78,10 +78,11 @@ impl ProducerContext for CollectingContext {
     }
 }
 
-fn default_config(config_overrides: HashMap<&str, &str>) -> ClientConfig {
+fn default_config(client_id: &str, config_overrides: HashMap<&str, &str>) -> ClientConfig {
     let mut config = ClientConfig::new();
     config
         .set("bootstrap.servers", &get_bootstrap_server())
+        .set("client.id", client_id)
         .set("message.timeout.ms", "5000");
 
     for (key, value) in config_overrides {
@@ -90,29 +91,37 @@ fn default_config(config_overrides: HashMap<&str, &str>) -> ClientConfig {
     config
 }
 
-fn base_producer(config_overrides: HashMap<&str, &str>) -> BaseProducer<PrintingContext> {
-    base_producer_with_context(PrintingContext { _n: 123 }, config_overrides)
+fn base_producer(
+    client_id: &str,
+    config_overrides: HashMap<&str, &str>,
+) -> BaseProducer<PrintingContext> {
+    base_producer_with_context(client_id, PrintingContext { _n: 123 }, config_overrides)
 }
 
 fn base_producer_with_context<C: ProducerContext>(
+    client_id: &str,
     context: C,
     config_overrides: HashMap<&str, &str>,
 ) -> BaseProducer<C> {
-    default_config(config_overrides)
+    default_config(client_id, config_overrides)
         .create_with_context::<C, BaseProducer<_>>(context)
         .unwrap()
 }
 
 #[allow(dead_code)]
-fn threaded_producer(config_overrides: HashMap<&str, &str>) -> ThreadedProducer<PrintingContext> {
-    threaded_producer_with_context(PrintingContext { _n: 123 }, config_overrides)
+fn threaded_producer(
+    client_id: &str,
+    config_overrides: HashMap<&str, &str>,
+) -> ThreadedProducer<PrintingContext> {
+    threaded_producer_with_context(client_id, PrintingContext { _n: 123 }, config_overrides)
 }
 
 fn threaded_producer_with_context<C: ProducerContext>(
+    client_id: &str,
     context: C,
     config_overrides: HashMap<&str, &str>,
 ) -> ThreadedProducer<C> {
-    default_config(config_overrides)
+    default_config(client_id, config_overrides)
         .create_with_context::<C, ThreadedProducer<_>>(context)
         .unwrap()
 }
@@ -121,7 +130,10 @@ fn threaded_producer_with_context<C: ProducerContext>(
 
 #[test]
 fn test_base_producer_queue_full() {
-    let producer = base_producer(map!("queue.buffering.max.messages" => "10"));
+    let producer = base_producer(
+        "test_base_producer_queue_full",
+        map!("queue.buffering.max.messages" => "10"),
+    );
     let topic_name = rand_test_topic();
 
     let results = (0..30)
@@ -160,6 +172,7 @@ fn test_base_producer_queue_full() {
 fn test_base_producer_timeout() {
     let context = CollectingContext::new();
     let producer = base_producer_with_context(
+        "test_base_producer_timeout",
         context.clone(),
         map!("message.timeout.ms" => "1000",
              "bootstrap.servers" => "1.2.3.4"),
@@ -225,7 +238,8 @@ fn test_base_producer_headers() {
     let context = HeaderCheckContext {
         ids: ids_set.clone(),
     };
-    let producer = base_producer_with_context(context, HashMap::new());
+    let producer =
+        base_producer_with_context("test_base_producer_headers", context, HashMap::new());
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)
@@ -253,7 +267,11 @@ fn test_base_producer_headers() {
 #[test]
 fn test_threaded_producer_send() {
     let context = CollectingContext::new();
-    let producer = threaded_producer_with_context(context.clone(), HashMap::new());
+    let producer = threaded_producer_with_context(
+        "test_threaded_producer_send",
+        context.clone(),
+        HashMap::new(),
+    );
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)
@@ -297,7 +315,8 @@ fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
 
     let shared_count = Arc::new(Mutex::new(0));
     let context = OpaqueArcContext {};
-    let producer = base_producer_with_context(context, HashMap::new());
+    let producer =
+        base_producer_with_context("test_base_producer_opaque_arc", context, HashMap::new());
     let topic_name = rand_test_topic();
 
     let results_count = (0..10)

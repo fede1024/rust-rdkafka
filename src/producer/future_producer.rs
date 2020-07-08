@@ -136,8 +136,8 @@ type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
 
 // Delegates all the methods calls to the wrapped context.
 impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
-    fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
-        self.wrapped_context.log(level, fac, log_message);
+    fn log(&self, id: &str, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
+        self.wrapped_context.log(id, level, fac, log_message);
     }
 
     fn stats(&self, statistics: Statistics) {

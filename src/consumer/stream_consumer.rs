@@ -43,8 +43,8 @@ impl<C: ConsumerContext + 'static> StreamConsumerContext<C> {
 }
 
 impl<C: ConsumerContext + 'static> ClientContext for StreamConsumerContext<C> {
-    fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
-        self.inner.log(level, fac, log_message)
+    fn log(&self, id: &str, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
+        self.inner.log(id, level, fac, log_message)
     }
 
     fn stats(&self, statistics: Statistics) {

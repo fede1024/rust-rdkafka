@@ -53,25 +53,23 @@ pub trait ClientContext: Send + Sync {
     /// details about the log level mapping.
     ///
     /// [`log`]: https://docs.rs/log
-    fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
+    fn log(&self, id: &str, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
         match level {
             RDKafkaLogLevel::Emerg
             | RDKafkaLogLevel::Alert
             | RDKafkaLogLevel::Critical
             | RDKafkaLogLevel::Error => {
-                error!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+                error!(target: "librdkafka", "{}: {} {}", id, fac, log_message)
             }
             RDKafkaLogLevel::Warning => {
-                warn!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+                warn!(target: "librdkafka", "{}: {} {}", id, fac, log_message)
             }
             RDKafkaLogLevel::Notice => {
-                info!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+                info!(target: "librdkafka", "{}: {} {}", id, fac, log_message)
             }
-            RDKafkaLogLevel::Info => {
-                info!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
-            }
+            RDKafkaLogLevel::Info => info!(target: "librdkafka", "{}: {} {}", id, fac, log_message),
             RDKafkaLogLevel::Debug => {
-                debug!(target: "librdkafka", "librdkafka: {} {}", fac, log_message)
+                debug!(target: "librdkafka", "{}: {} {}", id, fac, log_message)
             }
         }
     }
@@ -363,11 +361,13 @@ pub(crate) unsafe extern "C" fn native_log_cb<C: ClientContext>(
     fac: *const c_char,
     buf: *const c_char,
 ) {
+    let id = CStr::from_ptr(rdsys::rd_kafka_name(client)).to_string_lossy();
     let fac = CStr::from_ptr(fac).to_string_lossy();
     let log_message = CStr::from_ptr(buf).to_string_lossy();
 
     let context = &mut *(rdsys::rd_kafka_opaque(client) as *mut C);
     context.log(
+        id.trim(),
         RDKafkaLogLevel::from_int(level),
         fac.trim(),
         log_message.trim(),

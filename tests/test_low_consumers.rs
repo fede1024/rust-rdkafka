@@ -16,10 +16,11 @@ use crate::utils::*;
 mod utils;
 
 fn create_base_consumer(
+    client_id: &str,
     group_id: &str,
     config_overrides: Option<HashMap<&str, &str>>,
 ) -> BaseConsumer<ConsumerTestContext> {
-    consumer_config(group_id, config_overrides)
+    consumer_config(client_id, group_id, config_overrides)
         .create_with_context(ConsumerTestContext {
             _n: 64,
             wakeups: Arc::new(AtomicUsize::new(0)),
@@ -34,7 +35,7 @@ async fn test_produce_consume_seek() {
 
     let topic_name = rand_test_topic();
     populate_topic(&topic_name, 5, &value_fn, &key_fn, Some(0), None).await;
-    let consumer = create_base_consumer(&rand_test_group(), None);
+    let consumer = create_base_consumer("test_produce_consume_seek", &rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     for (i, message) in consumer.iter().take(3).enumerate() {
@@ -68,7 +69,7 @@ async fn test_produce_consume_iter() {
     let start_time = current_time_millis();
     let topic_name = rand_test_topic();
     let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
-    let consumer = create_base_consumer(&rand_test_group(), None);
+    let consumer = create_base_consumer("test_produce_consume_iter", &rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     for message in consumer.iter().take(100) {
@@ -115,7 +116,7 @@ async fn test_pause_resume_consumer_iter() {
     )
     .await;
     let group_id = rand_test_group();
-    let consumer = create_base_consumer(&group_id, None);
+    let consumer = create_base_consumer("test_pause_resume_consumer_iter", &group_id, None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     for _ in 0..PAUSE_COUNT {
@@ -153,7 +154,8 @@ async fn test_consume_partition_order() {
     // The default settings should result in consuming all the messages in
     // partition 0, then all the messages in partition 1, and so on.
     {
-        let consumer = create_base_consumer(&rand_test_group(), None);
+        let consumer =
+            create_base_consumer("test_consume_partition_order", &rand_test_group(), None);
         consumer.subscribe(&[topic_name.as_str()]).unwrap();
         for (i, m) in consumer.iter().take(12).enumerate() {
             match m {
@@ -166,7 +168,11 @@ async fn test_consume_partition_order() {
     // Using partition queues should allow us to consume the partitions
     // in a round-robin fashion.
     {
-        let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
+        let consumer = Arc::new(create_base_consumer(
+            "test_consume_partition_order",
+            &rand_test_group(),
+            None,
+        ));
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
         tpl.add_partition_offset(&topic_name, 1, Offset::Beginning);
@@ -191,7 +197,11 @@ async fn test_consume_partition_order() {
     // When not all partitions have been split into separate queues, the
     // unsplit partitions should still be accessible via the main queue.
     {
-        let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
+        let consumer = Arc::new(create_base_consumer(
+            "test_consume_partition_order",
+            &rand_test_group(),
+            None,
+        ));
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
         tpl.add_partition_offset(&topic_name, 1, Offset::Beginning);
@@ -220,7 +230,11 @@ async fn test_consume_partition_order() {
     // should be continuously polled to serve callbacks, but it should not panic
     // or result in memory unsafety, etc.
     {
-        let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
+        let consumer = Arc::new(create_base_consumer(
+            "test_consume_partition_order",
+            &rand_test_group(),
+            None,
+        ));
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
         consumer.assign(&tpl).unwrap();
@@ -245,12 +259,16 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
 
     let topic_name = rand_test_topic();
 
-    let consumer: BaseConsumer<_> = consumer_config(&rand_test_group(), None)
-        .create_with_context(ConsumerTestContext {
-            _n: 64,
-            wakeups: Arc::new(AtomicUsize::new(0)),
-        })
-        .expect("Consumer creation failed");
+    let consumer: BaseConsumer<_> = consumer_config(
+        "test_produce_consume_message_queue_nonempty_callback",
+        &rand_test_group(),
+        None,
+    )
+    .create_with_context(ConsumerTestContext {
+        _n: 64,
+        wakeups: Arc::new(AtomicUsize::new(0)),
+    })
+    .expect("Consumer creation failed");
     let consumer = Arc::new(consumer);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
