@@ -135,6 +135,7 @@ impl ConsumerContext for DefaultConsumerContext {}
 
 /// Specifies if the commit should be performed synchronously
 /// or asynchronously.
+#[derive(Clone, Copy, Debug)]
 pub enum CommitMode {
     /// Synchronous commit.
     Sync = 0,
