@@ -124,7 +124,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rdkafka = { version = "0.23", features = ["cmake-build"] }
+//! rdkafka = { version = "0.24", features = ["cmake-build"] }
 //! ```
 //!
 //! This crate will compile librdkafka from sources and link it statically to
@@ -149,7 +149,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rdkafka = { version = "0.23", features = ["dynamic-linking"] }
+//! rdkafka = { version = "0.24", features = ["dynamic-linking"] }
 //! ```
 //!
 //! For a full listing of features, consult the [rdkafka-sys crate's
@@ -165,7 +165,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rdkafka = { version = "0.23", default-features = false }
+//! rdkafka = { version = "0.24", default-features = false }
 //! ```
 //!
 //! If you would like to use an asynchronous runtime besides Tokio, you can

@@ -3,11 +3,20 @@
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 <a name="0.24.0"></a>
-## 0.24.0 (Unreleased)
+## 0.24.0 (2020-07-08)
 
-* **Breaking change.** Introduce a dependency on Tokio for the `StreamConsumer`.
-  The new implementation is more efficient and does not require a background
-  thread and an extra futures executor.
+* **Breaking change.** Introduce a dependency on Tokio for the `StreamConsumer`
+  in its default configuration. The new implementation is more efficient and
+  does not require a background thread and an extra futures executor.
+
+* Introduce the `StreamConsumer::start_with_runtime` and
+  `FutureProducer::send_with_runtime` methods. These methods are identical to
+  their respective non-`_with_runtime` counterparts, except that they take
+  an additional `AsyncRuntime` generic parameter that permits using an
+  asynchronous runtime besides Tokio.
+
+  For an example of using rdkafka with the [smol] runtime, see the
+  new [smol runtime] example.
 
 * **Breaking change.** Remove the `StreamConsumer::stop` method. To stop a
   `StreamConsumer` after calling `start`, simply drop the resulting
@@ -36,21 +45,14 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   Thanks to [@FSMaxB-dooshop] for discovering the issue and contributing the
   initial fix.
 
-* Introduce the `StreamConsumer::start_with_runtime` and
-  `FutureProducer::send_with_runtime` methods. These methods are identical to
-  their respective non-`_with_runtime` counterparts, except that they take
-  an additional `AsyncRuntime` generic parameter that permits using an
-  asynchronous runtime besides Tokio.
-
-  For an example of using rdkafka with the [smol] runtime, see the
-  new [smol runtime] example.
-
 * **Breaking change.** Remove the `util::duration_to_millis` function. This
-  functionality is now available in the standard library as
-  [`std::time::Duration::as_millis`].
+  functionality has been available in the standard library as
+  [`std::time::Duration::as_millis`] for over a year.
 
 * Introduce the `BaseConsumer::split_partition_queue` method to allow reading
   messages from partitions independently of one another.
+
+* Implement `Clone`, `Copy`, and `Debug` for `CommitMode`.
 
 * Decouple versioning of rdkafka-sys from rdkafka. rdkafka-sys now has its
   own [changelog](rdkafka-sys/changelog.md) and will follow SemVer conventions.

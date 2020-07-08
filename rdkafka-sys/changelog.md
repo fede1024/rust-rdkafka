@@ -1,7 +1,7 @@
 # Changelog
 
 <a name="2.0.0+1.4.2"></a>
-## v2.0.0+1.4.2 (Unreleased)
+## v2.0.0+1.4.2 (2020-07-08)
 
 * Start separate changelog for rdkafka-sys.
 
