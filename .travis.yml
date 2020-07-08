@@ -11,16 +11,16 @@ jobs:
   include:
   - os: linux
     arch: amd64
-    rust: stable
+    rust: 1.43.1
     env: RDKAFKA_RUN_TESTS=1
   - os: linux
     arch: arm64
-    rust: stable
+    rust: 1.43.1
   - os: osx
-    rust: stable
+    rust: 1.43.1
   - os: windows
     arch: amd64
-    rust: stable-msvc
+    rust: 1.43.1-msvc
     env: FEATURES=cmake_build,libz-static
 
 script:
