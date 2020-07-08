@@ -103,8 +103,9 @@ pub struct MessageStream<
     R: AsyncRuntime,
 {
     consumer: &'a StreamConsumer<C>,
-    err_interval: Option<Duration>,
-    err_delay: Option<R::Delay>,
+    interval: Duration,
+    delay: Option<R::Delay>,
+    no_message_error: bool,
 }
 
 impl<'a, C, R> MessageStream<'a, C, R>
@@ -114,12 +115,14 @@ where
 {
     fn new(
         consumer: &'a StreamConsumer<C>,
-        err_interval: Option<Duration>,
+        interval: Duration,
+        no_message_error: bool,
     ) -> MessageStream<'a, C, R> {
         MessageStream {
             consumer,
-            err_interval,
-            err_delay: None,
+            interval,
+            delay: None,
+            no_message_error,
         }
     }
 
@@ -164,21 +167,17 @@ where
         self.set_waker(cx.waker().clone());
 
         match self.poll() {
-            None => match self.err_interval {
-                None => Poll::Pending,
-                Some(err_interval) => {
-                    // We've been asked to periodically report that there are no
-                    // new messages. Check if it's time to do so.
-                    let mut err_delay = self
-                        .err_delay
-                        .get_or_insert_with(|| R::delay_for(err_interval));
-                    ready!(Pin::new(&mut err_delay).poll(cx));
-                    *err_delay = R::delay_for(err_interval);
-                    Poll::Ready(Some(Err(KafkaError::NoMessageReceived)))
+            None => loop {
+                let interval = self.interval;
+                let mut delay = self.delay.get_or_insert_with(|| R::delay_for(interval));
+                ready!(Pin::new(&mut delay).poll(cx));
+                self.delay = None;
+                if self.no_message_error {
+                    break Poll::Ready(Some(Err(KafkaError::NoMessageReceived)));
                 }
             },
             Some(message) => {
-                self.err_delay = None;
+                self.delay = None;
                 Poll::Ready(Some(message))
             }
         }
@@ -265,10 +264,6 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     where
         R: AsyncRuntime,
     {
-        let no_message_interval = match no_message_error {
-            true => Some(poll_interval),
-            false => None,
-        };
-        MessageStream::new(self, no_message_interval)
+        MessageStream::new(self, poll_interval, no_message_error)
     }
 }
