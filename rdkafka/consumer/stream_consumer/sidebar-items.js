@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["MessageStream","A Kafka consumer implementing Stream."],["StreamConsumer","A Kafka Consumer providing a `futures::Stream` interface."]]});
+initSidebarItems({"struct":[["MessageStream","A Kafka consumer implementing [`futures::Stream`]."],["StreamConsumer","A Kafka consumer providing a [`futures::Stream`] interface."],["StreamConsumerContext","The [`ConsumerContext`] used by the [`StreamConsumer`]. This context will automatically wake up the message stream when new data is available."]]});

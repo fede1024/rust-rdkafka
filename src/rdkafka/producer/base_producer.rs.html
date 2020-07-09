@@ -529,49 +529,101 @@
 <span id="529">529</span>
 <span id="530">530</span>
 <span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Low level Kafka producers.</span>
+<span class="doccomment">//! Low-level Kafka producers.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! For more information about the producers provided in rdkafka, refer to the module level documentation.</span>
+<span class="doccomment">//! For more information about the producers provided in rdkafka, refer to the</span>
+<span class="doccomment">//! [`producer`](super) module documentation.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## `BaseProducer`</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The `BaseProducer` is a low level Kafka producer designed to be as similar as possible to</span>
-<span class="doccomment">//! the underlying C librdkafka producer, while maintaining a safe Rust interface.</span>
+<span class="doccomment">//! The [`BaseProducer`] is a low level Kafka producer designed to be as similar</span>
+<span class="doccomment">//! as possible to the underlying C librdkafka producer, while maintaining a</span>
+<span class="doccomment">//! safe Rust interface.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! Production of messages is fully asynchronous. The librdkafka producer will take care of buffering</span>
-<span class="doccomment">//! requests together according to configuration, and to send them efficiently. Once a message has</span>
-<span class="doccomment">//! been produced, or the retry count reached, a callback function called delivery callback will be</span>
-<span class="doccomment">//! called.</span>
+<span class="doccomment">//! Production of messages is fully asynchronous. The librdkafka producer will</span>
+<span class="doccomment">//! take care of buffering requests together according to configuration, and to</span>
+<span class="doccomment">//! send them efficiently. Once a message has been produced, or the retry count</span>
+<span class="doccomment">//! reached, a callback function called delivery callback will be called.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The `BaseProducer` requires a `ProducerContext` which will be used to specify the delivery callback</span>
-<span class="doccomment">//! and the `DeliveryOpaque`. The `DeliveryOpaque` is a user-defined type that the user can pass to the</span>
-<span class="doccomment">//! `send` method of the producer, and that the producer will then forward to the delivery</span>
-<span class="doccomment">//! callback of the corresponding message. The `DeliveryOpaque` is useful in case the delivery</span>
-<span class="doccomment">//! callback requires additional information about the message (such as message id for example).</span>
+<span class="doccomment">//! The `BaseProducer` requires a [`ProducerContext`] which will be used to</span>
+<span class="doccomment">//! specify the delivery callback and the</span>
+<span class="doccomment">//! [`DeliveryOpaque`](ProducerContext::DeliveryOpaque). The `DeliveryOpaque` is</span>
+<span class="doccomment">//! a user-defined type that the user can pass to the `send` method of the</span>
+<span class="doccomment">//! producer, and that the producer will then forward to the delivery callback</span>
+<span class="doccomment">//! of the corresponding message. The `DeliveryOpaque` is useful in case the</span>
+<span class="doccomment">//! delivery callback requires additional information about the message (such as</span>
+<span class="doccomment">//! message id for example).</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ### Calling poll</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! To execute delivery callbacks the `poll` method of the producer should be called regularly.</span>
-<span class="doccomment">//! If `poll` is not called, or not often enough, a `RDKafkaError::QueueFull` error will be returned.</span>
+<span class="doccomment">//! To execute delivery callbacks the `poll` method of the producer should be</span>
+<span class="doccomment">//! called regularly. If `poll` is not called, or not often enough, a</span>
+<span class="doccomment">//! [`RDKafkaError::QueueFull`] error will be returned.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## `ThreadedProducer`</span>
-<span class="doccomment">//! The `ThreadedProducer` is a wrapper around the `BaseProducer` which spawns a thread</span>
-<span class="doccomment">//! dedicated to calling `poll` on the producer at regular intervals, so that the user doesn&#39;t</span>
-<span class="doccomment">//! have to. The thread is started when the producer is created, and it will be terminated</span>
-<span class="doccomment">//! once the producer goes out of scope.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! A `RDKafkaError::QueueFull` error can still be returned in case the polling thread is not</span>
-<span class="doccomment">//! fast enough or Kafka is not able to receive data and acknowledge messages quickly enough.</span>
-<span class="doccomment">//! If this error is returned, the producer should wait and try again.</span>
+<span class="doccomment">//! The `ThreadedProducer` is a wrapper around the `BaseProducer` which spawns a</span>
+<span class="doccomment">//! thread dedicated to calling `poll` on the producer at regular intervals, so</span>
+<span class="doccomment">//! that the user doesn&#39;t have to. The thread is started when the producer is</span>
+<span class="doccomment">//! created, and it will be terminated once the producer goes out of scope.</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! A [`RDKafkaError::QueueFull`] error can still be returned in case the</span>
+<span class="doccomment">//! polling thread is not fast enough or Kafka is not able to receive data and</span>
+<span class="doccomment">//! acknowledge messages quickly enough. If this error is returned, the caller</span>
+<span class="doccomment">//! should wait and try again.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::<span class="ident">CString</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">mem</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">raw</span>::<span class="ident">c_void</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">RwLock</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>::{<span class="self">self</span>, <span class="ident">JoinHandle</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 
@@ -593,21 +645,30 @@
 <span class="comment">// ********** PRODUCER CONTEXT **********</span>
 <span class="comment">//</span>
 
-<span class="doccomment">/// A `ProducerContext` is an object that can be used during the creation of a producer to</span>
-<span class="doccomment">/// customizer its behavior. In particular, it can be used to specify the `delivery` callback</span>
-<span class="doccomment">/// that will be called when the ack from a delivered message is received.</span>
+<span class="doccomment">/// Producer-specific context.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This user-defined object can be used to provide custom callbacks for</span>
+<span class="doccomment">/// producer events. Refer to the list of methods to check which callbacks can</span>
+<span class="doccomment">/// be specified.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// In particular, it can be used to specify the `delivery` callback that will</span>
+<span class="doccomment">/// be called when the acknowledgement for a delivered message is received.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See also the [`ClientContext`] trait.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ProducerContext</span>: <span class="ident">ClientContext</span> {
-    <span class="doccomment">/// A `DeliveryOpaque` is a user-defined structure that will be passed to the producer when</span>
-    <span class="doccomment">/// producing a message, and returned to the `delivery` method once the message has been</span>
-    <span class="doccomment">/// delivered, or failed to.</span>
+    <span class="doccomment">/// A `DeliveryOpaque` is a user-defined structure that will be passed to</span>
+    <span class="doccomment">/// the producer when producing a message, and returned to the `delivery`</span>
+    <span class="doccomment">/// method once the message has been delivered, or failed to.</span>
     <span class="kw">type</span> <span class="ident">DeliveryOpaque</span>: <span class="ident">IntoOpaque</span>;
 
-    <span class="doccomment">/// This method will be called once the message has been delivered (or failed to). The</span>
-    <span class="doccomment">/// `DeliveryOpaque` will be the one provided by the user when calling send.</span>
+    <span class="doccomment">/// This method will be called once the message has been delivered (or</span>
+    <span class="doccomment">/// failed to). The `DeliveryOpaque` will be the one provided by the user</span>
+    <span class="doccomment">/// when calling send.</span>
     <span class="kw">fn</span> <span class="ident">delivery</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">delivery_result</span>: <span class="kw-2">&amp;</span><span class="ident">DeliveryResult</span>, <span class="ident">delivery_opaque</span>: <span class="self">Self</span>::<span class="ident">DeliveryOpaque</span>);
 }
 
-<span class="doccomment">/// Default producer context that can be use when a custom context is not required.</span>
+<span class="doccomment">/// An empty producer context that can be used when customizations are not</span>
+<span class="doccomment">/// required.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DefaultProducerContext</span>;
 
@@ -623,17 +684,16 @@
 <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span> <span class="ident">delivery_cb</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span><span class="op">&gt;</span>(
     <span class="ident">_client</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>,
     <span class="ident">msg</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafkaMessage</span>,
-    <span class="ident">_opaque</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>,
+    <span class="ident">opaque</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>,
 ) {
-    <span class="kw">let</span> <span class="ident">producer_context</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">from_raw</span>(<span class="ident">_opaque</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">C</span>);
+    <span class="kw">let</span> <span class="ident">producer_context</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span>(<span class="ident">opaque</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">C</span>);
     <span class="kw">let</span> <span class="ident">delivery_opaque</span> <span class="op">=</span> <span class="ident">C</span>::<span class="ident">DeliveryOpaque</span>::<span class="ident">from_ptr</span>((<span class="kw-2">*</span><span class="ident">msg</span>).<span class="ident">_private</span>);
     <span class="kw">let</span> <span class="ident">owner</span> <span class="op">=</span> <span class="number">42u8</span>;
     <span class="comment">// Wrap the message pointer into a BorrowedMessage that will only live for the body of this</span>
     <span class="comment">// function.</span>
     <span class="kw">let</span> <span class="ident">delivery_result</span> <span class="op">=</span> <span class="ident">BorrowedMessage</span>::<span class="ident">from_dr_callback</span>(<span class="ident">msg</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaMessage</span>, <span class="kw-2">&amp;</span><span class="ident">owner</span>);
     <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Delivery event received: {:?}&quot;</span>, <span class="ident">delivery_result</span>);
-    (<span class="kw-2">*</span><span class="ident">producer_context</span>).<span class="ident">delivery</span>(<span class="kw-2">&amp;</span><span class="ident">delivery_result</span>, <span class="ident">delivery_opaque</span>);
-    <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">producer_context</span>); <span class="comment">// Do not free the producer context</span>
+    <span class="ident">producer_context</span>.<span class="ident">delivery</span>(<span class="kw-2">&amp;</span><span class="ident">delivery_result</span>, <span class="ident">delivery_opaque</span>);
     <span class="kw">match</span> <span class="ident">delivery_result</span> {
         <span class="comment">// Do not free the message, librdkafka will do it for us</span>
         <span class="prelude-val">Ok</span>(<span class="ident">message</span>) <span class="op">|</span> <span class="prelude-val">Err</span>((<span class="kw">_</span>, <span class="ident">message</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">message</span>),
@@ -644,15 +704,16 @@
 <span class="comment">// ********** BASE PRODUCER **********</span>
 <span class="comment">//</span>
 
-<span class="doccomment">/// Producer record for the base producer</span>
+<span class="doccomment">/// A record for the [`BaseProducer`] and [`ThreadedProducer`].</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// The `BaseRecord` is a structure that can be used to provide a new record to</span>
-<span class="doccomment">/// [BaseProducer::send]. Since most fields are optional, a `BaseRecord` can be constructed</span>
-<span class="doccomment">/// using the builder pattern.</span>
+<span class="doccomment">/// [`BaseProducer::send`] or [`ThreadedProducer::send`]. Since most fields are</span>
+<span class="doccomment">/// optional, a `BaseRecord` can be constructed using the builder pattern.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// # Examples</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// This example will create a `BaseRecord` with no [DeliveryOpaque](ProducerContext::DeliveryOpaque):</span>
+<span class="doccomment">/// This example will create a `BaseRecord` with no</span>
+<span class="doccomment">/// [`DeliveryOpaque`](ProducerContext::DeliveryOpaque):</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```rust,no_run</span>
 <span class="doccomment">/// # use rdkafka::producer::BaseRecord;</span>
@@ -663,16 +724,16 @@
 <span class="doccomment">///     .partition(5);                         // target partition</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The following example will build a similar record, but it will use a number as `DeliveryOpaque`</span>
-<span class="doccomment">/// for the message:</span>
+<span class="doccomment">/// The following example will build a similar record, but it will use a number</span>
+<span class="doccomment">/// as the `DeliveryOpaque` for the message:</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```rust,no_run</span>
 <span class="doccomment">/// # use rdkafka::producer::BaseRecord;</span>
 <span class="doccomment">/// # use rdkafka::message::ToBytes;</span>
 <span class="doccomment">/// let record = BaseRecord::with_opaque_to(&quot;topic_name&quot;, 123) // destination topic and message id</span>
-<span class="doccomment">///     .key(&amp;[1, 2, 3, 4])                    // message key</span>
-<span class="doccomment">///     .payload(&quot;content&quot;)                    // message payload</span>
-<span class="doccomment">///     .partition(5);                         // target partition</span>
+<span class="doccomment">///     .key(&amp;[1, 2, 3, 4])                                    // message key</span>
+<span class="doccomment">///     .payload(&quot;content&quot;)                                    // message payload</span>
+<span class="doccomment">///     .partition(5);                                         // target partition</span>
 <span class="doccomment">/// ```</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span>
@@ -681,24 +742,27 @@
     <span class="ident">P</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> <span class="op">=</span> (),
     <span class="ident">D</span>: <span class="ident">IntoOpaque</span> <span class="op">=</span> (),
 <span class="op">&gt;</span> {
-    <span class="doccomment">/// Required destination topic</span>
+    <span class="doccomment">/// Required destination topic.</span>
     <span class="kw">pub</span> <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>,
-    <span class="doccomment">/// Optional destination partition</span>
+    <span class="doccomment">/// Optional destination partition.</span>
     <span class="kw">pub</span> <span class="ident">partition</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Optional payload</span>
+    <span class="doccomment">/// Optional payload.</span>
     <span class="kw">pub</span> <span class="ident">payload</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">P</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Optional key</span>
+    <span class="doccomment">/// Optional key.</span>
     <span class="kw">pub</span> <span class="ident">key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">K</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Optional timestamp</span>
+    <span class="doccomment">/// Optional timestamp.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Note that Kafka represents timestamps as the number of milliseconds</span>
+    <span class="doccomment">/// since the Unix epoch.</span>
     <span class="kw">pub</span> <span class="ident">timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Optional message headers</span>
+    <span class="doccomment">/// Optional message headers.</span>
     <span class="kw">pub</span> <span class="ident">headers</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">OwnedHeaders</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Required delivery opaque (defaults to `()` if not required)</span>
+    <span class="doccomment">/// Required delivery opaque (defaults to `()` if not required).</span>
     <span class="kw">pub</span> <span class="ident">delivery_opaque</span>: <span class="ident">D</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">P</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">D</span>: <span class="ident">IntoOpaque</span><span class="op">&gt;</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, <span class="ident">D</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Create a new record with the specified topic name and delivery opaque.</span>
+    <span class="doccomment">/// Creates a new record with the specified topic name and delivery opaque.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_opaque_to</span>(<span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>, <span class="ident">delivery_opaque</span>: <span class="ident">D</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, <span class="ident">D</span><span class="op">&gt;</span> {
         <span class="ident">BaseRecord</span> {
             <span class="ident">topic</span>,
@@ -711,31 +775,34 @@
         }
     }
 
-    <span class="doccomment">/// Set the destination partition of the record.</span>
+    <span class="doccomment">/// Sets the destination partition of the record.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">partition</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">partition</span>: <span class="ident">i32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, <span class="ident">D</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">partition</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">partition</span>);
         <span class="self">self</span>
     }
 
-    <span class="doccomment">/// Set the payload of the record.</span>
+    <span class="doccomment">/// Sets the payload of the record.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">payload</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">payload</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">P</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, <span class="ident">D</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">payload</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">payload</span>);
         <span class="self">self</span>
     }
 
-    <span class="doccomment">/// Set the key of the record.</span>
+    <span class="doccomment">/// Sets the key of the record.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">key</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">K</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, <span class="ident">D</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">key</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">key</span>);
         <span class="self">self</span>
     }
 
-    <span class="doccomment">/// Set the timestamp of the record.</span>
+    <span class="doccomment">/// Sets the timestamp of the record.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Note that Kafka represents timestamps as the number of milliseconds</span>
+    <span class="doccomment">/// since the Unix epoch.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">timestamp</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">timestamp</span>: <span class="ident">i64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, <span class="ident">D</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">timestamp</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">timestamp</span>);
         <span class="self">self</span>
     }
 
-    <span class="doccomment">/// Set the headers of the record.</span>
+    <span class="doccomment">/// Sets the headers of the record.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">headers</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">headers</span>: <span class="ident">OwnedHeaders</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, <span class="ident">D</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">headers</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">headers</span>);
         <span class="self">self</span>
@@ -743,7 +810,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">P</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span><span class="op">&gt;</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, ()<span class="op">&gt;</span> {
-    <span class="doccomment">/// Create a new record with the specified topic name.</span>
+    <span class="doccomment">/// Creates a new record with the specified topic name.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to</span>(<span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, ()<span class="op">&gt;</span> {
         <span class="ident">BaseRecord</span> {
             <span class="ident">topic</span>,
@@ -765,7 +832,8 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span><span class="op">&gt;</span> <span class="ident">FromClientConfigAndContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Creates a new `BaseProducer` starting from a configuration and a context.</span>
+    <span class="doccomment">/// Creates a new `BaseProducer` starting from a configuration and a</span>
+    <span class="doccomment">/// context.</span>
     <span class="kw">fn</span> <span class="ident">from_config_and_context</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>, <span class="ident">context</span>: <span class="ident">C</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">native_config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">create_native_config</span>()<span class="question-mark">?</span>;
         <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_conf_set_dr_msg_cb</span>(<span class="ident">native_config</span>.<span class="ident">ptr</span>(), <span class="prelude-val">Some</span>(<span class="ident">delivery_cb</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>)) };
@@ -779,17 +847,19 @@
     }
 }
 
-<span class="doccomment">/// Low level Kafka producer.</span>
+<span class="doccomment">/// Lowest level Kafka producer.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The `BaseProducer` needs to be polled at regular intervals in order to serve queued delivery</span>
-<span class="doccomment">/// report callbacks (for more information, refer to the module-level documentation). This producer</span>
-<span class="doccomment">/// can be cheaply cloned to create a new reference to the same underlying producer.</span>
+<span class="doccomment">/// The `BaseProducer` needs to be polled at regular intervals in order to serve</span>
+<span class="doccomment">/// queued delivery report callbacks (for more information, refer to the</span>
+<span class="doccomment">/// module-level documentation). This producer can be cheaply cloned to create a</span>
+<span class="doccomment">/// new reference to the same underlying producer.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// # Example usage</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// This code will send a message to Kafka. No custom [ProducerContext] is specified, so the</span>
-<span class="doccomment">/// [DefaultProducerContext] will be used. To see how to use a producer context, refer to the</span>
-<span class="doccomment">/// examples in the examples folder.</span>
+<span class="doccomment">/// This code will send a message to Kafka. No custom [`ProducerContext`] is</span>
+<span class="doccomment">/// specified, so the [`DefaultProducerContext`] will be used. To see how to use</span>
+<span class="doccomment">/// a producer context, refer to the examples in the [`examples`] folder.</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// ```rust</span>
 <span class="doccomment">/// use rdkafka::config::ClientConfig;</span>
 <span class="doccomment">/// use rdkafka::producer::{BaseProducer, BaseRecord};</span>
@@ -814,6 +884,8 @@
 <span class="doccomment">/// // And/or flush the producer before dropping it.</span>
 <span class="doccomment">/// producer.flush(Duration::from_secs(1));</span>
 <span class="doccomment">/// ```</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">=</span> <span class="ident">DefaultProducerContext</span><span class="op">&gt;</span> {
     <span class="ident">client_arc</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
@@ -826,8 +898,10 @@
         }
     }
 
-    <span class="doccomment">/// Polls the producer. Regular calls to `poll` are required to process the events</span>
-    <span class="doccomment">/// and execute the message delivery callbacks. Returns the number of events served.</span>
+    <span class="doccomment">/// Polls the producer, returning the number of events served.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Regular calls to `poll` are required to process the events and execute</span>
+    <span class="doccomment">/// the message delivery callbacks.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i32</span> {
         <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_poll</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>(), <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>()) }
     }
@@ -837,17 +911,21 @@
         <span class="self">self</span>.<span class="ident">client_arc</span>.<span class="ident">native_ptr</span>()
     }
 
-    <span class="doccomment">/// Produce a message to Kafka. Message fields such as key, payload, partition, timestamp etc.</span>
-    <span class="doccomment">/// are provided to this method via a [BaseRecord]. If the message is correctly enqueued in the</span>
-    <span class="doccomment">/// producer&#39;s memory buffer, the method will take ownership of the record and return</span>
-    <span class="doccomment">/// immediately; in case of failure to enqueue, the original record is returned, alongside an</span>
-    <span class="doccomment">/// error code. If the message fails to be produced after being enqueued in the buffer, the</span>
-    <span class="doccomment">/// [ProducerContext::delivery] method will be called asynchronously, with the provided</span>
-    <span class="doccomment">/// [ProducerContext::DeliveryOpaque].</span>
+    <span class="doccomment">/// Sends a message to Kafka.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// When no partition is specified the underlying Kafka library picks a partition based on a</span>
-    <span class="doccomment">/// hash of the key. If no key is specified, a random partition will be used. To correctly</span>
-    <span class="doccomment">/// handle errors, the delivery callback should be implemented.</span>
+    <span class="doccomment">/// Message fields such as key, payload, partition, timestamp etc. are</span>
+    <span class="doccomment">/// provided to this method via a [`BaseRecord`]. If the message is</span>
+    <span class="doccomment">/// correctly enqueued in the producer&#39;s memory buffer, the method will take</span>
+    <span class="doccomment">/// ownership of the record and return immediately; in case of failure to</span>
+    <span class="doccomment">/// enqueue, the original record is returned, alongside an error code. If</span>
+    <span class="doccomment">/// the message fails to be produced after being enqueued in the buffer, the</span>
+    <span class="doccomment">/// [`ProducerContext::delivery`] method will be called asynchronously, with</span>
+    <span class="doccomment">/// the provided [`ProducerContext::DeliveryOpaque`].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// When no partition is specified the underlying Kafka library picks a</span>
+    <span class="doccomment">/// partition based on a hash of the key. If no key is specified, a random</span>
+    <span class="doccomment">/// partition will be used. To correctly handle errors, the delivery</span>
+    <span class="doccomment">/// callback should be implemented.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Note that this method will never block.</span>
     <span class="comment">// Simplifying the return type requires generic associated types, which are</span>
@@ -861,14 +939,14 @@
         <span class="ident">K</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>,
         <span class="ident">P</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>,
     {
-        <span class="kw">let</span> (<span class="ident">payload_ptr</span>, <span class="ident">payload_len</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">record</span>.<span class="ident">payload</span>.<span class="ident">map</span>(<span class="ident">P</span>::<span class="ident">to_bytes</span>) {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">ptr</span>::<span class="ident">null_mut</span>(), <span class="number">0</span>),
-            <span class="prelude-val">Some</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">p</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>, <span class="ident">p</span>.<span class="ident">len</span>()),
-        };
-        <span class="kw">let</span> (<span class="ident">key_ptr</span>, <span class="ident">key_len</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">record</span>.<span class="ident">key</span>.<span class="ident">map</span>(<span class="ident">K</span>::<span class="ident">to_bytes</span>) {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">ptr</span>::<span class="ident">null_mut</span>(), <span class="number">0</span>),
-            <span class="prelude-val">Some</span>(<span class="ident">k</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">k</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>, <span class="ident">k</span>.<span class="ident">len</span>()),
-        };
+        <span class="kw">fn</span> <span class="ident">as_bytes</span>(<span class="ident">opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>(<span class="kw">impl</span> <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="ident">ToBytes</span>)<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>, <span class="ident">usize</span>) {
+            <span class="kw">match</span> <span class="ident">opt</span>.<span class="ident">map</span>(<span class="ident">ToBytes</span>::<span class="ident">to_bytes</span>) {
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">ptr</span>::<span class="ident">null_mut</span>(), <span class="number">0</span>),
+                <span class="prelude-val">Some</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">p</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>, <span class="ident">p</span>.<span class="ident">len</span>()),
+            }
+        }
+        <span class="kw">let</span> (<span class="ident">payload_ptr</span>, <span class="ident">payload_len</span>) <span class="op">=</span> <span class="ident">as_bytes</span>(<span class="ident">record</span>.<span class="ident">payload</span>);
+        <span class="kw">let</span> (<span class="ident">key_ptr</span>, <span class="ident">key_len</span>) <span class="op">=</span> <span class="ident">as_bytes</span>(<span class="ident">record</span>.<span class="ident">key</span>);
         <span class="kw">let</span> <span class="ident">topic_cstring</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">record</span>.<span class="ident">topic</span>.<span class="ident">to_owned</span>()).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">produce_error</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">rdsys</span>::<span class="ident">rd_kafka_producev</span>(
@@ -907,15 +985,23 @@
         }
     }
 
-    <span class="doccomment">/// Flushes the producer. Should be called before termination. This method will call `poll()`</span>
-    <span class="doccomment">/// internally.</span>
+    <span class="doccomment">/// Flushes any pending messages.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This method should be called before termination to ensure delivery of</span>
+    <span class="doccomment">/// all enqueued messages. It will call `poll()` internally.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">flush</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) {
         <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_flush</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>(), <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>()) };
     }
 
-    <span class="doccomment">/// Returns the number of messages waiting to be sent, or sent but not acknowledged yet.</span>
+    <span class="doccomment">/// Returns the number of messages that are either waiting to be sent or are</span>
+    <span class="doccomment">/// sent but are waiting to be acknowledged.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">in_flight_count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i32</span> {
         <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_outq_len</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>()) }
+    }
+
+    <span class="doccomment">/// Returns the [`Client`] underlying this producer.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">client_arc</span>
     }
 }
 
@@ -931,16 +1017,17 @@
 <span class="comment">// ********** THREADED PRODUCER **********</span>
 <span class="comment">//</span>
 
-<span class="doccomment">/// A producer with a separate thread for event handling.</span>
+<span class="doccomment">/// A low-level Kafka producer with a separate thread for event handling.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The `ThreadedProducer` is a `BaseProducer` with a separate thread dedicated to calling `poll` at</span>
-<span class="doccomment">/// regular intervals in order to execute any queued event, such as delivery notifications. The</span>
-<span class="doccomment">/// thread will be automatically stopped when the producer is dropped.</span>
+<span class="doccomment">/// The `ThreadedProducer` is a [`BaseProducer`] with a separate thread</span>
+<span class="doccomment">/// dedicated to calling `poll` at regular intervals in order to execute any</span>
+<span class="doccomment">/// queued events, such as delivery notifications. The thread will be</span>
+<span class="doccomment">/// automatically stopped when the producer is dropped.</span>
 <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;The threaded producer will stop immediately if unused&quot;</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
     <span class="ident">producer</span>: <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     <span class="ident">should_stop</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicBool</span><span class="op">&gt;</span>,
-    <span class="ident">handle</span>: <span class="ident">RwLock</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">handle</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">FromClientConfig</span> <span class="kw">for</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">DefaultProducerContext</span><span class="op">&gt;</span> {
@@ -954,60 +1041,43 @@
         <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>,
         <span class="ident">context</span>: <span class="ident">C</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">threaded_producer</span> <span class="op">=</span> <span class="ident">ThreadedProducer</span> {
-            <span class="ident">producer</span>: <span class="ident">BaseProducer</span>::<span class="ident">from_config_and_context</span>(<span class="ident">config</span>, <span class="ident">context</span>)<span class="question-mark">?</span>,
-            <span class="ident">should_stop</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>)),
-            <span class="ident">handle</span>: <span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>),
+        <span class="kw">let</span> <span class="ident">producer</span> <span class="op">=</span> <span class="ident">BaseProducer</span>::<span class="ident">from_config_and_context</span>(<span class="ident">config</span>, <span class="ident">context</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">should_stop</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>));
+        <span class="kw">let</span> <span class="ident">thread</span> <span class="op">=</span> {
+            <span class="kw">let</span> <span class="ident">producer</span> <span class="op">=</span> <span class="ident">producer</span>.<span class="ident">clone</span>();
+            <span class="kw">let</span> <span class="ident">should_stop</span> <span class="op">=</span> <span class="ident">should_stop</span>.<span class="ident">clone</span>();
+            <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
+                .<span class="ident">name</span>(<span class="string">&quot;producer polling thread&quot;</span>.<span class="ident">to_string</span>())
+                .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling thread loop started&quot;</span>);
+                    <span class="kw">loop</span> {
+                        <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">producer</span>.<span class="ident">poll</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>));
+                        <span class="kw">if</span> <span class="ident">n</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
+                            <span class="kw">if</span> <span class="ident">should_stop</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Relaxed</span>) {
+                                <span class="comment">// We received nothing and the thread should</span>
+                                <span class="comment">// stop, so break the loop.</span>
+                                <span class="kw">break</span>;
+                            }
+                        } <span class="kw">else</span> {
+                            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Received {} events&quot;</span>, <span class="ident">n</span>);
+                        }
+                    }
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling thread loop terminated&quot;</span>);
+                })
+                .<span class="ident">expect</span>(<span class="string">&quot;Failed to start polling thread&quot;</span>)
         };
-        <span class="ident">threaded_producer</span>.<span class="ident">start</span>();
-        <span class="prelude-val">Ok</span>(<span class="ident">threaded_producer</span>)
+        <span class="prelude-val">Ok</span>(<span class="ident">ThreadedProducer</span> {
+            <span class="ident">producer</span>,
+            <span class="ident">should_stop</span>,
+            <span class="ident">handle</span>: <span class="prelude-val">Some</span>(<span class="ident">thread</span>),
+        })
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Starts the polling thread that will drive the producer. The thread is already started by</span>
-    <span class="doccomment">/// default.</span>
-    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">let</span> <span class="ident">producer_clone</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">should_stop</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">should_stop</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
-            .<span class="ident">name</span>(<span class="string">&quot;producer polling thread&quot;</span>.<span class="ident">to_string</span>())
-            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
-                <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling thread loop started&quot;</span>);
-                <span class="kw">loop</span> {
-                    <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">producer_clone</span>.<span class="ident">poll</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>));
-                    <span class="kw">if</span> <span class="ident">n</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
-                        <span class="kw">if</span> <span class="ident">should_stop</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Relaxed</span>) {
-                            <span class="comment">// We received nothing and the thread should</span>
-                            <span class="comment">// stop, so break the loop.</span>
-                            <span class="kw">break</span>;
-                        }
-                    } <span class="kw">else</span> {
-                        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Received {} events&quot;</span>, <span class="ident">n</span>);
-                    }
-                }
-                <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling thread loop terminated&quot;</span>);
-            })
-            .<span class="ident">expect</span>(<span class="string">&quot;Failed to start polling thread&quot;</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handle_store</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="string">&quot;poison error&quot;</span>);
-        <span class="kw-2">*</span><span class="ident">handle_store</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">handle</span>);
-    }
-
-    <span class="doccomment">/// Stops the polling thread. This method will be called during destruction.</span>
-    <span class="kw">fn</span> <span class="ident">stop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handle_store</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">write</span>().<span class="ident">expect</span>(<span class="string">&quot;poison error&quot;</span>);
-        <span class="kw">if</span> (<span class="kw-2">*</span><span class="ident">handle_store</span>).<span class="ident">is_some</span>() {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Stopping polling&quot;</span>);
-            <span class="self">self</span>.<span class="ident">should_stop</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>);
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Waiting for polling thread termination&quot;</span>);
-            <span class="kw">match</span> (<span class="kw-2">*</span><span class="ident">handle_store</span>).<span class="ident">take</span>().<span class="ident">unwrap</span>().<span class="ident">join</span>() {
-                <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling stopped&quot;</span>),
-                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failure while terminating thread: {:?}&quot;</span>, <span class="ident">e</span>),
-            };
-        }
-    }
-
-    <span class="doccomment">/// Sends a message to Kafka. See the documentation in `BaseProducer`.</span>
+    <span class="doccomment">/// Sends a message to Kafka.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See the documentation for [`BaseProducer::send`] for details.</span>
     <span class="comment">// Simplifying the return type requires generic associated types, which are</span>
     <span class="comment">// unstable.</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">type_complexity</span>)]</span>
@@ -1022,35 +1092,55 @@
         <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">send</span>(<span class="ident">record</span>)
     }
 
-    <span class="doccomment">/// Polls the internal producer. This is not normally required since the `ThreadedProducer` had</span>
-    <span class="doccomment">/// a thread dedicated to calling `poll` regularly.</span>
+    <span class="doccomment">/// Polls the internal producer.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This is not normally required since the `ThreadedProducer` has a thread</span>
+    <span class="doccomment">/// dedicated to calling `poll` regularly.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) {
         <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">poll</span>(<span class="ident">timeout</span>);
     }
 
-    <span class="doccomment">/// Flushes the producer. Should be called before termination.</span>
+    <span class="doccomment">/// Flushes any pending messages.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This method should be called before termination to ensure delivery of</span>
+    <span class="doccomment">/// all enqueued messages.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">flush</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) {
         <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">flush</span>(<span class="ident">timeout</span>);
     }
 
-    <span class="doccomment">/// Returns the number of messages waiting to be sent, or send but not acknowledged yet.</span>
+    <span class="doccomment">/// Returns the number of messages that are either waiting to be sent or are</span>
+    <span class="doccomment">/// sent but are waiting to be acknowledged.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">in_flight_count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i32</span> {
         <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">in_flight_count</span>()
+    }
+
+    <span class="doccomment">/// Returns the [`Client`] underlying this producer.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">client</span>()
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Destroy ThreadedProducer&quot;</span>);
-        <span class="self">self</span>.<span class="ident">stop</span>();
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">handle</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">take</span>() {
+            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Stopping polling&quot;</span>);
+            <span class="self">self</span>.<span class="ident">should_stop</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>);
+            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Waiting for polling thread termination&quot;</span>);
+            <span class="kw">match</span> <span class="ident">handle</span>.<span class="ident">join</span>() {
+                <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling stopped&quot;</span>),
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failure while terminating thread: {:?}&quot;</span>, <span class="ident">e</span>),
+            };
+        }
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;ThreadedProducer destroyed&quot;</span>);
     }
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="comment">// Just test that there are no panics, and that each struct implements the expected</span>
-    <span class="comment">// traits (Clone, Send, Sync etc.). Behavior is tested in the integrations tests.</span>
+    <span class="comment">// Just test that there are no panics, and that each struct implements the</span>
+    <span class="comment">// expected traits (Clone, Send, Sync etc.). Behavior is tested in the</span>
+    <span class="comment">// integration tests.</span>
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
     <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::<span class="ident">ClientConfig</span>;
 

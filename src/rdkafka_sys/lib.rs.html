@@ -110,24 +110,26 @@
 <span id="110">110</span>
 <span id="111">111</span>
 <span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Low level bindings to [librdkafka](https://github.com/edenhill/librdkafka).</span>
+<span class="doccomment">//! Low level bindings to [librdkafka](https://github.com/edenhill/librdkafka),</span>
+<span class="doccomment">//! a C library for the [Apache Kafka] protocol with producer, consumer, and</span>
+<span class="doccomment">//! admin clients.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! ## Bindings</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! To regenerate the bindings:</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! ``` bash</span>
-<span class="doccomment">//! git submodule update --init</span>
-<span class="doccomment">//! cargo install bindgen</span>
-<span class="doccomment">//! ./update-bindings.sh</span>
-<span class="doccomment">//! ```</span>
+<span class="doccomment">//! For a safe wrapper, see the [rdkafka] crate.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Version</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The rdkafka-sys version number is in the format `X.Y.Z-P`, where `X.Y.Z`</span>
-<span class="doccomment">//! corresponds to the librdkafka version, and `P` indicates the version of the</span>
-<span class="doccomment">//! rust bindings.</span>
+<span class="doccomment">//! The rdkafka-sys version number is in the format `X.Y.Z+RX.RY.RZ`, where</span>
+<span class="doccomment">//! `X.Y.Z` is the version of this crate and follows SemVer conventions, while</span>
+<span class="doccomment">//! `RX.RY.RZ` is the version of the bundled librdkafka.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Note that versions before v2.0.0+1.4.2 did not follow this convention, and</span>
+<span class="doccomment">//! instead directly correspond to the bundled librdkafka version.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Build</span>
 <span class="doccomment">//!</span>
@@ -135,87 +137,95 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! * When any of librdkafka&#39;s optional dependencies are enabled, like libz or</span>
 <span class="doccomment">//!   OpenSSL, if you have multiple versions of that library installed upon your</span>
-<span class="doccomment">//!   system, librdkafka&#39;s build system may disagree with Cargo about which version</span>
-<span class="doccomment">//!   of the library to use! **This can result in subtly broken builds,** if</span>
-<span class="doccomment">//!   librdkafka compiles against the headers for one version but Cargo links</span>
-<span class="doccomment">//!   against a different version.  For complete confidence when building release</span>
-<span class="doccomment">//!   binaries, use an environment like a Docker container or a chroot jail where</span>
-<span class="doccomment">//!   you can guarantee that only one version of each dependency is present.</span>
-<span class="doccomment">//!   Unfortunately, the current design of Cargo makes this nearly impossible to</span>
-<span class="doccomment">//!   fix.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! * librdkafka&#39;s default build system, which uses a bespoke tool called mklove, is</span>
-<span class="doccomment">//!   somewhat unreliable, as it does not support out-of-tree builds. This means</span>
-<span class="doccomment">//!   that if you have multiple projects that depend on the same version of</span>
-<span class="doccomment">//!   `librdkafka`, they will share a build directory in `~/.cargo/registry`, and</span>
-<span class="doccomment">//!   builds from one project may corrupt builds from the other. **Using the CMake</span>
-<span class="doccomment">//!   based build system is strongly encouraged**, if you can take the dependency on</span>
-<span class="doccomment">//!   CMake.</span>
+<span class="doccomment">//!   system, librdkafka&#39;s build system may disagree with Cargo about which</span>
+<span class="doccomment">//!   version of the library to use! **This can result in subtly broken</span>
+<span class="doccomment">//!   builds,** if librdkafka compiles against the headers for one version but</span>
+<span class="doccomment">//!   Cargo links against a different version.  For complete confidence when</span>
+<span class="doccomment">//!   building release binaries, use an environment like a Docker container or a</span>
+<span class="doccomment">//!   chroot jail where you can guarantee that only one version of each</span>
+<span class="doccomment">//!   dependency is present. The current design of Cargo unfortunately makes</span>
+<span class="doccomment">//!   this nearly impossible to fix.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ### Features</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! By default a submodule with the librdkafka sources pinned to a specific commit</span>
-<span class="doccomment">//! will be used to compile and statically link the library.</span>
+<span class="doccomment">//! By default a submodule with the librdkafka sources will be used to compile</span>
+<span class="doccomment">//! and statically link the library.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! The **`dynamic-linking`** feature can be used to link rdkafka to a locally</span>
 <span class="doccomment">//! installed version of librdkafka: if the feature is enabled, the build script</span>
 <span class="doccomment">//! will use `pkg-config` to check the version of the library installed in the</span>
 <span class="doccomment">//! system, and it will configure the compiler to dynamically link against it.</span>
+<span class="doccomment">//! The system version of librdkafka must exactly match the version of</span>
+<span class="doccomment">//! librdkafka bundled with this crate.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The **`cmake-build`** feature builds librdkafka with its [CMake] build system,</span>
-<span class="doccomment">//! rather than its default [mklove]-based build system. This feature requires that</span>
-<span class="doccomment">//! CMake is installed on the build machine.</span>
+<span class="doccomment">//! The **`cmake-build`** feature builds librdkafka with its [CMake] build</span>
+<span class="doccomment">//! system, rather than its default [mklove]-based build system. This feature</span>
+<span class="doccomment">//! requires that CMake is installed on the build machine.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The following features directly correspond to librdkafka features (i.e., flags</span>
-<span class="doccomment">//! you would pass to `configure` if you were compiling manually).</span>
+<span class="doccomment">//! The following features directly correspond to librdkafka features (i.e.,</span>
+<span class="doccomment">//! flags you would pass to `configure` if you were compiling manually).</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//!   * The **`ssl`** feature enables SSL support. By default, the system&#39;s OpenSSL</span>
-<span class="doccomment">//!     library is dynamically linked, but static linking of the version bundled</span>
-<span class="doccomment">//!     with the openssl-sys crate can be requested with the `ssl-vendored` feature.</span>
-<span class="doccomment">//!   * The **`gssapi`** feature enables SASL GSSAPI support with Cyrus libsasl2.</span>
-<span class="doccomment">//!     This feature requires that libsasl2 is installed on the system, as there is</span>
-<span class="doccomment">//!     not yet a libsasl2-sys crate that can build and link against a bundled</span>
-<span class="doccomment">//!     copy of the library.</span>
+<span class="doccomment">//!   * The **`ssl`** feature enables SSL support. By default, the system&#39;s</span>
+<span class="doccomment">//!     OpenSSL library is dynamically linked, but static linking of the version</span>
+<span class="doccomment">//!     bundled with the [openssl-sys] crate can be requested with the</span>
+<span class="doccomment">//!     `ssl-vendored` feature.</span>
+<span class="doccomment">//!   * The **`gssapi`** feature enables SASL GSSAPI support with Cyrus</span>
+<span class="doccomment">//!     libsasl2. By default the system&#39;s libsasl2 is dynamically linked, but</span>
+<span class="doccomment">//!     static linking of the version bundled with the [sasl2-sys] crate can be</span>
+<span class="doccomment">//!     requested with the `gssapi-vendored` feature.</span>
 <span class="doccomment">//!   * The **`libz`** feature enables support for zlib compression. This</span>
-<span class="doccomment">//!     feature is enabled by default. By default, the system&#39;s libz is dynamically</span>
-<span class="doccomment">//!     linked, but static linking of the version bundled with the libz-sys crate</span>
-<span class="doccomment">//!     can be requested with the `libz-static` feature.</span>
+<span class="doccomment">//!     feature is enabled by default. By default, the system&#39;s libz is</span>
+<span class="doccomment">//!     dynamically linked, but static linking of the version bundled with the</span>
+<span class="doccomment">//!     [libz-sys] crate can be requested with the `libz-static` feature.</span>
 <span class="doccomment">//!   * The **`zstd`** feature enables support for ZSTD compression. By default,</span>
-<span class="doccomment">//!     this builds and statically links the version bundled with the zstd-sys</span>
-<span class="doccomment">//!     crate, but dynamic linking of the system&#39;s version can be requested with the</span>
-<span class="doccomment">//!     `zstd-pkg-config` feature.</span>
-<span class="doccomment">//!   * The **`external-lz4`** feature statically links against the copy of liblz4</span>
-<span class="doccomment">//!     bundled with the lz4-sys crate. By default, librdkafka statically links</span>
-<span class="doccomment">//!     against its own bundled version of liblz4. Due to limitations with lz4-sys,</span>
-<span class="doccomment">//!     it is not yet possible to dynamically link against the system&#39;s version of</span>
-<span class="doccomment">//!     liblz4.</span>
+<span class="doccomment">//!     this builds and statically links the version bundled with the [zstd-sys]</span>
+<span class="doccomment">//!     crate, but dynamic linking of the system&#39;s version can be requested with</span>
+<span class="doccomment">//!     the `zstd-pkg-config` feature.</span>
+<span class="doccomment">//!   * The **`external-lz4`** feature statically links against the copy of</span>
+<span class="doccomment">//!     liblz4 bundled with the [lz4-sys] crate. By default, librdkafka</span>
+<span class="doccomment">//!     statically links against its own bundled version of liblz4. Due to</span>
+<span class="doccomment">//!     limitations with lz4-sys, it is not yet possible to dynamically link</span>
+<span class="doccomment">//!     against the system&#39;s version of liblz4.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! All features are disabled by default unless noted otherwise above. The build</span>
 <span class="doccomment">//! process is defined in [`build.rs`].</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! ## Updating</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! To upgrade change the git submodule in `librdkafka`, check if new errors</span>
-<span class="doccomment">//! need to be added to `helpers::primive_to_rd_kafka_resp_err_t` and update</span>
-<span class="doccomment">//! the version in `Cargo.toml`.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! [CMake]: https://cmake.org</span>
-<span class="doccomment">//! [mklove]: https://github.com/edenhill/mklove</span>
 <span class="doccomment">//! [`build.rs`]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/build.rs</span>
+<span class="doccomment">//! [Apache Kafka]: https://kafka.apache.org</span>
+<span class="doccomment">//! [CMake]: https://cmake.org</span>
+<span class="doccomment">//! [libz-sys]: https://crates.io/crates/libz-sys</span>
+<span class="doccomment">//! [lz4-sys]: https://crates.io/crates/lz4-sys</span>
+<span class="doccomment">//! [mklove]: https://github.com/edenhill/mklove</span>
+<span class="doccomment">//! [openssl-sys]: https://crates.io/crates/openssl-sys</span>
+<span class="doccomment">//! [rdkafka]: https://docs.rs/rdkafka</span>
+<span class="doccomment">//! [sasl2-sys]: https://docs.rs/sasl2-sys</span>
+<span class="doccomment">//! [zstd-sys]: https://crates.io/crates/zstd-sys</span>
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ssl&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;openssl-sys&quot;</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">openssl_sys</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;libz&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;sasl2-sys&quot;</span>)]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">sasl2_sys</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;libz-sys&quot;</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">libz_sys</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;zstd&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;zstd-sys&quot;</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">zstd_sys</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;external_lz4&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;lz4-sys&quot;</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">lz4_sys</span>;
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_camel_case_types</span>, <span class="ident">non_upper_case_globals</span>, <span class="ident">non_snake_case</span>, <span class="ident">clippy</span>::<span class="ident">all</span>)]</span>
+<span class="doccomment">/// FFI bindings.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// These bindings are automatically generated</span>
+<span class="doccomment">/// with [bindgen](https://github.com/rust-lang/rust-bindgen).</span>
+<span class="attribute">#[<span class="ident">allow</span>(
+    <span class="ident">non_camel_case_types</span>,
+    <span class="ident">non_upper_case_globals</span>,
+    <span class="ident">non_snake_case</span>,
+    <span class="ident">clippy</span>::<span class="ident">all</span>
+)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">bindings</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">helpers</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">types</span>;

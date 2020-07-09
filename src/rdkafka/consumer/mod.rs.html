@@ -323,8 +323,25 @@
 <span id="323">323</span>
 <span id="324">324</span>
 <span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Base trait and common functionality for all consumers.</span>
+<span class="doccomment">//! Kafka consumers.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
@@ -334,7 +351,7 @@
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">client</span>::{<span class="ident">ClientContext</span>, <span class="ident">NativeClient</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">client</span>::{<span class="ident">Client</span>, <span class="ident">ClientContext</span>, <span class="ident">NativeClient</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::<span class="ident">KafkaResult</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">groups</span>::<span class="ident">GroupList</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">message</span>::<span class="ident">BorrowedMessage</span>;
@@ -360,12 +377,19 @@
     <span class="ident">Error</span>(<span class="ident">String</span>),
 }
 
-<span class="doccomment">/// Consumer specific Context. This user-defined object can be used to provide custom callbacks to</span>
-<span class="doccomment">/// consumer events. Refer to the list of methods to check which callbacks can be specified.</span>
+<span class="doccomment">/// Consumer-specific context.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This user-defined object can be used to provide custom callbacks for</span>
+<span class="doccomment">/// consumer events. Refer to the list of methods to check which callbacks can</span>
+<span class="doccomment">/// be specified.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// See also the [`ClientContext`] trait.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ConsumerContext</span>: <span class="ident">ClientContext</span> {
-    <span class="doccomment">/// Implements the default rebalancing strategy and calls the `pre_rebalance` and</span>
-    <span class="doccomment">/// `post_rebalance` methods. If this method is overridden, it will be responsibility</span>
-    <span class="doccomment">/// of the user to call them if needed.</span>
+    <span class="doccomment">/// Implements the default rebalancing strategy and calls the</span>
+    <span class="doccomment">/// [`pre_rebalance`](ConsumerContext::pre_rebalance) and</span>
+    <span class="doccomment">/// [`post_rebalance`](ConsumerContext::post_rebalance) methods. If this</span>
+    <span class="doccomment">/// method is overridden, it will be responsibility of the user to call them</span>
+    <span class="doccomment">/// if needed.</span>
     <span class="kw">fn</span> <span class="ident">rebalance</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">native_client</span>: <span class="kw-2">&amp;</span><span class="ident">NativeClient</span>,
@@ -402,34 +426,34 @@
         <span class="self">self</span>.<span class="ident">post_rebalance</span>(<span class="kw-2">&amp;</span><span class="ident">rebalance</span>);
     }
 
-    <span class="doccomment">/// Pre-rebalance callback. This method will run before the rebalance and should</span>
-    <span class="doccomment">/// terminate its execution quickly.</span>
+    <span class="doccomment">/// Pre-rebalance callback. This method will run before the rebalance and</span>
+    <span class="doccomment">/// should terminate its execution quickly.</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
     <span class="kw">fn</span> <span class="ident">pre_rebalance</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rebalance</span>: <span class="kw-2">&amp;</span><span class="ident">Rebalance</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>) {}
 
-    <span class="doccomment">/// Post-rebalance callback. This method will run after the rebalance and should</span>
-    <span class="doccomment">/// terminate its execution quickly.</span>
+    <span class="doccomment">/// Post-rebalance callback. This method will run after the rebalance and</span>
+    <span class="doccomment">/// should terminate its execution quickly.</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
     <span class="kw">fn</span> <span class="ident">post_rebalance</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rebalance</span>: <span class="kw-2">&amp;</span><span class="ident">Rebalance</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>) {}
 
     <span class="comment">// TODO: convert pointer to structure</span>
-    <span class="doccomment">/// Post commit callback. This method will run after a group of offsets was committed to the</span>
-    <span class="doccomment">/// offset store.</span>
+    <span class="doccomment">/// Post commit callback. This method will run after a group of offsets was</span>
+    <span class="doccomment">/// committed to the offset store.</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
     <span class="kw">fn</span> <span class="ident">commit_callback</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">result</span>: <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">offsets</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>) {}
 
     <span class="doccomment">/// Returns the minimum interval at which to poll the main queue, which</span>
     <span class="doccomment">/// services the logging, stats, and error callbacks.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The main queue is polled once whenever [`Consumer.poll`] is called. If</span>
-    <span class="doccomment">/// `Consumer.poll` is called with a timeout that is larger than this</span>
-    <span class="doccomment">/// interval, then the main queue will be polled at that interval while the</span>
-    <span class="doccomment">/// consumer queue is blocked.</span>
+    <span class="doccomment">/// The main queue is polled once whenever [`BaseConsumer::poll`] is called.</span>
+    <span class="doccomment">/// If `poll` is called with a timeout that is larger than this interval,</span>
+    <span class="doccomment">/// then the main queue will be polled at that interval while the consumer</span>
+    <span class="doccomment">/// queue is blocked.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// For example, if the main queue&#39;s minimum poll interval is 200ms and</span>
-    <span class="doccomment">/// `Consumer.poll` is called with a timeout of 1s, then `Consumer.poll` may</span>
-    <span class="doccomment">/// block for up to 1s waiting for a message, but it will poll the main</span>
-    <span class="doccomment">/// queue every 200ms while it is waiting.</span>
+    <span class="doccomment">/// `poll` is called with a timeout of 1s, then `poll` may block for up to</span>
+    <span class="doccomment">/// 1s waiting for a message, but it will poll the main queue every 200ms</span>
+    <span class="doccomment">/// while it is waiting.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// By default, the minimum poll interval for the main queue is 1s.</span>
     <span class="kw">fn</span> <span class="ident">main_queue_min_poll_interval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Timeout</span> {
@@ -439,10 +463,14 @@
     <span class="doccomment">/// Message queue nonempty callback. This method will run when the</span>
     <span class="doccomment">/// consumer&#39;s message queue switches from empty to nonempty.</span>
     <span class="kw">fn</span> <span class="ident">message_queue_nonempty_callback</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
+
+    <span class="comment">// NOTE: when adding a new method, remember to add it to the</span>
+    <span class="comment">// StreamConsumerContext as well.</span>
 }
 
-<span class="doccomment">/// An empty consumer context that can be user when no context is needed.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="doccomment">/// An empty consumer context that can be user when no customizations are</span>
+<span class="doccomment">/// needed.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DefaultConsumerContext</span>;
 
 <span class="kw">impl</span> <span class="ident">ClientContext</span> <span class="kw">for</span> <span class="ident">DefaultConsumerContext</span> {}
@@ -450,6 +478,7 @@
 
 <span class="doccomment">/// Specifies if the commit should be performed synchronously</span>
 <span class="doccomment">/// or asynchronously.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">CommitMode</span> {
     <span class="doccomment">/// Synchronous commit.</span>
     <span class="ident">Sync</span> <span class="op">=</span> <span class="number">0</span>,
@@ -647,6 +676,11 @@
     <span class="doccomment">/// Resume consumption for the provided list of partitions.</span>
     <span class="kw">fn</span> <span class="ident">resume</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">partitions</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">resume</span>(<span class="ident">partitions</span>)
+    }
+
+    <span class="doccomment">/// Returns the [`Client`] underlying this consumer.</span>
+    <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">get_base_consumer</span>().<span class="ident">client</span>()
     }
 }
 </pre></div>

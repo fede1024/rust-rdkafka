@@ -235,165 +235,237 @@
 <span id="235">235</span>
 <span id="236">236</span>
 <span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Stream-based consumer implementation.</span>
 
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">future</span>::<span class="ident">Future</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">pin</span>::<span class="ident">Pin</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>::{<span class="self">self</span>, <span class="ident">JoinHandle</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>, <span class="ident">Waker</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 
-<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">channel</span>::<span class="ident">mpsc</span>;
-<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">SinkExt</span>, <span class="ident">Stream</span>, <span class="ident">StreamExt</span>};
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">trace</span>, <span class="ident">warn</span>};
+<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">ready</span>, <span class="ident">Stream</span>};
 
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::{<span class="ident">ClientConfig</span>, <span class="ident">FromClientConfig</span>, <span class="ident">FromClientConfigAndContext</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">client</span>::{<span class="ident">ClientContext</span>, <span class="ident">NativeClient</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::{<span class="ident">ClientConfig</span>, <span class="ident">FromClientConfig</span>, <span class="ident">FromClientConfigAndContext</span>, <span class="ident">RDKafkaLogLevel</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">consumer</span>::<span class="ident">base_consumer</span>::<span class="ident">BaseConsumer</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">consumer</span>::{<span class="ident">Consumer</span>, <span class="ident">ConsumerContext</span>, <span class="ident">DefaultConsumerContext</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">consumer</span>::{<span class="ident">Consumer</span>, <span class="ident">ConsumerContext</span>, <span class="ident">DefaultConsumerContext</span>, <span class="ident">Rebalance</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::{<span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">message</span>::<span class="ident">BorrowedMessage</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::<span class="ident">Timeout</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">statistics</span>::<span class="ident">Statistics</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">topic_partition_list</span>::<span class="ident">TopicPartitionList</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)]</span>
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::<span class="ident">TokioRuntime</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::{<span class="ident">AsyncRuntime</span>, <span class="ident">NativePtr</span>, <span class="ident">Timeout</span>};
 
-<span class="doccomment">/// Default channel size for the stream consumer. The number of context switches</span>
-<span class="doccomment">/// seems to decrease exponentially as the channel size is increased, and it stabilizes when</span>
-<span class="doccomment">/// the channel size reaches 10 or so.</span>
-<span class="kw">const</span> <span class="ident">CONSUMER_CHANNEL_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">10</span>;
-
-<span class="doccomment">/// A small wrapper for a message pointer. This wrapper is only used to</span>
-<span class="doccomment">/// pass a message between the polling thread and the thread consuming the stream,</span>
-<span class="doccomment">/// and to transform it from pointer to `BorrowedMessage` with a lifetime that derives from the</span>
-<span class="doccomment">/// lifetime of the stream consumer. In general is not safe to pass a struct with an internal</span>
-<span class="doccomment">/// reference across threads. However the `StreamConsumer` guarantees that the polling thread</span>
-<span class="doccomment">/// is terminated before the consumer is actually dropped, ensuring that the messages</span>
-<span class="doccomment">/// are safe to be used for their entire lifetime.</span>
-<span class="kw">struct</span> <span class="ident">PolledMessagePtr</span> {
-    <span class="ident">message_ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaMessage</span>,
+<span class="doccomment">/// The [`ConsumerContext`] used by the [`StreamConsumer`]. This context will</span>
+<span class="doccomment">/// automatically wake up the message stream when new data is available.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This type is not intended to be used directly. It will be automatically</span>
+<span class="doccomment">/// created by the `StreamConsumer` when necessary.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StreamConsumerContext</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+    <span class="ident">inner</span>: <span class="ident">C</span>,
+    <span class="ident">waker</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waker</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">PolledMessagePtr</span> {
-    <span class="doccomment">/// Creates a new PolledPtr from a message pointer. It takes the ownership of the message.</span>
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">message_ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaMessage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PolledMessagePtr</span> {
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;New polled ptr {:?}&quot;</span>, <span class="ident">message_ptr</span>);
-        <span class="ident">PolledMessagePtr</span> { <span class="ident">message_ptr</span> }
-    }
-
-    <span class="doccomment">/// Transforms the `PolledMessagePtr` into a message whose lifetime will be bound to the</span>
-    <span class="doccomment">/// lifetime of the provided consumer. If the librdkafka message represents an error, the error</span>
-    <span class="doccomment">/// will be returned instead.</span>
-    <span class="kw">fn</span> <span class="ident">into_message_of</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span>(
-        <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">BorrowedMessage</span>::<span class="ident">from_consumer</span>(<span class="self">self</span>.<span class="ident">message_ptr</span>, <span class="ident">consumer</span>) };
-        <span class="self">self</span>.<span class="ident">message_ptr</span> <span class="op">=</span> <span class="ident">ptr</span>::<span class="ident">null_mut</span>();
-        <span class="ident">msg</span>
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">PolledMessagePtr</span> {
-    <span class="doccomment">/// If the `PolledMessagePtr` is hasn&#39;t been transformed into a message and the pointer is</span>
-    <span class="doccomment">/// still available, it will free the underlying resources.</span>
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">message_ptr</span>.<span class="ident">is_null</span>() {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Destroy PolledPtr {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">message_ptr</span>);
-            <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_message_destroy</span>(<span class="self">self</span>.<span class="ident">message_ptr</span>) };
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">StreamConsumerContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">inner</span>: <span class="ident">C</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StreamConsumerContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+        <span class="ident">StreamConsumerContext</span> {
+            <span class="ident">inner</span>,
+            <span class="ident">waker</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>)),
         }
     }
 }
 
-<span class="doccomment">/// Allow message pointer to be moved across threads.</span>
-<span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Send</span> <span class="kw">for</span> <span class="ident">PolledMessagePtr</span> {}
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">ClientContext</span> <span class="kw">for</span> <span class="ident">StreamConsumerContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">level</span>: <span class="ident">RDKafkaLogLevel</span>, <span class="ident">fac</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">log_message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">log</span>(<span class="ident">level</span>, <span class="ident">fac</span>, <span class="ident">log_message</span>)
+    }
 
-<span class="doccomment">/// A Kafka consumer implementing Stream.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// It can be used to receive messages as they are consumed from Kafka. Note: there might be</span>
-<span class="doccomment">/// buffering between the actual Kafka consumer and the receiving end of this stream, so it is not</span>
-<span class="doccomment">/// advised to use automatic commit, as some messages might have been consumed by the internal Kafka</span>
-<span class="doccomment">/// consumer but not processed. Manual offset storing should be used, see the `store_offset`</span>
-<span class="doccomment">/// function on `Consumer`.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
-    <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">receiver</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PolledMessagePtr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-}
+    <span class="kw">fn</span> <span class="ident">stats</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">statistics</span>: <span class="ident">Statistics</span>) {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">stats</span>(<span class="ident">statistics</span>)
+    }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">receiver</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PolledMessagePtr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="ident">MessageStream</span> { <span class="ident">consumer</span>, <span class="ident">receiver</span> }
+    <span class="kw">fn</span> <span class="ident">error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">error</span>: <span class="ident">KafkaError</span>, <span class="ident">reason</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">error</span>(<span class="ident">error</span>, <span class="ident">reason</span>)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Stream</span> <span class="kw">for</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">ConsumerContext</span> <span class="kw">for</span> <span class="ident">StreamConsumerContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">rebalance</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">native_client</span>: <span class="kw-2">&amp;</span><span class="ident">NativeClient</span>,
+        <span class="ident">err</span>: <span class="ident">RDKafkaRespErr</span>,
+        <span class="ident">tpl</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TopicPartitionList</span>,
+    ) {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">rebalance</span>(<span class="ident">native_client</span>, <span class="ident">err</span>, <span class="ident">tpl</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">pre_rebalance</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rebalance</span>: <span class="kw-2">&amp;</span><span class="ident">Rebalance</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>) {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">pre_rebalance</span>(<span class="ident">rebalance</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">post_rebalance</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rebalance</span>: <span class="kw-2">&amp;</span><span class="ident">Rebalance</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>) {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">post_rebalance</span>(<span class="ident">rebalance</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">commit_callback</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">result</span>: <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">offsets</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>) {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">commit_callback</span>(<span class="ident">result</span>, <span class="ident">offsets</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">main_queue_min_poll_interval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Timeout</span> {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">main_queue_min_poll_interval</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">message_queue_nonempty_callback</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">waker</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">waker</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">take</span>() {
+            <span class="ident">waker</span>.<span class="ident">wake</span>();
+        }
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">message_queue_nonempty_callback</span>()
+    }
+}
+
+<span class="doccomment">/// A Kafka consumer implementing [`futures::Stream`].</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MessageStream</span><span class="op">&lt;</span>
+    <span class="lifetime">&#39;a</span>,
+    <span class="ident">C</span>,
+    <span class="comment">// Ugly, but this provides backwards compatibility when the `tokio` feature</span>
+    <span class="comment">// is enabled, as it is by default.</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)]</span> <span class="ident">R</span> <span class="op">=</span> <span class="ident">TokioRuntime</span>,
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>))]</span> <span class="ident">R</span>,
+<span class="op">&gt;</span> <span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+    <span class="ident">R</span>: <span class="ident">AsyncRuntime</span>,
+{
+    <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+    <span class="ident">interval</span>: <span class="ident">Duration</span>,
+    <span class="ident">delay</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">R</span>::<span class="ident">Delay</span><span class="op">&gt;</span>,
+    <span class="ident">no_message_error</span>: <span class="ident">bool</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+    <span class="ident">R</span>: <span class="ident">AsyncRuntime</span>,
+{
+    <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+        <span class="ident">interval</span>: <span class="ident">Duration</span>,
+        <span class="ident">no_message_error</span>: <span class="ident">bool</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span> {
+        <span class="ident">MessageStream</span> {
+            <span class="ident">consumer</span>,
+            <span class="ident">interval</span>,
+            <span class="ident">delay</span>: <span class="prelude-val">None</span>,
+            <span class="ident">no_message_error</span>,
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">context</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">StreamConsumerContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">consumer</span>.<span class="ident">get_base_consumer</span>().<span class="ident">context</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">client_ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span> {
+        <span class="self">self</span>.<span class="ident">consumer</span>.<span class="ident">client</span>().<span class="ident">native_ptr</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">set_waker</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">waker</span>: <span class="ident">Waker</span>) {
+        <span class="self">self</span>.<span class="ident">context</span>()
+            .<span class="ident">waker</span>
+            .<span class="ident">lock</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;lock poisoned&quot;</span>)
+            .<span class="ident">replace</span>(<span class="ident">waker</span>);
+    }
+
+    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">unsafe</span> {
+            <span class="ident">NativePtr</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_consumer_poll</span>(<span class="self">self</span>.<span class="ident">client_ptr</span>(), <span class="number">0</span>))
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">BorrowedMessage</span>::<span class="ident">from_consumer</span>(<span class="ident">p</span>, <span class="self">self</span>.<span class="ident">consumer</span>))
+        }
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span> <span class="ident">Stream</span> <span class="kw">for</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
+    <span class="ident">R</span>: <span class="ident">AsyncRuntime</span>,
+{
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">poll_next</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Item</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">receiver</span>.<span class="ident">poll_next_unpin</span>(<span class="ident">cx</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">ready</span><span class="op">|</span> {
-            <span class="ident">ready</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">polled_ptr_opt</span><span class="op">|</span> {
-                <span class="ident">polled_ptr_opt</span>.<span class="ident">map_or</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">NoMessageReceived</span>), <span class="op">|</span><span class="ident">polled_ptr</span><span class="op">|</span> {
-                    <span class="ident">polled_ptr</span>.<span class="ident">into_message_of</span>(<span class="self">self</span>.<span class="ident">consumer</span>)
-                })
-            })
-        })
-    }
-}
+        <span class="comment">// Unconditionally store the waker so that we are woken up if the queue</span>
+        <span class="comment">// flips from non-empty to empty. We have to store the waker on every</span>
+        <span class="comment">// call to poll in case this future migrates between tasks. We also need</span>
+        <span class="comment">// to store the waker *before* calling poll to avoid a race where `poll`</span>
+        <span class="comment">// returns None to indicate that the queue is empty, but the queue</span>
+        <span class="comment">// becomes non-empty before we&#39;ve installed the waker.</span>
+        <span class="self">self</span>.<span class="ident">set_waker</span>(<span class="ident">cx</span>.<span class="ident">waker</span>().<span class="ident">clone</span>());
 
-<span class="doccomment">/// Internal consumer loop. This is the main body of the thread that will drive the stream consumer.</span>
-<span class="doccomment">/// If `send_none` is true, the loop will send a None into the sender every time the poll times out.</span>
-<span class="kw">fn</span> <span class="ident">poll_loop</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span>(
-    <span class="ident">consumer</span>: <span class="kw-2">&amp;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="kw-2">mut</span> <span class="ident">sender</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PolledMessagePtr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">should_stop</span>: <span class="kw-2">&amp;</span><span class="ident">AtomicBool</span>,
-    <span class="ident">poll_interval</span>: <span class="ident">Duration</span>,
-    <span class="ident">send_none</span>: <span class="ident">bool</span>,
-) {
-    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling thread loop started&quot;</span>);
-    <span class="kw">while</span> <span class="op">!</span><span class="ident">should_stop</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Relaxed</span>) {
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling base consumer&quot;</span>);
-        <span class="kw">let</span> <span class="ident">future_sender</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">consumer</span>.<span class="ident">poll_raw</span>(<span class="ident">Timeout</span>::<span class="ident">After</span>(<span class="ident">poll_interval</span>)) {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">if</span> <span class="ident">send_none</span> {
-                    <span class="ident">sender</span>.<span class="ident">send</span>(<span class="prelude-val">None</span>)
-                } <span class="kw">else</span> {
-                    <span class="kw">continue</span>; <span class="comment">// TODO: check stream closed</span>
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">poll</span>() {
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">loop</span> {
+                <span class="kw">let</span> <span class="ident">interval</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">interval</span>;
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">delay</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">delay</span>.<span class="ident">get_or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">R</span>::<span class="ident">delay_for</span>(<span class="ident">interval</span>));
+                <span class="macro">ready</span><span class="macro">!</span>(<span class="ident">Pin</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">delay</span>).<span class="ident">poll</span>(<span class="ident">cx</span>));
+                <span class="self">self</span>.<span class="ident">delay</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+                <span class="kw">if</span> <span class="self">self</span>.<span class="ident">no_message_error</span> {
+                    <span class="kw">break</span> <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">NoMessageReceived</span>)));
                 }
+            },
+            <span class="prelude-val">Some</span>(<span class="ident">message</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="self">self</span>.<span class="ident">delay</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+                <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Some</span>(<span class="ident">message</span>))
             }
-            <span class="prelude-val">Some</span>(<span class="ident">m_ptr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">sender</span>.<span class="ident">send</span>(<span class="prelude-val">Some</span>(<span class="ident">PolledMessagePtr</span>::<span class="ident">new</span>(<span class="ident">m_ptr</span>))),
-        };
-        <span class="kw">match</span> <span class="ident">futures</span>::<span class="ident">executor</span>::<span class="ident">block_on</span>(<span class="ident">future_sender</span>) {
-            <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> (),
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Sender not available: {:?}&quot;</span>, <span class="ident">e</span>);
-                <span class="kw">break</span>;
-            }
-        };
+        }
     }
-    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling thread loop terminated&quot;</span>);
 }
 
-<span class="doccomment">/// A Kafka Consumer providing a `futures::Stream` interface.</span>
+<span class="doccomment">/// A Kafka consumer providing a [`futures::Stream`] interface.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// This consumer doesn&#39;t need to be polled since it has a separate polling thread. Due to the</span>
-<span class="doccomment">/// asynchronous nature of the stream, some messages might be consumed by the consumer without being</span>
-<span class="doccomment">/// processed on the other end of the stream. If auto commit is used, it might cause message loss</span>
-<span class="doccomment">/// after consumer restart. Manual offset storing should be used, see the `store_offset` function on</span>
-<span class="doccomment">/// `Consumer`.</span>
+<span class="doccomment">/// This consumer doesn&#39;t need to be polled explicitly since `await`ing the</span>
+<span class="doccomment">/// stream returned by [`StreamConsumer::start`] will implicitly poll the</span>
+<span class="doccomment">/// consumer.</span>
 <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;Consumer polling thread will stop immediately if unused&quot;</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> <span class="op">=</span> <span class="ident">DefaultConsumerContext</span><span class="op">&gt;</span> {
-    <span class="ident">consumer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">should_stop</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicBool</span><span class="op">&gt;</span>,
-    <span class="ident">handle</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">consumer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">StreamConsumerContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">Consumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">get_base_consumer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">Consumer</span><span class="op">&lt;</span><span class="ident">StreamConsumerContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_base_consumer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">StreamConsumerContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">Arc</span>::<span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">consumer</span>)
     }
 }
@@ -404,73 +476,65 @@
     }
 }
 
-<span class="doccomment">/// Creates a new `StreamConsumer` starting from a `ClientConfig`.</span>
+<span class="doccomment">/// Creates a new `StreamConsumer` starting from a [`ClientConfig`].</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">FromClientConfigAndContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">from_config_and_context</span>(
         <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>,
         <span class="ident">context</span>: <span class="ident">C</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">StreamConsumerContext</span>::<span class="ident">new</span>(<span class="ident">context</span>);
         <span class="kw">let</span> <span class="ident">stream_consumer</span> <span class="op">=</span> <span class="ident">StreamConsumer</span> {
             <span class="ident">consumer</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">BaseConsumer</span>::<span class="ident">from_config_and_context</span>(<span class="ident">config</span>, <span class="ident">context</span>)<span class="question-mark">?</span>),
-            <span class="ident">should_stop</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>)),
-            <span class="ident">handle</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>),
+        };
+        <span class="kw">unsafe</span> {
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_poll_set_consumer</span>(<span class="ident">stream_consumer</span>.<span class="ident">consumer</span>.<span class="ident">client</span>().<span class="ident">native_ptr</span>())
         };
         <span class="prelude-val">Ok</span>(<span class="ident">stream_consumer</span>)
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Starts the StreamConsumer with default configuration (100ms polling interval and no</span>
-    <span class="doccomment">/// `NoMessageReceived` notifications).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Starts the stream consumer with default configuration (100ms polling</span>
+    <span class="doccomment">/// interval and no `NoMessageReceived` notifications).</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// **Note:** this method must be called from within the context of a Tokio</span>
+    <span class="doccomment">/// runtime.</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">TokioRuntime</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">start_with</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>), <span class="bool-val">false</span>)
     }
 
-    <span class="doccomment">/// Starts the StreamConsumer with the specified poll interval. Additionally, if</span>
-    <span class="doccomment">/// `no_message_error` is set to true, it will return an error of type</span>
-    <span class="doccomment">/// `KafkaError::NoMessageReceived` every time the poll interval is reached and no message has</span>
-    <span class="doccomment">/// been received.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_with</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">poll_interval</span>: <span class="ident">Duration</span>, <span class="ident">no_message_error</span>: <span class="ident">bool</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Starts the stream consumer with the specified poll interval.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If `no_message_error` is set to true, the returned `MessageStream` will</span>
+    <span class="doccomment">/// yield an error of type `KafkaError::NoMessageReceived` every time the</span>
+    <span class="doccomment">/// poll interval is reached and no message has been received.</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_with</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">poll_interval</span>: <span class="ident">Duration</span>,
+        <span class="ident">no_message_error</span>: <span class="ident">bool</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">TokioRuntime</span><span class="op">&gt;</span> {
         <span class="comment">// TODO: verify called once</span>
-        <span class="kw">let</span> (<span class="ident">sender</span>, <span class="ident">receiver</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>(<span class="ident">CONSUMER_CHANNEL_SIZE</span>);
-        <span class="kw">let</span> <span class="ident">consumer</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">consumer</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">should_stop</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">should_stop</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
-            .<span class="ident">name</span>(<span class="string">&quot;poll&quot;</span>.<span class="ident">to_string</span>())
-            .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
-                <span class="ident">poll_loop</span>(
-                    <span class="ident">consumer</span>.<span class="ident">as_ref</span>(),
-                    <span class="ident">sender</span>,
-                    <span class="ident">should_stop</span>.<span class="ident">as_ref</span>(),
-                    <span class="ident">poll_interval</span>,
-                    <span class="ident">no_message_error</span>,
-                );
-            })
-            .<span class="ident">expect</span>(<span class="string">&quot;Failed to start polling thread&quot;</span>);
-        <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>() <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">handle</span>);
-        <span class="ident">MessageStream</span>::<span class="ident">new</span>(<span class="self">self</span>, <span class="ident">receiver</span>)
+        <span class="self">self</span>.<span class="ident">start_with_runtime</span>(<span class="ident">poll_interval</span>, <span class="ident">no_message_error</span>)
     }
 
-    <span class="doccomment">/// Stops the StreamConsumer, blocking the caller until the internal consumer has been stopped.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">handle</span>) <span class="op">=</span> <span class="ident">handle</span>.<span class="ident">take</span>() {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Stopping polling&quot;</span>);
-            <span class="self">self</span>.<span class="ident">should_stop</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>);
-            <span class="kw">match</span> <span class="ident">handle</span>.<span class="ident">join</span>() {
-                <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling stopped&quot;</span>),
-                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failure while terminating thread: {:?}&quot;</span>, <span class="ident">e</span>),
-            };
-        }
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">StreamConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Destroy StreamConsumer&quot;</span>);
-        <span class="comment">// The polling thread must be fully stopped before we can proceed with the actual drop,</span>
-        <span class="comment">// otherwise it might consume from a destroyed consumer.</span>
-        <span class="self">self</span>.<span class="ident">stop</span>();
+    <span class="doccomment">/// Like [`StreamConsumer::start_with`], but with a customizable</span>
+    <span class="doccomment">/// asynchronous runtime.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See the [`AsyncRuntime`] trait for the details on the interface the</span>
+    <span class="doccomment">/// runtime must satisfy.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_with_runtime</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">poll_interval</span>: <span class="ident">Duration</span>,
+        <span class="ident">no_message_error</span>: <span class="ident">bool</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MessageStream</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">R</span>: <span class="ident">AsyncRuntime</span>,
+    {
+        <span class="ident">MessageStream</span>::<span class="ident">new</span>(<span class="self">self</span>, <span class="ident">poll_interval</span>, <span class="ident">no_message_error</span>)
     }
 }
 </pre></div>

@@ -433,8 +433,17 @@
 <span id="433">433</span>
 <span id="434">434</span>
 <span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! This module contains type aliases for types defined in the auto-generated bindings.</span>
+<span class="doccomment">//! Aliases for types defined in the auto-generated bindings.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::<span class="ident">CStr</span>;
@@ -445,384 +454,393 @@
 
 <span class="comment">// TYPES</span>
 
-<span class="doccomment">/// Native rdkafka client</span>
+<span class="doccomment">/// Native rdkafka client.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafka</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_t</span>;
 
-<span class="doccomment">/// Native rdkafka configuration</span>
+<span class="doccomment">/// Native rdkafka configuration.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaConf</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_conf_t</span>;
 
-<span class="doccomment">/// Native rdkafka message</span>
+<span class="doccomment">/// Native rdkafka message.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaMessage</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_message_t</span>;
 
-<span class="doccomment">/// Native rdkafka topic</span>
+<span class="doccomment">/// Native rdkafka topic.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaTopic</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_topic_t</span>;
 
-<span class="doccomment">/// Native rdkafka topic configuration</span>
+<span class="doccomment">/// Native rdkafka topic configuration.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaTopicConf</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_topic_conf_t</span>;
 
-<span class="doccomment">/// Native rdkafka topic partition</span>
+<span class="doccomment">/// Native rdkafka topic partition.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaTopicPartition</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_topic_partition_t</span>;
 
-<span class="doccomment">/// Native rdkafka topic partition list</span>
+<span class="doccomment">/// Native rdkafka topic partition list.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaTopicPartitionList</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_topic_partition_list_t</span>;
 
-<span class="doccomment">/// Native rdkafka metadata container</span>
+<span class="doccomment">/// Native rdkafka metadata container.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaMetadata</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_metadata_t</span>;
 
-<span class="doccomment">/// Native rdkafka topic information</span>
+<span class="doccomment">/// Native rdkafka topic information.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaMetadataTopic</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_metadata_topic_t</span>;
 
-<span class="doccomment">/// Native rdkafka partition information</span>
+<span class="doccomment">/// Native rdkafka partition information.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaMetadataPartition</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_metadata_partition_t</span>;
 
-<span class="doccomment">/// Native rdkafka broker information</span>
+<span class="doccomment">/// Native rdkafka broker information.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaMetadataBroker</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_metadata_broker_t</span>;
 
-<span class="doccomment">/// Native rdkafka state</span>
+<span class="doccomment">/// Native rdkafka state.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaState</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_s</span>;
 
-<span class="doccomment">/// Native rdkafka list of groups</span>
+<span class="doccomment">/// Native rdkafka list of groups.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaGroupList</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_group_list</span>;
 
-<span class="doccomment">/// Native rdkafka group information</span>
+<span class="doccomment">/// Native rdkafka group information.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaGroupInfo</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_group_info</span>;
 
-<span class="doccomment">/// Native rdkafka group member information</span>
+<span class="doccomment">/// Native rdkafka group member information.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaGroupMemberInfo</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_group_member_info</span>;
 
-<span class="doccomment">/// Native rdkafka group member information</span>
+<span class="doccomment">/// Native rdkafka group member information.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaHeaders</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_headers_t</span>;
 
-<span class="doccomment">/// Native rdkafka queue</span>
+<span class="doccomment">/// Native rdkafka queue.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaQueue</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_queue_t</span>;
 
-<span class="comment">// Native rdkafka new topic object</span>
+<span class="doccomment">/// Native rdkafka new topic object.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaNewTopic</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_NewTopic_t</span>;
 
-<span class="comment">// Native rdkafka delete topic object</span>
+<span class="doccomment">/// Native rdkafka delete topic object.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaDeleteTopic</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_DeleteTopic_t</span>;
 
-<span class="comment">// Native rdkafka new partitions object</span>
+<span class="doccomment">/// Native rdkafka new partitions object.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaNewPartitions</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_NewPartitions_t</span>;
 
-<span class="comment">// Native rdkafka config resource</span>
+<span class="doccomment">/// Native rdkafka config resource.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaConfigResource</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_ConfigResource_t</span>;
 
-<span class="comment">// Native rdkafka event</span>
+<span class="doccomment">/// Native rdkafka event.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaEvent</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_event_t</span>;
 
-<span class="comment">// Native rdkafka admin options</span>
+<span class="doccomment">/// Native rdkafka admin options.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaAdminOptions</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_AdminOptions_t</span>;
 
-<span class="comment">// Native rdkafka topic result</span>
+<span class="doccomment">/// Native rdkafka topic result.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RDKafkaTopicResult</span> <span class="op">=</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_topic_result_t</span>;
 
 <span class="comment">// ENUMS</span>
 
-<span class="doccomment">/// Client types</span>
+<span class="doccomment">/// Client types.</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_type_t</span> <span class="kw">as</span> <span class="ident">RDKafkaType</span>;
 
-<span class="doccomment">/// Configuration result</span>
+<span class="doccomment">/// Configuration result.</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_conf_res_t</span> <span class="kw">as</span> <span class="ident">RDKafkaConfRes</span>;
 
-<span class="doccomment">/// Response error</span>
+<span class="doccomment">/// Response error.</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_resp_err_t</span> <span class="kw">as</span> <span class="ident">RDKafkaRespErr</span>;
 
-<span class="doccomment">/// Admin operation</span>
+<span class="doccomment">/// Admin operation.</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_admin_op_t</span> <span class="kw">as</span> <span class="ident">RDKafkaAdminOp</span>;
 
-<span class="doccomment">/// Config resource type</span>
+<span class="doccomment">/// Config resource type.</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_ResourceType_t</span> <span class="kw">as</span> <span class="ident">RDKafkaResourceType</span>;
 
-<span class="doccomment">/// Config source</span>
+<span class="doccomment">/// Config source.</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">bindings</span>::<span class="ident">rd_kafka_ConfigSource_t</span> <span class="kw">as</span> <span class="ident">RDKafkaConfigSource</span>;
 
-<span class="doccomment">/// Errors enum</span>
+<span class="comment">// Errors enum</span>
 
-<span class="doccomment">/// Error from the underlying rdkafka library.</span>
+<span class="doccomment">/// Native rdkafka error.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RDKafkaError</span> {
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
     <span class="ident">Begin</span> <span class="op">=</span> <span class="op">-</span><span class="number">200</span>,
-    <span class="doccomment">/// Received message is incorrect</span>
+    <span class="doccomment">/// Received message is incorrect.</span>
     <span class="ident">BadMessage</span> <span class="op">=</span> <span class="op">-</span><span class="number">199</span>,
-    <span class="doccomment">/// Bad/unknown compression</span>
+    <span class="doccomment">/// Bad/unknown compression.</span>
     <span class="ident">BadCompression</span> <span class="op">=</span> <span class="op">-</span><span class="number">198</span>,
-    <span class="doccomment">/// Broker is going away</span>
+    <span class="doccomment">/// Broker is going away.</span>
     <span class="ident">BrokerDestroy</span> <span class="op">=</span> <span class="op">-</span><span class="number">197</span>,
-    <span class="doccomment">/// Generic failure</span>
+    <span class="doccomment">/// Generic failure.</span>
     <span class="ident">Fail</span> <span class="op">=</span> <span class="op">-</span><span class="number">196</span>,
-    <span class="doccomment">/// Broker transport failure</span>
+    <span class="doccomment">/// Broker transport failure.</span>
     <span class="ident">BrokerTransportFailure</span> <span class="op">=</span> <span class="op">-</span><span class="number">195</span>,
-    <span class="doccomment">/// Critical system resource</span>
+    <span class="doccomment">/// Critical system resource.</span>
     <span class="ident">CriticalSystemResource</span> <span class="op">=</span> <span class="op">-</span><span class="number">194</span>,
-    <span class="doccomment">/// Failed to resolve broker</span>
+    <span class="doccomment">/// Failed to resolve broker.</span>
     <span class="ident">Resolve</span> <span class="op">=</span> <span class="op">-</span><span class="number">193</span>,
-    <span class="doccomment">/// Produced message timed out</span>
+    <span class="doccomment">/// Produced message timed out.</span>
     <span class="ident">MessageTimedOut</span> <span class="op">=</span> <span class="op">-</span><span class="number">192</span>,
     <span class="doccomment">/// Reached the end of the topic+partition queue on the broker. Not really an error.</span>
     <span class="ident">PartitionEOF</span> <span class="op">=</span> <span class="op">-</span><span class="number">191</span>,
     <span class="doccomment">/// Permanent: Partition does not exist in cluster.</span>
     <span class="ident">UnknownPartition</span> <span class="op">=</span> <span class="op">-</span><span class="number">190</span>,
-    <span class="doccomment">/// File or filesystem error</span>
+    <span class="doccomment">/// File or filesystem error.</span>
     <span class="ident">FileSystem</span> <span class="op">=</span> <span class="op">-</span><span class="number">189</span>,
     <span class="doccomment">/// Permanent: Topic does not exist in cluster.</span>
     <span class="ident">UnknownTopic</span> <span class="op">=</span> <span class="op">-</span><span class="number">188</span>,
     <span class="doccomment">/// All broker connections are down.</span>
     <span class="ident">AllBrokersDown</span> <span class="op">=</span> <span class="op">-</span><span class="number">187</span>,
-    <span class="doccomment">/// Invalid argument, or invalid configuration</span>
+    <span class="doccomment">/// Invalid argument, or invalid configuration.</span>
     <span class="ident">InvalidArgument</span> <span class="op">=</span> <span class="op">-</span><span class="number">186</span>,
-    <span class="doccomment">/// Operation timed out</span>
+    <span class="doccomment">/// Operation timed out.</span>
     <span class="ident">OperationTimedOut</span> <span class="op">=</span> <span class="op">-</span><span class="number">185</span>,
-    <span class="doccomment">/// Queue is full</span>
+    <span class="doccomment">/// Queue is full.</span>
     <span class="ident">QueueFull</span> <span class="op">=</span> <span class="op">-</span><span class="number">184</span>,
-    <span class="doccomment">/// ISR count &lt; required.acks</span>
+    <span class="doccomment">/// ISR count &lt; required.acks.</span>
     <span class="ident">ISRInsufficient</span> <span class="op">=</span> <span class="op">-</span><span class="number">183</span>,
-    <span class="doccomment">/// Broker node update</span>
+    <span class="doccomment">/// Broker node update.</span>
     <span class="ident">NodeUpdate</span> <span class="op">=</span> <span class="op">-</span><span class="number">182</span>,
-    <span class="doccomment">/// SSL error</span>
+    <span class="doccomment">/// SSL error.</span>
     <span class="ident">SSL</span> <span class="op">=</span> <span class="op">-</span><span class="number">181</span>,
     <span class="doccomment">/// Waiting for coordinator to become available.</span>
     <span class="ident">WaitingForCoordinator</span> <span class="op">=</span> <span class="op">-</span><span class="number">180</span>,
-    <span class="doccomment">/// Unknown client group</span>
+    <span class="doccomment">/// Unknown client group.</span>
     <span class="ident">UnknownGroup</span> <span class="op">=</span> <span class="op">-</span><span class="number">179</span>,
-    <span class="doccomment">/// Operation in progress</span>
+    <span class="doccomment">/// Operation in progress.</span>
     <span class="ident">InProgress</span> <span class="op">=</span> <span class="op">-</span><span class="number">178</span>,
     <span class="doccomment">/// Previous operation in progress, wait for it to finish.</span>
     <span class="ident">PreviousInProgress</span> <span class="op">=</span> <span class="op">-</span><span class="number">177</span>,
-    <span class="doccomment">/// This operation would interfere with an existing subscription</span>
+    <span class="doccomment">/// This operation would interfere with an existing subscription.</span>
     <span class="ident">ExistingSubscription</span> <span class="op">=</span> <span class="op">-</span><span class="number">176</span>,
-    <span class="doccomment">/// Assigned partitions (rebalance_cb)</span>
+    <span class="doccomment">/// Assigned partitions (rebalance_cb).</span>
     <span class="ident">AssignPartitions</span> <span class="op">=</span> <span class="op">-</span><span class="number">175</span>,
-    <span class="doccomment">/// Revoked partitions (rebalance_cb)</span>
+    <span class="doccomment">/// Revoked partitions (rebalance_cb).</span>
     <span class="ident">RevokePartitions</span> <span class="op">=</span> <span class="op">-</span><span class="number">174</span>,
-    <span class="doccomment">/// Conflicting use</span>
+    <span class="doccomment">/// Conflicting use.</span>
     <span class="ident">Conflict</span> <span class="op">=</span> <span class="op">-</span><span class="number">173</span>,
-    <span class="doccomment">/// Wrong state</span>
+    <span class="doccomment">/// Wrong state.</span>
     <span class="ident">State</span> <span class="op">=</span> <span class="op">-</span><span class="number">172</span>,
-    <span class="doccomment">/// Unknown protocol</span>
+    <span class="doccomment">/// Unknown protocol.</span>
     <span class="ident">UnknownProtocol</span> <span class="op">=</span> <span class="op">-</span><span class="number">171</span>,
-    <span class="doccomment">/// Not implemented</span>
+    <span class="doccomment">/// Not implemented.</span>
     <span class="ident">NotImplemented</span> <span class="op">=</span> <span class="op">-</span><span class="number">170</span>,
-    <span class="doccomment">/// Authentication failure</span>
+    <span class="doccomment">/// Authentication failure.</span>
     <span class="ident">Authentication</span> <span class="op">=</span> <span class="op">-</span><span class="number">169</span>,
-    <span class="doccomment">/// No stored offset</span>
+    <span class="doccomment">/// No stored offset.</span>
     <span class="ident">NoOffset</span> <span class="op">=</span> <span class="op">-</span><span class="number">168</span>,
-    <span class="doccomment">/// Outdated</span>
+    <span class="doccomment">/// Outdated.</span>
     <span class="ident">Outdated</span> <span class="op">=</span> <span class="op">-</span><span class="number">167</span>,
-    <span class="doccomment">/// Timed out in queue</span>
+    <span class="doccomment">/// Timed out in queue.</span>
     <span class="ident">TimedOutQueue</span> <span class="op">=</span> <span class="op">-</span><span class="number">166</span>,
-    <span class="doccomment">/// Feature not supported by broker</span>
+    <span class="doccomment">/// Feature not supported by broker.</span>
     <span class="ident">UnsupportedFeature</span> <span class="op">=</span> <span class="op">-</span><span class="number">165</span>,
-    <span class="doccomment">/// Awaiting cache update</span>
+    <span class="doccomment">/// Awaiting cache update.</span>
     <span class="ident">WaitCache</span> <span class="op">=</span> <span class="op">-</span><span class="number">164</span>,
-    <span class="doccomment">/// Operation interrupted (e.g., due to yield))</span>
+    <span class="doccomment">/// Operation interrupted (e.g., due to yield).</span>
     <span class="ident">Interrupted</span> <span class="op">=</span> <span class="op">-</span><span class="number">163</span>,
-    <span class="doccomment">/// Key serialization error</span>
+    <span class="doccomment">/// Key serialization error.</span>
     <span class="ident">KeySerialization</span> <span class="op">=</span> <span class="op">-</span><span class="number">162</span>,
-    <span class="doccomment">/// Value serialization error</span>
+    <span class="doccomment">/// Value serialization error.</span>
     <span class="ident">ValueSerialization</span> <span class="op">=</span> <span class="op">-</span><span class="number">161</span>,
-    <span class="doccomment">/// Key deserialization error</span>
+    <span class="doccomment">/// Key deserialization error.</span>
     <span class="ident">KeyDeserialization</span> <span class="op">=</span> <span class="op">-</span><span class="number">160</span>,
-    <span class="doccomment">/// Value deserialization error</span>
+    <span class="doccomment">/// Value deserialization error.</span>
     <span class="ident">ValueDeserialization</span> <span class="op">=</span> <span class="op">-</span><span class="number">159</span>,
-    <span class="doccomment">/// Partial response</span>
+    <span class="doccomment">/// Partial response.</span>
     <span class="ident">Partial</span> <span class="op">=</span> <span class="op">-</span><span class="number">158</span>,
-    <span class="doccomment">/// Modification attempted on read-only object</span>
+    <span class="doccomment">/// Modification attempted on read-only object.</span>
     <span class="ident">ReadOnly</span> <span class="op">=</span> <span class="op">-</span><span class="number">157</span>,
-    <span class="doccomment">/// No such entry or item not found</span>
+    <span class="doccomment">/// No such entry or item not found.</span>
     <span class="ident">NoEnt</span> <span class="op">=</span> <span class="op">-</span><span class="number">156</span>,
-    <span class="doccomment">/// Read underflow</span>
+    <span class="doccomment">/// Read underflow.</span>
     <span class="ident">Underflow</span> <span class="op">=</span> <span class="op">-</span><span class="number">155</span>,
-    <span class="doccomment">/// Invalid type</span>
+    <span class="doccomment">/// Invalid type.</span>
     <span class="ident">InvalidType</span> <span class="op">=</span> <span class="op">-</span><span class="number">154</span>,
-    <span class="doccomment">/// Retry operation</span>
+    <span class="doccomment">/// Retry operation.</span>
     <span class="ident">Retry</span> <span class="op">=</span> <span class="op">-</span><span class="number">153</span>,
-    <span class="doccomment">/// Purged in queue</span>
+    <span class="doccomment">/// Purged in queue.</span>
     <span class="ident">PurgeQueue</span> <span class="op">=</span> <span class="op">-</span><span class="number">152</span>,
-    <span class="doccomment">/// Purged in flight</span>
+    <span class="doccomment">/// Purged in flight.</span>
     <span class="ident">PurgeInflight</span> <span class="op">=</span> <span class="op">-</span><span class="number">151</span>,
-    <span class="doccomment">/// Fatal error: see rd_kafka_fatal_error()</span>
+    <span class="doccomment">/// Fatal error: see rd_kafka_fatal_error().</span>
     <span class="ident">Fatal</span> <span class="op">=</span> <span class="op">-</span><span class="number">150</span>,
-    <span class="doccomment">/// Inconsistent state</span>
+    <span class="doccomment">/// Inconsistent state.</span>
     <span class="ident">Inconsistent</span> <span class="op">=</span> <span class="op">-</span><span class="number">149</span>,
-    <span class="doccomment">/// Gap-less ordering would not be guaranteed if proceeding</span>
+    <span class="doccomment">/// Gap-less ordering would not be guaranteed if proceeding.</span>
     <span class="ident">GaplessGuarantee</span> <span class="op">=</span> <span class="op">-</span><span class="number">148</span>,
-    <span class="doccomment">/// Maximum poll interval exceeded</span>
+    <span class="doccomment">/// Maximum poll interval exceeded.</span>
     <span class="ident">PollExceeded</span> <span class="op">=</span> <span class="op">-</span><span class="number">147</span>,
-    <span class="doccomment">/// Unknown broker</span>
+    <span class="doccomment">/// Unknown broker.</span>
     <span class="ident">UnknownBroker</span> <span class="op">=</span> <span class="op">-</span><span class="number">146</span>,
+    <span class="doccomment">/// Functionality not configured.</span>
+    <span class="ident">NotConfigured</span>,
+    <span class="doccomment">/// Instance has been fenced.</span>
+    <span class="ident">Fenced</span>,
+    <span class="doccomment">/// Application generated error.</span>
+    <span class="ident">Application</span>,
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
     <span class="ident">End</span> <span class="op">=</span> <span class="op">-</span><span class="number">100</span>,
-    <span class="doccomment">/// Unknown broker error</span>
+    <span class="doccomment">/// Unknown broker error.</span>
     <span class="ident">Unknown</span> <span class="op">=</span> <span class="op">-</span><span class="number">1</span>,
-    <span class="doccomment">/// Success</span>
+    <span class="doccomment">/// Success.</span>
     <span class="ident">NoError</span> <span class="op">=</span> <span class="number">0</span>,
-    <span class="doccomment">/// Offset out of range</span>
+    <span class="doccomment">/// Offset out of range.</span>
     <span class="ident">OffsetOutOfRange</span> <span class="op">=</span> <span class="number">1</span>,
-    <span class="doccomment">/// Invalid message</span>
+    <span class="doccomment">/// Invalid message.</span>
     <span class="ident">InvalidMessage</span> <span class="op">=</span> <span class="number">2</span>,
-    <span class="doccomment">/// Unknown topic or partition</span>
+    <span class="doccomment">/// Unknown topic or partition.</span>
     <span class="ident">UnknownTopicOrPartition</span> <span class="op">=</span> <span class="number">3</span>,
-    <span class="doccomment">/// Invalid message size</span>
+    <span class="doccomment">/// Invalid message size.</span>
     <span class="ident">InvalidMessageSize</span> <span class="op">=</span> <span class="number">4</span>,
-    <span class="doccomment">/// Leader not available</span>
+    <span class="doccomment">/// Leader not available.</span>
     <span class="ident">LeaderNotAvailable</span> <span class="op">=</span> <span class="number">5</span>,
-    <span class="doccomment">/// Not leader for partition</span>
+    <span class="doccomment">/// Not leader for partition.</span>
     <span class="ident">NotLeaderForPartition</span> <span class="op">=</span> <span class="number">6</span>,
-    <span class="doccomment">/// Request timed out</span>
+    <span class="doccomment">/// Request timed out.</span>
     <span class="ident">RequestTimedOut</span> <span class="op">=</span> <span class="number">7</span>,
-    <span class="doccomment">/// Broker not available</span>
+    <span class="doccomment">/// Broker not available.</span>
     <span class="ident">BrokerNotAvailable</span> <span class="op">=</span> <span class="number">8</span>,
-    <span class="doccomment">/// Replica not available</span>
+    <span class="doccomment">/// Replica not available.</span>
     <span class="ident">ReplicaNotAvailable</span> <span class="op">=</span> <span class="number">9</span>,
-    <span class="doccomment">/// Message size too large</span>
+    <span class="doccomment">/// Message size too large.</span>
     <span class="ident">MessageSizeTooLarge</span> <span class="op">=</span> <span class="number">10</span>,
-    <span class="doccomment">/// Stale controller epoch code</span>
+    <span class="doccomment">/// Stale controller epoch code.</span>
     <span class="ident">StaleControllerEpoch</span> <span class="op">=</span> <span class="number">11</span>,
-    <span class="doccomment">/// Offset metadata string too large</span>
+    <span class="doccomment">/// Offset metadata string too large.</span>
     <span class="ident">OffsetMetadataTooLarge</span> <span class="op">=</span> <span class="number">12</span>,
-    <span class="doccomment">/// Broker disconnected before response received</span>
+    <span class="doccomment">/// Broker disconnected before response received.</span>
     <span class="ident">NetworkException</span> <span class="op">=</span> <span class="number">13</span>,
-    <span class="doccomment">/// Coordinator load in progress</span>
+    <span class="doccomment">/// Coordinator load in progress.</span>
     <span class="ident">CoordinatorLoadInProgress</span> <span class="op">=</span> <span class="number">14</span>,
-    <span class="doccomment">/// Coordinator not available</span>
+    <span class="doccomment">/// Coordinator not available.</span>
     <span class="ident">CoordinatorNotAvailable</span> <span class="op">=</span> <span class="number">15</span>,
-    <span class="doccomment">/// Not coordinator</span>
+    <span class="doccomment">/// Not coordinator.</span>
     <span class="ident">NotCoordinator</span> <span class="op">=</span> <span class="number">16</span>,
-    <span class="doccomment">/// Invalid topic</span>
+    <span class="doccomment">/// Invalid topic.</span>
     <span class="ident">InvalidTopic</span> <span class="op">=</span> <span class="number">17</span>,
-    <span class="doccomment">/// Message batch larger than configured server segment size</span>
+    <span class="doccomment">/// Message batch larger than configured server segment size.</span>
     <span class="ident">MessageBatchTooLarge</span> <span class="op">=</span> <span class="number">18</span>,
-    <span class="doccomment">/// Not enough in-sync replicas</span>
+    <span class="doccomment">/// Not enough in-sync replicas.</span>
     <span class="ident">NotEnoughReplicas</span> <span class="op">=</span> <span class="number">19</span>,
-    <span class="doccomment">/// Message(s) written to insufficient number of in-sync replicas</span>
+    <span class="doccomment">/// Message(s) written to insufficient number of in-sync replicas.</span>
     <span class="ident">NotEnoughReplicasAfterAppend</span> <span class="op">=</span> <span class="number">20</span>,
-    <span class="doccomment">/// Invalid required acks value</span>
+    <span class="doccomment">/// Invalid required acks value.</span>
     <span class="ident">InvalidRequiredAcks</span> <span class="op">=</span> <span class="number">21</span>,
-    <span class="doccomment">/// Specified group generation id is not valid</span>
+    <span class="doccomment">/// Specified group generation id is not valid.</span>
     <span class="ident">IllegalGeneration</span> <span class="op">=</span> <span class="number">22</span>,
-    <span class="doccomment">/// Inconsistent group protocol</span>
+    <span class="doccomment">/// Inconsistent group protocol.</span>
     <span class="ident">InconsistentGroupProtocol</span> <span class="op">=</span> <span class="number">23</span>,
-    <span class="doccomment">/// Invalid group.id</span>
+    <span class="doccomment">/// Invalid group.id.</span>
     <span class="ident">InvalidGroupId</span> <span class="op">=</span> <span class="number">24</span>,
-    <span class="doccomment">/// Unknown member</span>
+    <span class="doccomment">/// Unknown member.</span>
     <span class="ident">UnknownMemberId</span> <span class="op">=</span> <span class="number">25</span>,
-    <span class="doccomment">/// Invalid session timeout</span>
+    <span class="doccomment">/// Invalid session timeout.</span>
     <span class="ident">InvalidSessionTimeout</span> <span class="op">=</span> <span class="number">26</span>,
-    <span class="doccomment">/// Group rebalance in progress</span>
+    <span class="doccomment">/// Group rebalance in progress.</span>
     <span class="ident">RebalanceInProgress</span> <span class="op">=</span> <span class="number">27</span>,
-    <span class="doccomment">/// Commit offset data size is not valid</span>
+    <span class="doccomment">/// Commit offset data size is not valid.</span>
     <span class="ident">InvalidCommitOffsetSize</span> <span class="op">=</span> <span class="number">28</span>,
-    <span class="doccomment">/// Topic authorization failed</span>
+    <span class="doccomment">/// Topic authorization failed.</span>
     <span class="ident">TopicAuthorizationFailed</span> <span class="op">=</span> <span class="number">29</span>,
-    <span class="doccomment">/// Group authorization failed</span>
+    <span class="doccomment">/// Group authorization failed.</span>
     <span class="ident">GroupAuthorizationFailed</span> <span class="op">=</span> <span class="number">30</span>,
-    <span class="doccomment">/// Cluster authorization failed</span>
+    <span class="doccomment">/// Cluster authorization failed.</span>
     <span class="ident">ClusterAuthorizationFailed</span> <span class="op">=</span> <span class="number">31</span>,
-    <span class="doccomment">/// Invalid timestamp</span>
+    <span class="doccomment">/// Invalid timestamp.</span>
     <span class="ident">InvalidTimestamp</span> <span class="op">=</span> <span class="number">32</span>,
-    <span class="doccomment">/// Unsupported SASL mechanism</span>
+    <span class="doccomment">/// Unsupported SASL mechanism.</span>
     <span class="ident">UnsupportedSASLMechanism</span> <span class="op">=</span> <span class="number">33</span>,
-    <span class="doccomment">/// Illegal SASL state</span>
+    <span class="doccomment">/// Illegal SASL state.</span>
     <span class="ident">IllegalSASLState</span> <span class="op">=</span> <span class="number">34</span>,
-    <span class="doccomment">/// Unsupported version</span>
+    <span class="doccomment">/// Unsupported version.</span>
     <span class="ident">UnsupportedVersion</span> <span class="op">=</span> <span class="number">35</span>,
-    <span class="doccomment">/// Topic already exists</span>
+    <span class="doccomment">/// Topic already exists.</span>
     <span class="ident">TopicAlreadyExists</span> <span class="op">=</span> <span class="number">36</span>,
-    <span class="doccomment">/// Invalid number of partitions</span>
+    <span class="doccomment">/// Invalid number of partitions.</span>
     <span class="ident">InvalidPartitions</span> <span class="op">=</span> <span class="number">37</span>,
-    <span class="doccomment">/// Invalid replication factor</span>
+    <span class="doccomment">/// Invalid replication factor.</span>
     <span class="ident">InvalidReplicationFactor</span> <span class="op">=</span> <span class="number">38</span>,
-    <span class="doccomment">/// Invalid replica assignment</span>
+    <span class="doccomment">/// Invalid replica assignment.</span>
     <span class="ident">InvalidReplicaAssignment</span> <span class="op">=</span> <span class="number">39</span>,
-    <span class="doccomment">/// Invalid config */</span>
+    <span class="doccomment">/// Invalid config.</span>
     <span class="ident">InvalidConfig</span> <span class="op">=</span> <span class="number">40</span>,
-    <span class="doccomment">/// Not controller for cluster</span>
+    <span class="doccomment">/// Not controller for cluster.</span>
     <span class="ident">NotController</span> <span class="op">=</span> <span class="number">41</span>,
-    <span class="doccomment">/// Invalid request</span>
+    <span class="doccomment">/// Invalid request.</span>
     <span class="ident">InvalidRequest</span> <span class="op">=</span> <span class="number">42</span>,
-    <span class="doccomment">/// Message format on broker does not support request</span>
+    <span class="doccomment">/// Message format on broker does not support request.</span>
     <span class="ident">UnsupportedForMessageFormat</span> <span class="op">=</span> <span class="number">43</span>,
-    <span class="doccomment">/// Policy violation</span>
+    <span class="doccomment">/// Policy violation.</span>
     <span class="ident">PolicyViolation</span> <span class="op">=</span> <span class="number">44</span>,
-    <span class="doccomment">/// Broker received an out of order sequence number</span>
+    <span class="doccomment">/// Broker received an out of order sequence number.</span>
     <span class="ident">OutOfOrderSequenceNumber</span> <span class="op">=</span> <span class="number">45</span>,
-    <span class="doccomment">/// Broker received a duplicate sequence number</span>
+    <span class="doccomment">/// Broker received a duplicate sequence number.</span>
     <span class="ident">DuplicateSequenceNumber</span> <span class="op">=</span> <span class="number">46</span>,
-    <span class="doccomment">/// Producer attempted an operation with an old epoch</span>
+    <span class="doccomment">/// Producer attempted an operation with an old epoch.</span>
     <span class="ident">InvalidProducerEpoch</span> <span class="op">=</span> <span class="number">47</span>,
-    <span class="doccomment">/// Producer attempted a transactional operation in an invalid state</span>
+    <span class="doccomment">/// Producer attempted a transactional operation in an invalid state.</span>
     <span class="ident">InvalidTransactionalState</span> <span class="op">=</span> <span class="number">48</span>,
-    <span class="doccomment">/// Producer attempted to use a producer id which is currently assigned to its transactional id</span>
+    <span class="doccomment">/// Producer attempted to use a producer id which is currently assigned to</span>
+    <span class="doccomment">/// its transactional id.</span>
     <span class="ident">InvalidProducerIdMapping</span> <span class="op">=</span> <span class="number">49</span>,
-    <span class="doccomment">/// Transaction timeout is larger than the maxi value allowed by the broker&#39;s</span>
-    <span class="doccomment">/// max.transaction.timeout.ms</span>
+    <span class="doccomment">/// Transaction timeout is larger than the maxi value allowed by the</span>
+    <span class="doccomment">/// broker&#39;s max.transaction.timeout.ms.</span>
     <span class="ident">InvalidTransactionTimeout</span> <span class="op">=</span> <span class="number">50</span>,
-    <span class="doccomment">/// Producer attempted to update a transaction while another concurrent operation on the same</span>
-    <span class="doccomment">/// transaction was ongoing</span>
+    <span class="doccomment">/// Producer attempted to update a transaction while another concurrent</span>
+    <span class="doccomment">/// operation on the same transaction was ongoing.</span>
     <span class="ident">ConcurrentTransactions</span> <span class="op">=</span> <span class="number">51</span>,
-    <span class="doccomment">/// Indicates that the transaction coordinator sending a WriteTxnMarker is no longer the current</span>
-    <span class="doccomment">/// coordinator for a given producer</span>
+    <span class="doccomment">/// Indicates that the transaction coordinator sending a WriteTxnMarker is</span>
+    <span class="doccomment">/// no longer the current coordinator for a given producer.</span>
     <span class="ident">TransactionCoordinatorFenced</span> <span class="op">=</span> <span class="number">52</span>,
-    <span class="doccomment">/// Transactional Id authorization failed</span>
+    <span class="doccomment">/// Transactional Id authorization failed.</span>
     <span class="ident">TransactionalIdAuthorizationFailed</span> <span class="op">=</span> <span class="number">53</span>,
-    <span class="doccomment">/// Security features are disabled</span>
+    <span class="doccomment">/// Security features are disabled.</span>
     <span class="ident">SecurityDisabled</span> <span class="op">=</span> <span class="number">54</span>,
-    <span class="doccomment">/// Operation not attempted</span>
+    <span class="doccomment">/// Operation not attempted.</span>
     <span class="ident">OperationNotAttempted</span> <span class="op">=</span> <span class="number">55</span>,
-    <span class="doccomment">/// Disk error when trying to access log file on the disk</span>
+    <span class="doccomment">/// Disk error when trying to access log file on the disk.</span>
     <span class="ident">KafkaStorageError</span> <span class="op">=</span> <span class="number">56</span>,
-    <span class="doccomment">/// The user-specified log directory is not found in the broker config</span>
+    <span class="doccomment">/// The user-specified log directory is not found in the broker config.</span>
     <span class="ident">LogDirNotFound</span> <span class="op">=</span> <span class="number">57</span>,
-    <span class="doccomment">/// SASL Authentication failed</span>
+    <span class="doccomment">/// SASL Authentication failed.</span>
     <span class="ident">SaslAuthenticationFailed</span> <span class="op">=</span> <span class="number">58</span>,
-    <span class="doccomment">/// Unknown Producer Id</span>
+    <span class="doccomment">/// Unknown Producer Id.</span>
     <span class="ident">UnknownProducerId</span> <span class="op">=</span> <span class="number">59</span>,
-    <span class="doccomment">/// Partition reassignment is in progress</span>
+    <span class="doccomment">/// Partition reassignment is in progress.</span>
     <span class="ident">ReassignmentInProgress</span> <span class="op">=</span> <span class="number">60</span>,
-    <span class="doccomment">/// Delegation Token feature is not enabled</span>
+    <span class="doccomment">/// Delegation Token feature is not enabled.</span>
     <span class="ident">DelegationTokenAuthDisabled</span> <span class="op">=</span> <span class="number">61</span>,
-    <span class="doccomment">/// Delegation Token is not found on server</span>
+    <span class="doccomment">/// Delegation Token is not found on server.</span>
     <span class="ident">DelegationTokenNotFound</span> <span class="op">=</span> <span class="number">62</span>,
-    <span class="doccomment">/// Specified Principal is not valid Owner/Renewer</span>
+    <span class="doccomment">/// Specified Principal is not valid Owner/Renewer.</span>
     <span class="ident">DelegationTokenOwnerMismatch</span> <span class="op">=</span> <span class="number">63</span>,
-    <span class="doccomment">/// Delegation Token requests are not allowed on this connection</span>
+    <span class="doccomment">/// Delegation Token requests are not allowed on this connection.</span>
     <span class="ident">DelegationTokenRequestNotAllowed</span> <span class="op">=</span> <span class="number">64</span>,
-    <span class="doccomment">/// Delegation Token authorization failed</span>
+    <span class="doccomment">/// Delegation Token authorization failed.</span>
     <span class="ident">DelegationTokenAuthorizationFailed</span> <span class="op">=</span> <span class="number">65</span>,
-    <span class="doccomment">/// Delegation Token is expired</span>
+    <span class="doccomment">/// Delegation Token is expired.</span>
     <span class="ident">DelegationTokenExpired</span> <span class="op">=</span> <span class="number">66</span>,
-    <span class="doccomment">/// Supplied principalType is not supported</span>
+    <span class="doccomment">/// Supplied principalType is not supported.</span>
     <span class="ident">InvalidPrincipalType</span> <span class="op">=</span> <span class="number">67</span>,
-    <span class="doccomment">/// The group is not empty</span>
+    <span class="doccomment">/// The group is not empty.</span>
     <span class="ident">NonEmptyGroup</span> <span class="op">=</span> <span class="number">68</span>,
-    <span class="doccomment">/// The group id does not exist</span>
+    <span class="doccomment">/// The group id does not exist.</span>
     <span class="ident">GroupIdNotFound</span> <span class="op">=</span> <span class="number">69</span>,
-    <span class="doccomment">/// The fetch session ID was not found</span>
+    <span class="doccomment">/// The fetch session ID was not found.</span>
     <span class="ident">FetchSessionIdNotFound</span> <span class="op">=</span> <span class="number">70</span>,
-    <span class="doccomment">/// The fetch session epoch is invalid</span>
+    <span class="doccomment">/// The fetch session epoch is invalid.</span>
     <span class="ident">InvalidFetchSessionEpoch</span> <span class="op">=</span> <span class="number">71</span>,
-    <span class="doccomment">/// No matching listener</span>
+    <span class="doccomment">/// No matching listener.</span>
     <span class="ident">ListenerNotFound</span> <span class="op">=</span> <span class="number">72</span>,
-    <span class="doccomment">/// Topic deletion is disabled</span>
+    <span class="doccomment">/// Topic deletion is disabled.</span>
     <span class="ident">TopicDeletionDisabled</span> <span class="op">=</span> <span class="number">73</span>,
-    <span class="doccomment">/// Leader epoch is older than broker epoch</span>
+    <span class="doccomment">/// Leader epoch is older than broker epoch.</span>
     <span class="ident">FencedLeaderEpoch</span> <span class="op">=</span> <span class="number">74</span>,
-    <span class="doccomment">/// Leader epoch is newer than broker epoch</span>
+    <span class="doccomment">/// Leader epoch is newer than broker epoch.</span>
     <span class="ident">UnknownLeaderEpoch</span> <span class="op">=</span> <span class="number">75</span>,
-    <span class="doccomment">/// Unsupported compression type</span>
+    <span class="doccomment">/// Unsupported compression type.</span>
     <span class="ident">UnsupportedCompressionType</span> <span class="op">=</span> <span class="number">76</span>,
-    <span class="doccomment">/// Broker epoch has changed</span>
+    <span class="doccomment">/// Broker epoch has changed.</span>
     <span class="ident">StaleBrokerEpoch</span> <span class="op">=</span> <span class="number">77</span>,
-    <span class="doccomment">/// Leader high watermark is not caught up</span>
+    <span class="doccomment">/// Leader high watermark is not caught up.</span>
     <span class="ident">OffsetNotAvailable</span> <span class="op">=</span> <span class="number">78</span>,
-    <span class="doccomment">/// Group member needs a valid member ID</span>
+    <span class="doccomment">/// Group member needs a valid member ID.</span>
     <span class="ident">MemberIdRequired</span> <span class="op">=</span> <span class="number">79</span>,
-    <span class="doccomment">/// Preferred leader was not available</span>
+    <span class="doccomment">/// Preferred leader was not available.</span>
     <span class="ident">PreferredLeaderNotAvailable</span> <span class="op">=</span> <span class="number">80</span>,
-    <span class="doccomment">/// Consumer group has reached maximum size</span>
+    <span class="doccomment">/// Consumer group has reached maximum size.</span>
     <span class="ident">GroupMaxSizeReached</span> <span class="op">=</span> <span class="number">81</span>,
+    <span class="doccomment">/// Static consumer fenced by other consumer with same group.instance.id.</span>
+    <span class="ident">FencedInstanceId</span> <span class="op">=</span> <span class="number">82</span>,
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
     <span class="ident">EndAll</span>,
 }

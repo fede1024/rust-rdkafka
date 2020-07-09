@@ -227,21 +227,149 @@
 <span id="227">227</span>
 <span id="228">228</span>
 <span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Utility functions</span>
+<span class="doccomment">//! Utility functions and types.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::<span class="ident">CStr</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">future</span>::<span class="ident">Future</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ops</span>::<span class="ident">Deref</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">raw</span>::<span class="ident">c_char</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">raw</span>::<span class="ident">c_void</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">NonNull</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">slice</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
 
+<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">trace</span>;
+
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
 
-<span class="doccomment">/// Return a tuple representing the version of `librdkafka` in</span>
-<span class="doccomment">/// hexadecimal and string format.</span>
+<span class="doccomment">/// Returns a tuple representing the version of `librdkafka` in hexadecimal and</span>
+<span class="doccomment">/// string format.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_rdkafka_version</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">u16</span>, <span class="ident">String</span>) {
     <span class="kw">let</span> <span class="ident">version_number</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_version</span>() } <span class="kw">as</span> <span class="ident">u16</span>;
     <span class="kw">let</span> <span class="ident">c_str</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_version_str</span>()) };
@@ -292,26 +420,20 @@
     }
 }
 
-<span class="doccomment">/// Converts a Duration into milliseconds</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">duration_to_millis</span>(<span class="ident">duration</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
-    <span class="ident">duration</span>.<span class="ident">as_secs</span>() <span class="op">*</span> <span class="number">1000</span> <span class="op">+</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">duration</span>.<span class="ident">subsec_nanos</span>()) <span class="op">/</span> <span class="number">1_000_000</span>
-}
-
-<span class="doccomment">/// Converts the given time to milliseconds since unix epoch.</span>
+<span class="doccomment">/// Converts the given time to the number of milliseconds since the Unix epoch.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">millis_to_epoch</span>(<span class="ident">time</span>: <span class="ident">SystemTime</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i64</span> {
-    <span class="ident">duration_to_millis</span>(
-        <span class="ident">time</span>.<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">0</span>)),
-    ) <span class="kw">as</span> <span class="ident">i64</span>
+    <span class="ident">time</span>.<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
+        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">0</span>))
+        .<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">i64</span>
 }
 
-<span class="doccomment">/// Returns the current time in millis since unix epoch.</span>
+<span class="doccomment">/// Returns the current time in milliseconds since the Unix epoch.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">current_time_millis</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i64</span> {
     <span class="ident">millis_to_epoch</span>(<span class="ident">SystemTime</span>::<span class="ident">now</span>())
 }
 
-<span class="doccomment">/// Converts a pointer to an array to an optional slice. If the pointer is null, `None` will</span>
-<span class="doccomment">/// be returned.</span>
+<span class="doccomment">/// Converts a pointer to an array to an optional slice. If the pointer is null,</span>
+<span class="doccomment">/// returns `None`.</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">ptr_to_opt_slice</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_void</span>, <span class="ident">size</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">T</span>]<span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">ptr</span>.<span class="ident">is_null</span>() {
         <span class="prelude-val">None</span>
@@ -320,8 +442,8 @@
     }
 }
 
-<span class="doccomment">/// Converts a pointer to an array to a slice. If the pointer is null or the size is zero,</span>
-<span class="doccomment">/// a zero-length slice will be returned.</span>
+<span class="doccomment">/// Converts a pointer to an array to a slice. If the pointer is null or the</span>
+<span class="doccomment">/// size is zero, returns a zero-length slice..</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">ptr_to_slice</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_void</span>, <span class="ident">size</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">T</span>] {
     <span class="kw">if</span> <span class="ident">ptr</span>.<span class="ident">is_null</span>() <span class="op">|</span><span class="op">|</span> <span class="ident">size</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
         <span class="kw-2">&amp;</span>[][..]
@@ -330,11 +452,14 @@
     }
 }
 
-<span class="doccomment">/// A trait for the conversion of Rust data to raw pointers. This conversion is used</span>
-<span class="doccomment">/// to pass opaque objects to the C library and vice versa.</span>
+<span class="doccomment">/// Converts Rust data to and from raw pointers.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This conversion is used to pass opaque objects to the C library and vice</span>
+<span class="doccomment">/// versa.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">IntoOpaque</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
     <span class="doccomment">/// Converts the object into a raw pointer.</span>
     <span class="kw">fn</span> <span class="ident">as_ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>;
+
     <span class="doccomment">/// Converts the raw pointer back to the original Rust object.</span>
     <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="kw">_</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>;
 }
@@ -378,14 +503,14 @@
 }
 
 <span class="comment">// TODO: check if the implementation returns a copy of the data and update the documentation</span>
-<span class="doccomment">/// Converts a byte array representing a C string into a String.</span>
+<span class="doccomment">/// Converts a byte array representing a C string into a [`String`].</span>
 <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">bytes_cstr_to_owned</span>(<span class="ident">bytes_cstr</span>: <span class="kw-2">&amp;</span>[<span class="ident">c_char</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
     <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">bytes_cstr</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_char</span>)
         .<span class="ident">to_string_lossy</span>()
         .<span class="ident">into_owned</span>()
 }
 
-<span class="doccomment">/// Converts a C string into a String.</span>
+<span class="doccomment">/// Converts a C string into a [`String`].</span>
 <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">cstr_to_owned</span>(<span class="ident">cstr</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_char</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
     <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">cstr</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_char</span>)
         .<span class="ident">to_string_lossy</span>()
@@ -445,16 +570,135 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">KafkaDrop</span>,
+{
+    <span class="ident">ptr</span>: <span class="ident">NonNull</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+}
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_duration_to_millis</span>() {
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">duration_to_millis</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>)), <span class="number">1000</span>);
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">duration_to_millis</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">1500</span>)), <span class="number">1500</span>);
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">duration_to_millis</span>(<span class="ident">Duration</span>::<span class="ident">new</span>(<span class="number">5</span>, <span class="number">123_000_000</span>)), <span class="number">5123</span>);
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">KafkaDrop</span>,
+{
+    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Destroying {}: {:?}&quot;</span>, <span class="ident">T</span>::<span class="ident">TYPE</span>, <span class="self">self</span>.<span class="ident">ptr</span>);
+        <span class="kw">unsafe</span> { <span class="ident">T</span>::<span class="ident">DROP</span>(<span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">as_ptr</span>()) }
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Destroyed {}: {:?}&quot;</span>, <span class="ident">T</span>::<span class="ident">TYPE</span>, <span class="self">self</span>.<span class="ident">ptr</span>);
+    }
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">trait</span> <span class="ident">KafkaDrop</span> {
+    <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>);
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">WrappedCPointer</span> <span class="kw">for</span> <span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">KafkaDrop</span>,
+{
+    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">T</span>;
+
+    <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span> {
+        <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">as_ptr</span>()
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">KafkaDrop</span>,
+{
+    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">T</span>;
+    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">Self</span>::<span class="ident">Target</span> {
+        <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">as_ref</span>() }
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">KafkaDrop</span>,
+{
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+        <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">fmt</span>(<span class="ident">f</span>)
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">KafkaDrop</span>,
+{
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="ident">NonNull</span>::<span class="ident">new</span>(<span class="ident">ptr</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">ptr</span><span class="op">|</span> <span class="self">Self</span> { <span class="ident">ptr</span> })
+    }
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span> {
+        <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">as_ptr</span>()
+    }
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">OnDrop</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw">pub</span> <span class="ident">F</span>)
+<span class="kw">where</span>
+    <span class="ident">F</span>: <span class="ident">Fn</span>();
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">OnDrop</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">F</span>: <span class="ident">Fn</span>(),
+{
+    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        (<span class="self">self</span>.<span class="number">0</span>)()
+    }
+}
+
+<span class="doccomment">/// An abstraction over asynchronous runtimes.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// There are several asynchronous runtimes available for Rust. By default</span>
+<span class="doccomment">/// rust-rdkafka uses Tokio, via the [`TokioRuntime`], but it has pluggable</span>
+<span class="doccomment">/// support for any runtime that can satisfy this trait.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// For an example of using the [smol] runtime with rust-rdkafka, see the</span>
+<span class="doccomment">/// [smol_runtime] example.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [smol]: https://docs.rs/smol</span>
+<span class="doccomment">/// [smol_runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AsyncRuntime</span> {
+    <span class="doccomment">/// The type of the future returned by</span>
+    <span class="doccomment">/// [`delay_for`](AsyncRuntime::delay_for).</span>
+    <span class="kw">type</span> <span class="ident">Delay</span>: <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Unpin</span>;
+
+    <span class="doccomment">/// Spawns an asynchronous task.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The task should be be polled to completion, unless the runtime exits</span>
+    <span class="doccomment">/// first. With some runtimes this requires an explicit &quot;detach&quot; step.</span>
+    <span class="kw">fn</span> <span class="ident">spawn</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">task</span>: <span class="ident">T</span>)
+    <span class="kw">where</span>
+        <span class="ident">T</span>: <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>;
+
+    <span class="doccomment">/// Constructs a future that will resolve after `duration` has elapsed.</span>
+    <span class="kw">fn</span> <span class="ident">delay_for</span>(<span class="ident">duration</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Delay</span>;
+}
+
+<span class="doccomment">/// An [`AsyncRuntime`] implementation backed by [Tokio](tokio).</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This runtime is used by default throughout the crate, unless the `tokio`</span>
+<span class="doccomment">/// feature is disabled.</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)))]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TokioRuntime</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;tokio&quot;</span>)))]</span>
+<span class="kw">impl</span> <span class="ident">AsyncRuntime</span> <span class="kw">for</span> <span class="ident">TokioRuntime</span> {
+    <span class="kw">type</span> <span class="ident">Delay</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">time</span>::<span class="ident">Delay</span>;
+
+    <span class="kw">fn</span> <span class="ident">spawn</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">task</span>: <span class="ident">T</span>)
+    <span class="kw">where</span>
+        <span class="ident">T</span>: <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+    {
+        <span class="ident">tokio</span>::<span class="ident">spawn</span>(<span class="ident">task</span>);
+    }
+
+    <span class="kw">fn</span> <span class="ident">delay_for</span>(<span class="ident">duration</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Delay</span> {
+        <span class="ident">tokio</span>::<span class="ident">time</span>::<span class="ident">delay_for</span>(<span class="ident">duration</span>)
     }
 }
 </pre></div>

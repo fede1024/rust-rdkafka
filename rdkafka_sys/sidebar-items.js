@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["bindings",""],["helpers",""],["types","This module contains type aliases for types defined in the auto-generated bindings."]]});
+initSidebarItems({"mod":[["bindings","FFI bindings."],["helpers","Utility functions."],["types","Aliases for types defined in the auto-generated bindings."]]});

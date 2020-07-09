@@ -466,30 +466,21 @@
 <span id="466">466</span>
 <span id="467">467</span>
 <span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! A data structure representing topic, partitions and offsets, compatible with the</span>
-<span class="doccomment">//! `RDKafkaTopicPartitionList` exported by `rdkafka-sys`.</span>
+<span class="doccomment">//! Data structures representing topic, partitions and offsets.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Compatible with the `RDKafkaTopicPartitionList` exported by `rdkafka-sys`.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::{<span class="ident">CStr</span>, <span class="ident">CString</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">slice</span>;
-
-<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">trace</span>;
 
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::{<span class="ident">IsError</span>, <span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::{<span class="ident">KafkaDrop</span>, <span class="ident">NativePtr</span>};
 
 <span class="kw">const</span> <span class="ident">PARTITION_UNASSIGNED</span>: <span class="ident">i32</span> <span class="op">=</span> <span class="op">-</span><span class="number">1</span>;
 
@@ -498,7 +489,7 @@
 <span class="kw">const</span> <span class="ident">OFFSET_STORED</span>: <span class="ident">i64</span> <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">RD_KAFKA_OFFSET_STORED</span> <span class="kw">as</span> <span class="ident">i64</span>;
 <span class="kw">const</span> <span class="ident">OFFSET_INVALID</span>: <span class="ident">i64</span> <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">RD_KAFKA_OFFSET_INVALID</span> <span class="kw">as</span> <span class="ident">i64</span>;
 
-<span class="doccomment">/// A librdkafka offset.</span>
+<span class="doccomment">/// A Kafka offset.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Offset</span> {
     <span class="doccomment">/// Start consuming from the beginning of the partition.</span>
@@ -514,7 +505,8 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Offset</span> {
-    <span class="doccomment">/// Converts the integer representation of an offset use by librdkafka to an `Offset`.</span>
+    <span class="doccomment">/// Converts the integer representation of an offset used by librdkafka to</span>
+    <span class="doccomment">/// an `Offset`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_raw</span>(<span class="ident">raw_offset</span>: <span class="ident">i64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Offset</span> {
         <span class="kw">match</span> <span class="ident">raw_offset</span> {
             <span class="ident">OFFSET_BEGINNING</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Offset</span>::<span class="ident">Beginning</span>,
@@ -525,7 +517,8 @@
         }
     }
 
-    <span class="doccomment">/// Converts the `Offset` to the internal integer representation used by librdkafka.</span>
+    <span class="doccomment">/// Converts the `Offset` to the internal integer representation used by</span>
+    <span class="doccomment">/// librdkafka.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_raw</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i64</span> {
         <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
             <span class="ident">Offset</span>::<span class="ident">Beginning</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">OFFSET_BEGINNING</span>,
@@ -540,25 +533,22 @@
 <span class="comment">// TODO: implement Debug</span>
 <span class="doccomment">/// One element of the topic partition list.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TopicPartitionListElem</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartition</span>,
-    <span class="ident">_owner_list</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">TopicPartitionList</span>,
+    <span class="ident">ptr</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartition</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">TopicPartitionListElem</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(
-        <span class="ident">list</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">TopicPartitionList</span>,
-        <span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartition</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TopicPartitionListElem</span> {
-        <span class="ident">TopicPartitionListElem</span> {
-            <span class="ident">ptr</span>,
-            <span class="ident">_owner_list</span>: <span class="ident">list</span>,
-        }
+    <span class="comment">// _owner_list serves as a marker so that the lifetime isn&#39;t too long</span>
+    <span class="kw">fn</span> <span class="ident">from_ptr</span>(
+        <span class="ident">_owner_list</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">TopicPartitionList</span>,
+        <span class="ident">ptr</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartition</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TopicPartitionListElem</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+        <span class="ident">TopicPartitionListElem</span> { <span class="ident">ptr</span> }
     }
 
     <span class="doccomment">/// Returns the topic name.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">topic</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
         <span class="kw">unsafe</span> {
-            <span class="kw">let</span> <span class="ident">c_str</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">topic</span>;
+            <span class="kw">let</span> <span class="ident">c_str</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">topic</span>;
             <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">c_str</span>)
                 .<span class="ident">to_str</span>()
                 .<span class="ident">expect</span>(<span class="string">&quot;Topic name is not UTF-8&quot;</span>)
@@ -567,7 +557,7 @@
 
     <span class="doccomment">/// Returns the optional error associated to the specific entry in the TPL.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">kafka_err</span> <span class="op">=</span> <span class="kw">unsafe</span> { (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">err</span> };
+        <span class="kw">let</span> <span class="ident">kafka_err</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">err</span>;
         <span class="kw">if</span> <span class="ident">kafka_err</span>.<span class="ident">is_error</span>() {
             <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">OffsetFetch</span>(<span class="ident">kafka_err</span>.<span class="ident">into</span>()))
         } <span class="kw">else</span> {
@@ -577,19 +567,19 @@
 
     <span class="doccomment">/// Returns the partition number.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">partition</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i32</span> {
-        <span class="kw">unsafe</span> { (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">partition</span> }
+        <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">partition</span>
     }
 
     <span class="doccomment">/// Returns the offset.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">offset</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Offset</span> {
-        <span class="kw">let</span> <span class="ident">raw_offset</span> <span class="op">=</span> <span class="kw">unsafe</span> { (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">offset</span> };
+        <span class="kw">let</span> <span class="ident">raw_offset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">offset</span>;
         <span class="ident">Offset</span>::<span class="ident">from_raw</span>(<span class="ident">raw_offset</span>)
     }
 
     <span class="doccomment">/// Sets the offset.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_offset</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">Offset</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_offset</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">Offset</span>) {
         <span class="kw">let</span> <span class="ident">raw_offset</span> <span class="op">=</span> <span class="ident">offset</span>.<span class="ident">to_raw</span>();
-        <span class="kw">unsafe</span> { (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">offset</span> <span class="op">=</span> <span class="ident">raw_offset</span> };
+        <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">offset</span> <span class="op">=</span> <span class="ident">raw_offset</span>;
     }
 }
 
@@ -603,12 +593,17 @@
 
 <span class="doccomment">/// A structure to store and manipulate a list of topics and partitions with optional offsets.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TopicPartitionList</span> {
-    <span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartitionList</span>,
+    <span class="ident">ptr</span>: <span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">RDKafkaTopicPartitionList</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">KafkaDrop</span> <span class="kw">for</span> <span class="ident">RDKafkaTopicPartitionList</span> {
+    <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;topic partition list&quot;</span>;
+    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_destroy</span>;
 }
 
 <span class="kw">impl</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">TopicPartitionList</span> {
     <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">new_tpl</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_copy</span>(<span class="self">self</span>.<span class="ident">ptr</span>) };
+        <span class="kw">let</span> <span class="ident">new_tpl</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_copy</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) };
         <span class="kw">unsafe</span> { <span class="ident">TopicPartitionList</span>::<span class="ident">from_ptr</span>(<span class="ident">new_tpl</span>) }
     }
 }
@@ -628,7 +623,9 @@
     <span class="doccomment">/// Transforms a pointer to the native librdkafka RDTopicPartitionList into a</span>
     <span class="doccomment">/// managed `TopicPartitionList` instance.</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartitionList</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TopicPartitionList</span> {
-        <span class="ident">TopicPartitionList</span> { <span class="ident">ptr</span> }
+        <span class="ident">TopicPartitionList</span> {
+            <span class="ident">ptr</span>: <span class="ident">NativePtr</span>::<span class="ident">from_ptr</span>(<span class="ident">ptr</span>).<span class="ident">unwrap</span>(),
+        }
     }
 
     <span class="doccomment">/// Given a topic map, generates a new `TopicPartitionList`.</span>
@@ -644,23 +641,17 @@
 
     <span class="doccomment">/// Returns the pointer to the internal librdkafka structure.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafkaTopicPartitionList</span> {
-        <span class="self">self</span>.<span class="ident">ptr</span>
-    }
-
-    <span class="doccomment">/// Capture the instance without calling the destructor on the internal librdkafka</span>
-    <span class="doccomment">/// structure.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">leak</span>(<span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">ptr</span> <span class="op">=</span> <span class="ident">ptr</span>::<span class="ident">null_mut</span>();
+        <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">ptr</span>()
     }
 
     <span class="doccomment">/// Returns the number of elements in the list.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
-        <span class="kw">unsafe</span> { (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">cnt</span> <span class="kw">as</span> <span class="ident">usize</span> }
+        <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">cnt</span> <span class="kw">as</span> <span class="ident">usize</span>
     }
 
     <span class="doccomment">/// Returns the capacity of the list.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">capacity</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
-        <span class="kw">unsafe</span> { (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span> }
+        <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span>
     }
 
     <span class="doccomment">/// Adds a topic with unassigned partitions to the list.</span>
@@ -676,9 +667,9 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TopicPartitionListElem</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">topic_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">topic</span>).<span class="ident">expect</span>(<span class="string">&quot;Topic name is not UTF-8&quot;</span>);
         <span class="kw">let</span> <span class="ident">tp_ptr</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_add</span>(<span class="self">self</span>.<span class="ident">ptr</span>, <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(), <span class="ident">partition</span>)
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_add</span>(<span class="self">self</span>.<span class="ident">ptr</span>(), <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(), <span class="ident">partition</span>)
         };
-        <span class="kw">unsafe</span> { <span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="ident">tp_ptr</span>) }
+        <span class="kw">unsafe</span> { <span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">tp_ptr</span>) }
     }
 
     <span class="doccomment">/// Adds a topic and partition range to the list.</span>
@@ -686,7 +677,7 @@
         <span class="kw">let</span> <span class="ident">topic_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">topic</span>).<span class="ident">expect</span>(<span class="string">&quot;Topic name is not UTF-8&quot;</span>);
         <span class="kw">unsafe</span> {
             <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_add_range</span>(
-                <span class="self">self</span>.<span class="ident">ptr</span>,
+                <span class="self">self</span>.<span class="ident">ptr</span>(),
                 <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">start_partition</span>,
                 <span class="ident">stop_partition</span>,
@@ -705,7 +696,7 @@
         <span class="kw">let</span> <span class="ident">topic_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">topic</span>).<span class="ident">expect</span>(<span class="string">&quot;Topic name is not UTF-8&quot;</span>);
         <span class="kw">let</span> <span class="ident">kafka_err</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_set_offset</span>(
-                <span class="self">self</span>.<span class="ident">ptr</span>,
+                <span class="self">self</span>.<span class="ident">ptr</span>(),
                 <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">partition</span>,
                 <span class="ident">offset</span>.<span class="ident">to_raw</span>(),
@@ -730,12 +721,12 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_partition</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">partition</span>: <span class="ident">i32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TopicPartitionListElem</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">topic_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">topic</span>).<span class="ident">expect</span>(<span class="string">&quot;Topic name is not UTF-8&quot;</span>);
         <span class="kw">let</span> <span class="ident">elem_ptr</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_find</span>(<span class="self">self</span>.<span class="ident">ptr</span>, <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(), <span class="ident">partition</span>)
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_find</span>(<span class="self">self</span>.<span class="ident">ptr</span>(), <span class="ident">topic_c</span>.<span class="ident">as_ptr</span>(), <span class="ident">partition</span>)
         };
         <span class="kw">if</span> <span class="ident">elem_ptr</span>.<span class="ident">is_null</span>() {
             <span class="prelude-val">None</span>
         } <span class="kw">else</span> {
-            <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="ident">elem_ptr</span>) })
+            <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">elem_ptr</span>) })
         }
     }
 
@@ -743,7 +734,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_all_offsets</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">Offset</span>) {
         <span class="kw">let</span> <span class="ident">slice</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">slice</span>::<span class="ident">from_raw_parts_mut</span>((<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">elems</span>, <span class="self">self</span>.<span class="ident">count</span>()) };
         <span class="kw">for</span> <span class="ident">elem_ptr</span> <span class="kw">in</span> <span class="ident">slice</span> {
-            <span class="kw">let</span> <span class="ident">elem</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">elem_ptr</span>) };
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">elem</span> <span class="op">=</span> <span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">elem_ptr</span>);
             <span class="ident">elem</span>.<span class="ident">set_offset</span>(<span class="ident">offset</span>);
         }
     }
@@ -753,7 +744,7 @@
         <span class="kw">let</span> <span class="ident">slice</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">slice</span>::<span class="ident">from_raw_parts_mut</span>((<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">elems</span>, <span class="self">self</span>.<span class="ident">count</span>()) };
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vec</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">slice</span>.<span class="ident">len</span>());
         <span class="kw">for</span> <span class="ident">elem_ptr</span> <span class="kw">in</span> <span class="ident">slice</span> {
-            <span class="ident">vec</span>.<span class="ident">push</span>(<span class="kw">unsafe</span> { <span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">elem_ptr</span>) });
+            <span class="ident">vec</span>.<span class="ident">push</span>(<span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">elem_ptr</span>));
         }
         <span class="ident">vec</span>
     }
@@ -763,7 +754,7 @@
         <span class="kw">let</span> <span class="ident">slice</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">slice</span>::<span class="ident">from_raw_parts_mut</span>((<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">ptr</span>).<span class="ident">elems</span>, <span class="self">self</span>.<span class="ident">count</span>()) };
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vec</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">slice</span>.<span class="ident">len</span>());
         <span class="kw">for</span> <span class="ident">elem_ptr</span> <span class="kw">in</span> <span class="ident">slice</span> {
-            <span class="kw">let</span> <span class="ident">tp</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">elem_ptr</span>) };
+            <span class="kw">let</span> <span class="ident">tp</span> <span class="op">=</span> <span class="ident">TopicPartitionListElem</span>::<span class="ident">from_ptr</span>(<span class="self">self</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">elem_ptr</span>);
             <span class="kw">if</span> <span class="ident">tp</span>.<span class="ident">topic</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">topic</span> {
                 <span class="ident">vec</span>.<span class="ident">push</span>(<span class="ident">tp</span>);
             }
@@ -777,16 +768,6 @@
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">elem</span><span class="op">|</span> ((<span class="ident">elem</span>.<span class="ident">topic</span>().<span class="ident">to_owned</span>(), <span class="ident">elem</span>.<span class="ident">partition</span>()), <span class="ident">elem</span>.<span class="ident">offset</span>()))
             .<span class="ident">collect</span>()
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">TopicPartitionList</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">is_null</span>() {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Destroying TPL: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">ptr</span>);
-            <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_partition_list_destroy</span>(<span class="self">self</span>.<span class="ident">ptr</span>) }
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;TPL destroyed: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">ptr</span>);
-        }
     }
 }
 
@@ -827,6 +808,9 @@
     }
 }
 
+<span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Send</span> <span class="kw">for</span> <span class="ident">TopicPartitionList</span> {}
+<span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Sync</span> <span class="kw">for</span> <span class="ident">TopicPartitionList</span> {}
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
@@ -862,7 +846,7 @@
         <span class="kw">let</span> <span class="ident">tp0</span> <span class="op">=</span> <span class="ident">tpl</span>.<span class="ident">find_partition</span>(<span class="string">&quot;topic1&quot;</span>, <span class="number">0</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">tp1</span> <span class="op">=</span> <span class="ident">tpl</span>.<span class="ident">find_partition</span>(<span class="string">&quot;topic1&quot;</span>, <span class="number">1</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">tp2</span> <span class="op">=</span> <span class="ident">tpl</span>.<span class="ident">find_partition</span>(<span class="string">&quot;topic2&quot;</span>, <span class="number">0</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">tp3</span> <span class="op">=</span> <span class="ident">tpl</span>.<span class="ident">find_partition</span>(<span class="string">&quot;topic2&quot;</span>, <span class="number">1</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tp3</span> <span class="op">=</span> <span class="ident">tpl</span>.<span class="ident">find_partition</span>(<span class="string">&quot;topic2&quot;</span>, <span class="number">1</span>).<span class="ident">unwrap</span>();
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">tp0</span>.<span class="ident">topic</span>(), <span class="string">&quot;topic1&quot;</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">tp0</span>.<span class="ident">partition</span>(), <span class="number">0</span>);

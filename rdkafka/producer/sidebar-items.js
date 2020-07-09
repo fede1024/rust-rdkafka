@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["base_producer","Low level Kafka producers."],["future_producer","Future producer"]]});
+initSidebarItems({"mod":[["base_producer","Low-level Kafka producers."],["future_producer","High-level, futures-enabled Kafka producer."]]});

@@ -151,7 +151,15 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
 </pre><div class="example-wrap"><pre class="rust ">
+<span class="doccomment">//! Utility functions.</span>
+
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">types</span>::<span class="ident">RDKafkaError</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">types</span>::<span class="ident">RDKafkaError</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">types</span>::<span class="ident">RDKafkaRespErr</span>;
@@ -214,6 +222,9 @@
         <span class="ident">RD_KAFKA_RESP_ERR__GAPLESS_GUARANTEE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">GaplessGuarantee</span>,
         <span class="ident">RD_KAFKA_RESP_ERR__MAX_POLL_EXCEEDED</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">PollExceeded</span>,
         <span class="ident">RD_KAFKA_RESP_ERR__UNKNOWN_BROKER</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">UnknownBroker</span>,
+        <span class="ident">RD_KAFKA_RESP_ERR__NOT_CONFIGURED</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NotConfigured</span>,
+        <span class="ident">RD_KAFKA_RESP_ERR__FENCED</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Fenced</span>,
+        <span class="ident">RD_KAFKA_RESP_ERR__APPLICATION</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Application</span>,
         <span class="ident">RD_KAFKA_RESP_ERR__END</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">End</span>,
         <span class="ident">RD_KAFKA_RESP_ERR_UNKNOWN</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Unknown</span>,
         <span class="ident">RD_KAFKA_RESP_ERR_NO_ERROR</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NoError</span>,
@@ -302,6 +313,7 @@
         <span class="ident">RD_KAFKA_RESP_ERR_MEMBER_ID_REQUIRED</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MemberIdRequired</span>,
         <span class="ident">RD_KAFKA_RESP_ERR_PREFERRED_LEADER_NOT_AVAILABLE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">PreferredLeaderNotAvailable</span>,
         <span class="ident">RD_KAFKA_RESP_ERR_GROUP_MAX_SIZE_REACHED</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">GroupMaxSizeReached</span>,
+        <span class="ident">RD_KAFKA_RESP_ERR_FENCED_INSTANCE_ID</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">FencedInstanceId</span>,
         <span class="ident">RD_KAFKA_RESP_ERR_END_ALL</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EndAll</span>,
     }
 }

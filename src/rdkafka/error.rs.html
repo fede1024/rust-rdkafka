@@ -220,6 +220,10 @@
 <span id="220">220</span>
 <span id="221">221</span>
 <span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Error manipulations.</span>
 
@@ -235,8 +239,10 @@
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">KafkaError</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// Verify if the value represents an error condition.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Some librdkafka codes are informational, rather than true errors.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">IsError</span> {
-    <span class="doccomment">/// Return true if the value represents an error.</span>
+    <span class="doccomment">/// Reports whether the value represents an error.</span>
     <span class="kw">fn</span> <span class="ident">is_error</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>;
 }
 
@@ -254,7 +260,9 @@
 
 <span class="comment">// TODO: consider using macro</span>
 
-<span class="doccomment">/// Represents all Kafka errors. Check the underlying `RDKafkaError` to get details.</span>
+<span class="doccomment">/// Represents all possible Kafka errors.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// If applicable, check the underlying [`RDKafkaError`] to get details.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">KafkaError</span> {
     <span class="doccomment">/// Creation of admin operation failed.</span>
