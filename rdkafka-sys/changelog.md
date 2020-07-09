@@ -8,3 +8,8 @@
 * Upgrade to librdkafka v1.4.2.
 
 * Correct several references to `usize` in the generated bindings to `size_t`.
+
+* Introduce the `sasl-plain` option to compile the vendored libsasl2 with
+  support for the PLAIN authentication method. Also introduce the
+  `sasl-vendored` option to compile the vendored libsasl2 with support for only
+  the default authentication methods.

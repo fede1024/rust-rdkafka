@@ -51,18 +51,40 @@
 //!     OpenSSL library is dynamically linked, but static linking of the version
 //!     bundled with the [openssl-sys] crate can be requested with the
 //!     `ssl-vendored` feature.
-//!   * The **`gssapi`** feature enables SASL GSSAPI support with Cyrus
-//!     libsasl2. By default the system's libsasl2 is dynamically linked, but
-//!     static linking of the version bundled with the [sasl2-sys] crate can be
-//!     requested with the `gssapi-vendored` feature.
+//!
+//!  * The **`gssapi`** feature enables SASL GSSAPI support with Cyrus libsasl2.
+//!    By default the system's libsasl2 library is dynamically linked. If this
+//!    system's libsasl2 installation has a GSSAPI plugin installed, then that
+//!    plugin will be accessible to librdkafka.
+//!
+//!    To request static linking instead, specify any combination of the
+//!    following features.
+//!
+//!      * The **`sasl-vendored`** feature builds and links the libsasl2 version
+//!        that is bundled with the [sasl2-sys] crate. This copy of libsasl2
+//!        leaves most authentication methods disabled; you will likely want to
+//!        enable one one more additional authenticatication methods via the
+//!        following features.
+//!
+//!      * The **`sasl-plain`** feature compiles the vendored copy of libsasl2
+//!        with support for the PLAIN authentication method. It implies
+//!        `sasl-vendored`.
+//!
+//!      * The **`gssapi-vendored`** feature compiles the copy of libkrb5
+//!        bundled with the krb5-src crate, then compiles libsasl2 with support
+//!        for the GSSAPI authentication method via this copy of libkrb5. This
+//!        feature implies `sasl-vendored`.
+//!
 //!   * The **`libz`** feature enables support for zlib compression. This
 //!     feature is enabled by default. By default, the system's libz is
 //!     dynamically linked, but static linking of the version bundled with the
 //!     [libz-sys] crate can be requested with the `libz-static` feature.
+//!
 //!   * The **`zstd`** feature enables support for ZSTD compression. By default,
 //!     this builds and statically links the version bundled with the [zstd-sys]
 //!     crate, but dynamic linking of the system's version can be requested with
 //!     the `zstd-pkg-config` feature.
+//!
 //!   * The **`external-lz4`** feature statically links against the copy of
 //!     liblz4 bundled with the [lz4-sys] crate. By default, librdkafka
 //!     statically links against its own bundled version of liblz4. Due to
