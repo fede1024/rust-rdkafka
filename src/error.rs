@@ -224,3 +224,23 @@ impl From<ffi::NulError> for KafkaError {
         KafkaError::Nul(err)
     }
 }
+
+impl KafkaError {
+    /// Returns if an error is `Fatal` and requires reinitialisation.
+    /// for details see https://docs.confluent.io/5.5.0/clients/librdkafka/rdkafka_8h.html
+    pub fn is_fatal(&self) -> bool {
+        match self {
+            KafkaError::AdminOp(RDKafkaError::Fatal)
+            | KafkaError::ConsumerCommit(RDKafkaError::Fatal)
+            | KafkaError::Global(RDKafkaError::Fatal)
+            | KafkaError::GroupListFetch(RDKafkaError::Fatal)
+            | KafkaError::MessageConsumption(RDKafkaError::Fatal)
+            | KafkaError::MessageProduction(RDKafkaError::Fatal)
+            | KafkaError::MetadataFetch(RDKafkaError::Fatal)
+            | KafkaError::OffsetFetch(RDKafkaError::Fatal)
+            | KafkaError::SetPartitionOffset(RDKafkaError::Fatal)
+            | KafkaError::StoreOffset(RDKafkaError::Fatal) => true,
+            _ => false,
+        }
+    }
+}
