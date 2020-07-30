@@ -287,6 +287,11 @@ impl<C: ClientContext> AdminClient<C> {
         }
         Ok(rx)
     }
+
+    /// Returns the client underlying this admin client.
+    pub fn inner(&self) -> &Client<C> {
+        &self.client
+    }
 }
 
 impl FromClientConfig for AdminClient<DefaultClientContext> {
