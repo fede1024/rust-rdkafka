@@ -9,6 +9,7 @@ use std::time::Duration;
 use rand::Rng;
 use regex::Regex;
 
+use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::client::ClientContext;
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::ConsumerContext;
@@ -86,6 +87,17 @@ pub struct ProducerTestContext {
 
 impl ClientContext for ProducerTestContext {
     fn stats(&self, _: Statistics) {} // Don't print stats
+}
+
+pub async fn create_topic(name: &str, partitions: i32) {
+    let client: AdminClient<_> = consumer_config("create_topic", None).create().unwrap();
+    client
+        .create_topics(
+            &[NewTopic::new(name, partitions, TopicReplication::Fixed(1))],
+            &AdminOptions::new(),
+        )
+        .await
+        .unwrap();
 }
 
 /// Produce the specified count of messages to the topic and partition specified. A map

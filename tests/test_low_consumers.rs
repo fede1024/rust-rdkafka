@@ -245,6 +245,8 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
 
     let topic_name = rand_test_topic();
 
+    create_topic(&topic_name, 1).await;
+
     let consumer: BaseConsumer<_> = consumer_config(&rand_test_group(), None)
         .create_with_context(ConsumerTestContext {
             _n: 64,

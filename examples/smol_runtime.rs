@@ -65,23 +65,13 @@ fn main() {
     let brokers = matches.value_of("brokers").unwrap();
     let topic = matches.value_of("topic").unwrap().to_owned();
 
-    let producer: FutureProducer = ClientConfig::new()
-        .set("bootstrap.servers", brokers)
-        .set("message.timeout.ms", "5000")
-        .create()
-        .expect("Producer creation error");
-
-    let consumer: StreamConsumer = ClientConfig::new()
-        .set("bootstrap.servers", brokers)
-        .set("session.timeout.ms", "6000")
-        .set("enable.auto.commit", "false")
-        .set("auto.offset.reset", "earliest")
-        .set("group.id", "rust-rdkafka-smol-runtime-example")
-        .create()
-        .expect("Consumer creation failed");
-    consumer.subscribe(&[&topic]).unwrap();
-
     smol::run(async {
+        let producer: FutureProducer = ClientConfig::new()
+            .set("bootstrap.servers", brokers)
+            .set("message.timeout.ms", "5000")
+            .create()
+            .expect("Producer creation error");
+
         let delivery_status = producer
             .send_with_runtime::<SmolRuntime, Vec<u8>, _, _>(
                 FutureRecord::to(&topic).payload("hello from smol"),
@@ -92,6 +82,16 @@ fn main() {
             eprintln!("unable to send message: {}", e);
             process::exit(1);
         }
+
+        let consumer: StreamConsumer = ClientConfig::new()
+            .set("bootstrap.servers", brokers)
+            .set("session.timeout.ms", "6000")
+            .set("enable.auto.commit", "false")
+            .set("auto.offset.reset", "earliest")
+            .set("group.id", "rust-rdkafka-smol-runtime-example")
+            .create()
+            .expect("Consumer creation failed");
+        consumer.subscribe(&[&topic]).unwrap();
 
         let mut stream =
             consumer.start_with_runtime::<SmolRuntime>(Duration::from_millis(100), false);
