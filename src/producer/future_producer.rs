@@ -132,7 +132,7 @@ pub struct FutureProducerContext<C: ClientContext + 'static> {
 /// partition and offset of the message. If the message failed to be delivered
 /// an error will be returned, together with an owned copy of the original
 /// message.
-type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
+pub type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
 
 // Delegates all the methods calls to the wrapped context.
 impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
