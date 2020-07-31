@@ -16,6 +16,7 @@ branch is currently based on librdkafka 1.4.2.
 
 ### Documentation
 
+- [Current master branch](https://fede1024.github.io/rust-rdkafka/)
 - [Latest release](https://docs.rs/rdkafka/)
 - [Changelog](https://github.com/fede1024/rust-rdkafka/blob/master/changelog.md)
 
@@ -209,7 +210,7 @@ To enable debugging in your project, make sure you initialize the logger
 with `env_logger::init()`, or the equivalent for any `log`-compatible
 logging framework.
 
-[`AsyncRuntime`]: https://docs.rs/rdkafka/*/rdkafka/util/struct.AsyncRuntime.html
+[`AsyncRuntime`]: https://docs.rs/rdkafka/*/rdkafka/util/trait.AsyncRuntime.html
 [`BaseConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/base_consumer/struct.BaseConsumer.html
 [`BaseProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.BaseProducer.html
 [`Future`]: https://doc.rust-lang.org/stable/std/future/trait.Future.html

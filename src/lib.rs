@@ -8,6 +8,7 @@
 //!
 //! ### Documentation
 //!
+//! - [Current master branch](https://fede1024.github.io/rust-rdkafka/)
 //! - [Latest release](https://docs.rs/rdkafka/)
 //! - [Changelog](https://github.com/fede1024/rust-rdkafka/blob/master/changelog.md)
 //!
