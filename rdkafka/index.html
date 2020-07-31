@@ -108,7 +108,7 @@ the <a href="https://github.com/frankmcsherry/blog/blob/master/posts/2017-11-08.
 <h2 id="installation" class="section-header"><a href="#installation">Installation</a></h2>
 <p>Add this to your <code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependencies]
-rdkafka = { version = &quot;0.23&quot;, features = [&quot;cmake-build&quot;] }
+rdkafka = { version = &quot;0.24&quot;, features = [&quot;cmake-build&quot;] }
 </code></pre>
 <p>This crate will compile librdkafka from sources and link it statically to
 your executable. To compile librdkafka you'll need:</p>
@@ -129,7 +129,7 @@ commit will be used to compile and statically link the library. The
 <code>dynamic-linking</code> feature can be used to instead dynamically link rdkafka to
 the system's version of librdkafka. Example:</p>
 <pre><code class="language-toml">[dependencies]
-rdkafka = { version = &quot;0.23&quot;, features = [&quot;dynamic-linking&quot;] }
+rdkafka = { version = &quot;0.24&quot;, features = [&quot;dynamic-linking&quot;] }
 </code></pre>
 <p>For a full listing of features, consult the <a href="https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#features">rdkafka-sys crate's
 documentation</a>. All of rdkafka-sys features are
@@ -140,7 +140,7 @@ Tokio, which can be a heavyweight dependency for users who only intend to
 use the low-level consumers and producers. The Tokio integration is
 enabled by default, but can be disabled by turning off default features:</p>
 <pre><code class="language-toml">[dependencies]
-rdkafka = { version = &quot;0.23&quot;, default-features = false }
+rdkafka = { version = &quot;0.24&quot;, default-features = false }
 </code></pre>
 <p>If you would like to use an asynchronous runtime besides Tokio, you can
 integrate it with rust-rdkafka by providing a shim that implements the
@@ -179,4 +179,4 @@ logging framework.</p>
 </td></tr><tr class='module-item'><td><a class="mod" href="topic_partition_list/index.html" title='rdkafka::topic_partition_list mod'>topic_partition_list</a></td><td class='docblock-short'><p>Data structures representing topic, partitions and offsets.</p>
 </td></tr><tr class='module-item'><td><a class="mod" href="types/index.html" title='rdkafka::types mod'>types</a></td><td class='docblock-short'><p>Aliases for types defined in the auto-generated bindings.</p>
 </td></tr><tr class='module-item'><td><a class="mod" href="util/index.html" title='rdkafka::util mod'>util</a></td><td class='docblock-short'><p>Utility functions and types.</p>
-</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "rdkafka";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "rdkafka";</script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>

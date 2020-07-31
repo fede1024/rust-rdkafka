@@ -539,7 +539,7 @@
 <span class="doccomment">/// partition and offset of the message. If the message failed to be delivered</span>
 <span class="doccomment">/// an error will be returned, together with an owned copy of the original</span>
 <span class="doccomment">/// message.</span>
-<span class="kw">type</span> <span class="ident">OwnedDeliveryResult</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">i32</span>, <span class="ident">i64</span>), (<span class="ident">KafkaError</span>, <span class="ident">OwnedMessage</span>)<span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">OwnedDeliveryResult</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">i32</span>, <span class="ident">i64</span>), (<span class="ident">KafkaError</span>, <span class="ident">OwnedMessage</span>)<span class="op">&gt;</span>;
 
 <span class="comment">// Delegates all the methods calls to the wrapped context.</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ClientContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">ClientContext</span> <span class="kw">for</span> <span class="ident">FutureProducerContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
@@ -812,4 +812,4 @@
     }
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "rdkafka";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "rdkafka";</script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

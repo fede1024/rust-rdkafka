@@ -1,9 +1,3 @@
 (function() {var implementors = {};
 implementors["rdkafka"] = [{"text":"impl&lt;C:&nbsp;<a class=\"trait\" href=\"rdkafka/client/trait.ClientContext.html\" title=\"trait rdkafka::client::ClientContext\">ClientContext</a>&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"rdkafka/admin/struct.AdminClient.html\" title=\"struct rdkafka::admin::AdminClient\">AdminClient</a>&lt;C&gt;","synthetic":false,"types":["rdkafka::admin::AdminClient"]},{"text":"impl&lt;C:&nbsp;<a class=\"trait\" href=\"rdkafka/consumer/trait.ConsumerContext.html\" title=\"trait rdkafka::consumer::ConsumerContext\">ConsumerContext</a>&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"rdkafka/consumer/base_consumer/struct.BaseConsumer.html\" title=\"struct rdkafka::consumer::base_consumer::BaseConsumer\">BaseConsumer</a>&lt;C&gt;","synthetic":false,"types":["rdkafka::consumer::base_consumer::BaseConsumer"]},{"text":"impl&lt;C:&nbsp;<a class=\"trait\" href=\"rdkafka/producer/base_producer/trait.ProducerContext.html\" title=\"trait rdkafka::producer::base_producer::ProducerContext\">ProducerContext</a> + 'static&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"rdkafka/producer/base_producer/struct.ThreadedProducer.html\" title=\"struct rdkafka::producer::base_producer::ThreadedProducer\">ThreadedProducer</a>&lt;C&gt;","synthetic":false,"types":["rdkafka::producer::base_producer::ThreadedProducer"]}];
-
-            if (window.register_implementors) {
-                window.register_implementors(implementors);
-            } else {
-                window.pending_implementors = implementors;
-            }
-        })()
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
