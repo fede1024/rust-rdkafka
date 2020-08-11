@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
+use std::ffi::CString;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -12,6 +13,7 @@ use rdkafka::message::{Headers, Message, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::{
     BaseProducer, BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer,
 };
+use rdkafka::types::RDKafkaRespErr;
 use rdkafka::util::current_time_millis;
 use rdkafka::{ClientContext, Statistics};
 
@@ -313,4 +315,24 @@ fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
     let shared_count = Arc::try_unwrap(shared_count).unwrap().into_inner()?;
     assert_eq!(results_count, shared_count);
     Ok(())
+}
+
+#[test]
+fn test_fatal_errors() {
+    let producer = base_producer(HashMap::new());
+
+    assert_eq!(producer.client().fatal_error(), None);
+
+    unsafe {
+        rdkafka_sys::rd_kafka_test_fatal_error(
+            producer.client().native_ptr(),
+            RDKafkaRespErr::RD_KAFKA_RESP_ERR_OUT_OF_ORDER_SEQUENCE_NUMBER,
+            CString::new("fake error").unwrap().as_ptr(),
+        );
+    }
+
+    assert_eq!(
+        producer.client().fatal_error(),
+        Some((RDKafkaError::OutOfOrderSequenceNumber, "test_fatal_error: fake error".into()))
+    )
 }
