@@ -432,6 +432,25 @@
 <span id="432">432</span>
 <span id="433">433</span>
 <span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Common client functionality.</span>
 <span class="doccomment">//!</span>
@@ -738,6 +757,25 @@
         }
 
         <span class="prelude-val">Ok</span>(<span class="kw">unsafe</span> { <span class="ident">GroupList</span>::<span class="ident">from_ptr</span>(<span class="ident">group_list_ptr</span>) })
+    }
+
+    <span class="doccomment">/// Returns the first fatal error set on this client instance, or `None` if</span>
+    <span class="doccomment">/// no fatal error has occurred.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This function is intended to be used with idempotent producers, where</span>
+    <span class="doccomment">/// some errors must logically be considered fatal to retain consistency.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fatal_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">RDKafkaError</span>, <span class="ident">String</span>)<span class="op">&gt;</span> {
+        <span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">512</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">LEN</span>];
+        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_fatal_error</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>(), <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">LEN</span>) };
+        <span class="kw">if</span> <span class="ident">code</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RDKafkaRespErr</span>::<span class="ident">RD_KAFKA_RESP_ERR_NO_ERROR</span> {
+            <span class="prelude-val">None</span>
+        } <span class="kw">else</span> {
+            <span class="comment">// SAFETY: rd_kafka_fatal_error promises to null-terminate the</span>
+            <span class="comment">// string it writes into buf.</span>
+            <span class="kw">let</span> <span class="ident">cstr</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw">crate</span>::<span class="ident">util</span>::<span class="ident">cstr_to_owned</span>(<span class="ident">buf</span>.<span class="ident">as_ptr</span>()) };
+            <span class="prelude-val">Some</span>((<span class="ident">code</span>.<span class="ident">into</span>(), <span class="ident">cstr</span>))
+        }
     }
 
     <span class="doccomment">/// Returns a NativeTopic from the current client. The NativeTopic shouldn&#39;t outlive the client</span>
