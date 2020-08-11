@@ -168,7 +168,8 @@ impl fmt::Display for KafkaError {
 
 impl error::Error for KafkaError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        self.rdkafka_error().map(|e| e as &(dyn error::Error + 'static))
+        self.rdkafka_error()
+            .map(|e| e as &(dyn error::Error + 'static))
     }
 }
 

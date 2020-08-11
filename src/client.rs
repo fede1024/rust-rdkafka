@@ -305,6 +305,25 @@ impl<C: ClientContext> Client<C> {
         Ok(unsafe { GroupList::from_ptr(group_list_ptr) })
     }
 
+    /// Returns the first fatal error set on this client instance, or `None` if
+    /// no fatal error has occurred.
+    ///
+    /// This function is intended to be used with idempotent producers, where
+    /// some errors must logically be considered fatal to retain consistency.
+    pub fn fatal_error(&self) -> Option<(RDKafkaError, String)> {
+        const LEN: usize = 512;
+        let mut buf = [0; LEN];
+        let code = unsafe { rdsys::rd_kafka_fatal_error(self.native_ptr(), buf.as_mut_ptr(), LEN) };
+        if code == RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR {
+            None
+        } else {
+            // SAFETY: rd_kafka_fatal_error promises to null-terminate the
+            // string it writes into buf.
+            let cstr = unsafe { crate::util::cstr_to_owned(buf.as_ptr()) };
+            Some((code.into(), cstr))
+        }
+    }
+
     /// Returns a NativeTopic from the current client. The NativeTopic shouldn't outlive the client
     /// it was generated from.
     pub(crate) fn native_topic(&self, topic: &str) -> KafkaResult<NativeTopic> {
