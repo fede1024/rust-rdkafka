@@ -143,12 +143,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
         loop {
             unsafe { rdsys::rd_kafka_poll(self.client.native_ptr(), 0) };
             let op_timeout = cmp::min(timeout, self.main_queue_min_poll_interval);
-            let message_ptr = unsafe {
-                NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(
-                    self.client.native_ptr(),
-                    op_timeout.as_millis(),
-                ))
-            };
+            let message_ptr = self.consumer_poll(op_timeout);
             if let Some(message_ptr) = message_ptr {
                 break Some(message_ptr);
             }
@@ -156,6 +151,15 @@ impl<C: ConsumerContext> BaseConsumer<C> {
                 break None;
             }
             timeout -= op_timeout;
+        }
+    }
+
+    pub(crate) fn consumer_poll(&self, timeout: Timeout) -> Option<NativePtr<RDKafkaMessage>> {
+        unsafe {
+            NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(
+                self.client.native_ptr(),
+                timeout.as_millis(),
+            ))
         }
     }
 

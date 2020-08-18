@@ -21,7 +21,7 @@ use crate::statistics::Statistics;
 use crate::topic_partition_list::TopicPartitionList;
 #[cfg(feature = "tokio")]
 use crate::util::TokioRuntime;
-use crate::util::{AsyncRuntime, NativePtr, Timeout};
+use crate::util::{AsyncRuntime, Timeout};
 
 /// The [`ConsumerContext`] used by the [`StreamConsumer`]. This context will
 /// automatically wake up the message stream when new data is available.
@@ -130,23 +130,12 @@ where
         self.consumer.get_base_consumer().context()
     }
 
-    fn client_ptr(&self) -> *mut RDKafka {
-        self.consumer.client().native_ptr()
-    }
-
     fn set_waker(&self, waker: Waker) {
         self.context()
             .waker
             .lock()
             .expect("lock poisoned")
             .replace(waker);
-    }
-
-    fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
-        unsafe {
-            NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client_ptr(), 0))
-                .map(|p| BorrowedMessage::from_consumer(p, self.consumer))
-        }
     }
 }
 
@@ -166,7 +155,7 @@ where
         // becomes non-empty before we've installed the waker.
         self.set_waker(cx.waker().clone());
 
-        match self.poll() {
+        match self.consumer.consumer.poll(Duration::from_secs(0)) {
             None => loop {
                 let interval = self.interval;
                 let mut delay = self.delay.get_or_insert_with(|| R::delay_for(interval));
