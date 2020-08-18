@@ -21,7 +21,7 @@ use crate::statistics::Statistics;
 use crate::topic_partition_list::TopicPartitionList;
 #[cfg(feature = "tokio")]
 use crate::util::TokioRuntime;
-use crate::util::{AsyncRuntime, Timeout};
+use crate::util::{AsyncRuntime, NativePtr, Timeout};
 
 /// The [`ConsumerContext`] used by the [`StreamConsumer`]. This context will
 /// automatically wake up the message stream when new data is available.
@@ -125,18 +125,6 @@ where
             no_message_error,
         }
     }
-
-    fn context(&self) -> &StreamConsumerContext<C> {
-        self.consumer.get_base_consumer().context()
-    }
-
-    fn set_waker(&self, waker: Waker) {
-        self.context()
-            .waker
-            .lock()
-            .expect("lock poisoned")
-            .replace(waker);
-    }
 }
 
 impl<'a, C, R> Stream for MessageStream<'a, C, R>
@@ -147,29 +135,9 @@ where
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
-        // Unconditionally store the waker so that we are woken up if the queue
-        // flips from non-empty to empty. We have to store the waker on every
-        // call to poll in case this future migrates between tasks. We also need
-        // to store the waker *before* calling poll to avoid a race where `poll`
-        // returns None to indicate that the queue is empty, but the queue
-        // becomes non-empty before we've installed the waker.
-        self.set_waker(cx.waker().clone());
-
-        match self.consumer.consumer.poll(Duration::from_secs(0)) {
-            None => loop {
-                let interval = self.interval;
-                let mut delay = self.delay.get_or_insert_with(|| R::delay_for(interval));
-                ready!(Pin::new(&mut delay).poll(cx));
-                self.delay = None;
-                if self.no_message_error {
-                    break Poll::Ready(Some(Err(KafkaError::NoMessageReceived)));
-                }
-            },
-            Some(message) => {
-                self.delay = None;
-                Poll::Ready(Some(message))
-            }
-        }
+        self.consumer
+            .poll_next::<R>(cx, self.interval, self.no_message_error, &mut self.delay)
+            .map(Some)
     }
 }
 
@@ -254,5 +222,97 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         R: AsyncRuntime,
     {
         MessageStream::new(self, poll_interval, no_message_error)
+    }
+
+    /// Polls for the next message with the specified poll interval (100ms polling
+    /// interval and no `NoMessageReceived` notifications).
+    pub async fn recv(&self) -> KafkaResult<BorrowedMessage<'_>> {
+        self.recv_with(Duration::from_millis(100), false).await
+    }
+
+    /// Polls for the next message with the specified poll interval.
+    ///
+    /// If `no_message_error` is set to true, the returned `MessageStream` will
+    /// yield an error of type `KafkaError::NoMessageReceived` every time the
+    /// poll interval is reached and no message has been received.
+    pub async fn recv_with(
+        &self,
+        poll_interval: Duration,
+        no_message_error: bool,
+    ) -> KafkaResult<BorrowedMessage<'_>> {
+        self.recv_with_runtime::<TokioRuntime>(poll_interval, no_message_error)
+            .await
+    }
+
+    /// Polls for the next message with the specified poll interval.
+    ///
+    /// If `no_message_error` is set to true, the returned `MessageStream` will
+    /// yield an error of type `KafkaError::NoMessageReceived` every time the
+    /// poll interval is reached and no message has been received.
+    pub async fn recv_with_runtime<R>(
+        &self,
+        poll_interval: Duration,
+        no_message_error: bool,
+    ) -> KafkaResult<BorrowedMessage<'_>>
+    where
+        R: AsyncRuntime,
+    {
+        let mut delay = None;
+        futures::future::poll_fn(move |cx| {
+            self.poll_next::<R>(cx, poll_interval, no_message_error, &mut delay)
+        })
+        .await
+    }
+
+    fn context(&self) -> &StreamConsumerContext<C> {
+        self.get_base_consumer().context()
+    }
+
+    fn set_waker(&self, waker: Waker) {
+        self.context()
+            .waker
+            .lock()
+            .expect("lock poisoned")
+            .replace(waker);
+    }
+
+    fn poll_next<R>(
+        &self,
+        cx: &mut Context,
+        poll_interval: Duration,
+        no_message_error: bool,
+        delay: &mut Option<R::Delay>,
+    ) -> Poll<KafkaResult<BorrowedMessage<'_>>>
+    where
+        R: AsyncRuntime,
+    {
+        // Unconditionally store the waker so that we are woken up if the queue
+        // flips from non-empty to empty. We have to store the waker on every
+        // call to poll in case this future migrates between tasks. We also need
+        // to store the waker *before* calling poll to avoid a race where `poll`
+        // returns None to indicate that the queue is empty, but the queue
+        // becomes non-empty before we've installed the waker.
+        self.set_waker(cx.waker().clone());
+
+        match self.poll_consumer() {
+            None => loop {
+                ready!(Pin::new(delay.get_or_insert_with(|| R::delay_for(poll_interval))).poll(cx));
+                *delay = None;
+                if no_message_error {
+                    break Poll::Ready(Err(KafkaError::NoMessageReceived));
+                }
+            },
+            Some(message) => {
+                *delay = None;
+                Poll::Ready(message)
+            }
+        }
+    }
+
+    fn poll_consumer(&self) -> Option<KafkaResult<BorrowedMessage<'_>>> {
+        unsafe {
+            NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client().native_ptr(), 0))
+                .map(|p| BorrowedMessage::from_consumer(p, self))
+        }
     }
 }
