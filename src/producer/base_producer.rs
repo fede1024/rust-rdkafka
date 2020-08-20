@@ -58,9 +58,11 @@ use rdkafka_sys::types::*;
 
 use crate::client::{Client, ClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use crate::util::{IntoOpaque, Timeout};
+use crate::TopicPartitionList;
 
 pub use crate::message::DeliveryResult;
 
@@ -425,6 +427,81 @@ impl<C: ProducerContext> BaseProducer<C> {
     /// Returns the [`Client`] underlying this producer.
     pub fn client(&self) -> &Client<C> {
         &*self.client_arc
+    }
+
+    /// Initialize transactions for the producer instance.
+    pub fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        let init_error = unsafe {
+            let err =
+                rdsys::rd_kafka_init_transactions(self.native_ptr(), timeout.into().as_millis());
+            rdsys::rd_kafka_error_code(err)
+        };
+        if init_error.is_error() {
+            return Err(KafkaError::Transaction(init_error.into()));
+        }
+        Ok(())
+    }
+
+    /// Begin a new transaction.
+    pub fn begin_transaction(&self) -> KafkaResult<()> {
+        let begin_error = unsafe {
+            let err = rdsys::rd_kafka_begin_transaction(self.native_ptr());
+            rdsys::rd_kafka_error_code(err)
+        };
+        if begin_error.is_error() {
+            return Err(KafkaError::Transaction(begin_error.into()));
+        }
+        Ok(())
+    }
+
+    /// Sends a list of topic partition offsets to the consumer group coordinator for `cgm`, and
+    /// marks the offsets as part part of the current transaction. These offsets will be considered
+    /// committed only if the transaction is committed successfully.
+    pub fn send_offsets_to_transaction<T: Into<Timeout>>(
+        &self,
+        offsets: &TopicPartitionList,
+        cgm: &ConsumerGroupMetadata,
+        timeout: T,
+    ) -> KafkaResult<()> {
+        let send_error = unsafe {
+            let err = rdsys::rd_kafka_send_offsets_to_transaction(
+                self.native_ptr(),
+                offsets.ptr(),
+                cgm.ptr(),
+                timeout.into().as_millis(),
+            );
+            rdsys::rd_kafka_error_code(err)
+        };
+        if send_error.is_error() {
+            return Err(KafkaError::Transaction(send_error.into()));
+        }
+        Ok(())
+    }
+
+    /// Commit the current transaction.
+    pub fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        let commit_error = unsafe {
+            let err =
+                rdsys::rd_kafka_commit_transaction(self.native_ptr(), timeout.into().as_millis());
+            rdsys::rd_kafka_error_code(err)
+        };
+        if commit_error.is_error() {
+            return Err(KafkaError::Transaction(commit_error.into()));
+        }
+        Ok(())
+    }
+
+    /// Aborts the ongoing transaction.
+    pub fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        let abort_error = unsafe {
+            let err =
+                rdsys::rd_kafka_abort_transaction(self.native_ptr(), timeout.into().as_millis());
+            rdsys::rd_kafka_error_code(err)
+        };
+        if abort_error.is_error() {
+            return Err(KafkaError::Transaction(abort_error.into()));
+        }
+        Ok(())
     }
 }
 

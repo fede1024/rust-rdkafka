@@ -78,6 +78,8 @@ pub enum KafkaError {
     StoreOffset(RDKafkaError),
     /// Subscription creation failed.
     Subscription(String),
+    /// Transaction error.
+    Transaction(RDKafkaError),
 }
 
 impl fmt::Debug for KafkaError {
@@ -129,6 +131,7 @@ impl fmt::Debug for KafkaError {
             KafkaError::Subscription(ref err) => {
                 write!(f, "KafkaError (Subscription error: {})", err)
             }
+            KafkaError::Transaction(err) => write!(f, "KafkaError (Transaction error: {})", err),
         }
     }
 }
@@ -162,6 +165,7 @@ impl fmt::Display for KafkaError {
             KafkaError::SetPartitionOffset(err) => write!(f, "Set partition offset error: {}", err),
             KafkaError::StoreOffset(err) => write!(f, "Store offset error: {}", err),
             KafkaError::Subscription(ref err) => write!(f, "Subscription error: {}", err),
+            KafkaError::Transaction(err) => write!(f, "Transaction error: {}", err),
         }
     }
 }
@@ -213,6 +217,7 @@ impl KafkaError {
             KafkaError::SetPartitionOffset(err) => Some(err),
             KafkaError::StoreOffset(err) => Some(err),
             KafkaError::Subscription(_) => None,
+            KafkaError::Transaction(err) => Some(err),
         }
     }
 }
