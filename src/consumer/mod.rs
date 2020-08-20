@@ -14,7 +14,7 @@ use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{cstr_to_owned, Timeout};
+use crate::util::{cstr_to_owned, KafkaDrop, NativePtr, Timeout};
 
 pub mod base_consumer;
 pub mod stream_consumer;
@@ -141,6 +141,29 @@ pub enum CommitMode {
     Sync = 0,
     /// Asynchronous commit.
     Async = 1,
+}
+
+/// Consumer group metadata used to send offsets to producer transactions.
+pub struct ConsumerGroupMetadata {
+    ptr: NativePtr<RDKafkaConsumerGroupMetadata>,
+}
+
+unsafe impl KafkaDrop for RDKafkaConsumerGroupMetadata {
+    const TYPE: &'static str = "consumer_group_metadata";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_consumer_group_metadata_destroy;
+}
+
+impl ConsumerGroupMetadata {
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaConsumerGroupMetadata) -> ConsumerGroupMetadata {
+        ConsumerGroupMetadata {
+            ptr: NativePtr::from_ptr(ptr).unwrap(),
+        }
+    }
+
+    /// Returns the pointer to the internal librdkafka structure.
+    pub fn ptr(&self) -> *mut RDKafkaConsumerGroupMetadata {
+        self.ptr.ptr()
+    }
 }
 
 /// Common trait for all consumers.
@@ -338,5 +361,10 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     /// Returns the [`Client`] underlying this consumer.
     fn client(&self) -> &Client<C> {
         self.get_base_consumer().client()
+    }
+
+    /// Returns the consumer group metadata needed to send offsets to producer transactions.
+    fn group_metadata(&self) -> ConsumerGroupMetadata {
+        self.get_base_consumer().group_metadata()
     }
 }

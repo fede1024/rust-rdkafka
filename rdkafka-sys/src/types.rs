@@ -81,6 +81,8 @@ pub type RDKafkaAdminOptions = bindings::rd_kafka_AdminOptions_t;
 /// Native rdkafka topic result.
 pub type RDKafkaTopicResult = bindings::rd_kafka_topic_result_t;
 
+pub type RDKafkaConsumerGroupMetadata = bindings::rd_kafka_consumer_group_metadata_t;
+
 // ENUMS
 
 /// Client types.
