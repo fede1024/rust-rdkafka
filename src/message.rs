@@ -361,10 +361,10 @@ impl<'a> Message for BorrowedMessage<'a> {
         unsafe {
             let err = rdsys::rd_kafka_message_headers(self.ptr.ptr(), &mut native_headers_ptr);
             match err.into() {
-                RDKafkaError::NoError => {
+                RDKafkaErrorCode::NoError => {
                     Some(BorrowedHeaders::from_native_ptr(self, native_headers_ptr))
                 }
-                RDKafkaError::NoEnt => None,
+                RDKafkaErrorCode::NoEnt => None,
                 _ => None,
             }
         }

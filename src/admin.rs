@@ -526,8 +526,8 @@ type NativeAdminOptions = NativePtr<RDKafkaAdminOptions>;
 
 fn check_rdkafka_invalid_arg(res: RDKafkaRespErr, err_buf: &ErrBuf) -> KafkaResult<()> {
     match res.into() {
-        RDKafkaError::NoError => Ok(()),
-        RDKafkaError::InvalidArgument => {
+        RDKafkaErrorCode::NoError => Ok(()),
+        RDKafkaErrorCode::InvalidArgument => {
             let msg = if err_buf.len() == 0 {
                 "invalid argument".into()
             } else {
@@ -548,7 +548,7 @@ fn check_rdkafka_invalid_arg(res: RDKafkaRespErr, err_buf: &ErrBuf) -> KafkaResu
 
 /// The result of an individual CreateTopic, DeleteTopic, or
 /// CreatePartition operation.
-pub type TopicResult = Result<String, (String, RDKafkaError)>;
+pub type TopicResult = Result<String, (String, RDKafkaErrorCode)>;
 
 fn build_topic_results(topics: *const *const RDKafkaTopicResult, n: usize) -> Vec<TopicResult> {
     let mut out = Vec::with_capacity(n);
@@ -863,7 +863,7 @@ impl Future for CreatePartitionsFuture {
 //
 
 /// The result of an individual DescribeConfig operation.
-pub type ConfigResourceResult = Result<ConfigResource, RDKafkaError>;
+pub type ConfigResourceResult = Result<ConfigResource, RDKafkaErrorCode>;
 
 /// Specification of a configurable resource.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -1072,7 +1072,7 @@ impl Future for DescribeConfigsFuture {
 
 /// The result of an individual AlterConfig operation.
 pub type AlterConfigsResult =
-    Result<OwnedResourceSpecifier, (OwnedResourceSpecifier, RDKafkaError)>;
+    Result<OwnedResourceSpecifier, (OwnedResourceSpecifier, RDKafkaErrorCode)>;
 
 /// Configuration for an AlterConfig operation.
 pub struct AlterConfig<'a> {

@@ -7,7 +7,7 @@ use futures::stream::{FuturesUnordered, StreamExt};
 
 use rdkafka::client::DefaultClientContext;
 use rdkafka::config::ClientConfig;
-use rdkafka::error::{KafkaError, RDKafkaError};
+use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::message::{Headers, Message, OwnedHeaders};
 use rdkafka::producer::future_producer::FutureRecord;
 use rdkafka::producer::FutureProducer;
@@ -75,7 +75,7 @@ async fn test_future_producer_send_full() {
             .await;
         match res {
             Ok(_) => panic!("send unexpectedly succeeded"),
-            Err((KafkaError::MessageProduction(RDKafkaError::QueueFull), _)) => start.elapsed(),
+            Err((KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull), _)) => start.elapsed(),
             Err((e, _)) => panic!("got incorrect error: {}", e),
         }
     };

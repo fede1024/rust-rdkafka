@@ -5,8 +5,8 @@ use std::{error, ffi, fmt};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-// Re-export rdkafka error
-pub use rdsys::types::RDKafkaError;
+// Re-export rdkafka error code
+pub use rdsys::types::RDKafkaErrorCode;
 
 /// Kafka result.
 pub type KafkaResult<T> = Result<T, KafkaError>;
@@ -35,13 +35,13 @@ impl IsError for RDKafkaConfRes {
 
 /// Represents all possible Kafka errors.
 ///
-/// If applicable, check the underlying [`RDKafkaError`] to get details.
+/// If applicable, check the underlying [`RDKafkaErrorCode`] to get details.
 #[derive(Clone, PartialEq, Eq)]
 pub enum KafkaError {
     /// Creation of admin operation failed.
     AdminOpCreation(String),
     /// The admin operation itself failed.
-    AdminOp(RDKafkaError),
+    AdminOp(RDKafkaErrorCode),
     /// The client was dropped before the operation completed.
     Canceled,
     /// Invalid client configuration.
@@ -49,23 +49,23 @@ pub enum KafkaError {
     /// Client creation failed.
     ClientCreation(String),
     /// Consumer commit failed.
-    ConsumerCommit(RDKafkaError),
+    ConsumerCommit(RDKafkaErrorCode),
     /// Global error.
-    Global(RDKafkaError),
+    Global(RDKafkaErrorCode),
     /// Group list fetch failed.
-    GroupListFetch(RDKafkaError),
+    GroupListFetch(RDKafkaErrorCode),
     /// Message consumption failed.
-    MessageConsumption(RDKafkaError),
+    MessageConsumption(RDKafkaErrorCode),
     /// Message production error.
-    MessageProduction(RDKafkaError),
+    MessageProduction(RDKafkaErrorCode),
     /// Metadata fetch error.
-    MetadataFetch(RDKafkaError),
+    MetadataFetch(RDKafkaErrorCode),
     /// No message was received.
     NoMessageReceived,
     /// Unexpected null pointer
     Nul(ffi::NulError),
     /// Offset fetch failed.
-    OffsetFetch(RDKafkaError),
+    OffsetFetch(RDKafkaErrorCode),
     /// End of partition reached.
     PartitionEOF(i32),
     /// Pause/Resume failed.
@@ -73,13 +73,13 @@ pub enum KafkaError {
     /// Seeking a partition failed.
     Seek(String),
     /// Setting partition offset failed.
-    SetPartitionOffset(RDKafkaError),
+    SetPartitionOffset(RDKafkaErrorCode),
     /// Offset store failed.
-    StoreOffset(RDKafkaError),
+    StoreOffset(RDKafkaErrorCode),
     /// Subscription creation failed.
     Subscription(String),
     /// Transaction error.
-    Transaction(RDKafkaError),
+    Transaction(RDKafkaErrorCode),
 }
 
 impl fmt::Debug for KafkaError {
@@ -172,7 +172,7 @@ impl fmt::Display for KafkaError {
 
 impl error::Error for KafkaError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        self.rdkafka_error()
+        self.rdkafka_error_code()
             .map(|e| e as &(dyn error::Error + 'static))
     }
 }
@@ -187,15 +187,15 @@ impl KafkaError {
     /// Returns if an error is `Fatal` and requires reinitialisation.
     /// for details see https://docs.confluent.io/5.5.0/clients/librdkafka/rdkafka_8h.html
     pub fn is_fatal(&self) -> bool {
-        match self.rdkafka_error() {
-            Some(RDKafkaError::Fatal) => true,
+        match self.rdkafka_error_code() {
+            Some(RDKafkaErrorCode::Fatal) => true,
             _ => false,
         }
     }
 
-    /// Returns the [`RDKafkaError`] underlying this error, if any.
+    /// Returns the [`RDKafkaErrorCode`] underlying this error, if any.
     #[allow(clippy::match_same_arms)]
-    pub fn rdkafka_error(&self) -> Option<&RDKafkaError> {
+    pub fn rdkafka_error_code(&self) -> Option<&RDKafkaErrorCode> {
         match self {
             KafkaError::AdminOp(_) => None,
             KafkaError::AdminOpCreation(_) => None,

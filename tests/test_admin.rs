@@ -10,7 +10,7 @@ use rdkafka::admin::{
 };
 use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{BaseConsumer, Consumer, DefaultConsumerContext};
-use rdkafka::error::{KafkaError, RDKafkaError};
+use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::metadata::Metadata;
 use rdkafka::ClientConfig;
 
@@ -239,7 +239,10 @@ async fn test_topics() {
             .create_partitions(&[partitions], &opts)
             .await
             .expect("partition creation failed");
-        assert_eq!(res, &[Err((name, RDKafkaError::InvalidReplicaAssignment))],);
+        assert_eq!(
+            res,
+            &[Err((name, RDKafkaErrorCode::InvalidReplicaAssignment))],
+        );
     }
 
     // Verify that deleting a non-existent topic fails.
@@ -249,7 +252,10 @@ async fn test_topics() {
             .delete_topics(&[&name], &opts)
             .await
             .expect("delete topics failed");
-        assert_eq!(res, &[Err((name, RDKafkaError::UnknownTopicOrPartition))]);
+        assert_eq!(
+            res,
+            &[Err((name, RDKafkaErrorCode::UnknownTopicOrPartition))]
+        );
     }
 
     // Verify that mixed-success operations properly report the successful and
@@ -275,7 +281,7 @@ async fn test_topics() {
         assert_eq!(
             res,
             &[
-                Err((name1.clone(), RDKafkaError::TopicAlreadyExists)),
+                Err((name1.clone(), RDKafkaErrorCode::TopicAlreadyExists)),
                 Ok(name2.clone())
             ]
         );
@@ -296,7 +302,7 @@ async fn test_topics() {
             res,
             &[
                 Ok(name2.clone()),
-                Err((name1.clone(), RDKafkaError::UnknownTopicOrPartition))
+                Err((name1.clone(), RDKafkaErrorCode::UnknownTopicOrPartition))
             ]
         );
     }
@@ -392,30 +398,30 @@ async fn test_event_errors() {
     let res = admin_client.create_topics(&[], &opts).await;
     assert_eq!(
         res,
-        Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
     );
 
     let res = admin_client.create_partitions(&[], &opts).await;
     assert_eq!(
         res,
-        Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
     );
 
     let res = admin_client.delete_topics(&[], &opts).await;
     assert_eq!(
         res,
-        Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
     );
 
     let res = admin_client.describe_configs(&[], &opts).await;
     assert_eq!(
         res.err(),
-        Some(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+        Some(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
     );
 
     let res = admin_client.alter_configs(&[], &opts).await;
     assert_eq!(
         res,
-        Err(KafkaError::AdminOp(RDKafkaError::OperationTimedOut))
+        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
     );
 }
