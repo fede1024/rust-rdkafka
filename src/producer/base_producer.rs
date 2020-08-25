@@ -431,25 +431,21 @@ impl<C: ProducerContext> BaseProducer<C> {
 
     /// Initialize transactions for the producer instance.
     pub fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
-        let init_error = unsafe {
-            let err =
-                rdsys::rd_kafka_init_transactions(self.native_ptr(), timeout.into().as_millis());
-            rdsys::rd_kafka_error_code(err)
+        let init_error: *const RDKafkaError = unsafe {
+            rdsys::rd_kafka_init_transactions(self.native_ptr(), timeout.into().as_millis())
         };
         if init_error.is_error() {
-            return Err(KafkaError::Transaction(init_error.into()));
+            return unsafe { Err(KafkaError::Transaction(*init_error)) };
         }
         Ok(())
     }
 
     /// Begin a new transaction.
     pub fn begin_transaction(&self) -> KafkaResult<()> {
-        let begin_error = unsafe {
-            let err = rdsys::rd_kafka_begin_transaction(self.native_ptr());
-            rdsys::rd_kafka_error_code(err)
-        };
+        let begin_error: *const RDKafkaError =
+            unsafe { rdsys::rd_kafka_begin_transaction(self.native_ptr()) };
         if begin_error.is_error() {
-            return Err(KafkaError::Transaction(begin_error.into()));
+            return unsafe { Err(KafkaError::Transaction(*begin_error)) };
         }
         Ok(())
     }
@@ -463,43 +459,38 @@ impl<C: ProducerContext> BaseProducer<C> {
         cgm: &ConsumerGroupMetadata,
         timeout: T,
     ) -> KafkaResult<()> {
-        let send_error = unsafe {
-            let err = rdsys::rd_kafka_send_offsets_to_transaction(
+        let send_error: *const RDKafkaError = unsafe {
+            rdsys::rd_kafka_send_offsets_to_transaction(
                 self.native_ptr(),
                 offsets.ptr(),
                 cgm.ptr(),
                 timeout.into().as_millis(),
-            );
-            rdsys::rd_kafka_error_code(err)
+            )
         };
         if send_error.is_error() {
-            return Err(KafkaError::Transaction(send_error.into()));
+            return unsafe { Err(KafkaError::Transaction(*send_error)) };
         }
         Ok(())
     }
 
     /// Commit the current transaction.
     pub fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
-        let commit_error = unsafe {
-            let err =
-                rdsys::rd_kafka_commit_transaction(self.native_ptr(), timeout.into().as_millis());
-            rdsys::rd_kafka_error_code(err)
+        let commit_error: *const RDKafkaError = unsafe {
+            rdsys::rd_kafka_commit_transaction(self.native_ptr(), timeout.into().as_millis())
         };
         if commit_error.is_error() {
-            return Err(KafkaError::Transaction(commit_error.into()));
+            return unsafe { Err(KafkaError::Transaction(*commit_error)) };
         }
         Ok(())
     }
 
     /// Aborts the ongoing transaction.
     pub fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
-        let abort_error = unsafe {
-            let err =
-                rdsys::rd_kafka_abort_transaction(self.native_ptr(), timeout.into().as_millis());
-            rdsys::rd_kafka_error_code(err)
+        let abort_error: *const RDKafkaError = unsafe {
+            rdsys::rd_kafka_abort_transaction(self.native_ptr(), timeout.into().as_millis())
         };
         if abort_error.is_error() {
-            return Err(KafkaError::Transaction(abort_error.into()));
+            return unsafe { Err(KafkaError::Transaction(*abort_error)) };
         }
         Ok(())
     }

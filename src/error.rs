@@ -5,8 +5,10 @@ use std::{error, ffi, fmt};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-// Re-export rdkafka error code
-pub use rdsys::types::RDKafkaErrorCode;
+use crate::util::KafkaDrop;
+
+// Re-export rdkafka error types
+pub use rdsys::types::{RDKafkaError, RDKafkaErrorCode};
 
 /// Kafka result.
 pub type KafkaResult<T> = Result<T, KafkaError>;
@@ -29,6 +31,17 @@ impl IsError for RDKafkaConfRes {
     fn is_error(self) -> bool {
         self as i32 != RDKafkaConfRes::RD_KAFKA_CONF_OK as i32
     }
+}
+
+impl IsError for *const RDKafkaError {
+    fn is_error(self) -> bool {
+        self.is_null()
+    }
+}
+
+unsafe impl KafkaDrop for RDKafkaError {
+    const TYPE: &'static str = "error";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_error_destroy;
 }
 
 // TODO: consider using macro
@@ -79,7 +92,7 @@ pub enum KafkaError {
     /// Subscription creation failed.
     Subscription(String),
     /// Transaction error.
-    Transaction(RDKafkaErrorCode),
+    Transaction(RDKafkaError),
 }
 
 impl fmt::Debug for KafkaError {
@@ -172,30 +185,6 @@ impl fmt::Display for KafkaError {
 
 impl error::Error for KafkaError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        self.rdkafka_error_code()
-            .map(|e| e as &(dyn error::Error + 'static))
-    }
-}
-
-impl From<ffi::NulError> for KafkaError {
-    fn from(err: ffi::NulError) -> KafkaError {
-        KafkaError::Nul(err)
-    }
-}
-
-impl KafkaError {
-    /// Returns if an error is `Fatal` and requires reinitialisation.
-    /// for details see https://docs.confluent.io/5.5.0/clients/librdkafka/rdkafka_8h.html
-    pub fn is_fatal(&self) -> bool {
-        match self.rdkafka_error_code() {
-            Some(RDKafkaErrorCode::Fatal) => true,
-            _ => false,
-        }
-    }
-
-    /// Returns the [`RDKafkaErrorCode`] underlying this error, if any.
-    #[allow(clippy::match_same_arms)]
-    pub fn rdkafka_error_code(&self) -> Option<&RDKafkaErrorCode> {
         match self {
             KafkaError::AdminOp(_) => None,
             KafkaError::AdminOpCreation(_) => None,
@@ -218,6 +207,51 @@ impl KafkaError {
             KafkaError::StoreOffset(err) => Some(err),
             KafkaError::Subscription(_) => None,
             KafkaError::Transaction(err) => Some(err),
+        }
+    }
+}
+
+impl From<ffi::NulError> for KafkaError {
+    fn from(err: ffi::NulError) -> KafkaError {
+        KafkaError::Nul(err)
+    }
+}
+
+impl KafkaError {
+    /// Returns if an error is `Fatal` and requires reinitialisation.
+    /// for details see https://docs.confluent.io/5.5.0/clients/librdkafka/rdkafka_8h.html
+    pub fn is_fatal(&self) -> bool {
+        match self.rdkafka_error_code() {
+            Some(RDKafkaErrorCode::Fatal) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns the [`RDKafkaErrorCode`] underlying this error, if any.
+    #[allow(clippy::match_same_arms)]
+    pub fn rdkafka_error_code(&self) -> Option<RDKafkaErrorCode> {
+        match self {
+            KafkaError::AdminOp(_) => None,
+            KafkaError::AdminOpCreation(_) => None,
+            KafkaError::Canceled => None,
+            KafkaError::ClientConfig(_, _, _, _) => None,
+            KafkaError::ClientCreation(_) => None,
+            KafkaError::ConsumerCommit(err) => Some(*err),
+            KafkaError::Global(err) => Some(*err),
+            KafkaError::GroupListFetch(err) => Some(*err),
+            KafkaError::MessageConsumption(err) => Some(*err),
+            KafkaError::MessageProduction(err) => Some(*err),
+            KafkaError::MetadataFetch(err) => Some(*err),
+            KafkaError::NoMessageReceived => None,
+            KafkaError::Nul(_) => None,
+            KafkaError::OffsetFetch(err) => Some(*err),
+            KafkaError::PartitionEOF(_) => None,
+            KafkaError::PauseResume(_) => None,
+            KafkaError::Seek(_) => None,
+            KafkaError::SetPartitionOffset(err) => Some(*err),
+            KafkaError::StoreOffset(err) => Some(*err),
+            KafkaError::Subscription(_) => None,
+            KafkaError::Transaction(err) => Some(err.code()),
         }
     }
 }

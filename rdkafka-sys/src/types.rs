@@ -83,6 +83,57 @@ pub type RDKafkaTopicResult = bindings::rd_kafka_topic_result_t;
 
 pub type RDKafkaConsumerGroupMetadata = bindings::rd_kafka_consumer_group_metadata_t;
 
+/// Native rdkafka error.
+pub type RDKafkaError = bindings::rd_kafka_error_t;
+
+impl RDKafkaError {
+    pub fn code(&self) -> RDKafkaErrorCode {
+        unsafe { bindings::rd_kafka_error_code(self).into() }
+    }
+
+    pub fn name(&self) -> String {
+        let cstr = unsafe { bindings::rd_kafka_error_name(self) };
+        unsafe { CStr::from_ptr(cstr).to_string_lossy().into_owned() }
+    }
+
+    pub fn string(&self) -> String {
+        let cstr = unsafe { bindings::rd_kafka_error_string(self) };
+        unsafe { CStr::from_ptr(cstr).to_string_lossy().into_owned() }
+    }
+
+    pub fn is_fatal(&self) -> bool {
+        unsafe { bindings::rd_kafka_error_is_fatal(self) == 1 }
+    }
+
+    pub fn is_retriable(&self) -> bool {
+        unsafe { bindings::rd_kafka_error_is_retriable(self) == 1 }
+    }
+
+    pub fn txn_requires_abort(&self) -> bool {
+        unsafe { bindings::rd_kafka_error_txn_requires_abort(self) == 1 }
+    }
+}
+
+impl PartialEq for RDKafkaError {
+    fn eq(&self, other: &RDKafkaError) -> bool {
+        self.code() == other.code()
+    }
+}
+
+impl Eq for RDKafkaError {}
+
+impl fmt::Display for RDKafkaError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.code().fmt(f)
+    }
+}
+
+impl error::Error for RDKafkaError {
+    fn description(&self) -> &str {
+        "Error from underlying rdkafka library"
+    }
+}
+
 // ENUMS
 
 /// Client types.
