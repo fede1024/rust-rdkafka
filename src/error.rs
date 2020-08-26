@@ -35,7 +35,7 @@ impl IsError for RDKafkaConfRes {
 
 impl IsError for *const RDKafkaError {
     fn is_error(self) -> bool {
-        self.is_null()
+        !self.is_null()
     }
 }
 
