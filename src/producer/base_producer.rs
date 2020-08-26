@@ -451,7 +451,7 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 
     /// Sends a list of topic partition offsets to the consumer group coordinator for `cgm`, and
-    /// marks the offsets as part part of the current transaction. These offsets will be considered
+    /// marks the offsets as part of the current transaction. These offsets will be considered
     /// committed only if the transaction is committed successfully.
     pub fn send_offsets_to_transaction<T: Into<Timeout>>(
         &self,
