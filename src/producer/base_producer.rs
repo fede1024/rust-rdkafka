@@ -609,6 +609,39 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     pub fn client(&self) -> &Client<C> {
         self.producer.client()
     }
+
+    /// Initialize transactions for the producer instance.
+    pub fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.init_transactions(timeout)
+    }
+
+    /// Begin a new transaction.
+    pub fn begin_transaction(&self) -> KafkaResult<()> {
+        self.producer.begin_transaction()
+    }
+
+    /// Sends a list of topic partition offsets to the consumer group coordinator for `cgm`, and
+    /// marks the offsets as part of the current transaction. These offsets will be considered
+    /// committed only if the transaction is committed successfully.
+    pub fn send_offsets_to_transaction<T: Into<Timeout>>(
+        &self,
+        offsets: &TopicPartitionList,
+        cgm: &ConsumerGroupMetadata,
+        timeout: T,
+    ) -> KafkaResult<()> {
+        self.producer
+            .send_offsets_to_transaction(offsets, cgm, timeout)
+    }
+
+    /// Commit the current transaction.
+    pub fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.commit_transaction(timeout)
+    }
+
+    /// Abort the ongoing transaction.
+    pub fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.abort_transaction(timeout)
+    }
 }
 
 impl<C: ProducerContext + 'static> Drop for ThreadedProducer<C> {
