@@ -218,12 +218,15 @@ impl From<ffi::NulError> for KafkaError {
 }
 
 impl KafkaError {
-    /// Returns if an error is `Fatal` and requires reinitialisation.
+    /// Returns if an error is fatal and requires reinitialisation.
     /// for details see https://docs.confluent.io/5.5.0/clients/librdkafka/rdkafka_8h.html
     pub fn is_fatal(&self) -> bool {
-        match self.rdkafka_error_code() {
-            Some(RDKafkaErrorCode::Fatal) => true,
-            _ => false,
+        if let Some(RDKafkaErrorCode::Fatal) = self.rdkafka_error_code() {
+            true
+        } else if let KafkaError::Transaction(err) = self {
+            err.is_fatal()
+        } else {
+            false
         }
     }
 
