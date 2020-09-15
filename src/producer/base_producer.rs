@@ -430,6 +430,9 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 
     /// Initialize transactions for the producer instance.
+    ///
+    /// Requires that a `transactional.id` be set for the producer and must be
+    /// called before any other transaction or send operations.
     pub fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         let init_error: *const RDKafkaError = unsafe {
             rdsys::rd_kafka_init_transactions(self.native_ptr(), timeout.into().as_millis())
@@ -441,6 +444,10 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 
     /// Begin a new transaction.
+    ///
+    /// A successful call to `init_transactions` must be made before calling
+    /// `begin_transaction`. All records produced and consumer offsets sent
+    /// after calling will be committed or aborted atomically.
     pub fn begin_transaction(&self) -> KafkaResult<()> {
         let begin_error: *const RDKafkaError =
             unsafe { rdsys::rd_kafka_begin_transaction(self.native_ptr()) };
@@ -450,9 +457,16 @@ impl<C: ProducerContext> BaseProducer<C> {
         Ok(())
     }
 
-    /// Sends a list of topic partition offsets to the consumer group coordinator for `cgm`, and
-    /// marks the offsets as part of the current transaction. These offsets will be considered
-    /// committed only if the transaction is committed successfully.
+    /// Sends a list of topic partition offsets to the consumer group
+    /// coordinator for `cgm`, and marks the offsets as part of the current
+    /// transaction. These offsets will be considered committed only if the
+    /// transaction is committed successfully.
+    ///
+    /// The offsets should be the next message your application will consume,
+    /// i.e.: the last processed message's offset + 1 for each partition.
+    ///
+    /// To get `ConsumerGroupMetadata` use `Consumer::group_metadata` on the
+    /// consumer that offsets are being sent for.
     pub fn send_offsets_to_transaction<T: Into<Timeout>>(
         &self,
         offsets: &TopicPartitionList,
@@ -474,6 +488,8 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 
     /// Commit the current transaction.
+    ///
+    /// Flushes the producer before actually committing.
     pub fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         let commit_error: *const RDKafkaError = unsafe {
             rdsys::rd_kafka_commit_transaction(self.native_ptr(), timeout.into().as_millis())
@@ -485,6 +501,9 @@ impl<C: ProducerContext> BaseProducer<C> {
     }
 
     /// Aborts the ongoing transaction.
+    ///
+    /// Should be used when receiving non-fatal abortable transaction errors.
+    /// Outstanding messages will be purged.
     pub fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         let abort_error: *const RDKafkaError = unsafe {
             rdsys::rd_kafka_abort_transaction(self.native_ptr(), timeout.into().as_millis())
@@ -611,18 +630,29 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     }
 
     /// Initialize transactions for the producer instance.
+    ///
+    /// Requires that a `transactional.id` be set for the producer and must be
+    /// called before any other transaction or send operations.
     pub fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         self.producer.init_transactions(timeout)
     }
 
     /// Begin a new transaction.
+    ///
+    /// A successful call to `init_transactions` must be made before calling
+    /// `begin_transaction`. All records produced and consumer offsets sent
+    /// after calling will be committed or aborted atomically.
     pub fn begin_transaction(&self) -> KafkaResult<()> {
         self.producer.begin_transaction()
     }
 
-    /// Sends a list of topic partition offsets to the consumer group coordinator for `cgm`, and
-    /// marks the offsets as part of the current transaction. These offsets will be considered
-    /// committed only if the transaction is committed successfully.
+    /// Sends a list of topic partition offsets to the consumer group
+    /// coordinator for `cgm`, and marks the offsets as part of the current
+    /// transaction. These offsets will be considered committed only if the
+    /// transaction is committed successfully.
+    ///
+    /// The offsets should be the next message your application will consume,
+    /// i.e.: the last processed message's offset + 1 for each partition.
     pub fn send_offsets_to_transaction<T: Into<Timeout>>(
         &self,
         offsets: &TopicPartitionList,
@@ -634,11 +664,16 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     }
 
     /// Commit the current transaction.
+    ///
+    /// Flushes the producer before actually committing.
     pub fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         self.producer.commit_transaction(timeout)
     }
 
     /// Abort the ongoing transaction.
+    ///
+    /// Should be used when receiving non-fatal abortable transaction errors.
+    /// Outstanding messages will be purged.
     pub fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         self.producer.abort_transaction(timeout)
     }

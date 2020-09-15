@@ -31,6 +31,7 @@
 //! - Access to group metadata (list groups, list members of groups, hostnames,
 //!   etc.).
 //! - Access to producer and consumer metrics, errors and callbacks.
+//! - Transactional producers.
 //!
 //! ### One million messages per second
 //!
@@ -107,6 +108,17 @@
 //! [at-least-once delivery example] in the examples folder. To know more about
 //! delivery semantics, check the [message delivery semantics] chapter in the
 //! Kafka documentation.
+//!
+//! ### Exactly-once semantics
+//!
+//! Exactly-once semantics (EOS) can be achieved by using transactional producers and
+//! transaction aware consumers. This allows produced records and consumer
+//! offsets to be committed or aborted atomically and only committed messages
+//! to be read by the consumer. EOS is useful in read-process-write scenarios
+//! that require messages to be processed exactly once.
+//!
+//! To learn more about using transactions in `rdkafka` check the
+//! [Transactional producer API documentation] and the [transactions example].
 //!
 //! ### Users
 //!
@@ -210,11 +222,13 @@
 //! [`Stream`]: https://docs.rs/futures/*/futures/stream/trait.Stream.html
 //! [`StreamConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html
 //! [`ThreadedProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.ThreadedProducer.html
+//! [Transactional producer API documentation]: https://docs.rs/rdkafka/*/rdkafka/producer/index.html#transactional-producer-api
 //! [`log`]: https://docs.rs/log
 //! [`env_logger`]: https://docs.rs/env_logger
 //! [Apache Kafka]: https://kafka.apache.org
 //! [asynchronous processing example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs
 //! [at-least-once delivery example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/at_least_once.rs
+//! [transactions example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/transactions.rs
 //! [smol runtime example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/smol_runtime.rs
 //! [broker-compat]: https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility
 //! [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/

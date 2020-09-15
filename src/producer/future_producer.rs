@@ -371,18 +371,29 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     }
 
     /// Initialize transactions for the producer instance.
+    ///
+    /// Requires that a `transactional.id` be set for the producer and must be
+    /// called before any other transaction or send operations.
     pub fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         self.producer.init_transactions(timeout)
     }
 
     /// Begin a new transaction.
+    ///
+    /// A successful call to `init_transactions` must be made before calling
+    /// `begin_transaction`. All records produced and consumer offsets sent
+    /// after calling will be committed or aborted atomically.
     pub fn begin_transaction(&self) -> KafkaResult<()> {
         self.producer.begin_transaction()
     }
 
-    /// Sends a list of topic partition offsets to the consumer group coordinator for `cgm`, and
-    /// marks the offsets as part of the current transaction. These offsets will be considered
-    /// committed only if the transaction is committed successfully.
+    /// Sends a list of topic partition offsets to the consumer group
+    /// coordinator for `cgm`, and marks the offsets as part of the current
+    /// transaction. These offsets will be considered committed only if the
+    /// transaction is committed successfully.
+    ///
+    /// The offsets should be the next message your application will consume,
+    /// i.e.: the last processed message's offset + 1 for each partition.
     pub fn send_offsets_to_transaction<T: Into<Timeout>>(
         &self,
         offsets: &TopicPartitionList,
@@ -394,11 +405,16 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     }
 
     /// Commit the current transaction.
+    ///
+    /// Flushes the producer before actually committing.
     pub fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         self.producer.commit_transaction(timeout)
     }
 
     /// Abort the ongoing transaction.
+    ///
+    /// Should be used when receiving non-fatal abortable transaction errors.
+    /// Outstanding messages will be purged.
     pub fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         self.producer.abort_transaction(timeout)
     }

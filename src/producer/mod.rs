@@ -75,6 +75,46 @@
 //! available (for more information, check the documentation of the futures
 //! crate).
 //!
+//! ## Transactional producer API
+//!
+//! All `rust-rdkafka` producers support transactions. To configure a producer
+//! for transactions set `transactional.id` to an identifier unique to the
+//! application.
+//!
+//! Transactional producers work together with transaction aware consumers
+//! configured with `isolation.level = read_committed` (default).
+//!
+//! After creating a transactional producer, it must be initialized with
+//! `init_transactions`.
+//!
+//! To start a new transaction use `begin_transaction`.
+//! There can be **only one ongoing transaction** at a time per producer. All
+//! records sent after starting a transaction and before committing or aborting
+//! it will be part of the current transaction.
+//!
+//! Consumer offsets can be sent as part of the ongoing transaction using
+//! `send_offsets_to_transaction` and will be committed atomically with the
+//! other records sent in the transaction.
+//!
+//! The current transaction can be committed with `commit_transaction` or
+//! aborted using `abort_transaction`. Afterwards, a new transaction can begin.
+//!
+//! ### Errors
+//!
+//! Errors returned by transaction methods may:
+//! * be retriable, `RDKafkaError::is_retriable`: indicates that the operation
+//! may be retried.
+//! * require abort, `RDKafkaError::txn_requires_abort`: the current transaction
+//! must be aborted and a new one may begin.
+//! * be fatal, `KafkaError::is_fatal` or `RDKafkaError::is_fatal`: the producer
+//! must be stopped and the application terminated.
+//!
+//! For more details about transactions check the [librdkafka documentation],
+//! "Transactional producer API" section.
+//!
+//! [librdkafka documentation]:
+//! https://docs.confluent.io/5.5.1/clients/librdkafka/rdkafka_8h.html
+//!
 //! ## Configuration
 //!
 //! ### Producer configuration

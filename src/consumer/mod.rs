@@ -363,7 +363,8 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         self.get_base_consumer().client()
     }
 
-    /// Returns the consumer group metadata needed to send offsets to producer transactions.
+    /// Returns the consumer group metadata needed to send offsets to producer
+    /// transactions.
     fn group_metadata(&self) -> ConsumerGroupMetadata {
         self.get_base_consumer().group_metadata()
     }
