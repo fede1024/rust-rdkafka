@@ -21,7 +21,7 @@ use crate::statistics::Statistics;
 use crate::topic_partition_list::TopicPartitionList;
 #[cfg(feature = "tokio")]
 use crate::util::TokioRuntime;
-use crate::util::{AsyncRuntime, NativePtr, Timeout};
+use crate::util::{AsyncRuntime, Timeout};
 
 /// The [`ConsumerContext`] used by the [`StreamConsumer`]. This context will
 /// automatically wake up the message stream when new data is available.
@@ -226,6 +226,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
 
     /// Polls for the next message with the specified poll interval (100ms polling
     /// interval and no `NoMessageReceived` notifications).
+    #[cfg(feature = "tokio")]
     pub async fn recv(&self) -> KafkaResult<BorrowedMessage<'_>> {
         self.recv_with(Duration::from_millis(100), false).await
     }
@@ -235,6 +236,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     /// If `no_message_error` is set to true, the returned `MessageStream` will
     /// yield an error of type `KafkaError::NoMessageReceived` every time the
     /// poll interval is reached and no message has been received.
+    #[cfg(feature = "tokio")]
     pub async fn recv_with(
         &self,
         poll_interval: Duration,
@@ -294,7 +296,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         // becomes non-empty before we've installed the waker.
         self.set_waker(cx.waker().clone());
 
-        match self.poll_consumer() {
+        match self.consumer.consumer_poll(Duration::from_secs(0).into()) {
             None => loop {
                 ready!(Pin::new(delay.get_or_insert_with(|| R::delay_for(poll_interval))).poll(cx));
                 *delay = None;
@@ -306,13 +308,6 @@ impl<C: ConsumerContext> StreamConsumer<C> {
                 *delay = None;
                 Poll::Ready(message)
             }
-        }
-    }
-
-    fn poll_consumer(&self) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        unsafe {
-            NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client().native_ptr(), 0))
-                .map(|p| BorrowedMessage::from_consumer(p, self))
         }
     }
 }
