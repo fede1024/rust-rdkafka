@@ -166,6 +166,9 @@ impl ConsumerGroupMetadata {
     }
 }
 
+unsafe impl Send for ConsumerGroupMetadata {}
+unsafe impl Sync for ConsumerGroupMetadata {}
+
 /// Common trait for all consumers.
 ///
 /// # Note about object safety
