@@ -2,6 +2,9 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
+<a name="0.25.0"></a>
+## 0.25.0 (Unreleased)
+
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)
 
