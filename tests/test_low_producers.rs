@@ -8,7 +8,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use rdkafka::config::ClientConfig;
-use rdkafka::error::{KafkaError, RDKafkaError};
+use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::message::{Headers, Message, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::{
     BaseProducer, BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer,
@@ -143,7 +143,7 @@ fn test_base_producer_queue_full() {
     let errors = results
         .iter()
         .filter(|&e| {
-            if let &Err((KafkaError::MessageProduction(RDKafkaError::QueueFull), _)) = e {
+            if let &Err((KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull), _)) = e {
                 true
             } else {
                 false
@@ -190,7 +190,9 @@ fn test_base_producer_timeout() {
         assert_eq!(message.key_view::<str>(), Some(Ok("B")));
         assert_eq!(
             error,
-            &Some(KafkaError::MessageProduction(RDKafkaError::MessageTimedOut))
+            &Some(KafkaError::MessageProduction(
+                RDKafkaErrorCode::MessageTimedOut
+            ))
         );
         ids.insert(id);
     }
@@ -333,6 +335,9 @@ fn test_fatal_errors() {
 
     assert_eq!(
         producer.client().fatal_error(),
-        Some((RDKafkaError::OutOfOrderSequenceNumber, "test_fatal_error: fake error".into()))
+        Some((
+            RDKafkaErrorCode::OutOfOrderSequenceNumber,
+            "test_fatal_error: fake error".into()
+        ))
     )
 }

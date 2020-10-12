@@ -103,9 +103,9 @@ pub use bindings::rd_kafka_ConfigSource_t as RDKafkaConfigSource;
 
 // Errors enum
 
-/// Native rdkafka error.
+/// Native rdkafka error code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RDKafkaError {
+pub enum RDKafkaErrorCode {
     #[doc(hidden)]
     Begin = -200,
     /// Received message is incorrect.
@@ -400,13 +400,13 @@ pub enum RDKafkaError {
     EndAll,
 }
 
-impl From<RDKafkaRespErr> for RDKafkaError {
-    fn from(err: RDKafkaRespErr) -> RDKafkaError {
+impl From<RDKafkaRespErr> for RDKafkaErrorCode {
+    fn from(err: RDKafkaRespErr) -> RDKafkaErrorCode {
         helpers::rd_kafka_resp_err_t_to_rdkafka_error(err)
     }
 }
 
-impl fmt::Display for RDKafkaError {
+impl fmt::Display for RDKafkaErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let description = match RDKafkaRespErr::try_from(*self as i32) {
             Ok(err) => {
@@ -422,7 +422,7 @@ impl fmt::Display for RDKafkaError {
     }
 }
 
-impl error::Error for RDKafkaError {
+impl error::Error for RDKafkaErrorCode {
     fn description(&self) -> &str {
         "Error from underlying rdkafka library"
     }
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn test_display_error() {
-        let error: RDKafkaError = RDKafkaRespErr::RD_KAFKA_RESP_ERR__PARTITION_EOF.into();
+        let error: RDKafkaErrorCode = RDKafkaRespErr::RD_KAFKA_RESP_ERR__PARTITION_EOF.into();
         assert_eq!(
             "PartitionEOF (Broker: No more messages)",
             format!("{}", error)

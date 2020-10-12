@@ -14,7 +14,7 @@ use futures::FutureExt;
 
 use crate::client::{Client, ClientContext, DefaultClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
-use crate::error::{KafkaError, KafkaResult, RDKafkaError};
+use crate::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
 use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
 use crate::statistics::Statistics;
@@ -234,7 +234,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     /// The `queue_timeout` parameter controls how long to retry for if the
     /// librdkafka producer queue is full. Set it to `Timeout::Never` to retry
     /// forever or `Timeout::After(0)` to never block. If the timeout is reached
-    /// and the queue is still full, an [`RDKafkaError::QueueFull`] error will
+    /// and the queue is still full, an [`RDKafkaErrorCode::QueueFull`] error will
     /// be reported in the [`OwnedDeliveryResult`].
     ///
     /// Keep in mind that `queue_timeout` only applies to the first phase of the
@@ -293,7 +293,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
         loop {
             match self.producer.send(base_record) {
                 Err((e, record))
-                    if e == KafkaError::MessageProduction(RDKafkaError::QueueFull)
+                    if e == KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull)
                         && can_retry() =>
                 {
                     base_record = record;

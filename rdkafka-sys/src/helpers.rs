@@ -1,11 +1,11 @@
 //! Utility functions.
 
-use crate::types::RDKafkaError;
-use crate::types::RDKafkaError::*;
+use crate::types::RDKafkaErrorCode;
+use crate::types::RDKafkaErrorCode::*;
 use crate::types::RDKafkaRespErr;
 use crate::types::RDKafkaRespErr::*;
 
-pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError {
+pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaErrorCode {
     match err {
         RD_KAFKA_RESP_ERR__BEGIN => Begin,
         RD_KAFKA_RESP_ERR__BAD_MSG => BadMessage,

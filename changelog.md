@@ -2,6 +2,17 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
+<a name="0.25.0"></a>
+## 0.25.0 (Unreleased)
+
+* **Breaking change.** Rename `RDKafkaError` to `RDKafkaErrorCode`. This makes
+  space for the new `RDKafkaError` type, which mirrors the `rd_kafka_error_t`
+  type added to librdkafka in v1.4.0.
+
+  This change was made to reduce long-term confusion by ensuring the types in
+  rust-rdkafka map to types in librdkafka as directly as possible. The
+  maintainers apologize for the difficulty in upgrading through this change.
+
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)
 

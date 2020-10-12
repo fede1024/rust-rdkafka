@@ -310,7 +310,7 @@ impl<C: ClientContext> Client<C> {
     ///
     /// This function is intended to be used with idempotent producers, where
     /// some errors must logically be considered fatal to retain consistency.
-    pub fn fatal_error(&self) -> Option<(RDKafkaError, String)> {
+    pub fn fatal_error(&self) -> Option<(RDKafkaErrorCode, String)> {
         const LEN: usize = 512;
         let mut buf = [0; LEN];
         let code = unsafe { rdsys::rd_kafka_fatal_error(self.native_ptr(), buf.as_mut_ptr(), LEN) };
