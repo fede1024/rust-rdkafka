@@ -336,7 +336,7 @@ pub struct TokioRuntime;
 #[cfg(feature = "tokio")]
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
 impl AsyncRuntime for TokioRuntime {
-    type Delay = tokio::time::Delay;
+    type Delay = tokio::time::Sleep;
 
     fn spawn<T>(task: T)
     where
@@ -346,6 +346,6 @@ impl AsyncRuntime for TokioRuntime {
     }
 
     fn delay_for(duration: Duration) -> Self::Delay {
-        tokio::time::delay_for(duration)
+        tokio::time::sleep(duration)
     }
 }
