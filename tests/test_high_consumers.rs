@@ -41,7 +41,7 @@ fn create_stream_consumer_with_context<C: ConsumerContext>(
 }
 
 // All produced messages should be consumed.
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_base() {
     let _r = env_logger::try_init();
 
@@ -74,7 +74,7 @@ async fn test_produce_consume_base() {
 }
 
 // All produced messages should be consumed.
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_base_assign() {
     let _r = env_logger::try_init();
 
@@ -107,7 +107,7 @@ async fn test_produce_consume_base_assign() {
 }
 
 // All produced messages should be consumed.
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_with_timestamp() {
     let _r = env_logger::try_init();
 
@@ -147,7 +147,7 @@ async fn test_produce_consume_with_timestamp() {
     assert_eq!(tp.error(), Ok(()));
 }
 
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_consume_with_no_message_error() {
     let _r = env_logger::try_init();
 
@@ -209,7 +209,7 @@ async fn test_consume_with_no_message_error() {
 }
 
 // TODO: add check that commit cb gets called correctly
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_consumer_commit_message() {
     let _r = env_logger::try_init();
 
@@ -269,7 +269,7 @@ async fn test_consumer_commit_message() {
     assert_eq!(position, consumer.position().unwrap());
 }
 
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_consumer_store_offset_commit() {
     let _r = env_logger::try_init();
 

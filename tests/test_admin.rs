@@ -179,7 +179,7 @@ async fn test_topics() {
                 panic!("topic has {} partitions, but expected {}", n, 5);
             } else {
                 tries += 1;
-                tokio::time::delay_for(Duration::from_secs(1)).await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
 
@@ -368,7 +368,7 @@ async fn test_configs() {
             panic!("{:?} != {:?}", entry, Some(&expected_entry));
         } else {
             tries += 1;
-            tokio::time::delay_for(Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
 
