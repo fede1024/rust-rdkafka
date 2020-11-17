@@ -185,8 +185,29 @@ impl fmt::Display for KafkaError {
 
 impl error::Error for KafkaError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        self.rdkafka_error_code()
-            .map(|e| e as &(dyn error::Error + 'static))
+        match self {
+            KafkaError::AdminOp(_) => None,
+            KafkaError::AdminOpCreation(_) => None,
+            KafkaError::Canceled => None,
+            KafkaError::ClientConfig(_, _, _, _) => None,
+            KafkaError::ClientCreation(_) => None,
+            KafkaError::ConsumerCommit(err) => Some(err),
+            KafkaError::Global(err) => Some(err),
+            KafkaError::GroupListFetch(err) => Some(err),
+            KafkaError::MessageConsumption(err) => Some(err),
+            KafkaError::MessageProduction(err) => Some(err),
+            KafkaError::MetadataFetch(err) => Some(err),
+            KafkaError::NoMessageReceived => None,
+            KafkaError::Nul(_) => None,
+            KafkaError::OffsetFetch(err) => Some(err),
+            KafkaError::PartitionEOF(_) => None,
+            KafkaError::PauseResume(_) => None,
+            KafkaError::Seek(_) => None,
+            KafkaError::SetPartitionOffset(err) => Some(err),
+            KafkaError::StoreOffset(err) => Some(err),
+            KafkaError::Subscription(_) => None,
+            KafkaError::Transaction(err) => Some(err),
+        }
     }
 }
 
@@ -211,7 +232,7 @@ impl KafkaError {
 
     /// Returns the [`RDKafkaErrorCode`] underlying this error, if any.
     #[allow(clippy::match_same_arms)]
-    pub fn rdkafka_error_code(&self) -> Option<&RDKafkaErrorCode> {
+    pub fn rdkafka_error_code(&self) -> Option<RDKafkaErrorCode> {
         match self {
             KafkaError::AdminOp(_) => None,
             KafkaError::AdminOpCreation(_) => None,
