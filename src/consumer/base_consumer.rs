@@ -49,7 +49,7 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     opaque_ptr: *mut c_void,
 ) {
     let context = &mut *(opaque_ptr as *mut C);
-    let native_client = NativeClient::from_ptr(rk);
+    let native_client = NativeClient::from_ptr(rk).unwrap();
     let mut tpl = TopicPartitionList::from_ptr(native_tpl);
 
     context.rebalance(&native_client, err, &mut tpl);

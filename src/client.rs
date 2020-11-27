@@ -127,10 +127,8 @@ unsafe impl Send for NativeClient {}
 
 impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
-    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
-        NativeClient {
-            ptr: NativePtr::from_ptr(ptr).unwrap(),
-        }
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafka) -> Option<NativeClient> {
+        NativePtr::from_ptr(ptr).map(|ptr| NativeClient { ptr })
     }
 
     /// Returns the wrapped pointer to RDKafka.
@@ -180,23 +178,21 @@ impl<C: ClientContext> Client<C> {
         };
 
         let client_ptr = unsafe {
-            rdsys::rd_kafka_new(
+            NativeClient::from_ptr(rdsys::rd_kafka_new(
                 rd_kafka_type,
                 native_config.ptr_move(),
                 err_buf.as_mut_ptr(),
                 err_buf.len(),
-            )
+            ))
+            .ok_or_else(|| KafkaError::ClientCreation(err_buf.to_string()))?
         };
-        trace!("Create new librdkafka client {:p}", client_ptr);
 
-        if client_ptr.is_null() {
-            return Err(KafkaError::ClientCreation(err_buf.to_string()));
-        }
+        trace!("Create new librdkafka client {:p}", client_ptr.ptr());
 
-        unsafe { rdsys::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
+        unsafe { rdsys::rd_kafka_set_log_level(client_ptr.ptr(), config.log_level as i32) };
 
         Ok(Client {
-            native: unsafe { NativeClient::from_ptr(client_ptr) },
+            native: client_ptr,
             context: boxed_context,
         })
     }
