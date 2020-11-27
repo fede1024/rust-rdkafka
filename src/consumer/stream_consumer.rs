@@ -6,10 +6,12 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
-use futures::{ready, Stream};
+use futures::{ready, Stream, StreamExt};
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
+
+use slab::Slab;
 
 use crate::client::{ClientContext, NativeClient};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
@@ -30,14 +32,14 @@ use crate::util::{AsyncRuntime, Timeout};
 /// created by the `StreamConsumer` when necessary.
 pub struct StreamConsumerContext<C: ConsumerContext + 'static> {
     inner: C,
-    waker: Arc<Mutex<Option<Waker>>>,
+    wakers: Arc<Mutex<Slab<Option<Waker>>>>,
 }
 
 impl<C: ConsumerContext + 'static> StreamConsumerContext<C> {
     fn new(inner: C) -> StreamConsumerContext<C> {
         StreamConsumerContext {
             inner,
-            waker: Arc::new(Mutex::new(None)),
+            wakers: Arc::default(),
         }
     }
 }
@@ -83,8 +85,13 @@ impl<C: ConsumerContext + 'static> ConsumerContext for StreamConsumerContext<C> 
     }
 
     fn message_queue_nonempty_callback(&self) {
-        if let Some(waker) = self.waker.lock().unwrap().take() {
-            waker.wake();
+        {
+            let mut wakers = self.wakers.lock().unwrap();
+            for (_, waker) in wakers.iter_mut() {
+                if let Some(waker) = waker.take() {
+                    waker.wake();
+                }
+            }
         }
         self.inner.message_queue_nonempty_callback()
     }
@@ -106,6 +113,22 @@ pub struct MessageStream<
     interval: Duration,
     delay: Option<R::Delay>,
     no_message_error: bool,
+    slot: usize,
+}
+
+impl<'a, C, R> Drop for MessageStream<'a, C, R>
+where
+    C: ConsumerContext + 'static,
+    R: AsyncRuntime,
+{
+    fn drop(&mut self) {
+        self.consumer
+            .context()
+            .wakers
+            .lock()
+            .expect("lock poisoned")
+            .remove(self.slot);
+    }
 }
 
 impl<'a, C, R> MessageStream<'a, C, R>
@@ -123,6 +146,12 @@ where
             interval,
             delay: None,
             no_message_error,
+            slot: consumer
+                .context()
+                .wakers
+                .lock()
+                .expect("lock poisoned")
+                .insert(None),
         }
     }
 }
@@ -136,7 +165,13 @@ where
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         self.consumer
-            .poll_next::<R>(cx, self.interval, self.no_message_error, &mut self.delay)
+            .poll_next::<R>(
+                cx,
+                self.slot,
+                self.interval,
+                self.no_message_error,
+                &mut self.delay,
+            )
             .map(Some)
     }
 }
@@ -204,7 +239,6 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         poll_interval: Duration,
         no_message_error: bool,
     ) -> MessageStream<C, TokioRuntime> {
-        // TODO: verify called once
         self.start_with_runtime(poll_interval, no_message_error)
     }
 
@@ -259,28 +293,24 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     where
         R: AsyncRuntime,
     {
-        let mut delay = None;
-        futures::future::poll_fn(move |cx| {
-            self.poll_next::<R>(cx, poll_interval, no_message_error, &mut delay)
-        })
-        .await
+        MessageStream::<_, R>::new(self, poll_interval, no_message_error)
+            .next()
+            .await
+            .unwrap()
     }
 
     fn context(&self) -> &StreamConsumerContext<C> {
         self.get_base_consumer().context()
     }
 
-    fn set_waker(&self, waker: Waker) {
-        self.context()
-            .waker
-            .lock()
-            .expect("lock poisoned")
-            .replace(waker);
+    fn set_waker(&self, slot: usize, waker: Waker) {
+        self.context().wakers.lock().expect("lock poisoned")[slot].replace(waker);
     }
 
     fn poll_next<R>(
         &self,
         cx: &mut Context,
+        slot: usize,
         poll_interval: Duration,
         no_message_error: bool,
         delay: &mut Option<R::Delay>,
@@ -294,7 +324,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         // to store the waker *before* calling poll to avoid a race where `poll`
         // returns None to indicate that the queue is empty, but the queue
         // becomes non-empty before we've installed the waker.
-        self.set_waker(cx.waker().clone());
+        self.set_waker(slot, cx.waker().clone());
 
         match self.consumer.consumer_poll(Duration::from_secs(0).into()) {
             None => loop {
