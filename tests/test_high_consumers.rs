@@ -73,6 +73,39 @@ async fn test_produce_consume_base() {
         .await;
 }
 
+/// Test that multiple message streams from the same consumer all receive
+/// messages. In a previous version of rust-rdkafka, the `StreamConsumerContext`
+/// could only manage one waker, so each `MessageStream` would compete for the
+/// waker slot.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_produce_consume_base_concurrent() {
+    let _r = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+    populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
+
+    let consumer = Arc::new(create_stream_consumer(&rand_test_group(), None));
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+
+    let mk_task = || {
+        let consumer = consumer.clone();
+        tokio::spawn(async move {
+            consumer
+                .start_with(Duration::from_secs(60 * 60 * 24 * 365 /* 1 year */), false)
+                .take(20)
+                .for_each(|message| match message {
+                    Ok(_) => future::ready(()),
+                    Err(e) => panic!("Error receiving message: {:?}", e),
+                })
+                .await;
+        })
+    };
+
+    for res in future::join_all((0..5).map(|_| mk_task())).await {
+        res.unwrap();
+    }
+}
+
 // All produced messages should be consumed.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_base_assign() {
