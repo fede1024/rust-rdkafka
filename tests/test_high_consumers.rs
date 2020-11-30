@@ -73,6 +73,54 @@ async fn test_produce_consume_base() {
         .await;
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn test_produce_consume_base_concurrent() {
+    let _r = env_logger::try_init();
+
+    let start_time = current_time_millis();
+    let topic_name = rand_test_topic();
+    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
+    let consumer = Arc::new(create_stream_consumer(&rand_test_group(), None));
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+
+    let mk_task = || {
+        let consumer = consumer.clone();
+        let topic_name = topic_name.clone();
+        let message_map = message_map.clone();
+        tokio::spawn(async move {
+            let mut count = 0;
+            consumer
+                .start()
+                .take(50)
+                .for_each(|message| {
+                    count += 1;
+                    match message {
+                        Ok(m) => {
+                            let id = message_map[&(m.partition(), m.offset())];
+                            match m.timestamp() {
+                                Timestamp::CreateTime(timestamp) => {
+                                    assert!(timestamp >= start_time)
+                                }
+                                _ => panic!("Expected createtime for message timestamp"),
+                            };
+                            assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(id));
+                            assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(id));
+                            assert_eq!(m.topic(), topic_name.as_str());
+                        }
+                        Err(e) => panic!("Error receiving message: {:?}", e),
+                    };
+                    future::ready(())
+                })
+                .await;
+            count
+        })
+    };
+
+    let (a, b) = futures::try_join!(mk_task(), mk_task()).unwrap();
+    assert_eq!(a, 50);
+    assert_eq!(b, 50);
+}
+
 // All produced messages should be consumed.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_base_assign() {
