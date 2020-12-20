@@ -217,6 +217,10 @@ fn build_librdkafka() {
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         config.define("WITH_SSL", "1");
         config.register_dep("openssl");
+        // The mklove build system ties these to `--enable-ssl`. So make the
+        // CMake build system match that behavior.
+        config.define("WITH_SASL_SCRAM", "1");
+        config.define("WITH_SASL_OAUTHBEARER", "1");
     } else {
         config.define("WITH_SSL", "0");
     }

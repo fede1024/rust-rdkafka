@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* When using the CMake build system, the SASL SCRAM and OAUTHBEARER mechanisms
+  are now enabled when SSL is enabled, for parity with the non-CMake build
+  system.
+
 <a name="2.1.0+1.5.0></a>
 ## v2.1.0+1.5.0
 
