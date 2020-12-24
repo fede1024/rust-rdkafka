@@ -104,7 +104,7 @@ pub struct MessageStream<
 {
     consumer: &'a StreamConsumer<C>,
     interval: Duration,
-    delay: Option<R::Delay>,
+    delay: Pin<Box<Option<R::Delay>>>,
     no_message_error: bool,
 }
 
@@ -121,7 +121,7 @@ where
         MessageStream {
             consumer,
             interval,
-            delay: None,
+            delay: Box::pin(None),
             no_message_error,
         }
     }
@@ -148,6 +148,20 @@ where
                 .map(|p| BorrowedMessage::from_consumer(p, self.consumer))
         }
     }
+
+    // SAFETY: All access to `self.delay` occurs via the following two
+    // functions. These functions are careful to never move out of `self.delay`.
+    // (They can *drop* the future stored in `self.delay`, but that is
+    // permitted.) They never return a non-pinned pointer to the contents of
+    // `self.delay`.
+
+    fn ensure_delay(&mut self, delay: R::Delay) -> Pin<&mut R::Delay> {
+        unsafe { Pin::new_unchecked(self.delay.as_mut().get_unchecked_mut().get_or_insert(delay)) }
+    }
+
+    fn clear_delay(&mut self) {
+        unsafe { *self.delay.as_mut().get_unchecked_mut() = None }
+    }
 }
 
 impl<'a, C, R> Stream for MessageStream<'a, C, R>
@@ -168,16 +182,15 @@ where
 
         match self.poll() {
             None => loop {
-                let interval = self.interval;
-                let mut delay = self.delay.get_or_insert_with(|| R::delay_for(interval));
-                ready!(Pin::new(&mut delay).poll(cx));
-                self.delay = None;
+                let delay = R::delay_for(self.interval);
+                ready!(self.ensure_delay(delay).poll(cx));
+                self.clear_delay();
                 if self.no_message_error {
                     break Poll::Ready(Some(Err(KafkaError::NoMessageReceived)));
                 }
             },
             Some(message) => {
-                self.delay = None;
+                self.clear_delay();
                 Poll::Ready(Some(message))
             }
         }

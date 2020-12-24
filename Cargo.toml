@@ -21,7 +21,7 @@ log = "0.4.8"
 serde = { version = "1.0.0", features = ["derive"] }
 serde_derive = "1.0.0"
 serde_json = "1.0.0"
-tokio = { version = "0.3", features = ["rt", "time"], optional = true }
+tokio = { version = "1.0", features = ["rt", "time"], optional = true }
 
 [dev-dependencies]
 backoff = "0.1.5"
@@ -32,7 +32,7 @@ hdrhistogram = "7.0.0"
 rand = "0.3.15"
 regex = "1.1.6"
 smol = { version = "0.1.7" }
-tokio = { version = "0.3", features = ["macros", "rt-multi-thread", "time"] }
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "time"] }
 
 [[example]]
 name = "asynchronous_processing"
