@@ -311,7 +311,7 @@ where
 pub trait AsyncRuntime {
     /// The type of the future returned by
     /// [`delay_for`](AsyncRuntime::delay_for).
-    type Delay: Future<Output = ()> + Send + Unpin;
+    type Delay: Future<Output = ()> + Send;
 
     /// Spawns an asynchronous task.
     ///
