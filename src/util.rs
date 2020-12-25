@@ -109,6 +109,10 @@ pub trait IntoOpaque: Send + Sync {
     fn as_ptr(&self) -> *mut c_void;
 
     /// Converts the raw pointer back to the original Rust object.
+    ///
+    /// # Safety
+    ///
+    /// The pointer must be a valid pointer to the original Rust object.
     unsafe fn from_ptr(_: *mut c_void) -> Self;
 }
 
@@ -150,15 +154,11 @@ impl<T: Send + Sync> IntoOpaque for Arc<T> {
     }
 }
 
-// TODO: check if the implementation returns a copy of the data and update the documentation
-/// Converts a byte array representing a C string into a [`String`].
-pub unsafe fn bytes_cstr_to_owned(bytes_cstr: &[c_char]) -> String {
-    CStr::from_ptr(bytes_cstr.as_ptr() as *const c_char)
-        .to_string_lossy()
-        .into_owned()
-}
-
 /// Converts a C string into a [`String`].
+///
+/// # Safety
+///
+/// `cstr` must point to a valid, null-terminated C string.
 pub unsafe fn cstr_to_owned(cstr: *const c_char) -> String {
     CStr::from_ptr(cstr as *const c_char)
         .to_string_lossy()
@@ -166,7 +166,7 @@ pub unsafe fn cstr_to_owned(cstr: *const c_char) -> String {
 }
 
 pub(crate) struct ErrBuf {
-    buf: [c_char; ErrBuf::MAX_ERR_LEN],
+    buf: [u8; ErrBuf::MAX_ERR_LEN],
 }
 
 impl ErrBuf {
@@ -179,21 +179,29 @@ impl ErrBuf {
     }
 
     pub fn as_mut_ptr(&mut self) -> *mut c_char {
-        self.buf.as_mut_ptr()
+        self.buf.as_mut_ptr() as *mut c_char
     }
 
     pub fn len(&self) -> usize {
         self.buf.len()
-    }
-
-    pub fn to_string(&self) -> String {
-        unsafe { bytes_cstr_to_owned(&self.buf) }
     }
 }
 
 impl Default for ErrBuf {
     fn default() -> ErrBuf {
         ErrBuf::new()
+    }
+}
+
+impl fmt::Display for ErrBuf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            CStr::from_bytes_with_nul(&self.buf)
+                .unwrap()
+                .to_string_lossy()
+        )
     }
 }
 

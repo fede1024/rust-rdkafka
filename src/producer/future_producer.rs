@@ -281,7 +281,7 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     {
         let start_time = Instant::now();
         let queue_timeout = queue_timeout.into();
-        let can_retry = || match queue_timeout.into() {
+        let can_retry = || match queue_timeout {
             Timeout::Never => true,
             Timeout::After(t) if start_time.elapsed() < t => true,
             _ => false,

@@ -20,7 +20,6 @@ use std::slice;
 use std::string::ToString;
 
 use log::{debug, error, info, trace, warn};
-use serde_json;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
