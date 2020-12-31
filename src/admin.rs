@@ -389,6 +389,7 @@ impl NativePtr<RDKafkaEvent> {
 //
 
 /// Options for an admin API request.
+#[derive(Default)]
 pub struct AdminOptions {
     request_timeout: Option<Timeout>,
     operation_timeout: Option<Timeout>,
@@ -399,12 +400,7 @@ pub struct AdminOptions {
 impl AdminOptions {
     /// Creates a new `AdminOptions`.
     pub fn new() -> AdminOptions {
-        AdminOptions {
-            request_timeout: None,
-            operation_timeout: None,
-            validate_only: false,
-            broker_id: None,
-        }
+        AdminOptions::default()
     }
 
     /// Sets the overall request timeout, including broker lookup, request
@@ -553,7 +549,7 @@ pub type TopicResult = Result<String, (String, RDKafkaErrorCode)>;
 fn build_topic_results(topics: *const *const RDKafkaTopicResult, n: usize) -> Vec<TopicResult> {
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
-        let topic = unsafe { *topics.offset(i as isize) };
+        let topic = unsafe { *topics.add(i) };
         let name = unsafe { cstr_to_owned(rdsys::rd_kafka_topic_result_name(topic)) };
         let err = unsafe { rdsys::rd_kafka_topic_result_error(topic) };
         if err.is_error() {
@@ -635,7 +631,7 @@ impl<'a> NewTopic<'a> {
         .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
 
         if let TopicReplication::Variable(assignment) = self.replication {
-            for (partition_id, broker_ids) in assignment.into_iter().enumerate() {
+            for (partition_id, broker_ids) in assignment.iter().enumerate() {
                 let res = unsafe {
                     rdsys::rd_kafka_NewTopic_set_replica_assignment(
                         topic.ptr(),
@@ -809,7 +805,7 @@ impl<'a> NewPartitions<'a> {
         .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
 
         if let Some(assignment) = self.assignment {
-            for (partition_id, broker_ids) in assignment.into_iter().enumerate() {
+            for (partition_id, broker_ids) in assignment.iter().enumerate() {
                 let res = unsafe {
                     rdsys::rd_kafka_NewPartitions_set_replica_assignment(
                         partitions.ptr(),
@@ -1030,13 +1026,13 @@ impl Future for DescribeConfigsFuture {
         let resources = unsafe { rdsys::rd_kafka_DescribeConfigs_result_resources(res, &mut n) };
         let mut out = Vec::with_capacity(n);
         for i in 0..n {
-            let resource = unsafe { *resources.offset(i as isize) };
+            let resource = unsafe { *resources.add(i) };
             let specifier = extract_config_specifier(resource)?;
             let mut entries_out = Vec::new();
             let mut n = 0;
             let entries = unsafe { rdsys::rd_kafka_ConfigResource_configs(resource, &mut n) };
             for j in 0..n {
-                let entry = unsafe { *entries.offset(j as isize) };
+                let entry = unsafe { *entries.add(j) };
                 let name = unsafe { cstr_to_owned(rdsys::rd_kafka_ConfigEntry_name(entry)) };
                 let value = unsafe {
                     let value = rdsys::rd_kafka_ConfigEntry_value(entry);
@@ -1058,7 +1054,7 @@ impl Future for DescribeConfigsFuture {
                 });
             }
             out.push(Ok(ConfigResource {
-                specifier: specifier,
+                specifier,
                 entries: entries_out,
             }))
         }
@@ -1156,7 +1152,7 @@ impl Future for AlterConfigsFuture {
         let resources = unsafe { rdsys::rd_kafka_AlterConfigs_result_resources(res, &mut n) };
         let mut out = Vec::with_capacity(n);
         for i in 0..n {
-            let resource = unsafe { *resources.offset(i as isize) };
+            let resource = unsafe { *resources.add(i) };
             let specifier = extract_config_specifier(resource)?;
             out.push(Ok(specifier));
         }

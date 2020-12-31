@@ -1,27 +1,22 @@
-# Valgrind suppression file
-{
-   thrd_tls_alloc_stack
-   Memcheck:Leak
-   match-leak-kinds: possible
-   fun:calloc
-   fun:allocate_dtv
-   fun:_dl_allocate_tls
-   fun:allocate_stack
-   fun:pthread_create@@GLIBC_2.2.5
-}
+# Valgrind suppression file.
 
-# https://github.com/tokio-rs/tokio/issues/2535
+# Spurious statx complaints: https://github.com/rust-lang/rust/issues/68979.
+# TODO(benesch): remove when CI upgrades to Valgrind 3.16.
 {
-   tokio_timer
-   Memcheck:Leak
-   match-leak-kinds: definite
-   fun:malloc
-   fun:_ZN5alloc5alloc5alloc*
-   fun:_ZN62_$LT$alloc..alloc..Global$u20$as$u20$core..alloc..AllocRef$GT$5alloc*
-   fun:_ZN5alloc5alloc15exchange_malloc*
-   fun:_ZN5alloc4sync12Arc$LT$T$GT$3new*
-   fun:_ZN5tokio4time6driver15Driver$LT$T$GT$3new*
-   fun:_ZN5tokio7runtime4time7variant13create_driver*
-   fun:_ZN5tokio7runtime7builder7Builder22build_threaded_runtime*
-   fun:_ZN5tokio7runtime7builder7Builder5build*
+   <statx1>
+   Memcheck:Param
+   statx(file_name)
+   fun:syscall
+   fun:statx
+   fun:_ZN3std3sys4unix2fs9try_statx*
+   ...
+}
+{
+   <statx2>
+   Memcheck:Param
+   statx(buf)
+   fun:syscall
+   fun:statx
+   fun:_ZN3std3sys4unix2fs9try_statx*
+   ...
 }
