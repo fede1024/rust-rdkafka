@@ -179,7 +179,7 @@ where
 {
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         // Unconditionally store the waker so that we are woken up if the queue
         // flips from non-empty to empty. We have to store the waker on every
         // call to poll in case this future migrates between tasks. We also need
@@ -263,7 +263,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     /// runtime.
     #[cfg(feature = "tokio")]
     #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
-    pub fn start(&self) -> MessageStream<C, TokioRuntime> {
+    pub fn start(&self) -> MessageStream<'_, C, TokioRuntime> {
         self.start_with(Duration::from_millis(100), false)
     }
 
@@ -278,7 +278,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         &self,
         poll_interval: Duration,
         no_message_error: bool,
-    ) -> MessageStream<C, TokioRuntime> {
+    ) -> MessageStream<'_, C, TokioRuntime> {
         // TODO: verify called once
         self.start_with_runtime(poll_interval, no_message_error)
     }
@@ -292,7 +292,7 @@ impl<C: ConsumerContext> StreamConsumer<C> {
         &self,
         poll_interval: Duration,
         no_message_error: bool,
-    ) -> MessageStream<C, R>
+    ) -> MessageStream<'_, C, R>
     where
         R: AsyncRuntime,
     {

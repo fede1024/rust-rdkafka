@@ -249,7 +249,11 @@ impl TopicPartitionList {
     }
 
     /// Given a topic name and a partition number, returns the corresponding list element.
-    pub fn find_partition(&self, topic: &str, partition: i32) -> Option<TopicPartitionListElem> {
+    pub fn find_partition(
+        &self,
+        topic: &str,
+        partition: i32,
+    ) -> Option<TopicPartitionListElem<'_>> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let elem_ptr = unsafe {
             rdsys::rd_kafka_topic_partition_list_find(self.ptr(), topic_c.as_ptr(), partition)
@@ -271,7 +275,7 @@ impl TopicPartitionList {
     }
 
     /// Returns all the elements of the list.
-    pub fn elements(&self) -> Vec<TopicPartitionListElem> {
+    pub fn elements(&self) -> Vec<TopicPartitionListElem<'_>> {
         let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
         let mut vec = Vec::with_capacity(slice.len());
         for elem_ptr in slice {
@@ -324,7 +328,7 @@ impl Default for TopicPartitionList {
 }
 
 impl fmt::Debug for TopicPartitionList {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "TPL {{")?;
         for elem in self.elements() {
             write!(

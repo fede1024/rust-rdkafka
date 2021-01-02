@@ -233,6 +233,7 @@
 //! [Tokio]: https://tokio.rs/
 
 #![forbid(missing_docs)]
+#![deny(rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub use rdkafka_sys::types;

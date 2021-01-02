@@ -194,7 +194,7 @@ impl Default for ErrBuf {
 }
 
 impl fmt::Display for ErrBuf {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -274,7 +274,7 @@ impl<T> fmt::Debug for NativePtr<T>
 where
     T: KafkaDrop,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.ptr.fmt(f)
     }
 }
