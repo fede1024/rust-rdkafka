@@ -13,6 +13,9 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   rust-rdkafka map to types in librdkafka as directly as possible. The
   maintainers apologize for the difficulty in upgrading through this change.
 
+* Support calling `StreamConsumer::start` or its variants multiple times on the
+  same `StreamConsumer`.
+
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)
 

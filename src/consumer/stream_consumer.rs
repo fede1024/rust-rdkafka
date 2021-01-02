@@ -7,6 +7,7 @@ use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
 use futures::{ready, Stream};
+use slab::Slab;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
@@ -30,14 +31,14 @@ use crate::util::{AsyncRuntime, NativePtr, Timeout};
 /// created by the `StreamConsumer` when necessary.
 pub struct StreamConsumerContext<C: ConsumerContext + 'static> {
     inner: C,
-    waker: Arc<Mutex<Option<Waker>>>,
+    wakers: Arc<Mutex<Slab<Option<Waker>>>>,
 }
 
 impl<C: ConsumerContext + 'static> StreamConsumerContext<C> {
     fn new(inner: C) -> StreamConsumerContext<C> {
         StreamConsumerContext {
             inner,
-            waker: Arc::new(Mutex::new(None)),
+            wakers: Arc::new(Mutex::new(Slab::new())),
         }
     }
 }
@@ -83,8 +84,11 @@ impl<C: ConsumerContext + 'static> ConsumerContext for StreamConsumerContext<C> 
     }
 
     fn message_queue_nonempty_callback(&self) {
-        if let Some(waker) = self.waker.lock().unwrap().take() {
-            waker.wake();
+        let mut wakers = self.wakers.lock().unwrap();
+        for (_, waker) in wakers.iter_mut() {
+            if let Some(waker) = waker.take() {
+                waker.wake();
+            }
         }
         self.inner.message_queue_nonempty_callback()
     }
@@ -106,6 +110,7 @@ pub struct MessageStream<
     interval: Duration,
     delay: Pin<Box<Option<R::Delay>>>,
     no_message_error: bool,
+    slot: usize,
 }
 
 impl<'a, C, R> MessageStream<'a, C, R>
@@ -118,11 +123,17 @@ where
         interval: Duration,
         no_message_error: bool,
     ) -> MessageStream<'a, C, R> {
+        let slot = {
+            let context = consumer.get_base_consumer().context();
+            let mut wakers = context.wakers.lock().expect("lock poisoned");
+            wakers.insert(None)
+        };
         MessageStream {
             consumer,
             interval,
             delay: Box::pin(None),
             no_message_error,
+            slot,
         }
     }
 
@@ -135,11 +146,8 @@ where
     }
 
     fn set_waker(&self, waker: Waker) {
-        self.context()
-            .waker
-            .lock()
-            .expect("lock poisoned")
-            .replace(waker);
+        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
+        wakers[self.slot].replace(waker);
     }
 
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
@@ -194,6 +202,17 @@ where
                 Poll::Ready(Some(message))
             }
         }
+    }
+}
+
+impl<'a, C, R> Drop for MessageStream<'a, C, R>
+where
+    C: ConsumerContext + 'static,
+    R: AsyncRuntime,
+{
+    fn drop(&mut self) {
+        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
+        wakers.remove(self.slot);
     }
 }
 
