@@ -214,12 +214,12 @@ where
 /// consumer.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct StreamConsumer<C: ConsumerContext + 'static = DefaultConsumerContext> {
-    consumer: Arc<BaseConsumer<StreamConsumerContext<C>>>,
+    consumer: BaseConsumer<StreamConsumerContext<C>>,
 }
 
 impl<C: ConsumerContext> Consumer<StreamConsumerContext<C>> for StreamConsumer<C> {
     fn get_base_consumer(&self) -> &BaseConsumer<StreamConsumerContext<C>> {
-        Arc::as_ref(&self.consumer)
+        &self.consumer
     }
 }
 
@@ -237,7 +237,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
     ) -> KafkaResult<StreamConsumer<C>> {
         let context = StreamConsumerContext::new(context);
         let stream_consumer = StreamConsumer {
-            consumer: Arc::new(BaseConsumer::from_config_and_context(config, context)?),
+            consumer: BaseConsumer::from_config_and_context(config, context)?,
         };
         unsafe {
             rdsys::rd_kafka_poll_set_consumer(stream_consumer.consumer.client().native_ptr())
