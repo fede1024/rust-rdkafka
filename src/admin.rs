@@ -688,7 +688,7 @@ struct CreateTopicsFuture {
 impl Future for CreateTopicsFuture {
     type Output = KafkaResult<Vec<TopicResult>>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
         event.check_error()?;
         let res = unsafe { rdsys::rd_kafka_event_CreateTopics_result(event.ptr()) };
@@ -723,7 +723,7 @@ struct DeleteTopicsFuture {
 impl Future for DeleteTopicsFuture {
     type Output = KafkaResult<Vec<TopicResult>>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
         event.check_error()?;
         let res = unsafe { rdsys::rd_kafka_event_DeleteTopics_result(event.ptr()) };
@@ -766,7 +766,7 @@ impl<'a> NewPartitions<'a> {
 
     /// Sets the partition replica assignment for the new partitions. Only
     /// assignments for newly created replicas should be included.
-    pub fn assign(mut self, assignment: PartitionAssignment<'a>) -> NewPartitions {
+    pub fn assign(mut self, assignment: PartitionAssignment<'a>) -> NewPartitions<'_> {
         self.assignment = Some(assignment);
         self
     }
@@ -837,7 +837,7 @@ struct CreatePartitionsFuture {
 impl Future for CreatePartitionsFuture {
     type Output = KafkaResult<Vec<TopicResult>>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
         event.check_error()?;
         let res = unsafe { rdsys::rd_kafka_event_CreatePartitions_result(event.ptr()) };
@@ -1011,7 +1011,7 @@ struct DescribeConfigsFuture {
 impl Future for DescribeConfigsFuture {
     type Output = KafkaResult<Vec<ConfigResourceResult>>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
         event.check_error()?;
         let res = unsafe { rdsys::rd_kafka_event_DescribeConfigs_result(event.ptr()) };
@@ -1080,7 +1080,7 @@ pub struct AlterConfig<'a> {
 
 impl<'a> AlterConfig<'a> {
     /// Creates a new `AlterConfig`.
-    pub fn new(specifier: ResourceSpecifier) -> AlterConfig {
+    pub fn new(specifier: ResourceSpecifier<'_>) -> AlterConfig<'_> {
         AlterConfig {
             specifier,
             entries: HashMap::new(),
@@ -1137,7 +1137,7 @@ struct AlterConfigsFuture {
 impl Future for AlterConfigsFuture {
     type Output = KafkaResult<Vec<AlterConfigsResult>>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
         event.check_error()?;
         let res = unsafe { rdsys::rd_kafka_event_AlterConfigs_result(event.ptr()) };

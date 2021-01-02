@@ -210,13 +210,13 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
 
     /// Commit the provided message. Note that this will also automatically commit every
     /// message with lower offset within the same partition.
-    fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
+    fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()> {
         self.get_base_consumer().commit_message(message, mode)
     }
 
     /// Store offset for this message to be used on the next (auto)commit.
     /// When using this `enable.auto.offset.store` should be set to `false` in the config.
-    fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
+    fn store_offset(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
         self.get_base_consumer().store_offset(message)
     }
 

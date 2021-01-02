@@ -87,7 +87,7 @@ pub trait ProducerContext: ClientContext {
     /// This method will be called once the message has been delivered (or
     /// failed to). The `DeliveryOpaque` will be the one provided by the user
     /// when calling send.
-    fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque);
+    fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
 }
 
 /// An empty producer context that can be used when customizations are not
@@ -99,7 +99,7 @@ impl ClientContext for DefaultProducerContext {}
 impl ProducerContext for DefaultProducerContext {
     type DeliveryOpaque = ();
 
-    fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryOpaque) {}
+    fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
 }
 
 /// Callback that gets called from librdkafka every time a message succeeds or fails to be
@@ -159,12 +159,7 @@ unsafe extern "C" fn delivery_cb<C: ProducerContext>(
 ///     .partition(5);                                         // target partition
 /// ```
 #[derive(Debug)]
-pub struct BaseRecord<
-    'a,
-    K: ToBytes + ?Sized + 'a = (),
-    P: ToBytes + ?Sized + 'a = (),
-    D: IntoOpaque = (),
-> {
+pub struct BaseRecord<'a, K: ToBytes + ?Sized = (), P: ToBytes + ?Sized = (), D: IntoOpaque = ()> {
     /// Required destination topic.
     pub topic: &'a str,
     /// Optional destination partition.

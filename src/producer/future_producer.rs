@@ -32,7 +32,7 @@ use crate::util::{AsyncRuntime, IntoOpaque, Timeout};
 /// difference is that the [FutureRecord] doesn't provide custom delivery opaque
 /// object.
 #[derive(Debug)]
-pub struct FutureRecord<'a, K: ToBytes + ?Sized + 'a, P: ToBytes + ?Sized + 'a> {
+pub struct FutureRecord<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> {
     /// Required destination topic.
     pub topic: &'a str,
     /// Optional destination partition.
@@ -154,7 +154,7 @@ impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
 
     fn delivery(
         &self,
-        delivery_result: &DeliveryResult,
+        delivery_result: &DeliveryResult<'_>,
         tx: Box<oneshot::Sender<OwnedDeliveryResult>>,
     ) {
         let owned_delivery_result = match *delivery_result {
@@ -223,7 +223,7 @@ pub struct DeliveryFuture {
 impl Future for DeliveryFuture {
     type Output = Result<OwnedDeliveryResult, oneshot::Canceled>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         self.rx.poll_unpin(cx)
     }
 }
@@ -382,7 +382,7 @@ mod tests {
     impl ProducerContext for TestContext {
         type DeliveryOpaque = Box<i32>;
 
-        fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryOpaque) {
+        fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {
             unimplemented!()
         }
     }

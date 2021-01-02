@@ -172,7 +172,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// # Lifetime
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
-    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage>> {
+    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
         self.poll_raw(timeout.into())
             .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
     }
@@ -217,7 +217,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     ///   // Handle the message
     /// }
     /// ```
-    pub fn iter(&self) -> Iter<C> {
+    pub fn iter(&self) -> Iter<'_, C> {
         Iter(self)
     }
 
@@ -350,7 +350,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
-    fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
+    fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()> {
         let error = unsafe {
             rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32)
         };
@@ -361,7 +361,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
-    fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
+    fn store_offset(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
         let error = unsafe {
             rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset())
         };
@@ -550,7 +550,7 @@ impl<C: ConsumerContext> Drop for BaseConsumer<C> {
 /// Iterator for more convenient interface.
 ///
 /// It simply repeatedly calls [`BaseConsumer::poll`](struct.BaseConsumer.html#method.poll).
-pub struct Iter<'a, C: ConsumerContext + 'a>(&'a BaseConsumer<C>);
+pub struct Iter<'a, C: ConsumerContext>(&'a BaseConsumer<C>);
 
 impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
     type Item = KafkaResult<BorrowedMessage<'a>>;
@@ -590,7 +590,7 @@ impl<C: ConsumerContext> PartitionQueue<C> {
     /// Remember that you must also call [`BaseConsumer::poll`] on the
     /// associated consumer regularly, even if no messages are expected, to
     /// serve callbacks.
-    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage>> {
+    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
         unsafe {
             NativePtr::from_ptr(rdsys::rd_kafka_consume_queue(
                 self.queue.ptr(),
