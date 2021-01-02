@@ -16,6 +16,11 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Support calling `StreamConsumer::start` or its variants multiple times on the
   same `StreamConsumer`.
 
+* **Breaking change.** Remove the `no_message_error` parameter from
+  `StreamConsumer::start_with` and `StreamConsumer::start_with_runtime`.
+  Use a combinator like `tokio_stream::StreamExt::timeout` if you require the
+  old behavior.
+
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)
 

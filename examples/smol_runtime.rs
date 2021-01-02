@@ -93,8 +93,7 @@ fn main() {
             .expect("Consumer creation failed");
         consumer.subscribe(&[&topic]).unwrap();
 
-        let mut stream =
-            consumer.start_with_runtime::<SmolRuntime>(Duration::from_millis(100), false);
+        let mut stream = consumer.start_with_runtime::<SmolRuntime>(Duration::from_millis(100));
         let message = stream.next().await;
         match message {
             Some(Ok(message)) => println!(

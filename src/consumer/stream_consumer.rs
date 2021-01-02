@@ -109,7 +109,6 @@ pub struct MessageStream<
     consumer: &'a StreamConsumer<C>,
     interval: Duration,
     delay: Pin<Box<Option<R::Delay>>>,
-    no_message_error: bool,
     slot: usize,
 }
 
@@ -118,11 +117,7 @@ where
     C: ConsumerContext + 'static,
     R: AsyncRuntime,
 {
-    fn new(
-        consumer: &'a StreamConsumer<C>,
-        interval: Duration,
-        no_message_error: bool,
-    ) -> MessageStream<'a, C, R> {
+    fn new(consumer: &'a StreamConsumer<C>, interval: Duration) -> MessageStream<'a, C, R> {
         let slot = {
             let context = consumer.get_base_consumer().context();
             let mut wakers = context.wakers.lock().expect("lock poisoned");
@@ -132,7 +127,6 @@ where
             consumer,
             interval,
             delay: Box::pin(None),
-            no_message_error,
             slot,
         }
     }
@@ -193,9 +187,6 @@ where
                 let delay = R::delay_for(self.interval);
                 ready!(self.ensure_delay(delay).poll(cx));
                 self.clear_delay();
-                if self.no_message_error {
-                    break Poll::Ready(Some(Err(KafkaError::NoMessageReceived)));
-                }
             },
             Some(message) => {
                 self.clear_delay();
@@ -264,23 +255,15 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     #[cfg(feature = "tokio")]
     #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
     pub fn start(&self) -> MessageStream<'_, C, TokioRuntime> {
-        self.start_with(Duration::from_millis(100), false)
+        self.start_with(Duration::from_millis(100))
     }
 
     /// Starts the stream consumer with the specified poll interval.
-    ///
-    /// If `no_message_error` is set to true, the returned `MessageStream` will
-    /// yield an error of type `KafkaError::NoMessageReceived` every time the
-    /// poll interval is reached and no message has been received.
     #[cfg(feature = "tokio")]
     #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
-    pub fn start_with(
-        &self,
-        poll_interval: Duration,
-        no_message_error: bool,
-    ) -> MessageStream<'_, C, TokioRuntime> {
+    pub fn start_with(&self, poll_interval: Duration) -> MessageStream<'_, C, TokioRuntime> {
         // TODO: verify called once
-        self.start_with_runtime(poll_interval, no_message_error)
+        self.start_with_runtime(poll_interval)
     }
 
     /// Like [`StreamConsumer::start_with`], but with a customizable
@@ -288,14 +271,10 @@ impl<C: ConsumerContext> StreamConsumer<C> {
     ///
     /// See the [`AsyncRuntime`] trait for the details on the interface the
     /// runtime must satisfy.
-    pub fn start_with_runtime<R>(
-        &self,
-        poll_interval: Duration,
-        no_message_error: bool,
-    ) -> MessageStream<'_, C, R>
+    pub fn start_with_runtime<R>(&self, poll_interval: Duration) -> MessageStream<'_, C, R>
     where
         R: AsyncRuntime,
     {
-        MessageStream::new(self, poll_interval, no_message_error)
+        MessageStream::new(self, poll_interval)
     }
 }
