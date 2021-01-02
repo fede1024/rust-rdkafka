@@ -13,6 +13,23 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   rust-rdkafka map to types in librdkafka as directly as possible. The
   maintainers apologize for the difficulty in upgrading through this change.
 
+* **Breaking change.** Simplify the `StreamConsumer` API. The `StreamConsumer`
+  type now implements [`Stream`] directly, so you no longer need to "start" the
+  stream consumer via, e.g., `StreamConsumer::start` to obtain a
+  `MessageStream`.
+
+  Specifically, this release removes the following items:
+
+    * `StreamConsumer::start`
+    * `StreamConsumer::start_with`
+    * `StreamConsumer::start_with_runtime`
+    * `MessageStream`
+    * `KafkaError::NoMessageReceived`
+
+  There is no replacement for the `no_message_parameter` of
+  `StreamConsumer::start_with` and `StreamConsumer::start_with_runtime`. If you
+  need this behavior, use a downstream stream combinator like [`tokio_stream::StreamExt::timeout`].
+
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)
 
@@ -68,13 +85,6 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Decouple versioning of rdkafka-sys from rdkafka. rdkafka-sys now has its
   own [changelog](rdkafka-sys/changelog.md) and will follow SemVer conventions.
   ([#211])
-
-[#211]: https://github.com/fede1024/rust-rdkafka/issues/211
-[`std::time::Duration::as_millis`]: https://doc.rust-lang.org/stable/std/time/struct.Duration.html#method.as_millis
-[smol runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs
-[smol]: docs.rs/smol
-
-[@FSMaxB-dooshop]: https://github.com/FSMaxB-dooshop
 
 <a name="0.23.1"></a>
 ## 0.23.1 (2020-01-13)
@@ -378,3 +388,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * More metadata for consumers
 * Watermark API
 * First iteration of integration test suite
+
+[#211]: https://github.com/fede1024/rust-rdkafka/issues/211
+[`Stream`]: https://docs.rs/futures/0.3.8/futures/stream/trait.Stream.html
+[`std::time::Duration::as_millis`]: https://doc.rust-lang.org/stable/std/time/struct.Duration.html#method.as_millis
+[smol runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs
+[smol]: docs.rs/smol
+[`tokio_stream::StreamExt::timeout`]: https://docs.rs/tokio-stream/0.1.0/tokio_stream/trait.StreamExt.html#method.timeout
+
+[@FSMaxB-dooshop]: https://github.com/FSMaxB-dooshop

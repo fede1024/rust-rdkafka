@@ -21,7 +21,7 @@ pub mod stream_consumer;
 
 // Re-exports.
 pub use self::base_consumer::BaseConsumer;
-pub use self::stream_consumer::{MessageStream, StreamConsumer};
+pub use self::stream_consumer::StreamConsumer;
 
 /// Rebalance information.
 #[derive(Clone, Debug)]

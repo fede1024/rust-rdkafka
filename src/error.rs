@@ -60,8 +60,6 @@ pub enum KafkaError {
     MessageProduction(RDKafkaErrorCode),
     /// Metadata fetch error.
     MetadataFetch(RDKafkaErrorCode),
-    /// No message was received.
-    NoMessageReceived,
     /// Unexpected null pointer
     Nul(ffi::NulError),
     /// Offset fetch failed.
@@ -112,9 +110,6 @@ impl fmt::Debug for KafkaError {
             KafkaError::MetadataFetch(err) => {
                 write!(f, "KafkaError (Metadata fetch error: {})", err)
             }
-            KafkaError::NoMessageReceived => {
-                write!(f, "No message received within the given poll interval")
-            }
             KafkaError::Nul(_) => write!(f, "FFI null error"),
             KafkaError::OffsetFetch(err) => write!(f, "KafkaError (Offset fetch error: {})", err),
             KafkaError::PartitionEOF(part_n) => write!(f, "KafkaError (Partition EOF: {})", part_n),
@@ -151,9 +146,6 @@ impl fmt::Display for KafkaError {
             KafkaError::MessageConsumption(err) => write!(f, "Message consumption error: {}", err),
             KafkaError::MessageProduction(err) => write!(f, "Message production error: {}", err),
             KafkaError::MetadataFetch(err) => write!(f, "Meta data fetch error: {}", err),
-            KafkaError::NoMessageReceived => {
-                write!(f, "No message received within the given poll interval")
-            }
             KafkaError::Nul(_) => write!(f, "FFI nul error"),
             KafkaError::OffsetFetch(err) => write!(f, "Offset fetch error: {}", err),
             KafkaError::PartitionEOF(part_n) => write!(f, "Partition EOF: {}", part_n),
@@ -204,7 +196,6 @@ impl KafkaError {
             KafkaError::MessageConsumption(err) => Some(err),
             KafkaError::MessageProduction(err) => Some(err),
             KafkaError::MetadataFetch(err) => Some(err),
-            KafkaError::NoMessageReceived => None,
             KafkaError::Nul(_) => None,
             KafkaError::OffsetFetch(err) => Some(err),
             KafkaError::PartitionEOF(_) => None,

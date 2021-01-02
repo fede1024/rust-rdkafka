@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use futures::future;
 use futures::stream::StreamExt;
@@ -52,7 +52,6 @@ async fn test_produce_consume_base() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
-        .start()
         .take(100)
         .for_each(|message| {
             match message {
@@ -92,7 +91,6 @@ async fn test_produce_consume_base_assign() {
     let mut partition_count = vec![0, 0, 0];
 
     let _consumer_future = consumer
-        .start()
         .take(19)
         .for_each(|message| {
             match message {
@@ -118,7 +116,6 @@ async fn test_produce_consume_with_timestamp() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
-        .start()
         .take(100)
         .for_each(|message| {
             match message {
@@ -147,67 +144,6 @@ async fn test_produce_consume_with_timestamp() {
     assert_eq!(tp.error(), Ok(()));
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn test_consume_with_no_message_error() {
-    let _r = env_logger::try_init();
-
-    let consumer = create_stream_consumer(&rand_test_group(), None);
-
-    let mut message_stream = consumer.start_with(Duration::from_millis(200), true);
-
-    let mut first_poll_time = None;
-    let mut timeouts_count = 0;
-    while let Some(message) = message_stream.next().await {
-        match message {
-            Err(KafkaError::NoMessageReceived) => {
-                // TODO: use entry interface for Options once available
-                if first_poll_time.is_none() {
-                    first_poll_time = Some(Instant::now());
-                }
-                timeouts_count += 1;
-                if timeouts_count == 26 {
-                    break;
-                }
-            }
-            Ok(m) => panic!("A message was actually received: {:?}", m),
-            Err(e) => panic!("Unexpected error while receiving message: {:?}", e),
-        };
-    }
-
-    assert_eq!(timeouts_count, 26);
-    // It should take 5000ms
-    println!("Duration: {:?}", first_poll_time.unwrap().elapsed());
-    assert!(first_poll_time.unwrap().elapsed() < Duration::from_millis(7000));
-    assert!(first_poll_time.unwrap().elapsed() > Duration::from_millis(4500));
-
-    // Subscribe to a topic with one record.
-    let topic_name = rand_test_topic();
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None).await;
-    consumer.subscribe(&[&topic_name]).unwrap();
-
-    // Assert that we see that record eventually.
-    while let Some(message) = message_stream.next().await {
-        if let Ok(_) = message {
-            break;
-        }
-    }
-
-    // Assert that we receive a few NoMessageReceived errors after we see the
-    // one record.
-    assert!(matches!(
-        message_stream.next().await,
-        Some(Err(KafkaError::NoMessageReceived))
-    ));
-    assert!(matches!(
-        message_stream.next().await,
-        Some(Err(KafkaError::NoMessageReceived))
-    ));
-    assert!(matches!(
-        message_stream.next().await,
-        Some(Err(KafkaError::NoMessageReceived))
-    ));
-}
-
 // TODO: add check that commit cb gets called correctly
 #[tokio::test(flavor = "multi_thread")]
 async fn test_consumer_commit_message() {
@@ -221,7 +157,6 @@ async fn test_consumer_commit_message() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
-        .start()
         .take(33)
         .for_each(|message| {
             match message {
@@ -284,7 +219,6 @@ async fn test_consumer_store_offset_commit() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
-        .start()
         .take(36)
         .for_each(|message| {
             match message {
