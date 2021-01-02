@@ -57,7 +57,7 @@ use rdkafka_sys::rd_kafka_vtype_t::*;
 use rdkafka_sys::types::*;
 
 use crate::client::{Client, ClientContext};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::config::{ClientConfig, FromClientConfig};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use crate::util::{IntoOpaque, Timeout};
@@ -242,17 +242,11 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> BaseRecord<'a, K, P, ()> {
     }
 }
 
-impl FromClientConfig for BaseProducer<DefaultProducerContext> {
-    /// Creates a new `BaseProducer` starting from a configuration.
-    fn from_config(config: &ClientConfig) -> KafkaResult<BaseProducer<DefaultProducerContext>> {
-        BaseProducer::from_config_and_context(config, DefaultProducerContext)
-    }
-}
-
-impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
-    /// Creates a new `BaseProducer` starting from a configuration and a
-    /// context.
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseProducer<C>> {
+impl<C> FromClientConfig<C> for BaseProducer<C>
+where
+    C: ProducerContext,
+{
+    fn from_client_config(config: &ClientConfig, context: C) -> KafkaResult<Self> {
         let native_config = config.create_native_config()?;
         unsafe { rdsys::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<C>)) };
         let client = Client::new(
@@ -448,18 +442,12 @@ pub struct ThreadedProducer<C: ProducerContext + 'static> {
     handle: Option<JoinHandle<()>>,
 }
 
-impl FromClientConfig for ThreadedProducer<DefaultProducerContext> {
-    fn from_config(config: &ClientConfig) -> KafkaResult<ThreadedProducer<DefaultProducerContext>> {
-        ThreadedProducer::from_config_and_context(config, DefaultProducerContext)
-    }
-}
-
-impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for ThreadedProducer<C> {
-    fn from_config_and_context(
-        config: &ClientConfig,
-        context: C,
-    ) -> KafkaResult<ThreadedProducer<C>> {
-        let producer = BaseProducer::from_config_and_context(config, context)?;
+impl<C> FromClientConfig<C> for ThreadedProducer<C>
+where
+    C: ProducerContext,
+{
+    fn from_client_config(config: &ClientConfig, context: C) -> KafkaResult<ThreadedProducer<C>> {
+        let producer = BaseProducer::from_client_config(config, context)?;
         let should_stop = Arc::new(AtomicBool::new(false));
         let thread = {
             let producer = producer.clone();

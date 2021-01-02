@@ -22,8 +22,8 @@ use log::{trace, warn};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, ClientContext, DefaultClientContext, NativeQueue};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::client::{Client, ClientContext, NativeQueue};
+use crate::config::{ClientConfig, FromClientConfig};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, KafkaDrop, NativePtr, Timeout};
 
@@ -294,14 +294,11 @@ impl<C: ClientContext> AdminClient<C> {
     }
 }
 
-impl FromClientConfig for AdminClient<DefaultClientContext> {
-    fn from_config(config: &ClientConfig) -> KafkaResult<AdminClient<DefaultClientContext>> {
-        AdminClient::from_config_and_context(config, DefaultClientContext)
-    }
-}
-
-impl<C: ClientContext> FromClientConfigAndContext<C> for AdminClient<C> {
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<AdminClient<C>> {
+impl<C> FromClientConfig<C> for AdminClient<C>
+where
+    C: ClientContext,
+{
+    fn from_client_config(config: &ClientConfig, context: C) -> KafkaResult<AdminClient<C>> {
         let native_config = config.create_native_config()?;
         // librdkafka only provides consumer and producer types. We follow the
         // example of the Python bindings in choosing to pretend to be a

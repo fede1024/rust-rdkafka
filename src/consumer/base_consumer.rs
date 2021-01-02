@@ -13,7 +13,7 @@ use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::client::{Client, NativeClient, NativeQueue};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::config::{ClientConfig, FromClientConfig};
 use crate::consumer::{CommitMode, Consumer, ConsumerContext, DefaultConsumerContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
@@ -85,15 +85,11 @@ pub struct BaseConsumer<C: ConsumerContext = DefaultConsumerContext> {
     _queue: Option<NativeQueue>,
 }
 
-impl FromClientConfig for BaseConsumer {
-    fn from_config(config: &ClientConfig) -> KafkaResult<BaseConsumer> {
-        BaseConsumer::from_config_and_context(config, DefaultConsumerContext)
-    }
-}
-
-/// Creates a new `BaseConsumer` starting from a `ClientConfig`.
-impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
+impl<C> FromClientConfig<C> for BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
+    fn from_client_config(config: &ClientConfig, context: C) -> KafkaResult<Self> {
         let native_config = config.create_native_config()?;
         unsafe {
             rdsys::rd_kafka_conf_set_rebalance_cb(

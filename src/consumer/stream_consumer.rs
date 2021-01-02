@@ -13,7 +13,7 @@ use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::client::{ClientContext, NativeClient};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
+use crate::config::{ClientConfig, FromClientConfig, RDKafkaLogLevel};
 use crate::consumer::base_consumer::BaseConsumer;
 use crate::consumer::{Consumer, ConsumerContext, DefaultConsumerContext, Rebalance};
 use crate::error::{KafkaError, KafkaResult};
@@ -223,21 +223,14 @@ impl<C: ConsumerContext> Consumer<StreamConsumerContext<C>> for StreamConsumer<C
     }
 }
 
-impl FromClientConfig for StreamConsumer {
-    fn from_config(config: &ClientConfig) -> KafkaResult<StreamConsumer> {
-        StreamConsumer::from_config_and_context(config, DefaultConsumerContext)
-    }
-}
-
-/// Creates a new `StreamConsumer` starting from a [`ClientConfig`].
-impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
-    fn from_config_and_context(
-        config: &ClientConfig,
-        context: C,
-    ) -> KafkaResult<StreamConsumer<C>> {
+impl<C> FromClientConfig<C> for StreamConsumer<C>
+where
+    C: ConsumerContext,
+{
+    fn from_client_config(config: &ClientConfig, context: C) -> KafkaResult<StreamConsumer<C>> {
         let context = StreamConsumerContext::new(context);
         let stream_consumer = StreamConsumer {
-            consumer: BaseConsumer::from_config_and_context(config, context)?,
+            consumer: BaseConsumer::from_client_config(config, context)?,
         };
         unsafe {
             rdsys::rd_kafka_poll_set_consumer(stream_consumer.consumer.client().native_ptr())

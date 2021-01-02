@@ -13,7 +13,7 @@ use futures::channel::oneshot;
 use futures::FutureExt;
 
 use crate::client::{Client, ClientContext, DefaultClientContext};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
+use crate::config::{ClientConfig, FromClientConfig, RDKafkaLogLevel};
 use crate::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
 use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
@@ -189,21 +189,15 @@ impl<C: ClientContext + 'static> Clone for FutureProducer<C> {
     }
 }
 
-impl FromClientConfig for FutureProducer {
-    fn from_config(config: &ClientConfig) -> KafkaResult<FutureProducer> {
-        FutureProducer::from_config_and_context(config, DefaultClientContext)
-    }
-}
-
-impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
-    fn from_config_and_context(
-        config: &ClientConfig,
-        context: C,
-    ) -> KafkaResult<FutureProducer<C>> {
+impl<C> FromClientConfig<C> for FutureProducer<C>
+where
+    C: ClientContext,
+{
+    fn from_client_config(config: &ClientConfig, context: C) -> KafkaResult<FutureProducer<C>> {
         let future_context = FutureProducerContext {
             wrapped_context: context,
         };
-        let threaded_producer = ThreadedProducer::from_config_and_context(config, future_context)?;
+        let threaded_producer = ThreadedProducer::from_client_config(config, future_context)?;
         Ok(FutureProducer {
             producer: Arc::new(threaded_producer),
         })

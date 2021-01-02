@@ -31,7 +31,7 @@ use log::{log_enabled, Level};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::ClientContext;
+use crate::client::{ClientContext, DefaultClientContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::util::{ErrBuf, KafkaDrop, NativePtr};
 
@@ -178,17 +178,20 @@ impl ClientConfig {
     }
 
     /// Uses the current configuration to create a new Consumer or Producer.
-    pub fn create<T: FromClientConfig>(&self) -> KafkaResult<T> {
-        T::from_config(self)
+    pub fn create<T>(&self) -> KafkaResult<T>
+    where
+        T: FromClientConfig<DefaultClientContext>,
+    {
+        T::from_client_config(self, DefaultClientContext)
     }
 
     /// Uses the current configuration and the provided context to create a new Consumer or Producer.
     pub fn create_with_context<C, T>(&self, context: C) -> KafkaResult<T>
     where
         C: ClientContext,
-        T: FromClientConfigAndContext<C>,
+        T: FromClientConfig<C>,
     {
-        T::from_config_and_context(self, context)
+        T::from_client_config(self, context)
     }
 }
 
@@ -206,14 +209,10 @@ fn log_level_from_global_config() -> RDKafkaLogLevel {
 }
 
 /// Create a new client based on the provided configuration.
-pub trait FromClientConfig: Sized {
-    /// Creates a client from a client configuration. The default client context
-    /// will be used.
-    fn from_config(_: &ClientConfig) -> KafkaResult<Self>;
-}
-
-/// Create a new client based on the provided configuration and context.
-pub trait FromClientConfigAndContext<C: ClientContext>: Sized {
+pub trait FromClientConfig<C>: Sized
+where
+    C: ClientContext,
+{
     /// Creates a client from a client configuration and a client context.
-    fn from_config_and_context(_: &ClientConfig, _: C) -> KafkaResult<Self>;
+    fn from_client_config(config: &ClientConfig, context: C) -> KafkaResult<Self>;
 }

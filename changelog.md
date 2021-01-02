@@ -21,6 +21,23 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   Use a combinator like `tokio_stream::StreamExt::timeout` if you require the
   old behavior.
 
+* **Breaking change.** Merge the `FromClientConfig` and
+  `FromClientConfigAndContext` traits. The result is the following trait:
+
+  ```rust
+  pub trait FromClientConfig<C>: Sized
+  where
+      C: ClientContext,
+  {
+      /// Creates a client from a client configuration and a client context.
+      fn from_client_config(config: &ClientConfig, context: C) -> KafkaResult<Self>;
+  }
+  ```
+
+  Most users are expected to be unaffected by this change, as most interaction
+  with these traits occurs indirectly via the (unchanged) `ClientConfig::create`
+  and `ClientConfig::create_with_context` methods.
+
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)
 
