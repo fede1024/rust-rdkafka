@@ -96,7 +96,7 @@ async fn test_subscription() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group.
-    let _consumer_future = consumer.start().next().await;
+    let _consumer_future = consumer.next().await;
 
     let mut tpl = TopicPartitionList::new();
     tpl.add_topic_unassigned(&topic_name);
@@ -116,7 +116,7 @@ async fn test_group_membership() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group.
-    let _consumer_future = consumer.start().next().await;
+    let _consumer_future = consumer.next().await;
 
     let group_list = consumer
         .fetch_group_list(None, Duration::from_secs(5))

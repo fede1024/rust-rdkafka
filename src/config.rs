@@ -136,6 +136,10 @@ impl ClientConfig {
         }
     }
 
+    pub(crate) fn get(&self, key: &str) -> Option<&str> {
+        self.conf_map.get(key).map(|val| val.as_str())
+    }
+
     /// Sets a new parameter in the configuration.
     pub fn set<'a>(&'a mut self, key: &str, value: &str) -> &'a mut ClientConfig {
         self.conf_map.insert(key.to_string(), value.to_string());

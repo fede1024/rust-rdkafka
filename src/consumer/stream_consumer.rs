@@ -1,12 +1,16 @@
-//! Stream-based consumer implementation.
+//! High-level consumers with a [`Stream`](futures::Stream) interface.
 
-use std::future::Future;
+use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
-use futures::{ready, Stream};
+use futures::channel::oneshot;
+use futures::future::FutureExt;
+use futures::select;
+use futures::stream::{Stream, StreamExt};
+use log::trace;
 use slab::Slab;
 
 use rdkafka_sys as rdsys;
@@ -22,15 +26,15 @@ use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
 use crate::statistics::Statistics;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-#[cfg(feature = "tokio")]
-use crate::util::TokioRuntime;
-use crate::util::{AsyncRuntime, NativePtr, Timeout};
+use crate::util::{AsyncRuntime, DefaultRuntime, NativePtr, Timeout};
 
-/// The [`ConsumerContext`] used by the [`StreamConsumer`]. This context will
-/// automatically wake up the message stream when new data is available.
+/// A consumer context wrapper for a stream consumer.
 ///
-/// This type is not intended to be used directly. It will be automatically
-/// created by the `StreamConsumer` when necessary.
+/// This context will automatically wake up the message stream when new data is
+/// available.
+///
+/// This type is not intended to be used directly. The construction of a
+/// `StreamConsumer` automatically wraps the underlying context in this type.
 pub struct StreamConsumerContext<C>
 where
     C: ConsumerContext,
@@ -47,6 +51,15 @@ where
         StreamConsumerContext {
             inner,
             wakers: Arc::new(Mutex::new(Slab::new())),
+        }
+    }
+
+    fn wake_all(&self) {
+        let mut wakers = self.wakers.lock().unwrap();
+        for (_, waker) in wakers.iter_mut() {
+            if let Some(waker) = waker.take() {
+                waker.wake();
+            }
         }
     }
 }
@@ -98,51 +111,33 @@ where
     }
 
     fn message_queue_nonempty_callback(&self) {
-        let mut wakers = self.wakers.lock().unwrap();
-        for (_, waker) in wakers.iter_mut() {
-            if let Some(waker) = waker.take() {
-                waker.wake();
-            }
-        }
+        self.wake_all();
         self.inner.message_queue_nonempty_callback()
     }
 }
 
-/// A Kafka consumer implementing [`futures::Stream`].
-pub struct MessageStream<
-    'a,
-    C,
-    // Ugly, but this provides backwards compatibility when the `tokio` feature
-    // is enabled, as it is by default.
-    #[cfg(feature = "tokio")] R = TokioRuntime,
-    #[cfg(not(feature = "tokio"))] R,
-> where
+/// A stream of messages from a [`StreamConsumer`].
+///
+/// See the documentation of [`StreamConsumer::stream`] for details.
+pub struct MessageStream<'a, C, R = DefaultRuntime>
+where
     C: ConsumerContext + 'static,
-    R: AsyncRuntime,
 {
-    consumer: &'a StreamConsumer<C>,
-    interval: Duration,
-    delay: Pin<Box<Option<R::Delay>>>,
+    consumer: &'a StreamConsumer<C, R>,
     slot: usize,
 }
 
 impl<'a, C, R> MessageStream<'a, C, R>
 where
     C: ConsumerContext + 'static,
-    R: AsyncRuntime,
 {
-    fn new(consumer: &'a StreamConsumer<C>, interval: Duration) -> MessageStream<'a, C, R> {
+    fn new(consumer: &'a StreamConsumer<C, R>) -> MessageStream<'a, C, R> {
         let slot = {
             let context = consumer.base.context();
             let mut wakers = context.wakers.lock().expect("lock poisoned");
             wakers.insert(None)
         };
-        MessageStream {
-            consumer,
-            interval,
-            delay: Box::pin(None),
-            slot,
-        }
+        MessageStream { consumer, slot }
     }
 
     fn context(&self) -> &StreamConsumerContext<C> {
@@ -164,30 +159,15 @@ where
                 .map(|p| BorrowedMessage::from_consumer(p, self.consumer))
         }
     }
-
-    // SAFETY: All access to `self.delay` occurs via the following two
-    // functions. These functions are careful to never move out of `self.delay`.
-    // (They can *drop* the future stored in `self.delay`, but that is
-    // permitted.) They never return a non-pinned pointer to the contents of
-    // `self.delay`.
-
-    fn ensure_delay(&mut self, delay: R::Delay) -> Pin<&mut R::Delay> {
-        unsafe { Pin::new_unchecked(self.delay.as_mut().get_unchecked_mut().get_or_insert(delay)) }
-    }
-
-    fn clear_delay(&mut self) {
-        unsafe { *self.delay.as_mut().get_unchecked_mut() = None }
-    }
 }
 
 impl<'a, C, R> Stream for MessageStream<'a, C, R>
 where
     C: ConsumerContext + 'a,
-    R: AsyncRuntime,
 {
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         // Unconditionally store the waker so that we are woken up if the queue
         // flips from non-empty to empty. We have to store the waker on every
         // call to poll in case this future migrates between tasks. We also need
@@ -197,15 +177,8 @@ where
         self.set_waker(cx.waker().clone());
 
         match self.poll() {
-            None => loop {
-                let delay = R::delay_for(self.interval);
-                ready!(self.ensure_delay(delay).poll(cx));
-                self.clear_delay();
-            },
-            Some(message) => {
-                self.clear_delay();
-                Poll::Ready(Some(message))
-            }
+            None => Poll::Pending,
+            Some(message) => Poll::Ready(Some(message)),
         }
     }
 }
@@ -213,7 +186,6 @@ where
 impl<'a, C, R> Drop for MessageStream<'a, C, R>
 where
     C: ConsumerContext + 'static,
-    R: AsyncRuntime,
 {
     fn drop(&mut self) {
         let mut wakers = self.context().wakers.lock().expect("lock poisoned");
@@ -221,20 +193,143 @@ where
     }
 }
 
-/// A Kafka consumer providing a [`futures::Stream`] interface.
+/// A high-level consumer with a [`Stream`](futures::Stream) interface.
 ///
-/// This consumer doesn't need to be polled explicitly since `await`ing the
-/// stream returned by [`StreamConsumer::start`] will implicitly poll the
-/// consumer.
+/// This consumer doesn't need to be polled explicitly. Extracting an item from
+/// the stream returned by the [`stream`](StreamConsumer::stream) will
+/// implicitly poll the underlying Kafka consumer.
+///
+/// If you activate the consumer group protocol by calling
+/// [`subscribe`](Consumer::subscribe), the stream consumer will integrate with
+/// librdkafka's liveness detection as described in [KIP-62]. You must be sure
+/// that you attempt to extract a message from the stream consumer at least
+/// every `max.poll.interval.ms` milliseconds, or librdkafka will assume that
+/// the processing thread is wedged and leave the consumer groups.
+///
+/// [KIP-62]: https://cwiki.apache.org/confluence/display/KAFKA/KIP-62%3A+Allow+consumer+to+send+heartbeats+from+a+background+thread
 #[must_use = "Consumer polling thread will stop immediately if unused"]
-pub struct StreamConsumer<C = DefaultConsumerContext>
+pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
 {
     base: BaseConsumer<StreamConsumerContext<C>>,
+    _shutdown_trigger: oneshot::Sender<()>,
+    _runtime: PhantomData<R>,
 }
 
-impl<C> Consumer<StreamConsumerContext<C>> for StreamConsumer<C>
+impl<R> FromClientConfig for StreamConsumer<DefaultConsumerContext, R>
+where
+    R: AsyncRuntime,
+{
+    fn from_config(config: &ClientConfig) -> KafkaResult<Self> {
+        StreamConsumer::from_config_and_context(config, DefaultConsumerContext)
+    }
+}
+
+/// Creates a new `StreamConsumer` starting from a [`ClientConfig`].
+impl<C, R> FromClientConfigAndContext<C> for StreamConsumer<C, R>
+where
+    C: ConsumerContext + 'static,
+    R: AsyncRuntime,
+{
+    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<Self> {
+        let context = StreamConsumerContext::new(context);
+        let base = BaseConsumer::from_config_and_context(config, context)?;
+        let native_ptr = base.client().native_ptr() as usize;
+
+        // Redirect rdkafka's main queue to the consumer queue so that we only
+        // need to listen to the consumer queue to observe events like
+        // rebalancings and stats.
+        unsafe { rdsys::rd_kafka_poll_set_consumer(base.client().native_ptr()) };
+
+        // We need to make sure we poll the consumer at least once every max
+        // poll interval, *unless* the processing task has wedged. To accomplish
+        // this, we launch a background task that sends spurious wakeup
+        // notifications at half the max poll interval. An unwedged processing
+        // task will wake up and poll the consumer with plenty of time to spare,
+        // while a wedged processing task will not.
+        //
+        // The default max poll interval is 5m, so there is essentially no
+        // performance impact to these spurious wakeups.
+        let (shutdown_trigger, shutdown_tripwire) = oneshot::channel();
+        let mut shutdown_tripwire = shutdown_tripwire.fuse();
+        let poll_interval = match config.get("max.poll.interval.ms") {
+            Some(millis) => {
+                let millis = millis.parse().expect("rdkafka validated config value");
+                Duration::from_millis(millis)
+            }
+            None => Duration::from_secs(300),
+        };
+        let context = base.context().clone();
+        R::spawn(async move {
+            trace!("Starting stream consumer wake loop: 0x{:x}", native_ptr);
+            loop {
+                select! {
+                    _ = R::delay_for(poll_interval / 2).fuse() => context.wake_all(),
+                    _ = shutdown_tripwire => break,
+                }
+            }
+            trace!("Shut down stream consumer wake loop: 0x{:x}", native_ptr);
+        });
+
+        Ok(StreamConsumer {
+            base,
+            _shutdown_trigger: shutdown_trigger,
+            _runtime: PhantomData,
+        })
+    }
+}
+
+impl<C, R> StreamConsumer<C, R>
+where
+    C: ConsumerContext + 'static,
+{
+    /// Constructs a stream that yields messages from this consumer.
+    ///
+    /// It is legal to have multiple live message streams for the same consumer,
+    /// and to move those message streams across threads. Note, however, that
+    /// the message streams share the same underlying state. A message received
+    /// by the consumer will be delivered to only one of the live message
+    /// streams. If you seek the underlying consumer, all message streams
+    /// created from the consumer will begin to draw messages from the new
+    /// position of the consumer.
+    ///
+    /// If you want multiple independent views of a Kafka topic, create multiple
+    /// consumers, not multiple message streams.
+    pub fn stream(&self) -> MessageStream<'_, C, R> {
+        MessageStream::new(self)
+    }
+
+    /// Constructs a stream that yields messages from this consumer.
+    #[deprecated = "use the more clearly named \"StreamConsumer::stream\" method instead"]
+    pub fn start(&self) -> MessageStream<'_, C, R> {
+        self.stream()
+    }
+
+    /// Yields the next message from the stream.
+    ///
+    /// This method will block until the next message is available or an error
+    /// occurs. It is legal to call `next` from multiple threads simultaneously.
+    ///
+    /// Note that this method is exactly as efficient as constructing a
+    /// single-use message stream and extracting one message from it:
+    ///
+    /// ```
+    /// use futures::future::StreamExt;
+    ///
+    /// # async fn example(consumer: StreamConsumer) {
+    /// consumer.stream().next().await.expect("MessageStream never returns None");
+    /// # }
+    /// ```
+    pub async fn next(&self) -> Result<BorrowedMessage<'_>, KafkaError> {
+        self.stream()
+            .next()
+            .await
+            .expect("kafka streams never terminate")
+    }
+}
+
+impl<C, R> Consumer<StreamConsumerContext<C>> for StreamConsumer<C, R>
 where
     C: ConsumerContext,
 {
@@ -378,59 +473,5 @@ where
 
     fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
         self.base.resume(partitions)
-    }
-}
-
-impl FromClientConfig for StreamConsumer {
-    fn from_config(config: &ClientConfig) -> KafkaResult<StreamConsumer> {
-        StreamConsumer::from_config_and_context(config, DefaultConsumerContext)
-    }
-}
-
-/// Creates a new `StreamConsumer` starting from a [`ClientConfig`].
-impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
-    fn from_config_and_context(
-        config: &ClientConfig,
-        context: C,
-    ) -> KafkaResult<StreamConsumer<C>> {
-        let context = StreamConsumerContext::new(context);
-        let stream_consumer = StreamConsumer {
-            base: BaseConsumer::from_config_and_context(config, context)?,
-        };
-        unsafe { rdsys::rd_kafka_poll_set_consumer(stream_consumer.base.client().native_ptr()) };
-        Ok(stream_consumer)
-    }
-}
-
-impl<C: ConsumerContext> StreamConsumer<C> {
-    /// Starts the stream consumer with default configuration (100ms polling
-    /// interval and no `NoMessageReceived` notifications).
-    ///
-    /// **Note:** this method must be called from within the context of a Tokio
-    /// runtime.
-    #[cfg(feature = "tokio")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
-    pub fn start(&self) -> MessageStream<'_, C, TokioRuntime> {
-        self.start_with(Duration::from_millis(100))
-    }
-
-    /// Starts the stream consumer with the specified poll interval.
-    #[cfg(feature = "tokio")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
-    pub fn start_with(&self, poll_interval: Duration) -> MessageStream<'_, C, TokioRuntime> {
-        // TODO: verify called once
-        self.start_with_runtime(poll_interval)
-    }
-
-    /// Like [`StreamConsumer::start_with`], but with a customizable
-    /// asynchronous runtime.
-    ///
-    /// See the [`AsyncRuntime`] trait for the details on the interface the
-    /// runtime must satisfy.
-    pub fn start_with_runtime<R>(&self, poll_interval: Duration) -> MessageStream<'_, C, R>
-    where
-        R: AsyncRuntime,
-    {
-        MessageStream::new(self, poll_interval)
     }
 }

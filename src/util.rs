@@ -10,8 +10,11 @@ use std::ptr;
 use std::ptr::NonNull;
 use std::slice;
 use std::sync::Arc;
+use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use futures::channel::oneshot;
+use futures::future::{FutureExt, Map};
 use log::trace;
 
 use rdkafka_sys as rdsys;
@@ -182,8 +185,13 @@ impl ErrBuf {
         self.buf.as_mut_ptr() as *mut c_char
     }
 
+    pub fn filled(&self) -> &[u8] {
+        let i = self.buf.iter().position(|c| *c == 0).unwrap();
+        &self.buf[..i + 1]
+    }
+
     pub fn len(&self) -> usize {
-        self.buf.len()
+        self.filled().len()
     }
 }
 
@@ -198,7 +206,7 @@ impl fmt::Display for ErrBuf {
         write!(
             f,
             "{}",
-            CStr::from_bytes_with_nul(&self.buf)
+            CStr::from_bytes_with_nul(self.filled())
                 .unwrap()
                 .to_string_lossy()
         )
@@ -316,7 +324,7 @@ where
 ///
 /// [smol]: https://docs.rs/smol
 /// [smol_runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs
-pub trait AsyncRuntime {
+pub trait AsyncRuntime: Send + Sync + 'static {
     /// The type of the future returned by
     /// [`delay_for`](AsyncRuntime::delay_for).
     type Delay: Future<Output = ()> + Send;
@@ -331,6 +339,48 @@ pub trait AsyncRuntime {
 
     /// Constructs a future that will resolve after `duration` has elapsed.
     fn delay_for(duration: Duration) -> Self::Delay;
+}
+
+/// The default [`AsyncRuntime`] used when one is not explicitly specified.
+///
+/// This is defined to be the [`TokioRuntime`] when the `tokio` feature is
+/// enabled, and the [`NaiveRuntime`] otherwise.
+#[cfg(not(feature = "tokio"))]
+pub type DefaultRuntime = NaiveRuntime;
+
+/// The default [`AsyncRuntime`] used when one is not explicitly specified.
+///
+/// This is defined to be the [`TokioRuntime`] when the `tokio` feature is
+/// enabled, and the [`NaiveRuntime`] otherwise.
+#[cfg(feature = "tokio")]
+pub type DefaultRuntime = TokioRuntime;
+
+/// An [`AsyncRuntime`] implementation backed by the executor in the
+/// [futures](futures) crate.
+///
+/// This runtime should not be used when performance is a concern, as it makes
+/// heavy use of threads to compenstate for the lack of a timer in the futures
+/// executor.
+pub struct NaiveRuntime;
+
+impl AsyncRuntime for NaiveRuntime {
+    type Delay = Map<oneshot::Receiver<()>, fn(Result<(), oneshot::Canceled>)>;
+
+    fn spawn<T>(task: T)
+    where
+        T: Future<Output = ()> + Send + 'static,
+    {
+        thread::spawn(|| futures::executor::block_on(task));
+    }
+
+    fn delay_for(duration: Duration) -> Self::Delay {
+        let (tx, rx) = oneshot::channel();
+        thread::spawn(move || {
+            thread::sleep(duration);
+            tx.send(())
+        });
+        rx.map(|_| ())
+    }
 }
 
 /// An [`AsyncRuntime`] implementation backed by [Tokio](tokio).

@@ -13,22 +13,57 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   rust-rdkafka map to types in librdkafka as directly as possible. The
   maintainers apologize for the difficulty in upgrading through this change.
 
-* Support calling `StreamConsumer::start` or its variants multiple times on the
-  same `StreamConsumer`.
+* **Breaking changes.** Rework the consumer APIs to fix several bugs and design
+  warts:
 
-* **Breaking change.** Remove the `no_message_error` parameter from
-  `StreamConsumer::start_with` and `StreamConsumer::start_with_runtime`.
-  Use a combinator like `tokio_stream::StreamExt::timeout` if you require the
-  old behavior.
+  * Rename `StreamConsumer::start` to `StreamConsumer::stream`, though the
+    former name will be retained as a deprecated alias for one release to ease
+    the transition. The new name better reflects that the method is a cheap
+    operation that can be called repeatedly and in multiple threads
+    simultaneously.
 
-* **Breaking change.** Remove the `Consumer::get_base_consumer` method, as
-  accessing the `BaseConsumer` that underlied a `StreamConsumer` was dangerous.
+  * Remove the `StreamConsumer::start_with` and
+    `StreamConsumer::start_with_runtime` methods.
 
-* **Breaking change.** Return an `&Arc<C>` from `Client::context` rather than an
-  `&C`. This is expected to cause very little breakage in practice.
+    There is no replacement in rust-rdkafka itself for the `no_message_error`
+    parameter. If you need this message, use a downstream combinator like
+    `tokio_stream::StreamExt::timeout`.
 
-* **Breaking change.** Move the `BaseConsumer::context` method to the `Consumer`
-  trait, so that it is available when using the `StreamConsumer` as well.
+    There is no longer a need for the `poll_interval` parameter to these
+    methods. Message delivery is now entirely event driven, so no time-based
+    polling occurs.
+
+    To specify an `AsyncRuntime` besides the default, specify the desired
+    runtime type as the new `R` parameter of `StreamConsumer` when you create
+    it.
+
+  * Remove the `Consumer::get_base_consumer` method, as
+    accessing the `BaseConsumer` that underlied a `StreamConsumer` was
+    dangerous.
+
+  * Return an `&Arc<C>` from `Client::context` rather than an
+    `&C`. This is expected to cause very little breakage in practice.
+
+  * Move the `BaseConsumer::context` method to the `Consumer`
+    trait, so that it is available when using the `StreamConsumer` as well.
+
+* Fix stalls when using multiple `MessageStream`s simultaneously.
+
+  Thanks to [@Marwes] for discovering the issue and contributing the initial
+  fix.
+
+* Add a convenience method, `StreamConsumer::next`, to yield the next message
+  from a stream.
+
+  Thanks again to [@Marwes].
+
+* Add a new implementation of `AsyncRuntime` called `NaiveRuntime` that does not
+  depend on Tokio.
+
+  This runtime has poor performance, but is necessary to make the crate compile
+  when the `tokio` feature is disabled.
+
+[@Marwes]: https://github.com/Marwes
 
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)

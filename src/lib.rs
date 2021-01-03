@@ -240,6 +240,7 @@
 
 #![forbid(missing_docs)]
 #![deny(rust_2018_idioms)]
+#![allow(clippy::type_complexity)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub use rdkafka_sys::types;
