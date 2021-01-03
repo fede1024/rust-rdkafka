@@ -77,9 +77,13 @@ unsafe fn enable_nonempty_callback<C: ConsumerContext>(queue: &NativeQueue, cont
     )
 }
 
-/// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
-/// to make progress on rebalance, callbacks and to receive messages.
-pub struct BaseConsumer<C: ConsumerContext = DefaultConsumerContext> {
+/// Low level wrapper around the librdkafka consumer. This consumer must be
+/// periodically polled to make progress on rebalancing, callbacks and to
+/// receive messages.
+pub struct BaseConsumer<C = DefaultConsumerContext>
+where
+    C: ConsumerContext,
+{
     client: Client<C>,
     main_queue_min_poll_interval: Timeout,
     _queue: Option<NativeQueue>,
@@ -126,12 +130,10 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     }
 }
 
-impl<C: ConsumerContext> BaseConsumer<C> {
-    /// Returns the client underlying this consumer.
-    pub fn client(&self) -> &Client<C> {
-        &self.client
-    }
-
+impl<C> BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
     /// Returns the context used to create this consumer.
     pub fn context(&self) -> &C {
         self.client.context()
@@ -265,9 +267,12 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     }
 }
 
-impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
-    fn get_base_consumer(&self) -> &BaseConsumer<C> {
-        self
+impl<C> Consumer<C> for BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
+    fn client(&self) -> &Client<C> {
+        &self.client
     }
 
     fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
@@ -447,21 +452,22 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
         let mut tpl = unsafe { TopicPartitionList::from_ptr(tpl_ptr) };
 
-        // Set the timestamp we want in the offset field for every partition as librdkafka expects.
+        // Set the timestamp we want in the offset field for every partition as
+        // librdkafka expects.
         tpl.set_all_offsets(Offset::Offset(timestamp));
 
         self.offsets_for_times(tpl, timeout)
     }
 
-    /**
-     * `timestamps` is a `TopicPartitionList` with timestamps instead of offsets.
-     */
+    // `timestamps` is a `TopicPartitionList` with timestamps instead of
+    // offsets.
     fn offsets_for_times<T: Into<Timeout>>(
         &self,
         timestamps: TopicPartitionList,
         timeout: T,
     ) -> KafkaResult<TopicPartitionList> {
-        // This call will then put the offset in the offset field of this topic partition list.
+        // This call will then put the offset in the offset field of this topic
+        // partition list.
         let offsets_for_times_error = unsafe {
             rdsys::rd_kafka_offsets_for_times(
                 self.client.native_ptr(),
@@ -539,7 +545,10 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     }
 }
 
-impl<C: ConsumerContext> Drop for BaseConsumer<C> {
+impl<C> Drop for BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
     fn drop(&mut self) {
         trace!("Destroying consumer: {:?}", self.client.native_ptr()); // TODO: fix me (multiple executions ?)
         unsafe { rdsys::rd_kafka_consumer_close(self.client.native_ptr()) };
@@ -547,13 +556,20 @@ impl<C: ConsumerContext> Drop for BaseConsumer<C> {
     }
 }
 
-/// Iterator for more convenient interface.
+/// A convenience iterator over the messages in a [`BaseConsumer`].
 ///
-/// It simply repeatedly calls [`BaseConsumer::poll`](struct.BaseConsumer.html#method.poll).
-pub struct Iter<'a, C: ConsumerContext>(&'a BaseConsumer<C>);
+/// Each call to [`Iter::next`] simply calls [`BaseConsumer::poll`] with an
+/// infinite timeout.
+pub struct Iter<'a, C>(&'a BaseConsumer<C>)
+where
+    C: ConsumerContext;
 
-impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
+impl<'a, C> Iterator for Iter<'a, C>
+where
+    C: ConsumerContext,
+{
     type Item = KafkaResult<BorrowedMessage<'a>>;
+
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(item) = self.0.poll(None) {
@@ -563,21 +579,31 @@ impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
     }
 }
 
-impl<'a, C: ConsumerContext + 'a> IntoIterator for &'a BaseConsumer<C> {
+impl<'a, C> IntoIterator for &'a BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
     type Item = KafkaResult<BorrowedMessage<'a>>;
     type IntoIter = Iter<'a, C>;
+
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
 /// A message queue for a single partition.
-pub struct PartitionQueue<C: ConsumerContext> {
+pub struct PartitionQueue<C>
+where
+    C: ConsumerContext,
+{
     consumer: Arc<BaseConsumer<C>>,
     queue: NativeQueue,
 }
 
-impl<C: ConsumerContext> PartitionQueue<C> {
+impl<C> PartitionQueue<C>
+where
+    C: ConsumerContext,
+{
     fn new(consumer: Arc<BaseConsumer<C>>, queue: NativeQueue) -> Self {
         PartitionQueue { consumer, queue }
     }

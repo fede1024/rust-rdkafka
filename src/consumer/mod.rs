@@ -147,35 +147,28 @@ pub enum CommitMode {
 ///
 /// # Note about object safety
 ///
-/// Doing type erasure on consumers is expected to be rare (eg. `Box<Consumer>`). Therefore, the
-/// API is optimised for the case where a concrete type is available. As a result, some methods are
-/// not available on trait objects, since they are generic.
-///
-/// If there's still the need to erase the type, the generic methods can still be reached through
-/// the [`get_base_consumer`](#method.get_base_consumer) method.
-pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
-    /// Returns a reference to the BaseConsumer.
-    fn get_base_consumer(&self) -> &BaseConsumer<C>;
+/// Doing type erasure on consumers is expected to be rare (eg. `Box<dyn
+/// Consumer>`). Therefore, the API is optimised for the case where a concrete
+/// type is available. As a result, some methods are not available on trait
+/// objects, since they are generic.
+pub trait Consumer<C = DefaultConsumerContext>
+where
+    C: ConsumerContext,
+{
+    /// Returns the [`Client`] underlying this consumer.
+    fn client(&self) -> &Client<C>;
 
-    // Default implementations
+    /// Subscribes the consumer to a list of topics.
+    fn subscribe(&self, topics: &[&str]) -> KafkaResult<()>;
 
-    /// Subscribe the consumer to a list of topics.
-    fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
-        self.get_base_consumer().subscribe(topics)
-    }
+    /// Unsubscribes the current subscription list.
+    fn unsubscribe(&self);
 
-    /// Unsubscribe the current subscription list.
-    fn unsubscribe(&self) {
-        self.get_base_consumer().unsubscribe();
-    }
+    /// Manually assigns topics and partitions to the consumer. If used,
+    /// automatic consumer rebalance won't be activated.
+    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()>;
 
-    /// Manually assign topics and partitions to the consumer. If used, automatic consumer
-    /// rebalance won't be activated.
-    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
-        self.get_base_consumer().assign(assignment)
-    }
-
-    /// Seek to `offset` for the specified `topic` and `partition`. After a
+    /// Seeks to `offset` for the specified `topic` and `partition`. After a
     /// successful call to `seek`, the next poll of the consumer will return the
     /// message with `offset`.
     fn seek<T: Into<Timeout>>(
@@ -184,80 +177,59 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         partition: i32,
         offset: Offset,
         timeout: T,
-    ) -> KafkaResult<()> {
-        self.get_base_consumer()
-            .seek(topic, partition, offset, timeout)
-    }
+    ) -> KafkaResult<()>;
 
-    /// Commits the offset of the specified message. The commit can be sync (blocking), or async.
-    /// Notice that when a specific offset is committed, all the previous offsets are considered
-    /// committed as well. Use this method only if you are processing messages in order.
+    /// Commits the offset of the specified message. The commit can be sync
+    /// (blocking), or async. Notice that when a specific offset is committed,
+    /// all the previous offsets are considered committed as well. Use this
+    /// method only if you are processing messages in order.
     fn commit(
         &self,
         topic_partition_list: &TopicPartitionList,
         mode: CommitMode,
-    ) -> KafkaResult<()> {
-        self.get_base_consumer().commit(topic_partition_list, mode)
-    }
+    ) -> KafkaResult<()>;
 
-    /// Commit the current consumer state. Notice that if the consumer fails after a message
-    /// has been received, but before the message has been processed by the user code,
-    /// this might lead to data loss. Check the "at-least-once delivery" section in the readme
-    /// for more information.
-    fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()> {
-        self.get_base_consumer().commit_consumer_state(mode)
-    }
+    /// Commits the current consumer state. Notice that if the consumer fails
+    /// after a message has been received, but before the message has been
+    /// processed by the user code, this might lead to data loss. Check the
+    /// "at-least-once delivery" section in the readme for more information.
+    fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()>;
 
-    /// Commit the provided message. Note that this will also automatically commit every
-    /// message with lower offset within the same partition.
-    fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()> {
-        self.get_base_consumer().commit_message(message, mode)
-    }
+    /// Commit the provided message. Note that this will also automatically
+    /// commit every message with lower offset within the same partition.
+    fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()>;
 
-    /// Store offset for this message to be used on the next (auto)commit.
-    /// When using this `enable.auto.offset.store` should be set to `false` in the config.
-    fn store_offset(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
-        self.get_base_consumer().store_offset(message)
-    }
+    /// Stores offset for this message to be used on the next (auto)commit. When
+    /// using this `enable.auto.offset.store` should be set to `false` in the
+    /// config.
+    fn store_offset(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()>;
 
-    /// Store offsets to be used on the next (auto)commit.
-    /// When using this `enable.auto.offset.store` should be set to `false` in the config.
-    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
-        self.get_base_consumer().store_offsets(tpl)
-    }
+    /// Store offsets to be used on the next (auto)commit. When using this
+    /// `enable.auto.offset.store` should be set to `false` in the config.
+    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()>;
 
     /// Returns the current topic subscription.
-    fn subscription(&self) -> KafkaResult<TopicPartitionList> {
-        self.get_base_consumer().subscription()
-    }
+    fn subscription(&self) -> KafkaResult<TopicPartitionList>;
 
     /// Returns the current partition assignment.
-    fn assignment(&self) -> KafkaResult<TopicPartitionList> {
-        self.get_base_consumer().assignment()
-    }
+    fn assignment(&self) -> KafkaResult<TopicPartitionList>;
 
-    /// Retrieve committed offsets for topics and partitions.
+    /// Retrieves the committed offsets for topics and partitions.
     fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer().committed(timeout)
-    }
+        Self: Sized;
 
-    /// Retrieve committed offsets for specified topics and partitions.
+    /// Retrieves the committed offsets for specified topics and partitions.
     fn committed_offsets<T>(
         &self,
         tpl: TopicPartitionList,
         timeout: T,
     ) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Timeout>,
-    {
-        self.get_base_consumer().committed_offsets(tpl, timeout)
-    }
+        T: Into<Timeout>;
 
-    /// Lookup the offsets for this consumer's partitions by timestamp.
+    /// Looks up the offsets for this consumer's partitions by timestamp.
     fn offsets_for_timestamp<T>(
         &self,
         timestamp: i64,
@@ -265,13 +237,9 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     ) -> KafkaResult<TopicPartitionList>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer()
-            .offsets_for_timestamp(timestamp, timeout)
-    }
+        Self: Sized;
 
-    /// Look up the offsets for the specified partitions by timestamp.
+    /// Looks up the offsets for the specified partitions by timestamp.
     fn offsets_for_times<T>(
         &self,
         timestamps: TopicPartitionList,
@@ -279,26 +247,17 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     ) -> KafkaResult<TopicPartitionList>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer()
-            .offsets_for_times(timestamps, timeout)
-    }
+        Self: Sized;
 
     /// Retrieve current positions (offsets) for topics and partitions.
-    fn position(&self) -> KafkaResult<TopicPartitionList> {
-        self.get_base_consumer().position()
-    }
+    fn position(&self) -> KafkaResult<TopicPartitionList>;
 
-    /// Returns the metadata information for the specified topic, or for all topics in the cluster
-    /// if no topic is specified.
+    /// Returns the metadata information for the specified topic, or for all
+    /// topics in the cluster if no topic is specified.
     fn fetch_metadata<T>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer().fetch_metadata(topic, timeout)
-    }
+        Self: Sized;
 
     /// Returns the metadata information for all the topics in the cluster.
     fn fetch_watermarks<T>(
@@ -309,34 +268,18 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     ) -> KafkaResult<(i64, i64)>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer()
-            .fetch_watermarks(topic, partition, timeout)
-    }
+        Self: Sized;
 
     /// Returns the group membership information for the given group. If no group is
     /// specified, all groups will be returned.
     fn fetch_group_list<T>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer().fetch_group_list(group, timeout)
-    }
+        Self: Sized;
 
-    /// Pause consumption for the provided list of partitions.
-    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
-        self.get_base_consumer().pause(partitions)
-    }
+    /// Pauses consumption for the provided list of partitions.
+    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()>;
 
-    /// Resume consumption for the provided list of partitions.
-    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
-        self.get_base_consumer().resume(partitions)
-    }
-
-    /// Returns the [`Client`] underlying this consumer.
-    fn client(&self) -> &Client<C> {
-        self.get_base_consumer().client()
-    }
+    /// Resumes consumption for the provided list of partitions.
+    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()>;
 }

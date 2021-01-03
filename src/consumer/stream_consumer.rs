@@ -12,14 +12,16 @@ use slab::Slab;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{ClientContext, NativeClient};
+use crate::client::{Client, ClientContext, NativeClient};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use crate::consumer::base_consumer::BaseConsumer;
-use crate::consumer::{Consumer, ConsumerContext, DefaultConsumerContext, Rebalance};
+use crate::consumer::{CommitMode, Consumer, ConsumerContext, DefaultConsumerContext, Rebalance};
 use crate::error::{KafkaError, KafkaResult};
+use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
+use crate::metadata::Metadata;
 use crate::statistics::Statistics;
-use crate::topic_partition_list::TopicPartitionList;
+use crate::topic_partition_list::{Offset, TopicPartitionList};
 #[cfg(feature = "tokio")]
 use crate::util::TokioRuntime;
 use crate::util::{AsyncRuntime, NativePtr, Timeout};
@@ -29,12 +31,18 @@ use crate::util::{AsyncRuntime, NativePtr, Timeout};
 ///
 /// This type is not intended to be used directly. It will be automatically
 /// created by the `StreamConsumer` when necessary.
-pub struct StreamConsumerContext<C: ConsumerContext + 'static> {
+pub struct StreamConsumerContext<C>
+where
+    C: ConsumerContext,
+{
     inner: C,
     wakers: Arc<Mutex<Slab<Option<Waker>>>>,
 }
 
-impl<C: ConsumerContext + 'static> StreamConsumerContext<C> {
+impl<C> StreamConsumerContext<C>
+where
+    C: ConsumerContext,
+{
     fn new(inner: C) -> StreamConsumerContext<C> {
         StreamConsumerContext {
             inner,
@@ -43,7 +51,10 @@ impl<C: ConsumerContext + 'static> StreamConsumerContext<C> {
     }
 }
 
-impl<C: ConsumerContext + 'static> ClientContext for StreamConsumerContext<C> {
+impl<C> ClientContext for StreamConsumerContext<C>
+where
+    C: ConsumerContext,
+{
     fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
         self.inner.log(level, fac, log_message)
     }
@@ -57,7 +68,10 @@ impl<C: ConsumerContext + 'static> ClientContext for StreamConsumerContext<C> {
     }
 }
 
-impl<C: ConsumerContext + 'static> ConsumerContext for StreamConsumerContext<C> {
+impl<C> ConsumerContext for StreamConsumerContext<C>
+where
+    C: ConsumerContext,
+{
     fn rebalance(
         &self,
         native_client: &NativeClient,
@@ -119,7 +133,7 @@ where
 {
     fn new(consumer: &'a StreamConsumer<C>, interval: Duration) -> MessageStream<'a, C, R> {
         let slot = {
-            let context = consumer.get_base_consumer().context();
+            let context = consumer.base.context();
             let mut wakers = context.wakers.lock().expect("lock poisoned");
             wakers.insert(None)
         };
@@ -132,7 +146,7 @@ where
     }
 
     fn context(&self) -> &StreamConsumerContext<C> {
-        self.consumer.get_base_consumer().context()
+        self.consumer.base.context()
     }
 
     fn client_ptr(&self) -> *mut RDKafka {
@@ -213,13 +227,157 @@ where
 /// stream returned by [`StreamConsumer::start`] will implicitly poll the
 /// consumer.
 #[must_use = "Consumer polling thread will stop immediately if unused"]
-pub struct StreamConsumer<C: ConsumerContext + 'static = DefaultConsumerContext> {
-    consumer: BaseConsumer<StreamConsumerContext<C>>,
+pub struct StreamConsumer<C = DefaultConsumerContext>
+where
+    C: ConsumerContext,
+{
+    base: BaseConsumer<StreamConsumerContext<C>>,
 }
 
-impl<C: ConsumerContext> Consumer<StreamConsumerContext<C>> for StreamConsumer<C> {
-    fn get_base_consumer(&self) -> &BaseConsumer<StreamConsumerContext<C>> {
-        &self.consumer
+impl<C> Consumer<StreamConsumerContext<C>> for StreamConsumer<C>
+where
+    C: ConsumerContext,
+{
+    fn client(&self) -> &Client<StreamConsumerContext<C>> {
+        self.base.client()
+    }
+
+    fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
+        self.base.subscribe(topics)
+    }
+
+    fn unsubscribe(&self) {
+        self.base.unsubscribe();
+    }
+
+    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+        self.base.assign(assignment)
+    }
+
+    fn seek<T: Into<Timeout>>(
+        &self,
+        topic: &str,
+        partition: i32,
+        offset: Offset,
+        timeout: T,
+    ) -> KafkaResult<()> {
+        self.base.seek(topic, partition, offset, timeout)
+    }
+
+    fn commit(
+        &self,
+        topic_partition_list: &TopicPartitionList,
+        mode: CommitMode,
+    ) -> KafkaResult<()> {
+        self.base.commit(topic_partition_list, mode)
+    }
+
+    fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()> {
+        self.base.commit_consumer_state(mode)
+    }
+
+    fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()> {
+        self.base.commit_message(message, mode)
+    }
+
+    fn store_offset(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
+        self.base.store_offset(message)
+    }
+
+    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
+        self.base.store_offsets(tpl)
+    }
+
+    fn subscription(&self) -> KafkaResult<TopicPartitionList> {
+        self.base.subscription()
+    }
+
+    fn assignment(&self) -> KafkaResult<TopicPartitionList> {
+        self.base.assignment()
+    }
+
+    fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
+    where
+        T: Into<Timeout>,
+        Self: Sized,
+    {
+        self.base.committed(timeout)
+    }
+
+    fn committed_offsets<T>(
+        &self,
+        tpl: TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList>
+    where
+        T: Into<Timeout>,
+    {
+        self.base.committed_offsets(tpl, timeout)
+    }
+
+    fn offsets_for_timestamp<T>(
+        &self,
+        timestamp: i64,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList>
+    where
+        T: Into<Timeout>,
+        Self: Sized,
+    {
+        self.base.offsets_for_timestamp(timestamp, timeout)
+    }
+
+    fn offsets_for_times<T>(
+        &self,
+        timestamps: TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList>
+    where
+        T: Into<Timeout>,
+        Self: Sized,
+    {
+        self.base.offsets_for_times(timestamps, timeout)
+    }
+
+    fn position(&self) -> KafkaResult<TopicPartitionList> {
+        self.base.position()
+    }
+
+    fn fetch_metadata<T>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata>
+    where
+        T: Into<Timeout>,
+        Self: Sized,
+    {
+        self.base.fetch_metadata(topic, timeout)
+    }
+
+    fn fetch_watermarks<T>(
+        &self,
+        topic: &str,
+        partition: i32,
+        timeout: T,
+    ) -> KafkaResult<(i64, i64)>
+    where
+        T: Into<Timeout>,
+        Self: Sized,
+    {
+        self.base.fetch_watermarks(topic, partition, timeout)
+    }
+
+    fn fetch_group_list<T>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList>
+    where
+        T: Into<Timeout>,
+        Self: Sized,
+    {
+        self.base.fetch_group_list(group, timeout)
+    }
+
+    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+        self.base.pause(partitions)
+    }
+
+    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+        self.base.resume(partitions)
     }
 }
 
@@ -237,11 +395,9 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for StreamConsumer<C> {
     ) -> KafkaResult<StreamConsumer<C>> {
         let context = StreamConsumerContext::new(context);
         let stream_consumer = StreamConsumer {
-            consumer: BaseConsumer::from_config_and_context(config, context)?,
+            base: BaseConsumer::from_config_and_context(config, context)?,
         };
-        unsafe {
-            rdsys::rd_kafka_poll_set_consumer(stream_consumer.consumer.client().native_ptr())
-        };
+        unsafe { rdsys::rd_kafka_poll_set_consumer(stream_consumer.base.client().native_ptr()) };
         Ok(stream_consumer)
     }
 }

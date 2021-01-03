@@ -21,6 +21,9 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   Use a combinator like `tokio_stream::StreamExt::timeout` if you require the
   old behavior.
 
+* **Breaking change.** Remove the `Consumer::get_base_consumer` method, as
+  accessing the `BaseConsumer` that underlied a `StreamConsumer` was dangerous.
+
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)
 
