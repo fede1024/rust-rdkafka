@@ -69,11 +69,11 @@ unsafe extern "C" fn native_message_queue_nonempty_cb<C: ConsumerContext>(
     (*context).message_queue_nonempty_callback();
 }
 
-unsafe fn enable_nonempty_callback<C: ConsumerContext>(queue: &NativeQueue, context: &C) {
+unsafe fn enable_nonempty_callback<C: ConsumerContext>(queue: &NativeQueue, context: &Arc<C>) {
     rdsys::rd_kafka_queue_cb_event_enable(
         queue.ptr(),
         Some(native_message_queue_nonempty_cb::<C>),
-        context as *const C as *mut c_void,
+        Arc::as_ptr(context) as *mut c_void,
     )
 }
 
@@ -134,11 +134,6 @@ impl<C> BaseConsumer<C>
 where
     C: ConsumerContext,
 {
-    /// Returns the context used to create this consumer.
-    pub fn context(&self) -> &C {
-        self.client.context()
-    }
-
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
     /// This method is for internal use only. Use poll instead.
     pub(crate) fn poll_raw(&self, mut timeout: Timeout) -> Option<NativePtr<RDKafkaMessage>> {

@@ -1,6 +1,7 @@
 //! Kafka consumers.
 
 use std::ptr;
+use std::sync::Arc;
 use std::time::Duration;
 
 use log::{error, trace};
@@ -157,6 +158,11 @@ where
 {
     /// Returns the [`Client`] underlying this consumer.
     fn client(&self) -> &Client<C>;
+
+    /// Returns a reference to [`Context`] used to create this consumer.
+    fn context(&self) -> &Arc<C> {
+        self.client().context()
+    }
 
     /// Subscribes the consumer to a list of topics.
     fn subscribe(&self, topics: &[&str]) -> KafkaResult<()>;

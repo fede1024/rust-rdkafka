@@ -18,6 +18,7 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::slice;
 use std::string::ToString;
+use std::sync::Arc;
 
 use log::{debug, error, info, trace, warn};
 
@@ -151,7 +152,7 @@ impl NativeClient {
 /// [`producer`]: crate::producer
 pub struct Client<C: ClientContext = DefaultClientContext> {
     native: NativeClient,
-    context: Box<C>,
+    context: Arc<C>,
 }
 
 impl<C: ClientContext> Client<C> {
@@ -163,11 +164,11 @@ impl<C: ClientContext> Client<C> {
         context: C,
     ) -> KafkaResult<Client<C>> {
         let mut err_buf = ErrBuf::new();
-        let mut boxed_context = Box::new(context);
+        let context = Arc::new(context);
         unsafe {
             rdsys::rd_kafka_conf_set_opaque(
                 native_config.ptr(),
-                (&mut *boxed_context) as *mut C as *mut c_void,
+                Arc::as_ptr(&context) as *mut c_void,
             )
         };
         unsafe { rdsys::rd_kafka_conf_set_log_cb(native_config.ptr(), Some(native_log_cb::<C>)) };
@@ -196,7 +197,7 @@ impl<C: ClientContext> Client<C> {
 
         Ok(Client {
             native: unsafe { NativeClient::from_ptr(client_ptr) },
-            context: boxed_context,
+            context,
         })
     }
 
@@ -211,8 +212,8 @@ impl<C: ClientContext> Client<C> {
     }
 
     /// Returns a reference to the context.
-    pub fn context(&self) -> &C {
-        self.context.as_ref()
+    pub fn context(&self) -> &Arc<C> {
+        &self.context
     }
 
     /// Returns the metadata information for the specified topic, or for all topics in the cluster
