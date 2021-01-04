@@ -25,11 +25,11 @@ impl AsyncRuntime for SmolRuntime {
     where
         T: Future<Output = ()> + Send + 'static,
     {
-        smol::Task::spawn(task).detach()
+        smol::spawn(task).detach()
     }
 
     fn delay_for(duration: Duration) -> Self::Delay {
-        smol::Timer::after(duration).map(|_| ())
+        FutureExt::map(smol::Timer::after(duration), |_| ())
     }
 }
 
@@ -65,7 +65,7 @@ fn main() {
     let brokers = matches.value_of("brokers").unwrap();
     let topic = matches.value_of("topic").unwrap().to_owned();
 
-    smol::run(async {
+    smol::block_on(async {
         let producer: FutureProducer = ClientConfig::new()
             .set("bootstrap.servers", brokers)
             .set("message.timeout.ms", "5000")
