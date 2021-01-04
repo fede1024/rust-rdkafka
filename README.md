@@ -165,6 +165,12 @@ For a full listing of features, consult the [rdkafka-sys crate's
 documentation][rdkafka-sys-features]. All of rdkafka-sys features are
 re-exported as rdkafka features.
 
+### Minimum supported Rust version (MSRV)
+
+The current minimum supported Rust version (MSRV) is 1.45.0. Note that
+bumping the MSRV is not considered a breaking change. Any release of
+rust-rdkafka may bump the MSRV.
+
 ### Asynchronous runtimes
 
 Some features of the [`StreamConsumer`] and [`FutureProducer`] depend on

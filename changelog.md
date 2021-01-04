@@ -24,6 +24,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * **Breaking change.** Remove the `Consumer::get_base_consumer` method, as
   accessing the `BaseConsumer` that underlied a `StreamConsumer` was dangerous.
 
+* **Breaking change.** Return an `&Arc<C>` from `Client::context` rather than an
+  `&C`. This is expected to cause very little breakage in practice.
+
+* **Breaking change.** Move the `BaseConsumer::context` method to the `Consumer`
+  trait, so that it is available when using the `StreamConsumer` as well.
+
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)
 
