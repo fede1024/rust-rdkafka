@@ -112,3 +112,6 @@ fn now() -> i64 {
         .try_into()
         .unwrap()
 }
+
+// The tokio dependency is renamed for rdkafka to allow for a `tokio` feature
+use tokio_dep as tokio;

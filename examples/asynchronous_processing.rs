@@ -189,3 +189,6 @@ async fn main() {
         .for_each(|_| async { () })
         .await
 }
+
+// The tokio dependency is renamed for rdkafka to allow for a `tokio` feature
+use tokio_dep as tokio;

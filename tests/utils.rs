@@ -19,6 +19,8 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::statistics::Statistics;
 use rdkafka::TopicPartitionList;
 
+pub use tokio_dep as tokio;
+
 #[macro_export]
 macro_rules! map(
     { $($key:expr => $value:expr),+ } => {

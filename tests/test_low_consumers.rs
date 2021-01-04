@@ -285,7 +285,10 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     assert_eq!(wakeups.load(Ordering::SeqCst), 1);
 
     // Verify there are no messages waiting.
-    assert!(consumer.poll(Duration::from_secs(0)).is_none());
+    assert_eq!(
+        consumer.poll(Duration::from_secs(0)).map(|r| r.map(|_| ())),
+        None
+    );
 
     // Populate the topic, and expect a wakeup notifying us of the new messages.
     populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None).await;

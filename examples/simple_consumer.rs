@@ -132,3 +132,6 @@ async fn main() {
 
     consume_and_print(brokers, group_id, &topics).await
 }
+
+// The tokio dependency is renamed for rdkafka to allow for a `tokio` feature
+use tokio_dep as tokio;

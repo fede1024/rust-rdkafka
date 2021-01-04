@@ -5,7 +5,6 @@
 //!
 //! `rust-rdkafka` provides a safe Rust interface to librdkafka. The master
 //! branch is currently based on librdkafka 1.4.2.
-//!
 //! ### Documentation
 //!
 //! - [Current master branch](https://fede1024.github.io/rust-rdkafka/)

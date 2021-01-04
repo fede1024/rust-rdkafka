@@ -17,6 +17,9 @@ use futures::channel::oneshot;
 use futures::future::{FutureExt, Map};
 use log::trace;
 
+#[cfg(feature = "tokio")]
+use tokio_dep as tokio;
+
 use rdkafka_sys as rdsys;
 
 /// Returns a tuple representing the version of `librdkafka` in hexadecimal and

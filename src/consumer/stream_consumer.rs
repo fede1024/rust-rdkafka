@@ -2,16 +2,15 @@
 
 use std::marker::PhantomData;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
-use std::task::{Context, Poll, Waker};
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::channel::oneshot;
-use futures::future::FutureExt;
-use futures::select;
+use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{Stream, StreamExt};
+use futures::{ready, select};
 use log::trace;
-use slab::Slab;
+use tokio_dep as tokio;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
@@ -40,7 +39,7 @@ where
     C: ConsumerContext,
 {
     inner: C,
-    wakers: Arc<Mutex<Slab<Option<Waker>>>>,
+    wakers: tokio::sync::Notify,
 }
 
 impl<C> StreamConsumerContext<C>
@@ -50,17 +49,15 @@ where
     fn new(inner: C) -> StreamConsumerContext<C> {
         StreamConsumerContext {
             inner,
-            wakers: Arc::new(Mutex::new(Slab::new())),
+            wakers: Default::default(),
         }
     }
 
-    fn wake_all(&self) {
-        let mut wakers = self.wakers.lock().unwrap();
-        for (_, waker) in wakers.iter_mut() {
-            if let Some(waker) = waker.take() {
-                waker.wake();
-            }
-        }
+    fn wake(&self) {
+        // `notify_one` has the special property that it will wake one waiter which registers after
+        // this notification. If that waiter finds that there are more messages available it will
+        // then proceed to wake all other waiters
+        self.wakers.notify_one();
     }
 }
 
@@ -111,7 +108,7 @@ where
     }
 
     fn message_queue_nonempty_callback(&self) {
-        self.wake_all();
+        self.wake();
         self.inner.message_queue_nonempty_callback()
     }
 }
@@ -124,7 +121,8 @@ where
     C: ConsumerContext + 'static,
 {
     consumer: &'a StreamConsumer<C, R>,
-    slot: usize,
+    // TODO Remove the Box once tokio exposes the `Notified` future
+    notified: Option<BoxFuture<'a, ()>>,
 }
 
 impl<'a, C, R> MessageStream<'a, C, R>
@@ -132,25 +130,14 @@ where
     C: ConsumerContext + 'static,
 {
     fn new(consumer: &'a StreamConsumer<C, R>) -> MessageStream<'a, C, R> {
-        let slot = {
-            let context = consumer.base.context();
-            let mut wakers = context.wakers.lock().expect("lock poisoned");
-            wakers.insert(None)
-        };
-        MessageStream { consumer, slot }
-    }
-
-    fn context(&self) -> &StreamConsumerContext<C> {
-        self.consumer.base.context()
+        MessageStream {
+            consumer,
+            notified: None,
+        }
     }
 
     fn client_ptr(&self) -> *mut RDKafka {
         self.consumer.client().native_ptr()
-    }
-
-    fn set_waker(&self, waker: Waker) {
-        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
-        wakers[self.slot].replace(waker);
     }
 
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
@@ -167,29 +154,24 @@ where
 {
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        // Unconditionally store the waker so that we are woken up if the queue
-        // flips from non-empty to empty. We have to store the waker on every
-        // call to poll in case this future migrates between tasks. We also need
-        // to store the waker *before* calling poll to avoid a race where `poll`
-        // returns None to indicate that the queue is empty, but the queue
-        // becomes non-empty before we've installed the waker.
-        self.set_waker(cx.waker().clone());
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        loop {
+            if let Some(notified) = &mut self.notified {
+                ready!(notified.as_mut().poll(cx));
+                self.notified = None;
+            }
 
-        match self.poll() {
-            None => Poll::Pending,
-            Some(message) => Poll::Ready(Some(message)),
+            match self.poll() {
+                None => {
+                    self.notified = Some(self.consumer.context().wakers.notified().boxed());
+                }
+                Some(message) => {
+                    // More messages were available, notify all other waiters
+                    self.consumer.context().wakers.notify_waiters();
+                    return Poll::Ready(Some(message));
+                }
+            }
         }
-    }
-}
-
-impl<'a, C, R> Drop for MessageStream<'a, C, R>
-where
-    C: ConsumerContext + 'static,
-{
-    fn drop(&mut self) {
-        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
-        wakers.remove(self.slot);
     }
 }
 
@@ -265,7 +247,7 @@ where
             trace!("Starting stream consumer wake loop: 0x{:x}", native_ptr);
             loop {
                 select! {
-                    _ = R::delay_for(poll_interval / 2).fuse() => context.wake_all(),
+                    _ = R::delay_for(poll_interval / 2).fuse() => context.wake(),
                     _ = shutdown_tripwire => break,
                 }
             }
