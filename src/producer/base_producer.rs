@@ -56,51 +56,14 @@ use rdkafka_sys as rdsys;
 use rdkafka_sys::rd_kafka_vtype_t::*;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, ClientContext};
+use crate::client::Client;
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use crate::util::{IntoOpaque, Timeout};
+use crate::producer::{DefaultProducerContext, ProducerContext};
 
 pub use crate::message::DeliveryResult;
-
-//
-// ********** PRODUCER CONTEXT **********
-//
-
-/// Producer-specific context.
-///
-/// This user-defined object can be used to provide custom callbacks for
-/// producer events. Refer to the list of methods to check which callbacks can
-/// be specified.
-///
-/// In particular, it can be used to specify the `delivery` callback that will
-/// be called when the acknowledgement for a delivered message is received.
-///
-/// See also the [`ClientContext`] trait.
-pub trait ProducerContext: ClientContext {
-    /// A `DeliveryOpaque` is a user-defined structure that will be passed to
-    /// the producer when producing a message, and returned to the `delivery`
-    /// method once the message has been delivered, or failed to.
-    type DeliveryOpaque: IntoOpaque;
-
-    /// This method will be called once the message has been delivered (or
-    /// failed to). The `DeliveryOpaque` will be the one provided by the user
-    /// when calling send.
-    fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
-}
-
-/// An empty producer context that can be used when customizations are not
-/// required.
-#[derive(Clone)]
-pub struct DefaultProducerContext;
-
-impl ClientContext for DefaultProducerContext {}
-impl ProducerContext for DefaultProducerContext {
-    type DeliveryOpaque = ();
-
-    fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
-}
 
 /// Callback that gets called from librdkafka every time a message succeeds or fails to be
 /// delivered.

@@ -113,11 +113,51 @@
 //!   delivery. A time of 0 is infinite. Default: 300000.
 //!
 
+use crate::client::ClientContext;
+use crate::util::IntoOpaque;
+
 pub mod base_producer;
 pub mod future_producer;
 
-pub use self::base_producer::{
-    BaseProducer, BaseRecord, DefaultProducerContext, DeliveryResult, ProducerContext,
-    ThreadedProducer,
-};
+#[doc(inline)]
+pub use self::base_producer::{BaseProducer, BaseRecord, DeliveryResult, ThreadedProducer};
+#[doc(inline)]
 pub use self::future_producer::{DeliveryFuture, FutureProducer, FutureRecord};
+
+//
+// ********** PRODUCER CONTEXT **********
+//
+
+/// Producer-specific context.
+///
+/// This user-defined object can be used to provide custom callbacks for
+/// producer events. Refer to the list of methods to check which callbacks can
+/// be specified.
+///
+/// In particular, it can be used to specify the `delivery` callback that will
+/// be called when the acknowledgement for a delivered message is received.
+///
+/// See also the [`ClientContext`] trait.
+pub trait ProducerContext: ClientContext {
+    /// A `DeliveryOpaque` is a user-defined structure that will be passed to
+    /// the producer when producing a message, and returned to the `delivery`
+    /// method once the message has been delivered, or failed to.
+    type DeliveryOpaque: IntoOpaque;
+
+    /// This method will be called once the message has been delivered (or
+    /// failed to). The `DeliveryOpaque` will be the one provided by the user
+    /// when calling send.
+    fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
+}
+
+/// An inert producer context that can be used when customizations are not
+/// required.
+#[derive(Clone)]
+pub struct DefaultProducerContext;
+
+impl ClientContext for DefaultProducerContext {}
+impl ProducerContext for DefaultProducerContext {
+    type DeliveryOpaque = ();
+
+    fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
+}

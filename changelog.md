@@ -59,6 +59,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
       This change should have no impact on users who use the default runtime.
 
+    * Move the `producer::base_producer::{ProducerContext, DefaultProducerContext}`
+      types out of the `base_producer` module and into the `producer` module
+      directly, to match the `consumer` module layout.
+
 * Fix stalls when using multiple `MessageStream`s simultaneously.
 
   Thanks to [@Marwes] for discovering the issue and contributing the initial
