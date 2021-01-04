@@ -49,19 +49,23 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 * **Breaking change.** Rework the producer APIs to fix several design warts:
 
-    * Remove the `FutureProducer::send_with_runtime` method. Use the `send`
-      method instead. The `AsyncRuntime` to use is determined by the new `R`
-      type parameter to `FutureProducer`, which you can specify when you create
-      the producer.
+  * Remove the `FutureProducer::send_with_runtime` method. Use the `send`
+    method instead. The `AsyncRuntime` to use is determined by the new `R`
+    type parameter to `FutureProducer`, which you can specify when you create
+    the producer.
 
-      This change makes the `FutureProducer` mirror the redesigned
-      `StreamConsumer`.
+    This change makes the `FutureProducer` mirror the redesigned
+    `StreamConsumer`.
 
-      This change should have no impact on users who use the default runtime.
+    This change should have no impact on users who use the default runtime.
 
-    * Move the `producer::base_producer::{ProducerContext, DefaultProducerContext}`
-      types out of the `base_producer` module and into the `producer` module
-      directly, to match the `consumer` module layout.
+  * Move the `producer::base_producer::{ProducerContext, DefaultProducerContext}`
+    types out of the `base_producer` module and into the `producer` module
+    directly, to match the `consumer` module layout.
+
+  * Move the `client`, `in_flight_count`, and `flush` methods inherent to all
+    producers to a new `Producer` trait. This trait is analogous to the
+    `Consumer` trait.
 
 * Fix stalls when using multiple `MessageStream`s simultaneously.
 

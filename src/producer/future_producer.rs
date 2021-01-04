@@ -17,7 +17,7 @@ use crate::client::{Client, ClientContext, DefaultClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use crate::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
-use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
+use crate::producer::{BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer};
 use crate::statistics::Statistics;
 use crate::util::{AsyncRuntime, DefaultRuntime, IntoOpaque, Timeout};
 
@@ -334,29 +334,28 @@ where
 
     /// Polls the internal producer.
     ///
-    /// This is not normally required since the `FutureProducer` had a thread
+    /// This is not normally required since the `FutureProducer` has a thread
     /// dedicated to calling `poll` regularly.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.poll(timeout);
     }
+}
 
-    /// Flushes any pending messages.
-    ///
-    /// This method should be called before termination to ensure delivery of
-    /// all enqueued messages.
-    pub fn flush<T: Into<Timeout>>(&self, timeout: T) {
+impl<C, R> Producer<FutureProducerContext<C>> for FutureProducer<C, R>
+where
+    C: ClientContext + 'static,
+    R: AsyncRuntime,
+{
+    fn client(&self) -> &Client<FutureProducerContext<C>> {
+        self.producer.client()
+    }
+
+    fn flush<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.flush(timeout);
     }
 
-    /// Returns the number of messages that are either waiting to be sent or are
-    /// sent but are waiting to be acknowledged.
-    pub fn in_flight_count(&self) -> i32 {
+    fn in_flight_count(&self) -> i32 {
         self.producer.in_flight_count()
-    }
-
-    /// Returns the [`Client`] underlying this producer.
-    pub fn client(&self) -> &Client<FutureProducerContext<C>> {
-        self.producer.client()
     }
 }
 

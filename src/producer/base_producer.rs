@@ -27,7 +27,7 @@
 //!
 //! To execute delivery callbacks the `poll` method of the producer should be
 //! called regularly. If `poll` is not called, or not often enough, a
-//! [`RDKafkaError::QueueFull`] error will be returned.
+//! [`RDKafkaErrorCode::QueueFull`] error will be returned.
 //!
 //! ## `ThreadedProducer`
 //!
@@ -36,7 +36,7 @@
 //! that the user doesn't have to. The thread is started when the producer is
 //! created, and it will be terminated once the producer goes out of scope.
 //!
-//! A [`RDKafkaError::QueueFull`] error can still be returned in case the
+//! A [`RDKafkaErrorCode::QueueFull`] error can still be returned in case the
 //! polling thread is not fast enough or Kafka is not able to receive data and
 //! acknowledge messages quickly enough. If this error is returned, the caller
 //! should wait and try again.
@@ -60,8 +60,8 @@ use crate::client::Client;
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
+use crate::producer::{DefaultProducerContext, Producer, ProducerContext};
 use crate::util::{IntoOpaque, Timeout};
-use crate::producer::{DefaultProducerContext, ProducerContext};
 
 pub use crate::message::DeliveryResult;
 
@@ -212,7 +212,10 @@ impl FromClientConfig for BaseProducer<DefaultProducerContext> {
     }
 }
 
-impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
+impl<C> FromClientConfigAndContext<C> for BaseProducer<C>
+where
+    C: ProducerContext,
+{
     /// Creates a new `BaseProducer` starting from a configuration and a
     /// context.
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseProducer<C>> {
@@ -267,11 +270,17 @@ impl<C: ProducerContext> FromClientConfigAndContext<C> for BaseProducer<C> {
 /// ```
 ///
 /// [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
-pub struct BaseProducer<C: ProducerContext = DefaultProducerContext> {
+pub struct BaseProducer<C = DefaultProducerContext>
+where
+    C: ProducerContext,
+{
     client_arc: Arc<Client<C>>,
 }
 
-impl<C: ProducerContext> BaseProducer<C> {
+impl<C> BaseProducer<C>
+where
+    C: ProducerContext,
+{
     /// Creates a base producer starting from a Client.
     fn from_client(client: Client<C>) -> BaseProducer<C> {
         BaseProducer {
@@ -311,7 +320,6 @@ impl<C: ProducerContext> BaseProducer<C> {
     /// Note that this method will never block.
     // Simplifying the return type requires generic associated types, which are
     // unstable.
-    #[allow(clippy::type_complexity)]
     pub fn send<'a, K, P>(
         &self,
         record: BaseRecord<'a, K, P, C::DeliveryOpaque>,
@@ -365,28 +373,29 @@ impl<C: ProducerContext> BaseProducer<C> {
             Ok(())
         }
     }
+}
 
-    /// Flushes any pending messages.
-    ///
-    /// This method should be called before termination to ensure delivery of
-    /// all enqueued messages. It will call `poll()` internally.
-    pub fn flush<T: Into<Timeout>>(&self, timeout: T) {
+impl<C> Producer<C> for BaseProducer<C>
+where
+    C: ProducerContext,
+{
+    fn client(&self) -> &Client<C> {
+        &*self.client_arc
+    }
+
+    fn flush<T: Into<Timeout>>(&self, timeout: T) {
         unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout.into().as_millis()) };
     }
 
-    /// Returns the number of messages that are either waiting to be sent or are
-    /// sent but are waiting to be acknowledged.
-    pub fn in_flight_count(&self) -> i32 {
+    fn in_flight_count(&self) -> i32 {
         unsafe { rdsys::rd_kafka_outq_len(self.native_ptr()) }
-    }
-
-    /// Returns the [`Client`] underlying this producer.
-    pub fn client(&self) -> &Client<C> {
-        &*self.client_arc
     }
 }
 
-impl<C: ProducerContext> Clone for BaseProducer<C> {
+impl<C> Clone for BaseProducer<C>
+where
+    C: ProducerContext,
+{
     fn clone(&self) -> BaseProducer<C> {
         BaseProducer {
             client_arc: self.client_arc.clone(),
@@ -405,7 +414,10 @@ impl<C: ProducerContext> Clone for BaseProducer<C> {
 /// queued events, such as delivery notifications. The thread will be
 /// automatically stopped when the producer is dropped.
 #[must_use = "The threaded producer will stop immediately if unused"]
-pub struct ThreadedProducer<C: ProducerContext + 'static> {
+pub struct ThreadedProducer<C>
+where
+    C: ProducerContext + 'static,
+{
     producer: BaseProducer<C>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
@@ -417,7 +429,10 @@ impl FromClientConfig for ThreadedProducer<DefaultProducerContext> {
     }
 }
 
-impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for ThreadedProducer<C> {
+impl<C> FromClientConfigAndContext<C> for ThreadedProducer<C>
+where
+    C: ProducerContext + 'static,
+{
     fn from_config_and_context(
         config: &ClientConfig,
         context: C,
@@ -455,13 +470,15 @@ impl<C: ProducerContext + 'static> FromClientConfigAndContext<C> for ThreadedPro
     }
 }
 
-impl<C: ProducerContext + 'static> ThreadedProducer<C> {
+impl<C> ThreadedProducer<C>
+where
+    C: ProducerContext + 'static,
+{
     /// Sends a message to Kafka.
     ///
     /// See the documentation for [`BaseProducer::send`] for details.
     // Simplifying the return type requires generic associated types, which are
     // unstable.
-    #[allow(clippy::type_complexity)]
     pub fn send<'a, K, P>(
         &self,
         record: BaseRecord<'a, K, P, C::DeliveryOpaque>,
@@ -480,28 +497,29 @@ impl<C: ProducerContext + 'static> ThreadedProducer<C> {
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.poll(timeout);
     }
+}
 
-    /// Flushes any pending messages.
-    ///
-    /// This method should be called before termination to ensure delivery of
-    /// all enqueued messages.
-    pub fn flush<T: Into<Timeout>>(&self, timeout: T) {
+impl<C> Producer<C> for ThreadedProducer<C>
+where
+    C: ProducerContext + 'static,
+{
+    fn client(&self) -> &Client<C> {
+        self.producer.client()
+    }
+
+    fn flush<T: Into<Timeout>>(&self, timeout: T) {
         self.producer.flush(timeout);
     }
 
-    /// Returns the number of messages that are either waiting to be sent or are
-    /// sent but are waiting to be acknowledged.
-    pub fn in_flight_count(&self) -> i32 {
+    fn in_flight_count(&self) -> i32 {
         self.producer.in_flight_count()
-    }
-
-    /// Returns the [`Client`] underlying this producer.
-    pub fn client(&self) -> &Client<C> {
-        self.producer.client()
     }
 }
 
-impl<C: ProducerContext + 'static> Drop for ThreadedProducer<C> {
+impl<C> Drop for ThreadedProducer<C>
+where
+    C: ProducerContext + 'static,
+{
     fn drop(&mut self) {
         trace!("Destroy ThreadedProducer");
         if let Some(handle) = self.handle.take() {

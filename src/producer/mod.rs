@@ -113,8 +113,10 @@
 //!   delivery. A time of 0 is infinite. Default: 300000.
 //!
 
-use crate::client::ClientContext;
-use crate::util::IntoOpaque;
+use std::sync::Arc;
+
+use crate::client::{Client, ClientContext};
+use crate::util::{IntoOpaque, Timeout};
 
 pub mod base_producer;
 pub mod future_producer;
@@ -160,4 +162,29 @@ impl ProducerContext for DefaultProducerContext {
     type DeliveryOpaque = ();
 
     fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
+}
+
+/// Common trait for all producers.
+pub trait Producer<C = DefaultProducerContext>
+where
+    C: ProducerContext,
+{
+    /// Returns the [`Client`] underlying this producer.
+    fn client(&self) -> &Client<C>;
+
+    /// Returns a reference to the [`ProducerContext`] used to create this
+    /// producer.
+    fn context(&self) -> &Arc<C> {
+        self.client().context()
+    }
+
+    /// Returns the number of messages that are either waiting to be sent or are
+    /// sent but are waiting to be acknowledged.
+    fn in_flight_count(&self) -> i32;
+
+    /// Flushes any pending messages.
+    ///
+    /// This method should be called before termination to ensure delivery of
+    /// all enqueued messages. It will call `poll()` internally.
+    fn flush<T: Into<Timeout>>(&self, timeout: T);
 }
