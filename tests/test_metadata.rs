@@ -2,8 +2,6 @@
 
 use std::time::Duration;
 
-use futures::*;
-
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::topic_partition_list::TopicPartitionList;

@@ -73,7 +73,7 @@ fn main() {
             .expect("Producer creation error");
 
         let delivery_status = producer
-            .send_with_runtime::<SmolRuntime, Vec<u8>, _, _>(
+            .send::<Vec<u8>, _, _>(
                 FutureRecord::to(&topic).payload("hello from smol"),
                 Duration::from_secs(0),
             )
