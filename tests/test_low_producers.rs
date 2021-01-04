@@ -11,7 +11,7 @@ use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::message::{Headers, Message, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::{
-    BaseProducer, BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer,
+    BaseProducer, BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer,
 };
 use rdkafka::types::RDKafkaRespErr;
 use rdkafka::util::current_time_millis;

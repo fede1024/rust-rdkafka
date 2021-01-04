@@ -180,15 +180,6 @@ impl From<ffi::NulError> for KafkaError {
 }
 
 impl KafkaError {
-    /// Returns if an error is `Fatal` and requires reinitialisation.
-    /// for details see https://docs.confluent.io/5.5.0/clients/librdkafka/rdkafka_8h.html
-    pub fn is_fatal(&self) -> bool {
-        match self.rdkafka_error_code() {
-            Some(RDKafkaErrorCode::Fatal) => true,
-            _ => false,
-        }
-    }
-
     /// Returns the [`RDKafkaErrorCode`] underlying this error, if any.
     #[allow(clippy::match_same_arms)]
     pub fn rdkafka_error_code(&self) -> Option<&RDKafkaErrorCode> {
