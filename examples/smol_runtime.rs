@@ -83,7 +83,7 @@ fn main() {
             process::exit(1);
         }
 
-        let consumer: StreamConsumer = ClientConfig::new()
+        let consumer: StreamConsumer<_, SmolRuntime> = ClientConfig::new()
             .set("bootstrap.servers", brokers)
             .set("session.timeout.ms", "6000")
             .set("enable.auto.commit", "false")
@@ -93,7 +93,7 @@ fn main() {
             .expect("Consumer creation failed");
         consumer.subscribe(&[&topic]).unwrap();
 
-        let mut stream = consumer.start_with_runtime::<SmolRuntime>(Duration::from_millis(100));
+        let mut stream = consumer.stream();
         let message = stream.next().await;
         match message {
             Some(Ok(message)) => println!(

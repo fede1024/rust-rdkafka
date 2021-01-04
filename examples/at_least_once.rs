@@ -15,7 +15,6 @@ use std::time::Duration;
 
 use clap::{App, Arg};
 use futures::future;
-use futures::stream::StreamExt;
 use log::{info, warn};
 
 use rdkafka::client::ClientContext;
@@ -142,10 +141,8 @@ async fn main() {
     let consumer = create_consumer(brokers, group_id, input_topic);
     let producer = create_producer(brokers);
 
-    let mut stream = consumer.start();
-
-    while let Some(message) = stream.next().await {
-        match message {
+    loop {
+        match consumer.next().await {
             Err(e) => {
                 warn!("Kafka error: {}", e);
             }

@@ -80,7 +80,7 @@ async fn run_async_processor(
         .expect("Producer creation error");
 
     // Create the outer pipeline on the message stream.
-    let stream_processor = consumer.start().try_for_each(|borrowed_message| {
+    let stream_processor = consumer.stream().try_for_each(|borrowed_message| {
         let producer = producer.clone();
         let output_topic = output_topic.to_string();
         async move {

@@ -1,5 +1,4 @@
 use clap::{App, Arg};
-use futures::StreamExt;
 use log::{info, warn};
 
 use rdkafka::client::ClientContext;
@@ -58,12 +57,8 @@ async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
         .subscribe(&topics.to_vec())
         .expect("Can't subscribe to specified topics");
 
-    // consumer.start() returns a stream. The stream can be used ot chain together expensive steps,
-    // such as complex computations on a thread pool or asynchronous IO.
-    let mut message_stream = consumer.start();
-
-    while let Some(message) = message_stream.next().await {
-        match message {
+    loop {
+        match consumer.next().await {
             Err(e) => warn!("Kafka error: {}", e),
             Ok(m) => {
                 let payload = match m.payload_view::<str>() {

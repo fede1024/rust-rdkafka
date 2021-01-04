@@ -1,4 +1,4 @@
-//! Low level consumer wrapper.
+//! Low-level consumers.
 
 use std::cmp;
 use std::ffi::CString;
@@ -77,9 +77,10 @@ unsafe fn enable_nonempty_callback<C: ConsumerContext>(queue: &NativeQueue, cont
     )
 }
 
-/// Low level wrapper around the librdkafka consumer. This consumer must be
-/// periodically polled to make progress on rebalancing, callbacks and to
-/// receive messages.
+/// A low-level consumer that requires manual polling.
+///
+/// This consumer must be periodically polled to make progress on rebalancing,
+/// callbacks and to receive messages.
 pub struct BaseConsumer<C = DefaultConsumerContext>
 where
     C: ConsumerContext,

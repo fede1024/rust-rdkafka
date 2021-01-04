@@ -13,6 +13,7 @@ use rdkafka::error::KafkaError;
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::current_time_millis;
 use rdkafka::{Message, Timestamp};
+use rdkafka_sys::types::RDKafkaConfRes;
 
 use crate::utils::*;
 
@@ -30,14 +31,38 @@ fn create_stream_consumer(
     create_stream_consumer_with_context(group_id, config_overrides, cons_context)
 }
 
-fn create_stream_consumer_with_context<C: ConsumerContext>(
+fn create_stream_consumer_with_context<C>(
     group_id: &str,
     config_overrides: Option<HashMap<&str, &str>>,
     context: C,
-) -> StreamConsumer<C> {
+) -> StreamConsumer<C>
+where
+    C: ConsumerContext + 'static,
+{
     consumer_config(group_id, config_overrides)
         .create_with_context(context)
         .expect("Consumer creation failed")
+}
+
+#[tokio::test]
+async fn test_invalid_max_poll_interval() {
+    let res: Result<StreamConsumer, _> = consumer_config(
+        &rand_test_group(),
+        Some(map!("max.poll.interval.ms" => "-1")),
+    )
+    .create();
+    match res {
+        Err(KafkaError::ClientConfig(RDKafkaConfRes::RD_KAFKA_CONF_INVALID, desc, key, value)) => {
+            assert_eq!(desc, "");
+            assert_eq!(key, "max.poll.interval.ms");
+            assert_eq!(value, "-1");
+        }
+        Ok(_) => panic!("invalid max poll interval configuration accepted"),
+        Err(e) => panic!(
+            "incorrect error returned for invalid max poll interval: {:?}",
+            e
+        ),
+    }
 }
 
 // All produced messages should be consumed.
@@ -52,7 +77,7 @@ async fn test_produce_consume_base() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
-        .start()
+        .stream()
         .take(100)
         .for_each(|message| {
             match message {
@@ -91,7 +116,7 @@ async fn test_produce_consume_base_concurrent() {
         let consumer = consumer.clone();
         tokio::spawn(async move {
             consumer
-                .start_with(Duration::from_secs(60 * 60 * 24 * 365 /* 1 year */))
+                .stream()
                 .take(20)
                 .for_each(|message| match message {
                     Ok(_) => future::ready(()),
@@ -125,7 +150,7 @@ async fn test_produce_consume_base_assign() {
     let mut partition_count = vec![0, 0, 0];
 
     let _consumer_future = consumer
-        .start()
+        .stream()
         .take(19)
         .for_each(|message| {
             match message {
@@ -151,7 +176,7 @@ async fn test_produce_consume_with_timestamp() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
-        .start()
+        .stream()
         .take(100)
         .for_each(|message| {
             match message {
@@ -193,7 +218,7 @@ async fn test_consumer_commit_message() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
-        .start()
+        .stream()
         .take(33)
         .for_each(|message| {
             match message {
@@ -256,7 +281,7 @@ async fn test_consumer_store_offset_commit() {
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
-        .start()
+        .stream()
         .take(36)
         .for_each(|message| {
             match message {

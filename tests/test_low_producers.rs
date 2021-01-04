@@ -325,11 +325,12 @@ fn test_fatal_errors() {
 
     assert_eq!(producer.client().fatal_error(), None);
 
+    let msg = CString::new("fake error").unwrap();
     unsafe {
         rdkafka_sys::rd_kafka_test_fatal_error(
             producer.client().native_ptr(),
             RDKafkaRespErr::RD_KAFKA_RESP_ERR_OUT_OF_ORDER_SEQUENCE_NUMBER,
-            CString::new("fake error").unwrap().as_ptr(),
+            msg.as_ptr(),
         );
     }
 

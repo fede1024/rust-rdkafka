@@ -35,30 +35,6 @@ regex = "1.1.6"
 smol = { version = "0.1.7" }
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "time"] }
 
-[[example]]
-name = "asynchronous_processing"
-required-features = ["tokio"]
-
-[[example]]
-name = "at_least_once"
-required-features = ["tokio"]
-
-[[example]]
-name = "roundtrip"
-required-features = ["tokio"]
-
-[[example]]
-name = "simple_consumer"
-required-features = ["tokio"]
-
-[[test]]
-name = "test_high_consumers"
-required-features = ["tokio"]
-
-[[test]]
-name = "test_metadata"
-required-features = ["tokio"]
-
 # These features are re-exports of the features that the rdkafka-sys crate
 # provides. See the rdkafka-sys documentation for details.
 [features]

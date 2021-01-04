@@ -2,7 +2,6 @@ use std::convert::TryInto;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use clap::{App, Arg};
-use futures::stream::StreamExt;
 use hdrhistogram::Histogram;
 
 use rdkafka::config::ClientConfig;
@@ -81,11 +80,10 @@ async fn main() {
     });
 
     let start = Instant::now();
-    let mut stream = consumer.start();
     let mut latencies = Histogram::<u64>::new(5).unwrap();
     println!("Warming up for 10s...");
-    while let Some(message) = stream.next().await {
-        let message = message.unwrap();
+    loop {
+        let message = consumer.next().await.unwrap();
         let then = message.timestamp().to_millis().unwrap();
         if start.elapsed() < Duration::from_secs(10) {
             // Warming up.

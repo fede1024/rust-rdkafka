@@ -21,7 +21,9 @@ pub mod base_consumer;
 pub mod stream_consumer;
 
 // Re-exports.
+#[doc(inline)]
 pub use self::base_consumer::BaseConsumer;
+#[doc(inline)]
 pub use self::stream_consumer::{MessageStream, StreamConsumer};
 
 /// Rebalance information.
@@ -126,7 +128,7 @@ pub trait ConsumerContext: ClientContext {
     // StreamConsumerContext as well.
 }
 
-/// An empty consumer context that can be user when no customizations are
+/// An inert [`ConsumerContext`] that can be used when no customizations are
 /// needed.
 #[derive(Clone, Default)]
 pub struct DefaultConsumerContext;
@@ -134,8 +136,8 @@ pub struct DefaultConsumerContext;
 impl ClientContext for DefaultConsumerContext {}
 impl ConsumerContext for DefaultConsumerContext {}
 
-/// Specifies if the commit should be performed synchronously
-/// or asynchronously.
+/// Specifies whether a commit should be performed synchronously or
+/// asynchronously.
 #[derive(Clone, Copy, Debug)]
 pub enum CommitMode {
     /// Synchronous commit.
@@ -159,7 +161,8 @@ where
     /// Returns the [`Client`] underlying this consumer.
     fn client(&self) -> &Client<C>;
 
-    /// Returns a reference to [`Context`] used to create this consumer.
+    /// Returns a reference to the [`ConsumerContext`] used to create this
+    /// consumer.
     fn context(&self) -> &Arc<C> {
         self.client().context()
     }
