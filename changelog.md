@@ -13,7 +13,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   rust-rdkafka map to types in librdkafka as directly as possible. The
   maintainers apologize for the difficulty in upgrading through this change.
 
-* **Breaking changes.** Rework the consumer APIs to fix several bugs and design
+* **Breaking change.** Rework the consumer APIs to fix several bugs and design
   warts:
 
   * Rename `StreamConsumer::start` to `StreamConsumer::stream`, though the
@@ -46,6 +46,18 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
   * Move the `BaseConsumer::context` method to the `Consumer`
     trait, so that it is available when using the `StreamConsumer` as well.
+
+* **Breaking change.** Rework the producer APIs to fix several design warts:
+
+    * Remove the `FutureProducer::send_with_runtime` method. Use the `send`
+      method instead. The `AsyncRuntime` to use is determined by the new `R`
+      type parameter to `FutureProducer`, which you can specify when you create
+      the producer.
+
+      This change makes the `FutureProducer` mirror the redesigned
+      `StreamConsumer`.
+
+      This change should have no impact on users who use the default runtime.
 
 * Fix stalls when using multiple `MessageStream`s simultaneously.
 

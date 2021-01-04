@@ -17,7 +17,6 @@ use rdkafka::error::KafkaResult;
 use rdkafka::message::ToBytes;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::statistics::Statistics;
-use rdkafka::util::DefaultRuntime;
 use rdkafka::TopicPartitionList;
 
 #[macro_export]
@@ -134,7 +133,7 @@ where
         .map(|id| {
             let future = async move {
                 producer
-                    .send_with_runtime::<DefaultRuntime, _, _, _>(
+                    .send(
                         FutureRecord {
                             topic: topic_name,
                             payload: Some(&value_fn(id)),

@@ -4,6 +4,7 @@
 // TODO: extend docs
 
 use std::future::Future;
+use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
@@ -18,9 +19,7 @@ use crate::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
 use crate::producer::{BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer};
 use crate::statistics::Statistics;
-#[cfg(feature = "tokio")]
-use crate::util::TokioRuntime;
-use crate::util::{AsyncRuntime, IntoOpaque, Timeout};
+use crate::util::{AsyncRuntime, DefaultRuntime, IntoOpaque, Timeout};
 
 //
 // ********** FUTURE PRODUCER **********
@@ -177,14 +176,22 @@ impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
 /// underlying producer. The internal polling thread will be terminated when the
 /// `FutureProducer` goes out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-pub struct FutureProducer<C: ClientContext + 'static = DefaultClientContext> {
+pub struct FutureProducer<C = DefaultClientContext, R = DefaultRuntime>
+where
+    C: ClientContext + 'static,
+{
     producer: Arc<ThreadedProducer<FutureProducerContext<C>>>,
+    _runtime: PhantomData<R>,
 }
 
-impl<C: ClientContext + 'static> Clone for FutureProducer<C> {
-    fn clone(&self) -> FutureProducer<C> {
+impl<C, R> Clone for FutureProducer<C, R>
+where
+    C: ClientContext + 'static,
+{
+    fn clone(&self) -> FutureProducer<C, R> {
         FutureProducer {
             producer: self.producer.clone(),
+            _runtime: PhantomData,
         }
     }
 }
@@ -195,17 +202,22 @@ impl FromClientConfig for FutureProducer {
     }
 }
 
-impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for FutureProducer<C> {
+impl<C, R> FromClientConfigAndContext<C> for FutureProducer<C, R>
+where
+    C: ClientContext + 'static,
+    R: AsyncRuntime,
+{
     fn from_config_and_context(
         config: &ClientConfig,
         context: C,
-    ) -> KafkaResult<FutureProducer<C>> {
+    ) -> KafkaResult<FutureProducer<C, R>> {
         let future_context = FutureProducerContext {
             wrapped_context: context,
         };
         let threaded_producer = ThreadedProducer::from_config_and_context(config, future_context)?;
         Ok(FutureProducer {
             producer: Arc::new(threaded_producer),
+            _runtime: PhantomData,
         })
     }
 }
@@ -228,7 +240,11 @@ impl Future for DeliveryFuture {
     }
 }
 
-impl<C: ClientContext + 'static> FutureProducer<C> {
+impl<C, R> FutureProducer<C, R>
+where
+    C: ClientContext + 'static,
+    R: AsyncRuntime,
+{
     /// Sends a message to Kafka, returning the result of the send.
     ///
     /// The `queue_timeout` parameter controls how long to retry for if the
@@ -244,37 +260,12 @@ impl<C: ClientContext + 'static> FutureProducer<C> {
     ///
     /// See also the [`FutureProducer::send_result`] method, which will not
     /// retry the queue operation if the queue is full.
-    ///
-    /// **Note:** this method must be called from within the context of a Tokio
-    /// runtime.
-    #[cfg(feature = "tokio")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
     pub async fn send<K, P, T>(
         &self,
         record: FutureRecord<'_, K, P>,
         queue_timeout: T,
     ) -> OwnedDeliveryResult
     where
-        K: ToBytes + ?Sized,
-        P: ToBytes + ?Sized,
-        T: Into<Timeout>,
-    {
-        self.send_with_runtime::<TokioRuntime, _, _, _>(record, queue_timeout)
-            .await
-    }
-
-    /// Like [`FutureProducer::send`], but with a customizable asynchronous
-    /// runtime.
-    ///
-    /// See the [`AsyncRuntime`] trait for the details on the interface the
-    /// runtime must satisfy.
-    pub async fn send_with_runtime<R, K, P, T>(
-        &self,
-        record: FutureRecord<'_, K, P>,
-        queue_timeout: T,
-    ) -> OwnedDeliveryResult
-    where
-        R: AsyncRuntime,
         K: ToBytes + ?Sized,
         P: ToBytes + ?Sized,
         T: Into<Timeout>,
