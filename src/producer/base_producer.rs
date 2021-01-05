@@ -248,7 +248,7 @@ where
 ///
 /// ```rust
 /// use rdkafka::config::ClientConfig;
-/// use rdkafka::producer::{BaseProducer, BaseRecord};
+/// use rdkafka::producer::{BaseProducer, BaseRecord, Producer};
 /// use std::time::Duration;
 ///
 /// let producer: BaseProducer = ClientConfig::new()
