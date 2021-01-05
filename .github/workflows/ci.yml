@@ -21,6 +21,7 @@ jobs:
         components: rustfmt, clippy
     - run: cargo fmt -- --check
     - run: cargo clippy -- -Dwarnings
+    - run: cargo test --doc
 
   check:
     strategy:

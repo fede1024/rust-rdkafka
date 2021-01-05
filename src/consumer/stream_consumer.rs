@@ -325,7 +325,8 @@ where
     /// single-use message stream and extracting one message from it:
     ///
     /// ```
-    /// use futures::future::StreamExt;
+    /// use futures::stream::StreamExt;
+    /// # use rdkafka::consumer::StreamConsumer;
     ///
     /// # async fn example(consumer: StreamConsumer) {
     /// consumer.stream().next().await.expect("MessageStream never returns None");
