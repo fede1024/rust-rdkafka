@@ -15,7 +15,7 @@ use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{cstr_to_owned, Timeout};
+use crate::util::{cstr_to_owned, KafkaDrop, NativePtr, Timeout};
 
 pub mod base_consumer;
 pub mod stream_consumer;
@@ -146,6 +146,27 @@ pub enum CommitMode {
     Async = 1,
 }
 
+/// Consumer group metadata.
+///
+/// For use with [`Producer::send_offsets_to_transaction`].
+///
+/// [`Producer::send_offsets_to_transaction`]: crate::producer::Producer::send_offsets_to_transaction
+pub struct ConsumerGroupMetadata(NativePtr<RDKafkaConsumerGroupMetadata>);
+
+impl ConsumerGroupMetadata {
+    pub(crate) fn ptr(&self) -> *const RDKafkaConsumerGroupMetadata {
+        self.0.ptr()
+    }
+}
+
+unsafe impl KafkaDrop for RDKafkaConsumerGroupMetadata {
+    const TYPE: &'static str = "consumer_group_metadata";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_consumer_group_metadata_destroy;
+}
+
+unsafe impl Send for ConsumerGroupMetadata {}
+unsafe impl Sync for ConsumerGroupMetadata {}
+
 /// Common trait for all consumers.
 ///
 /// # Note about object safety
@@ -166,6 +187,15 @@ where
     fn context(&self) -> &Arc<C> {
         self.client().context()
     }
+
+    /// Returns the current consumer group metadata associated with the
+    /// consumer.
+    ///
+    /// If the consumer was not configured with a `group.id`, returns `None`.
+    /// For use with [`Producer::send_offsets_to_transaction`].
+    ///
+    /// [`Producer::send_offsets_to_transaction`]: crate::producer::Producer::send_offsets_to_transaction
+    fn group_metadata(&self) -> Option<ConsumerGroupMetadata>;
 
     /// Subscribes the consumer to a list of topics.
     fn subscribe(&self, topics: &[&str]) -> KafkaResult<()>;

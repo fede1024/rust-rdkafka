@@ -14,7 +14,9 @@ use rdkafka_sys::types::*;
 
 use crate::client::{Client, NativeClient, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use crate::consumer::{CommitMode, Consumer, ConsumerContext, DefaultConsumerContext};
+use crate::consumer::{
+    CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext,
+};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::message::{BorrowedMessage, Message};
@@ -269,6 +271,15 @@ where
 {
     fn client(&self) -> &Client<C> {
         &self.client
+    }
+
+    fn group_metadata(&self) -> Option<ConsumerGroupMetadata> {
+        let ptr = unsafe {
+            NativePtr::from_ptr(rdsys::rd_kafka_consumer_group_metadata(
+                self.client.native_ptr(),
+            ))
+        }?;
+        Some(ConsumerGroupMetadata(ptr))
     }
 
     fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {

@@ -5,6 +5,13 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 <a name="0.25.0"></a>
 ## 0.25.0 (Unreleased)
 
+* Add support for transactional producers. The new methods are
+  `Producer::init_transactions`, `Producer::begin_transaction`,
+  `Producer::commit_transaction`, `Producer::abort_transaction`, and
+  `Producer::send_offsets_to_transaction`.
+
+  Thanks to [@roignpar] for the implementation.
+
 * **Breaking change.** Rename `RDKafkaError` to `RDKafkaErrorCode`. This makes
   space for the new `RDKafkaError` type, which mirrors the `rd_kafka_error_t`
   type added to librdkafka in v1.4.0.
@@ -84,6 +91,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   when the `tokio` feature is disabled.
 
 [@Marwes]: https://github.com/Marwes
+[@roignpar]: https://github.com/roignpar
 
 <a name="0.24.0"></a>
 ## 0.24.0 (2020-07-08)

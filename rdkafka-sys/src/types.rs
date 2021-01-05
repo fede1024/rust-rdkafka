@@ -1,8 +1,9 @@
 //! Aliases for types defined in the auto-generated bindings.
 
 use std::convert::TryFrom;
+use std::error::Error;
 use std::ffi::CStr;
-use std::{error, fmt};
+use std::fmt;
 
 use crate::bindings;
 use crate::helpers;
@@ -41,6 +42,9 @@ pub type RDKafkaMetadataPartition = bindings::rd_kafka_metadata_partition_t;
 
 /// Native rdkafka broker information.
 pub type RDKafkaMetadataBroker = bindings::rd_kafka_metadata_broker_t;
+
+/// Native rdkafka consumer group metadata.
+pub type RDKafkaConsumerGroupMetadata = bindings::rd_kafka_consumer_group_metadata_t;
 
 /// Native rdkafka state.
 pub type RDKafkaState = bindings::rd_kafka_s;
@@ -435,11 +439,7 @@ impl fmt::Display for RDKafkaErrorCode {
     }
 }
 
-impl error::Error for RDKafkaErrorCode {
-    fn description(&self) -> &str {
-        "Error from underlying rdkafka library"
-    }
-}
+impl Error for RDKafkaErrorCode {}
 
 #[cfg(test)]
 mod tests {

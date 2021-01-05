@@ -39,6 +39,8 @@ The main features provided at the moment are:
 - Access to group metadata (list groups, list members of groups, hostnames,
   etc.).
 - Access to producer and consumer metrics, errors and callbacks.
+- Exactly-once semantics (EOS) via idempotent and transactional producers
+  and read-committed consumers.
 
 ### One million messages per second
 
@@ -115,6 +117,19 @@ To see how to implement at-least-once delivery with `rdkafka`, check out the
 [at-least-once delivery example] in the examples folder. To know more about
 delivery semantics, check the [message delivery semantics] chapter in the
 Kafka documentation.
+
+### Exactly-once semantics
+
+Exactly-once semantics (EOS) can be achieved using transactional producers,
+which allow produced records and consumer offsets to be committed or aborted
+atomically. Consumers that set their `isolation.level` to `read_committed`
+will only observe committed messages.
+
+EOS is useful in read-process-write scenarios that require messages to be
+processed exactly once.
+
+To learn more about using transactions in rust-rdkafka, see the
+[Transactions](producer-transactions) section of the producer documentation.
 
 ### Users
 
@@ -239,6 +254,7 @@ logging framework.
 [librdkafka]: https://github.com/edenhill/librdkafka
 [librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 [message delivery semantics]: https://kafka.apache.org/0101/documentation.html#semantics
+[producer-transactions]: https://docs.rs/rdkafka/*/rdkafka/producer/#transactions
 [rdkafka-sys-features]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#features
 [rdkafka-sys-known-issues]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#known-issues
 [smol]: https://docs.rs/smol

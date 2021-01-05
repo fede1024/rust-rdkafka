@@ -58,9 +58,11 @@ use rdkafka_sys::types::*;
 
 use crate::client::Client;
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::consumer::ConsumerGroupMetadata;
+use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use crate::producer::{DefaultProducerContext, Producer, ProducerContext};
+use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{IntoOpaque, Timeout};
 
 pub use crate::message::DeliveryResult;
@@ -390,6 +392,79 @@ where
     fn in_flight_count(&self) -> i32 {
         unsafe { rdsys::rd_kafka_outq_len(self.native_ptr()) }
     }
+
+    fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_init_transactions(
+                self.native_ptr(),
+                timeout.into().as_millis(),
+            ))
+        };
+        if ret.is_error() {
+            Err(KafkaError::Transaction(ret))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn begin_transaction(&self) -> KafkaResult<()> {
+        let ret =
+            unsafe { RDKafkaError::from_ptr(rdsys::rd_kafka_begin_transaction(self.native_ptr())) };
+        if ret.is_error() {
+            Err(KafkaError::Transaction(ret))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn send_offsets_to_transaction<T: Into<Timeout>>(
+        &self,
+        offsets: &TopicPartitionList,
+        cgm: &ConsumerGroupMetadata,
+        timeout: T,
+    ) -> KafkaResult<()> {
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_send_offsets_to_transaction(
+                self.native_ptr(),
+                offsets.ptr(),
+                cgm.ptr(),
+                timeout.into().as_millis(),
+            ))
+        };
+        if ret.is_error() {
+            Err(KafkaError::Transaction(ret))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_commit_transaction(
+                self.native_ptr(),
+                timeout.into().as_millis(),
+            ))
+        };
+        if ret.is_error() {
+            Err(KafkaError::Transaction(ret))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_abort_transaction(
+                self.native_ptr(),
+                timeout.into().as_millis(),
+            ))
+        };
+        if ret.is_error() {
+            Err(KafkaError::Transaction(ret))
+        } else {
+            Ok(())
+        }
+    }
 }
 
 impl<C> Clone for BaseProducer<C>
@@ -513,6 +588,32 @@ where
 
     fn in_flight_count(&self) -> i32 {
         self.producer.in_flight_count()
+    }
+
+    fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.init_transactions(timeout)
+    }
+
+    fn begin_transaction(&self) -> KafkaResult<()> {
+        self.producer.begin_transaction()
+    }
+
+    fn send_offsets_to_transaction<T: Into<Timeout>>(
+        &self,
+        offsets: &TopicPartitionList,
+        cgm: &ConsumerGroupMetadata,
+        timeout: T,
+    ) -> KafkaResult<()> {
+        self.producer
+            .send_offsets_to_transaction(offsets, cgm, timeout)
+    }
+
+    fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.commit_transaction(timeout)
+    }
+
+    fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.abort_transaction(timeout)
     }
 }
 

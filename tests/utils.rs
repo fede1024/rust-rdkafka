@@ -46,6 +46,14 @@ pub fn rand_test_group() -> String {
     format!("__test_{}", id)
 }
 
+pub fn rand_test_transactional_id() -> String {
+    let id = rand::thread_rng()
+        .gen_ascii_chars()
+        .take(10)
+        .collect::<String>();
+    format!("__test_{}", id)
+}
+
 pub fn get_bootstrap_server() -> String {
     env::var("KAFKA_HOST").unwrap_or_else(|_| "localhost:9092".to_owned())
 }
