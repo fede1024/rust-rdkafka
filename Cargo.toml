@@ -41,6 +41,7 @@ tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "time"] }
 default = ["libz", "tokio"]
 cmake-build = ["rdkafka-sys/cmake-build"]
 cmake_build = ["rdkafka-sys/cmake_build"]
+dynamic-linking = ["rdkafka-sys/dynamic-linking"]
 dynamic_linking = ["rdkafka-sys/dynamic_linking"]
 ssl = ["rdkafka-sys/ssl"]
 ssl-vendored = ["rdkafka-sys/ssl-vendored"]
