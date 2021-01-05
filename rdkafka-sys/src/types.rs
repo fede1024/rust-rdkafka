@@ -396,6 +396,19 @@ pub enum RDKafkaErrorCode {
     GroupMaxSizeReached = 81,
     /// Static consumer fenced by other consumer with same group.instance.id.
     FencedInstanceId = 82,
+    /// Eligible partition leaders are not available.
+    EligibleLeadersNotAvailable = 83,
+    /// Leader election not needed for topic partition.
+    ElectionNotNeeded = 84,
+    /// No partition reassignment is in progress.
+    NoReassignmentInProgress = 85,
+    /// Deleting offsets of a topic while the consumer group is subscribed to
+    /// it.
+    GroupSubscribedToTopic = 86,
+    /// Broker failed to validate record.
+    InvalidRecord = 87,
+    /// There are unstable offsets that need to be cleared.
+    UnstableOffsetCommit = 88,
     #[doc(hidden)]
     EndAll,
 }
