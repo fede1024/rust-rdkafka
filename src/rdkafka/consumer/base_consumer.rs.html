@@ -1,4 +1,7 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/consumer/base_consumer.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>base_consumer.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../rdkafka/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/consumer/base_consumer.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>base_consumer.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -600,8 +603,41 @@
 <span id="600">600</span>
 <span id="601">601</span>
 <span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Low level consumer wrapper.</span>
+<span class="doccomment">//! Low-level consumers.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">cmp</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::<span class="ident">CString</span>;
@@ -617,7 +653,9 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">client</span>::{<span class="ident">Client</span>, <span class="ident">NativeClient</span>, <span class="ident">NativeQueue</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::{<span class="ident">ClientConfig</span>, <span class="ident">FromClientConfig</span>, <span class="ident">FromClientConfigAndContext</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">consumer</span>::{<span class="ident">CommitMode</span>, <span class="ident">Consumer</span>, <span class="ident">ConsumerContext</span>, <span class="ident">DefaultConsumerContext</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">consumer</span>::{
+    <span class="ident">CommitMode</span>, <span class="ident">Consumer</span>, <span class="ident">ConsumerContext</span>, <span class="ident">ConsumerGroupMetadata</span>, <span class="ident">DefaultConsumerContext</span>,
+};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::{<span class="ident">IsError</span>, <span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">groups</span>::<span class="ident">GroupList</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">message</span>::{<span class="ident">BorrowedMessage</span>, <span class="ident">Message</span>};
@@ -672,17 +710,22 @@
     (<span class="kw-2">*</span><span class="ident">context</span>).<span class="ident">message_queue_nonempty_callback</span>();
 }
 
-<span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">enable_nonempty_callback</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span>(<span class="ident">queue</span>: <span class="kw-2">&amp;</span><span class="ident">NativeQueue</span>, <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="ident">C</span>) {
+<span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">enable_nonempty_callback</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span>(<span class="ident">queue</span>: <span class="kw-2">&amp;</span><span class="ident">NativeQueue</span>, <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>) {
     <span class="ident">rdsys</span>::<span class="ident">rd_kafka_queue_cb_event_enable</span>(
         <span class="ident">queue</span>.<span class="ident">ptr</span>(),
         <span class="prelude-val">Some</span>(<span class="ident">native_message_queue_nonempty_cb</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>),
-        <span class="ident">context</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">C</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>,
+        <span class="ident">Arc</span>::<span class="ident">as_ptr</span>(<span class="ident">context</span>) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>,
     )
 }
 
-<span class="doccomment">/// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled</span>
-<span class="doccomment">/// to make progress on rebalance, callbacks and to receive messages.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">=</span> <span class="ident">DefaultConsumerContext</span><span class="op">&gt;</span> {
+<span class="doccomment">/// A low-level consumer that requires manual polling.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This consumer must be periodically polled to make progress on rebalancing,</span>
+<span class="doccomment">/// callbacks and to receive messages.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span> <span class="op">=</span> <span class="ident">DefaultConsumerContext</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span>,
+{
     <span class="ident">client</span>: <span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     <span class="ident">main_queue_min_poll_interval</span>: <span class="ident">Timeout</span>,
     <span class="ident">_queue</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NativeQueue</span><span class="op">&gt;</span>,
@@ -729,17 +772,10 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Returns the client underlying this consumer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">client</span>
-    }
-
-    <span class="doccomment">/// Returns the context used to create this consumer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">context</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">C</span> {
-        <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">context</span>()
-    }
-
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span>,
+{
     <span class="doccomment">/// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.</span>
     <span class="doccomment">/// This method is for internal use only. Use poll instead.</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">poll_raw</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">timeout</span>: <span class="ident">Timeout</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">RDKafkaMessage</span><span class="op">&gt;</span><span class="op">&gt;</span> {
@@ -775,7 +811,7 @@
     <span class="doccomment">/// # Lifetime</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The returned message lives in the memory of the consumer and cannot outlive it.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">poll_raw</span>(<span class="ident">timeout</span>.<span class="ident">into</span>())
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ptr</span><span class="op">|</span> <span class="kw">unsafe</span> { <span class="ident">BorrowedMessage</span>::<span class="ident">from_consumer</span>(<span class="ident">ptr</span>, <span class="self">self</span>) })
     }
@@ -820,7 +856,7 @@
     <span class="doccomment">///   // Handle the message</span>
     <span class="doccomment">/// }</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">C</span><span class="op">&gt;</span> {
         <span class="ident">Iter</span>(<span class="self">self</span>)
     }
 
@@ -868,9 +904,21 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">Consumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">get_base_consumer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="self">self</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">Consumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span>,
+{
+    <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">client</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">group_metadata</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ConsumerGroupMetadata</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="kw">unsafe</span> {
+            <span class="ident">NativePtr</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_consumer_group_metadata</span>(
+                <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(),
+            ))
+        }<span class="question-mark">?</span>;
+        <span class="prelude-val">Some</span>(<span class="ident">ConsumerGroupMetadata</span>(<span class="ident">ptr</span>))
     }
 
     <span class="kw">fn</span> <span class="ident">subscribe</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">topics</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -953,7 +1001,7 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">commit_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">BorrowedMessage</span>, <span class="ident">mode</span>: <span class="ident">CommitMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">commit_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">mode</span>: <span class="ident">CommitMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">rdsys</span>::<span class="ident">rd_kafka_commit_message</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(), <span class="ident">message</span>.<span class="ident">ptr</span>(), <span class="ident">mode</span> <span class="kw">as</span> <span class="ident">i32</span>)
         };
@@ -964,7 +1012,7 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">store_offset</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">BorrowedMessage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">store_offset</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">rdsys</span>::<span class="ident">rd_kafka_offset_store</span>(<span class="ident">message</span>.<span class="ident">topic_ptr</span>(), <span class="ident">message</span>.<span class="ident">partition</span>(), <span class="ident">message</span>.<span class="ident">offset</span>())
         };
@@ -1050,21 +1098,22 @@
         }
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tpl</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">TopicPartitionList</span>::<span class="ident">from_ptr</span>(<span class="ident">tpl_ptr</span>) };
 
-        <span class="comment">// Set the timestamp we want in the offset field for every partition as librdkafka expects.</span>
+        <span class="comment">// Set the timestamp we want in the offset field for every partition as</span>
+        <span class="comment">// librdkafka expects.</span>
         <span class="ident">tpl</span>.<span class="ident">set_all_offsets</span>(<span class="ident">Offset</span>::<span class="ident">Offset</span>(<span class="ident">timestamp</span>));
 
         <span class="self">self</span>.<span class="ident">offsets_for_times</span>(<span class="ident">tpl</span>, <span class="ident">timeout</span>)
     }
 
-    <span class="doccomment">/**
-     * `timestamps` is a `TopicPartitionList` with timestamps instead of offsets.
-     */</span>
+    <span class="comment">// `timestamps` is a `TopicPartitionList` with timestamps instead of</span>
+    <span class="comment">// offsets.</span>
     <span class="kw">fn</span> <span class="ident">offsets_for_times</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">timestamps</span>: <span class="ident">TopicPartitionList</span>,
         <span class="ident">timeout</span>: <span class="ident">T</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">TopicPartitionList</span><span class="op">&gt;</span> {
-        <span class="comment">// This call will then put the offset in the offset field of this topic partition list.</span>
+        <span class="comment">// This call will then put the offset in the offset field of this topic</span>
+        <span class="comment">// partition list.</span>
         <span class="kw">let</span> <span class="ident">offsets_for_times_error</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">rdsys</span>::<span class="ident">rd_kafka_offsets_for_times</span>(
                 <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(),
@@ -1142,7 +1191,10 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span>,
+{
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Destroying consumer: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>()); <span class="comment">// TODO: fix me (multiple executions ?)</span>
         <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_consumer_close</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>()) };
@@ -1150,13 +1202,20 @@
     }
 }
 
-<span class="doccomment">/// Iterator for more convenient interface.</span>
+<span class="doccomment">/// A convenience iterator over the messages in a [`BaseConsumer`].</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// It simply repeatedly calls [`BaseConsumer::poll`](struct.BaseConsumer.html#method.poll).</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>);
+<span class="doccomment">/// Each call to [`Iter::next`] simply calls [`BaseConsumer::poll`] with an</span>
+<span class="doccomment">/// infinite timeout.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>)
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span>;
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span>,
+{
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+
     <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Item</span><span class="op">&gt;</span> {
         <span class="kw">loop</span> {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">item</span>) <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">poll</span>(<span class="prelude-val">None</span>) {
@@ -1166,21 +1225,31 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">ConsumerContext</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span>,
+{
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span>;
+
     <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">IntoIter</span> {
         <span class="self">self</span>.<span class="ident">iter</span>()
     }
 }
 
 <span class="doccomment">/// A message queue for a single partition.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PartitionQueue</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PartitionQueue</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span>,
+{
     <span class="ident">consumer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">queue</span>: <span class="ident">NativeQueue</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ConsumerContext</span><span class="op">&gt;</span> <span class="ident">PartitionQueue</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">PartitionQueue</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ConsumerContext</span>,
+{
     <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">consumer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BaseConsumer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">queue</span>: <span class="ident">NativeQueue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">PartitionQueue</span> { <span class="ident">consumer</span>, <span class="ident">queue</span> }
     }
@@ -1193,7 +1262,7 @@
     <span class="doccomment">/// Remember that you must also call [`BaseConsumer::poll`] on the</span>
     <span class="doccomment">/// associated consumer regularly, even if no messages are expected, to</span>
     <span class="doccomment">/// serve callbacks.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
             <span class="ident">NativePtr</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_consume_queue</span>(
                 <span class="self">self</span>.<span class="ident">queue</span>.<span class="ident">ptr</span>(),

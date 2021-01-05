@@ -1,4 +1,7 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/producer/base_producer.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>base_producer.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../rdkafka/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/producer/base_producer.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>base_producer.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -574,6 +577,83 @@
 <span id="574">574</span>
 <span id="575">575</span>
 <span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Low-level Kafka producers.</span>
 <span class="doccomment">//!</span>
@@ -604,7 +684,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! To execute delivery callbacks the `poll` method of the producer should be</span>
 <span class="doccomment">//! called regularly. If `poll` is not called, or not often enough, a</span>
-<span class="doccomment">//! [`RDKafkaError::QueueFull`] error will be returned.</span>
+<span class="doccomment">//! [`RDKafkaErrorCode::QueueFull`] error will be returned.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## `ThreadedProducer`</span>
 <span class="doccomment">//!</span>
@@ -613,7 +693,7 @@
 <span class="doccomment">//! that the user doesn&#39;t have to. The thread is started when the producer is</span>
 <span class="doccomment">//! created, and it will be terminated once the producer goes out of scope.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! A [`RDKafkaError::QueueFull`] error can still be returned in case the</span>
+<span class="doccomment">//! A [`RDKafkaErrorCode::QueueFull`] error can still be returned in case the</span>
 <span class="doccomment">//! polling thread is not fast enough or Kafka is not able to receive data and</span>
 <span class="doccomment">//! acknowledge messages quickly enough. If this error is returned, the caller</span>
 <span class="doccomment">//! should wait and try again.</span>
@@ -633,51 +713,16 @@
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">rd_kafka_vtype_t</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">client</span>::{<span class="ident">Client</span>, <span class="ident">ClientContext</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">client</span>::<span class="ident">Client</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::{<span class="ident">ClientConfig</span>, <span class="ident">FromClientConfig</span>, <span class="ident">FromClientConfigAndContext</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::{<span class="ident">IsError</span>, <span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">consumer</span>::<span class="ident">ConsumerGroupMetadata</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::{<span class="ident">IsError</span>, <span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>, <span class="ident">RDKafkaError</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">message</span>::{<span class="ident">BorrowedMessage</span>, <span class="ident">OwnedHeaders</span>, <span class="ident">ToBytes</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">producer</span>::{<span class="ident">DefaultProducerContext</span>, <span class="ident">Producer</span>, <span class="ident">ProducerContext</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">topic_partition_list</span>::<span class="ident">TopicPartitionList</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::{<span class="ident">IntoOpaque</span>, <span class="ident">Timeout</span>};
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">message</span>::<span class="ident">DeliveryResult</span>;
-
-<span class="comment">//</span>
-<span class="comment">// ********** PRODUCER CONTEXT **********</span>
-<span class="comment">//</span>
-
-<span class="doccomment">/// Producer-specific context.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This user-defined object can be used to provide custom callbacks for</span>
-<span class="doccomment">/// producer events. Refer to the list of methods to check which callbacks can</span>
-<span class="doccomment">/// be specified.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// In particular, it can be used to specify the `delivery` callback that will</span>
-<span class="doccomment">/// be called when the acknowledgement for a delivered message is received.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// See also the [`ClientContext`] trait.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ProducerContext</span>: <span class="ident">ClientContext</span> {
-    <span class="doccomment">/// A `DeliveryOpaque` is a user-defined structure that will be passed to</span>
-    <span class="doccomment">/// the producer when producing a message, and returned to the `delivery`</span>
-    <span class="doccomment">/// method once the message has been delivered, or failed to.</span>
-    <span class="kw">type</span> <span class="ident">DeliveryOpaque</span>: <span class="ident">IntoOpaque</span>;
-
-    <span class="doccomment">/// This method will be called once the message has been delivered (or</span>
-    <span class="doccomment">/// failed to). The `DeliveryOpaque` will be the one provided by the user</span>
-    <span class="doccomment">/// when calling send.</span>
-    <span class="kw">fn</span> <span class="ident">delivery</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">delivery_result</span>: <span class="kw-2">&amp;</span><span class="ident">DeliveryResult</span>, <span class="ident">delivery_opaque</span>: <span class="self">Self</span>::<span class="ident">DeliveryOpaque</span>);
-}
-
-<span class="doccomment">/// An empty producer context that can be used when customizations are not</span>
-<span class="doccomment">/// required.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DefaultProducerContext</span>;
-
-<span class="kw">impl</span> <span class="ident">ClientContext</span> <span class="kw">for</span> <span class="ident">DefaultProducerContext</span> {}
-<span class="kw">impl</span> <span class="ident">ProducerContext</span> <span class="kw">for</span> <span class="ident">DefaultProducerContext</span> {
-    <span class="kw">type</span> <span class="ident">DeliveryOpaque</span> <span class="op">=</span> ();
-
-    <span class="kw">fn</span> <span class="ident">delivery</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="ident">DeliveryResult</span>, <span class="kw">_</span>: <span class="self">Self</span>::<span class="ident">DeliveryOpaque</span>) {}
-}
 
 <span class="doccomment">/// Callback that gets called from librdkafka every time a message succeeds or fails to be</span>
 <span class="doccomment">/// delivered.</span>
@@ -736,12 +781,7 @@
 <span class="doccomment">///     .partition(5);                                         // target partition</span>
 <span class="doccomment">/// ```</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span>
-    <span class="lifetime">&#39;a</span>,
-    <span class="ident">K</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> <span class="op">=</span> (),
-    <span class="ident">P</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> <span class="op">=</span> (),
-    <span class="ident">D</span>: <span class="ident">IntoOpaque</span> <span class="op">=</span> (),
-<span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">=</span> (), <span class="ident">P</span>: <span class="ident">ToBytes</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">=</span> (), <span class="ident">D</span>: <span class="ident">IntoOpaque</span> <span class="op">=</span> ()<span class="op">&gt;</span> {
     <span class="doccomment">/// Required destination topic.</span>
     <span class="kw">pub</span> <span class="ident">topic</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>,
     <span class="doccomment">/// Optional destination partition.</span>
@@ -831,7 +871,10 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span><span class="op">&gt;</span> <span class="ident">FromClientConfigAndContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">FromClientConfigAndContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span>,
+{
     <span class="doccomment">/// Creates a new `BaseProducer` starting from a configuration and a</span>
     <span class="doccomment">/// context.</span>
     <span class="kw">fn</span> <span class="ident">from_config_and_context</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>, <span class="ident">context</span>: <span class="ident">C</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
@@ -886,11 +929,17 @@
 <span class="doccomment">/// ```</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">=</span> <span class="ident">DefaultProducerContext</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span> <span class="op">=</span> <span class="ident">DefaultProducerContext</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span>,
+{
     <span class="ident">client_arc</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span><span class="op">&gt;</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span>,
+{
     <span class="doccomment">/// Creates a base producer starting from a Client.</span>
     <span class="kw">fn</span> <span class="ident">from_client</span>(<span class="ident">client</span>: <span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
         <span class="ident">BaseProducer</span> {
@@ -930,7 +979,6 @@
     <span class="doccomment">/// Note that this method will never block.</span>
     <span class="comment">// Simplifying the return type requires generic associated types, which are</span>
     <span class="comment">// unstable.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">type_complexity</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">send</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">record</span>: <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, <span class="ident">C</span>::<span class="ident">DeliveryOpaque</span><span class="op">&gt;</span>,
@@ -984,28 +1032,102 @@
             <span class="prelude-val">Ok</span>(())
         }
     }
+}
 
-    <span class="doccomment">/// Flushes any pending messages.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This method should be called before termination to ensure delivery of</span>
-    <span class="doccomment">/// all enqueued messages. It will call `poll()` internally.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">flush</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">Producer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span>,
+{
+    <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">client_arc</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">flush</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) {
         <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_flush</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>(), <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>()) };
     }
 
-    <span class="doccomment">/// Returns the number of messages that are either waiting to be sent or are</span>
-    <span class="doccomment">/// sent but are waiting to be acknowledged.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">in_flight_count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i32</span> {
+    <span class="kw">fn</span> <span class="ident">in_flight_count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i32</span> {
         <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_outq_len</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>()) }
     }
 
-    <span class="doccomment">/// Returns the [`Client`] underlying this producer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">client_arc</span>
+    <span class="kw">fn</span> <span class="ident">init_transactions</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="kw">unsafe</span> {
+            <span class="ident">RDKafkaError</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_init_transactions</span>(
+                <span class="self">self</span>.<span class="ident">native_ptr</span>(),
+                <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>(),
+            ))
+        };
+        <span class="kw">if</span> <span class="ident">ret</span>.<span class="ident">is_error</span>() {
+            <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">Transaction</span>(<span class="ident">ret</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Ok</span>(())
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">begin_transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span>
+            <span class="kw">unsafe</span> { <span class="ident">RDKafkaError</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_begin_transaction</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>())) };
+        <span class="kw">if</span> <span class="ident">ret</span>.<span class="ident">is_error</span>() {
+            <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">Transaction</span>(<span class="ident">ret</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Ok</span>(())
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">send_offsets_to_transaction</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">offsets</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>,
+        <span class="ident">cgm</span>: <span class="kw-2">&amp;</span><span class="ident">ConsumerGroupMetadata</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="kw">unsafe</span> {
+            <span class="ident">RDKafkaError</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_send_offsets_to_transaction</span>(
+                <span class="self">self</span>.<span class="ident">native_ptr</span>(),
+                <span class="ident">offsets</span>.<span class="ident">ptr</span>(),
+                <span class="ident">cgm</span>.<span class="ident">ptr</span>(),
+                <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>(),
+            ))
+        };
+        <span class="kw">if</span> <span class="ident">ret</span>.<span class="ident">is_error</span>() {
+            <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">Transaction</span>(<span class="ident">ret</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Ok</span>(())
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">commit_transaction</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="kw">unsafe</span> {
+            <span class="ident">RDKafkaError</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_commit_transaction</span>(
+                <span class="self">self</span>.<span class="ident">native_ptr</span>(),
+                <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>(),
+            ))
+        };
+        <span class="kw">if</span> <span class="ident">ret</span>.<span class="ident">is_error</span>() {
+            <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">Transaction</span>(<span class="ident">ret</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Ok</span>(())
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">abort_transaction</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="kw">unsafe</span> {
+            <span class="ident">RDKafkaError</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_abort_transaction</span>(
+                <span class="self">self</span>.<span class="ident">native_ptr</span>(),
+                <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>(),
+            ))
+        };
+        <span class="kw">if</span> <span class="ident">ret</span>.<span class="ident">is_error</span>() {
+            <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">Transaction</span>(<span class="ident">ret</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Ok</span>(())
+        }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span>,
+{
     <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
         <span class="ident">BaseProducer</span> {
             <span class="ident">client_arc</span>: <span class="self">self</span>.<span class="ident">client_arc</span>.<span class="ident">clone</span>(),
@@ -1024,7 +1146,10 @@
 <span class="doccomment">/// queued events, such as delivery notifications. The thread will be</span>
 <span class="doccomment">/// automatically stopped when the producer is dropped.</span>
 <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;The threaded producer will stop immediately if unused&quot;</span>]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+{
     <span class="ident">producer</span>: <span class="ident">BaseProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     <span class="ident">should_stop</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicBool</span><span class="op">&gt;</span>,
     <span class="ident">handle</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -1036,7 +1161,10 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">FromClientConfigAndContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">FromClientConfigAndContext</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+{
     <span class="kw">fn</span> <span class="ident">from_config_and_context</span>(
         <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>,
         <span class="ident">context</span>: <span class="ident">C</span>,
@@ -1074,13 +1202,15 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+{
     <span class="doccomment">/// Sends a message to Kafka.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// See the documentation for [`BaseProducer::send`] for details.</span>
     <span class="comment">// Simplifying the return type requires generic associated types, which are</span>
     <span class="comment">// unstable.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">type_complexity</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">send</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">record</span>: <span class="ident">BaseRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">P</span>, <span class="ident">C</span>::<span class="ident">DeliveryOpaque</span><span class="op">&gt;</span>,
@@ -1099,28 +1229,55 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) {
         <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">poll</span>(<span class="ident">timeout</span>);
     }
+}
 
-    <span class="doccomment">/// Flushes any pending messages.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This method should be called before termination to ensure delivery of</span>
-    <span class="doccomment">/// all enqueued messages.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">flush</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">Producer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+{
+    <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">client</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">flush</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) {
         <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">flush</span>(<span class="ident">timeout</span>);
     }
 
-    <span class="doccomment">/// Returns the number of messages that are either waiting to be sent or are</span>
-    <span class="doccomment">/// sent but are waiting to be acknowledged.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">in_flight_count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i32</span> {
+    <span class="kw">fn</span> <span class="ident">in_flight_count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">i32</span> {
         <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">in_flight_count</span>()
     }
 
-    <span class="doccomment">/// Returns the [`Client`] underlying this producer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Client</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">client</span>()
+    <span class="kw">fn</span> <span class="ident">init_transactions</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">init_transactions</span>(<span class="ident">timeout</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">begin_transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">begin_transaction</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">send_offsets_to_transaction</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">offsets</span>: <span class="kw-2">&amp;</span><span class="ident">TopicPartitionList</span>,
+        <span class="ident">cgm</span>: <span class="kw-2">&amp;</span><span class="ident">ConsumerGroupMetadata</span>,
+        <span class="ident">timeout</span>: <span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">producer</span>
+            .<span class="ident">send_offsets_to_transaction</span>(<span class="ident">offsets</span>, <span class="ident">cgm</span>, <span class="ident">timeout</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">commit_transaction</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">commit_transaction</span>(<span class="ident">timeout</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">abort_transaction</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">timeout</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">producer</span>.<span class="ident">abort_transaction</span>(<span class="ident">timeout</span>)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">ThreadedProducer</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">C</span>: <span class="ident">ProducerContext</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+{
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Destroy ThreadedProducer&quot;</span>);
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">handle</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">take</span>() {

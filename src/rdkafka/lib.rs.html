@@ -1,4 +1,7 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -257,6 +260,30 @@
 <span id="257">257</span>
 <span id="258">258</span>
 <span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A fully asynchronous, [futures]-enabled [Apache Kafka] client</span>
 <span class="doccomment">//! library for Rust based on [librdkafka].</span>
@@ -264,7 +291,7 @@
 <span class="doccomment">//! ## The library</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! `rust-rdkafka` provides a safe Rust interface to librdkafka. The master</span>
-<span class="doccomment">//! branch is currently based on librdkafka 1.4.2.</span>
+<span class="doccomment">//! branch is currently based on librdkafka 1.5.3.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ### Documentation</span>
 <span class="doccomment">//!</span>
@@ -291,6 +318,8 @@
 <span class="doccomment">//! - Access to group metadata (list groups, list members of groups, hostnames,</span>
 <span class="doccomment">//!   etc.).</span>
 <span class="doccomment">//! - Access to producer and consumer metrics, errors and callbacks.</span>
+<span class="doccomment">//! - Exactly-once semantics (EOS) via idempotent and transactional producers</span>
+<span class="doccomment">//!   and read-committed consumers.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ### One million messages per second</span>
 <span class="doccomment">//!</span>
@@ -368,6 +397,19 @@
 <span class="doccomment">//! delivery semantics, check the [message delivery semantics] chapter in the</span>
 <span class="doccomment">//! Kafka documentation.</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! ### Exactly-once semantics</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Exactly-once semantics (EOS) can be achieved using transactional producers,</span>
+<span class="doccomment">//! which allow produced records and consumer offsets to be committed or aborted</span>
+<span class="doccomment">//! atomically. Consumers that set their `isolation.level` to `read_committed`</span>
+<span class="doccomment">//! will only observe committed messages.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! EOS is useful in read-process-write scenarios that require messages to be</span>
+<span class="doccomment">//! processed exactly once.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! To learn more about using transactions in rust-rdkafka, see the</span>
+<span class="doccomment">//! [Transactions](producer-transactions) section of the producer documentation.</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! ### Users</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Here are some of the projects using rust-rdkafka:</span>
@@ -416,6 +458,12 @@
 <span class="doccomment">//! For a full listing of features, consult the [rdkafka-sys crate&#39;s</span>
 <span class="doccomment">//! documentation][rdkafka-sys-features]. All of rdkafka-sys features are</span>
 <span class="doccomment">//! re-exported as rdkafka features.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ### Minimum supported Rust version (MSRV)</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! The current minimum supported Rust version (MSRV) is 1.45.0. Note that</span>
+<span class="doccomment">//! bumping the MSRV is not considered a breaking change. Any release of</span>
+<span class="doccomment">//! rust-rdkafka may bump the MSRV.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ### Asynchronous runtimes</span>
 <span class="doccomment">//!</span>
@@ -485,6 +533,7 @@
 <span class="doccomment">//! [librdkafka]: https://github.com/edenhill/librdkafka</span>
 <span class="doccomment">//! [librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md</span>
 <span class="doccomment">//! [message delivery semantics]: https://kafka.apache.org/0101/documentation.html#semantics</span>
+<span class="doccomment">//! [producer-transactions]: https://docs.rs/rdkafka/*/rdkafka/producer/#transactions</span>
 <span class="doccomment">//! [rdkafka-sys-features]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#features</span>
 <span class="doccomment">//! [rdkafka-sys-known-issues]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#known-issues</span>
 <span class="doccomment">//! [smol]: https://docs.rs/smol</span>
@@ -493,6 +542,8 @@
 <span class="doccomment">//! [Tokio]: https://tokio.rs/</span>
 
 <span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">missing_docs</span>)]</span>
+<span class="attribute">#![<span class="ident">deny</span>(<span class="ident">rust_2018_idioms</span>)]</span>
+<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">type_complexity</span>)]</span>
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">feature</span>(<span class="ident">doc_cfg</span>))]</span>
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>;

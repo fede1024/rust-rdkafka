@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["KafkaError","Represents all possible Kafka errors."],["RDKafkaError","Native rdkafka error."]],"trait":[["IsError","Verify if the value represents an error condition."]],"type":[["KafkaResult","Kafka result."]]});
+initSidebarItems({"enum":[["KafkaError","Represents all possible Kafka errors."],["RDKafkaErrorCode","Native rdkafka error code."]],"struct":[["RDKafkaError","Native rdkafka error."]],"trait":[["IsError","Verify if the value represents an error condition."]],"type":[["KafkaResult","Kafka result."]]});
