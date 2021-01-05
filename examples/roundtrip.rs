@@ -83,7 +83,7 @@ async fn main() {
     let mut latencies = Histogram::<u64>::new(5).unwrap();
     println!("Warming up for 10s...");
     loop {
-        let message = consumer.next().await.unwrap();
+        let message = consumer.recv().await.unwrap();
         let then = message.timestamp().to_millis().unwrap();
         if start.elapsed() < Duration::from_secs(10) {
             // Warming up.

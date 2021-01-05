@@ -58,7 +58,7 @@ async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
         .expect("Can't subscribe to specified topics");
 
     loop {
-        match consumer.next().await {
+        match consumer.recv().await {
             Err(e) => warn!("Kafka error: {}", e),
             Ok(m) => {
                 let payload = match m.payload_view::<str>() {

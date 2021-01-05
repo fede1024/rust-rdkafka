@@ -79,7 +79,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   Thanks to [@Marwes] for discovering the issue and contributing the initial
   fix.
 
-* Add a convenience method, `StreamConsumer::next`, to yield the next message
+* Add a convenience method, `StreamConsumer::recv`, to yield the next message
   from a stream.
 
   Thanks again to [@Marwes].
