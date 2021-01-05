@@ -1628,7 +1628,7 @@
                     <span class="ident">native_opts</span>.<span class="ident">ptr</span>(),
                     <span class="ident">timeout</span>.<span class="ident">as_millis</span>(),
                     <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                    <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                    <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
                 )
             };
             <span class="ident">check_rdkafka_invalid_arg</span>(<span class="ident">res</span>, <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
@@ -1640,7 +1640,7 @@
                     <span class="ident">native_opts</span>.<span class="ident">ptr</span>(),
                     <span class="ident">timeout</span>.<span class="ident">as_millis</span>(),
                     <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                    <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                    <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
                 )
             };
             <span class="ident">check_rdkafka_invalid_arg</span>(<span class="ident">res</span>, <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
@@ -1652,7 +1652,7 @@
                     <span class="ident">native_opts</span>.<span class="ident">ptr</span>(),
                     <span class="number">1</span>, <span class="comment">// true</span>
                     <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                    <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                    <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
                 )
             };
             <span class="ident">check_rdkafka_invalid_arg</span>(<span class="ident">res</span>, <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
@@ -1664,7 +1664,7 @@
                     <span class="ident">native_opts</span>.<span class="ident">ptr</span>(),
                     <span class="ident">broker_id</span>,
                     <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                    <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                    <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
                 )
             };
             <span class="ident">check_rdkafka_invalid_arg</span>(<span class="ident">res</span>, <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
@@ -1790,7 +1790,7 @@
                 <span class="self">self</span>.<span class="ident">num_partitions</span>,
                 <span class="ident">repl</span>,
                 <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
             ))
         }
         .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="ident">err_buf</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
@@ -1804,7 +1804,7 @@
                         <span class="ident">broker_ids</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i32</span>,
                         <span class="ident">broker_ids</span>.<span class="ident">len</span>(),
                         <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                        <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                        <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
                     )
                 };
                 <span class="ident">check_rdkafka_invalid_arg</span>(<span class="ident">res</span>, <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
@@ -1964,7 +1964,7 @@
                 <span class="ident">name</span>.<span class="ident">as_ptr</span>(),
                 <span class="self">self</span>.<span class="ident">new_partition_count</span>,
                 <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
             ))
         }
         .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="ident">err_buf</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
@@ -1978,7 +1978,7 @@
                         <span class="ident">broker_ids</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i32</span>,
                         <span class="ident">broker_ids</span>.<span class="ident">len</span>(),
                         <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                        <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                        <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
                     )
                 };
                 <span class="ident">check_rdkafka_invalid_arg</span>(<span class="ident">res</span>, <span class="ident">err_buf</span>)<span class="question-mark">?</span>;

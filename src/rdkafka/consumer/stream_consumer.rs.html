@@ -812,10 +812,10 @@
         <span class="self">self</span>.<span class="ident">stream</span>()
     }
 
-    <span class="doccomment">/// Yields the next message from the stream.</span>
+    <span class="doccomment">/// Receives the next message from the stream.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// This method will block until the next message is available or an error</span>
-    <span class="doccomment">/// occurs. It is legal to call `next` from multiple threads simultaneously.</span>
+    <span class="doccomment">/// occurs. It is legal to call `recv` from multiple threads simultaneously.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Note that this method is exactly as efficient as constructing a</span>
     <span class="doccomment">/// single-use message stream and extracting one message from it:</span>
@@ -828,7 +828,7 @@
     <span class="doccomment">/// consumer.stream().next().await.expect(&quot;MessageStream never returns None&quot;);</span>
     <span class="doccomment">/// # }</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">KafkaError</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">recv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BorrowedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">KafkaError</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">stream</span>()
             .<span class="ident">next</span>()
             .<span class="kw">await</span>

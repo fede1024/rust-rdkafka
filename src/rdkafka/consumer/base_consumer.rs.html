@@ -634,8 +634,6 @@
 <span id="631">631</span>
 <span id="632">632</span>
 <span id="633">633</span>
-<span id="634">634</span>
-<span id="635">635</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Low-level consumers.</span>
 
@@ -956,13 +954,11 @@
         <span class="ident">timeout</span>: <span class="ident">T</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">topic</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_topic</span>(<span class="ident">topic</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">ret_code</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_seek</span>(
-                <span class="ident">topic</span>.<span class="ident">ptr</span>(),
-                <span class="ident">partition</span>,
-                <span class="ident">offset</span>.<span class="ident">to_raw</span>(),
-                <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>(),
-            )
+        <span class="kw">let</span> <span class="ident">ret_code</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">offset</span>.<span class="ident">to_raw</span>() {
+            <span class="prelude-val">Some</span>(<span class="ident">offset</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">unsafe</span> {
+                <span class="ident">rdsys</span>::<span class="ident">rd_kafka_seek</span>(<span class="ident">topic</span>.<span class="ident">ptr</span>(), <span class="ident">partition</span>, <span class="ident">offset</span>, <span class="ident">timeout</span>.<span class="ident">into</span>().<span class="ident">as_millis</span>())
+            },
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">Seek</span>(<span class="string">&quot;Local: Unrepresentable offset&quot;</span>.<span class="ident">into</span>())),
         };
         <span class="kw">if</span> <span class="ident">ret_code</span>.<span class="ident">is_error</span>() {
             <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_err2str</span>(<span class="ident">ret_code</span>)) };
@@ -1100,7 +1096,7 @@
 
         <span class="comment">// Set the timestamp we want in the offset field for every partition as</span>
         <span class="comment">// librdkafka expects.</span>
-        <span class="ident">tpl</span>.<span class="ident">set_all_offsets</span>(<span class="ident">Offset</span>::<span class="ident">Offset</span>(<span class="ident">timestamp</span>));
+        <span class="ident">tpl</span>.<span class="ident">set_all_offsets</span>(<span class="ident">Offset</span>::<span class="ident">Offset</span>(<span class="ident">timestamp</span>))<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">offsets_for_times</span>(<span class="ident">tpl</span>, <span class="ident">timeout</span>)
     }

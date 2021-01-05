@@ -393,7 +393,7 @@
                     <span class="ident">key_c</span>.<span class="ident">as_ptr</span>(),
                     <span class="ident">value_c</span>.<span class="ident">as_ptr</span>(),
                     <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                    <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                    <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
                 )
             };
             <span class="kw">if</span> <span class="ident">ret</span>.<span class="ident">is_error</span>() {

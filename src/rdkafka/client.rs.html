@@ -452,8 +452,6 @@
 <span id="449">449</span>
 <span id="450">450</span>
 <span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Common client functionality.</span>
 <span class="doccomment">//!</span>
@@ -641,7 +639,7 @@
                 <span class="ident">rd_kafka_type</span>,
                 <span class="ident">native_config</span>.<span class="ident">ptr_move</span>(),
                 <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
-                <span class="ident">err_buf</span>.<span class="ident">len</span>(),
+                <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
             )
         };
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Create new librdkafka client {:p}&quot;</span>, <span class="ident">client_ptr</span>);
@@ -768,16 +766,14 @@
     <span class="doccomment">/// This function is intended to be used with idempotent producers, where</span>
     <span class="doccomment">/// some errors must logically be considered fatal to retain consistency.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fatal_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">RDKafkaErrorCode</span>, <span class="ident">String</span>)<span class="op">&gt;</span> {
-        <span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">512</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">LEN</span>];
-        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_fatal_error</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>(), <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">LEN</span>) };
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="kw">unsafe</span> {
+            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_fatal_error</span>(<span class="self">self</span>.<span class="ident">native_ptr</span>(), <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">err_buf</span>.<span class="ident">capacity</span>())
+        };
         <span class="kw">if</span> <span class="ident">code</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RDKafkaRespErr</span>::<span class="ident">RD_KAFKA_RESP_ERR_NO_ERROR</span> {
             <span class="prelude-val">None</span>
         } <span class="kw">else</span> {
-            <span class="comment">// SAFETY: rd_kafka_fatal_error promises to null-terminate the</span>
-            <span class="comment">// string it writes into buf.</span>
-            <span class="kw">let</span> <span class="ident">cstr</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw">crate</span>::<span class="ident">util</span>::<span class="ident">cstr_to_owned</span>(<span class="ident">buf</span>.<span class="ident">as_ptr</span>()) };
-            <span class="prelude-val">Some</span>((<span class="ident">code</span>.<span class="ident">into</span>(), <span class="ident">cstr</span>))
+            <span class="prelude-val">Some</span>((<span class="ident">code</span>.<span class="ident">into</span>(), <span class="ident">err_buf</span>.<span class="ident">to_string</span>()))
         }
     }
 
