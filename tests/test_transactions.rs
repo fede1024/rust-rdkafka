@@ -74,7 +74,7 @@ async fn test_transaction_abort() -> Result<(), Box<dyn Error>> {
 
     // Commit the first 10 messages.
     let mut commit_tpl = TopicPartitionList::new();
-    commit_tpl.add_partition_offset(&consume_topic, 0, Offset::Offset(10));
+    commit_tpl.add_partition_offset(&consume_topic, 0, Offset::Offset(10))?;
     consumer.commit(&commit_tpl, CommitMode::Sync).unwrap();
 
     // Create a producer and start a transaction.
@@ -85,7 +85,7 @@ async fn test_transaction_abort() -> Result<(), Box<dyn Error>> {
     // Tie the commit of offset 20 to the transaction.
     let cgm = consumer.group_metadata().unwrap();
     let mut txn_tpl = TopicPartitionList::new();
-    txn_tpl.add_partition_offset(&consume_topic, 0, Offset::Offset(20));
+    txn_tpl.add_partition_offset(&consume_topic, 0, Offset::Offset(20))?;
     producer.send_offsets_to_transaction(&txn_tpl, &cgm, Timeout::Never)?;
 
     // Produce 10 records in the transaction.
@@ -142,7 +142,7 @@ async fn test_transaction_commit() -> Result<(), Box<dyn Error>> {
 
     // Commit the first 10 messages.
     let mut commit_tpl = TopicPartitionList::new();
-    commit_tpl.add_partition_offset(&consume_topic, 0, Offset::Offset(10));
+    commit_tpl.add_partition_offset(&consume_topic, 0, Offset::Offset(10))?;
     consumer.commit(&commit_tpl, CommitMode::Sync).unwrap();
 
     // Create a producer and start a transaction.
@@ -153,7 +153,7 @@ async fn test_transaction_commit() -> Result<(), Box<dyn Error>> {
     // Tie the commit of offset 20 to the transaction.
     let cgm = consumer.group_metadata().unwrap();
     let mut txn_tpl = TopicPartitionList::new();
-    txn_tpl.add_partition_offset(&consume_topic, 0, Offset::Offset(20));
+    txn_tpl.add_partition_offset(&consume_topic, 0, Offset::Offset(20))?;
     producer.send_offsets_to_transaction(&txn_tpl, &cgm, Timeout::Never)?;
 
     // Produce 10 records in the transaction.

@@ -7,6 +7,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext};
+use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::{current_time_millis, Timeout};
 use rdkafka::{Message, Timestamp};
@@ -55,9 +56,41 @@ async fn test_produce_consume_seek() {
         }
     }
 
+    consumer
+        .seek(&topic_name, 0, Offset::OffsetTail(3), None)
+        .unwrap();
+
+    for (i, message) in consumer.iter().take(2).enumerate() {
+        match message {
+            Ok(message) => assert_eq!(message.offset(), i as i64 + 2),
+            Err(e) => panic!("Error receiving message: {:?}", e),
+        }
+    }
+
     consumer.seek(&topic_name, 0, Offset::End, None).unwrap();
 
     ensure_empty(&consumer, "There should be no messages left");
+
+    // Validate that unrepresentable offsets are rejected.
+    match consumer.seek(&topic_name, 0, Offset::Offset(-1), None) {
+        Err(KafkaError::Seek(s)) => assert_eq!(s, "Local: Unrepresentable offset"),
+        bad => panic!("unexpected return from invalid seek: {:?}", bad),
+    }
+    let mut tpl = TopicPartitionList::new();
+    match tpl.add_partition_offset(&topic_name, 0, Offset::OffsetTail(-1)) {
+        Err(KafkaError::SetPartitionOffset(RDKafkaErrorCode::InvalidArgument)) => (),
+        bad => panic!(
+            "unexpected return from invalid add_partition_offset: {:?}",
+            bad
+        ),
+    }
+    match tpl.set_all_offsets(Offset::OffsetTail(-1)) {
+        Err(KafkaError::SetPartitionOffset(RDKafkaErrorCode::InvalidArgument)) => (),
+        bad => panic!(
+            "unexpected return from invalid add_partition_offset: {:?}",
+            bad
+        ),
+    }
 }
 
 // All produced messages should be consumed.
@@ -168,9 +201,12 @@ async fn test_consume_partition_order() {
     {
         let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
         let mut tpl = TopicPartitionList::new();
-        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
-        tpl.add_partition_offset(&topic_name, 1, Offset::Beginning);
-        tpl.add_partition_offset(&topic_name, 2, Offset::Beginning);
+        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+            .unwrap();
+        tpl.add_partition_offset(&topic_name, 1, Offset::Beginning)
+            .unwrap();
+        tpl.add_partition_offset(&topic_name, 2, Offset::Beginning)
+            .unwrap();
         consumer.assign(&tpl).unwrap();
 
         let partition_queues: Vec<_> = (0..3)
@@ -193,9 +229,12 @@ async fn test_consume_partition_order() {
     {
         let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
         let mut tpl = TopicPartitionList::new();
-        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
-        tpl.add_partition_offset(&topic_name, 1, Offset::Beginning);
-        tpl.add_partition_offset(&topic_name, 2, Offset::Beginning);
+        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+            .unwrap();
+        tpl.add_partition_offset(&topic_name, 1, Offset::Beginning)
+            .unwrap();
+        tpl.add_partition_offset(&topic_name, 2, Offset::Beginning)
+            .unwrap();
         consumer.assign(&tpl).unwrap();
 
         let partition1 = consumer.split_partition_queue(&topic_name, 1).unwrap();
@@ -222,7 +261,8 @@ async fn test_consume_partition_order() {
     {
         let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
         let mut tpl = TopicPartitionList::new();
-        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning);
+        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+            .unwrap();
         consumer.assign(&tpl).unwrap();
         let queue = consumer.split_partition_queue(&topic_name, 0).unwrap();
 

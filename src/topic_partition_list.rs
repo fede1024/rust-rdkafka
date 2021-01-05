@@ -19,6 +19,7 @@ const OFFSET_BEGINNING: i64 = rdsys::RD_KAFKA_OFFSET_BEGINNING as i64;
 const OFFSET_END: i64 = rdsys::RD_KAFKA_OFFSET_END as i64;
 const OFFSET_STORED: i64 = rdsys::RD_KAFKA_OFFSET_STORED as i64;
 const OFFSET_INVALID: i64 = rdsys::RD_KAFKA_OFFSET_INVALID as i64;
+const OFFSET_TAIL_BASE: i64 = rdsys::RD_KAFKA_OFFSET_TAIL_BASE as i64;
 
 /// A Kafka offset.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -32,7 +33,15 @@ pub enum Offset {
     /// Offset not assigned or invalid.
     Invalid,
     /// A specific offset to consume from.
+    ///
+    /// Note that while the offset is a signed integer, negative offsets will be
+    /// rejected when passed to librdkafka.
     Offset(i64),
+    /// An offset relative to the end of the partition.
+    ///
+    /// Note that while the offset is a signed integer, negative offsets will
+    /// be rejected when passed to librdkafka.
+    OffsetTail(i64),
 }
 
 impl Offset {
@@ -44,19 +53,25 @@ impl Offset {
             OFFSET_END => Offset::End,
             OFFSET_STORED => Offset::Stored,
             OFFSET_INVALID => Offset::Invalid,
+            n if n <= OFFSET_TAIL_BASE => Offset::OffsetTail(-(n - OFFSET_TAIL_BASE)),
             n => Offset::Offset(n),
         }
     }
 
     /// Converts the `Offset` to the internal integer representation used by
     /// librdkafka.
-    pub fn to_raw(&self) -> i64 {
-        match *self {
-            Offset::Beginning => OFFSET_BEGINNING,
-            Offset::End => OFFSET_END,
-            Offset::Stored => OFFSET_STORED,
-            Offset::Invalid => OFFSET_INVALID,
-            Offset::Offset(n) => n,
+    ///
+    /// Returns `None` if the offset cannot be represented in librdkafka's
+    /// internal representation.
+    pub fn to_raw(self) -> Option<i64> {
+        match self {
+            Offset::Beginning => Some(OFFSET_BEGINNING),
+            Offset::End => Some(OFFSET_END),
+            Offset::Stored => Some(OFFSET_STORED),
+            Offset::Invalid => Some(OFFSET_INVALID),
+            Offset::Offset(n) if n > 0 => Some(n),
+            Offset::OffsetTail(n) if n > 0 => Some(OFFSET_TAIL_BASE - n),
+            Offset::Offset(_) | Offset::OffsetTail(_) => None,
         }
     }
 }
@@ -108,9 +123,16 @@ impl<'a> TopicPartitionListElem<'a> {
     }
 
     /// Sets the offset.
-    pub fn set_offset(&mut self, offset: Offset) {
-        let raw_offset = offset.to_raw();
-        self.ptr.offset = raw_offset;
+    pub fn set_offset(&mut self, offset: Offset) -> KafkaResult<()> {
+        match offset.to_raw() {
+            Some(offset) => {
+                self.ptr.offset = offset;
+                Ok(())
+            }
+            None => Err(KafkaError::SetPartitionOffset(
+                RDKafkaErrorCode::InvalidArgument,
+            )),
+        }
     }
 }
 
@@ -160,14 +182,14 @@ impl TopicPartitionList {
     }
 
     /// Given a topic map, generates a new `TopicPartitionList`.
-    pub fn from_topic_map(topic_map: &HashMap<(String, i32), Offset>) -> TopicPartitionList {
-        topic_map.iter().fold(
-            TopicPartitionList::with_capacity(topic_map.len()),
-            |mut tpl, (&(ref topic_name, partition), offset)| {
-                tpl.add_partition_offset(topic_name, partition, *offset);
-                tpl
-            },
-        )
+    pub fn from_topic_map(
+        topic_map: &HashMap<(String, i32), Offset>,
+    ) -> KafkaResult<TopicPartitionList> {
+        let mut tpl = TopicPartitionList::with_capacity(topic_map.len());
+        for ((topic_name, partition), offset) in topic_map {
+            tpl.add_partition_offset(topic_name, *partition, *offset)?;
+        }
+        Ok(tpl)
     }
 
     /// Returns the pointer to the internal librdkafka structure.
@@ -225,13 +247,16 @@ impl TopicPartitionList {
         offset: Offset,
     ) -> KafkaResult<()> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
-        let kafka_err = unsafe {
-            rdsys::rd_kafka_topic_partition_list_set_offset(
-                self.ptr(),
-                topic_c.as_ptr(),
-                partition,
-                offset.to_raw(),
-            )
+        let kafka_err = match offset.to_raw() {
+            Some(offset) => unsafe {
+                rdsys::rd_kafka_topic_partition_list_set_offset(
+                    self.ptr(),
+                    topic_c.as_ptr(),
+                    partition,
+                    offset,
+                )
+            },
+            None => RDKafkaRespErr::RD_KAFKA_RESP_ERR__INVALID_ARG,
         };
 
         if kafka_err.is_error() {
@@ -242,10 +267,14 @@ impl TopicPartitionList {
     }
 
     /// Adds a topic and partition to the list, with the specified offset.
-    pub fn add_partition_offset(&mut self, topic: &str, partition: i32, offset: Offset) {
+    pub fn add_partition_offset(
+        &mut self,
+        topic: &str,
+        partition: i32,
+        offset: Offset,
+    ) -> KafkaResult<()> {
         self.add_partition(topic, partition);
         self.set_partition_offset(topic, partition, offset)
-            .expect("Should never fail");
     }
 
     /// Given a topic name and a partition number, returns the corresponding list element.
@@ -266,12 +295,13 @@ impl TopicPartitionList {
     }
 
     /// Sets all partitions in the list to the specified offset.
-    pub fn set_all_offsets(&mut self, offset: Offset) {
+    pub fn set_all_offsets(&mut self, offset: Offset) -> Result<(), KafkaError> {
         let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
         for elem_ptr in slice {
             let mut elem = TopicPartitionListElem::from_ptr(self, &mut *elem_ptr);
-            elem.set_offset(offset);
+            elem.set_offset(offset)?;
         }
+        Ok(())
     }
 
     /// Returns all the elements of the list.
@@ -353,6 +383,15 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
+    fn offset_conversion() {
+        assert_eq!(Offset::Offset(123).to_raw(), Some(123));
+        assert_eq!(Offset::from_raw(123), Offset::Offset(123));
+
+        assert_eq!(Offset::OffsetTail(10).to_raw(), Some(-2010));
+        assert_eq!(Offset::from_raw(-2010), Offset::OffsetTail(10));
+    }
+
+    #[test]
     fn add_partition_offset_find() {
         let mut tpl = TopicPartitionList::new();
 
@@ -396,7 +435,7 @@ mod tests {
         assert_eq!(tp3.partition(), 1);
         assert_eq!(tp3.offset(), Offset::Offset(3));
 
-        tp3.set_offset(Offset::Offset(1234));
+        tp3.set_offset(Offset::Offset(1234)).unwrap();
         assert_eq!(tp3.offset(), Offset::Offset(1234));
     }
 
@@ -432,8 +471,10 @@ mod tests {
     #[test]
     fn test_add_partition_offset_clone() {
         let mut tpl = TopicPartitionList::new();
-        tpl.add_partition_offset("topic1", 0, Offset::Offset(0));
-        tpl.add_partition_offset("topic1", 1, Offset::Offset(1));
+        tpl.add_partition_offset("topic1", 0, Offset::Offset(0))
+            .unwrap();
+        tpl.add_partition_offset("topic1", 1, Offset::Offset(1))
+            .unwrap();
 
         let tp0 = tpl.find_partition("topic1", 0).unwrap();
         let tp1 = tpl.find_partition("topic1", 1).unwrap();
@@ -462,9 +503,9 @@ mod tests {
         topic_map.insert(("topic1".to_string(), 1), Offset::Offset(123));
         topic_map.insert(("topic2".to_string(), 0), Offset::Beginning);
 
-        let tpl = TopicPartitionList::from_topic_map(&topic_map);
+        let tpl = TopicPartitionList::from_topic_map(&topic_map).unwrap();
         let topic_map2 = tpl.to_topic_map();
-        let tpl2 = TopicPartitionList::from_topic_map(&topic_map2);
+        let tpl2 = TopicPartitionList::from_topic_map(&topic_map2).unwrap();
 
         assert_eq!(topic_map, topic_map2);
         assert_eq!(tpl, tpl2);

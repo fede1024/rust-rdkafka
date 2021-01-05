@@ -74,6 +74,19 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
     producers to a new `Producer` trait. This trait is analogous to the
     `Consumer` trait.
 
+* **Breaking change.** Several `TopicPartitionList`-related methods now return
+  `Result<T, KafkaError>` rather than `T`:
+
+  * `TopicPartitionListElem::set_offset`
+  * `TopicPartitionList::from_topic_map`
+  * `TopicPartitionList::add_partition_offset`
+  * `TopicPartitionList::set_all_offsets`
+
+  This was necessary to properly throw errors when an `Offset` passed to one
+  of these methods is representable in Rust but not in C.
+
+* Support end-relative offsets via `Offset::OffsetTail`.
+
 * Fix stalls when using multiple `MessageStream`s simultaneously.
 
   Thanks to [@Marwes] for discovering the issue and contributing the initial
