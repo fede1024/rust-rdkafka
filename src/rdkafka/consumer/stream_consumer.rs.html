@@ -492,6 +492,7 @@
 <span id="489">489</span>
 <span id="490">490</span>
 <span id="491">491</span>
+<span id="492">492</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! High-level consumers with a [`Stream`](futures::Stream) interface.</span>
 
@@ -820,7 +821,8 @@
     <span class="doccomment">/// single-use message stream and extracting one message from it:</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use futures::future::StreamExt;</span>
+    <span class="doccomment">/// use futures::stream::StreamExt;</span>
+    <span class="doccomment">/// # use rdkafka::consumer::StreamConsumer;</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # async fn example(consumer: StreamConsumer) {</span>
     <span class="doccomment">/// consumer.stream().next().await.expect(&quot;MessageStream never returns None&quot;);</span>
