@@ -18,8 +18,8 @@
 //! regular intervals to process those events; the thread calling `poll` will be
 //! the one executing the user-specified delivery callback for every delivery
 //! event. If `poll` is not called, or not frequently enough, the producer will
-//! return a `RDKafkaError::QueueFull` error and it won't be able to send any
-//! other message until more delivery event are processed via `poll`. The
+//! return a [`RDKafkaErrorCode::QueueFull`] error and it won't be able to send
+//! any other message until more delivery event are processed via `poll`. The
 //! `QueueFull` error can also be returned if Kafka is not able to receive the
 //! messages quickly enough.
 //!
@@ -75,6 +75,47 @@
 //! available (for more information, check the documentation of the futures
 //! crate).
 //!
+//! ## Transactions
+//!
+//! All rust-rdkafka producers support transactions. Transactional producers
+//! work together with transaction-aware consumers configured with the default
+//! `isolation.level` of `read_committed`.
+//!
+//! To configure a producer for transactions set `transactional.id` to an
+//! identifier unique to the application when creating the producer. After
+//! creating the producer, you must initialize it with
+//! [`Producer::init_transactions`].
+//!
+//! To start a new transaction use [`Producer::begin_transaction`]. There can be
+//! **only one ongoing transaction** at a time per producer. All records sent
+//! after starting a transaction and before committing or aborting it will
+//! automatically be associated with that transaction.
+//!
+//! Once you have initialized transactions on a producer, you are not permitted
+//! to produce messages outside of a transaction.
+//!
+//! Consumer offsets can be sent as part of the ongoing transaction using
+//! `send_offsets_to_transaction` and will be committed atomically with the
+//! other records sent in the transaction.
+//!
+//! The current transaction can be committed with
+//! [`Producer::commit_transaction`] or aborted using
+//! [`Producer::abort_transaction`]. Afterwards, a new transaction can begin.
+//!
+//! ### Errors
+//!
+//! Errors returned by transaction methods may:
+//!
+//! * be retriable ([`RDKafkaError::is_retriable`]), in which case the operation
+//!   that encountered the error may be retried.
+//! * require abort ([`RDKafkaError::txn_requires_abort`], in which case the
+//!   current transaction must be aborted and a new transaction begun.
+//! * be fatal ([`RDKafkaError::is_fatal`]), in which case the producer must be
+//!   stopped and the application terminated.
+//!
+//! For more details about transactions, see the [Transactional Producer]
+//! section of the librdkafka introduction.
+//!
 //! ## Configuration
 //!
 //! ### Producer configuration
@@ -112,10 +153,18 @@
 //!   locally and limits the time a produced message waits for successful
 //!   delivery. A time of 0 is infinite. Default: 300000.
 //!
+//! [`RDKafkaErrorCode::QueueFull`]: crate::error::RDKafkaErrorCode::QueueFull
+//! [`RDKafkaError::is_retriable`]: crate::error::RDKafkaError::is_retriable
+//! [`RDKafkaError::txn_requires_abort`]: crate::error::RDKafkaError::txn_requires_abort
+//! [`RDKafkaError::is_fatal`]: crate::error::RDKafkaError::is_fatal
+//! [Transactional Producer]: https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#transactional-producer
 
 use std::sync::Arc;
 
 use crate::client::{Client, ClientContext};
+use crate::consumer::ConsumerGroupMetadata;
+use crate::error::KafkaResult;
+use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{IntoOpaque, Timeout};
 
 pub mod base_producer;
@@ -187,4 +236,135 @@ where
     /// This method should be called before termination to ensure delivery of
     /// all enqueued messages. It will call `poll()` internally.
     fn flush<T: Into<Timeout>>(&self, timeout: T);
+
+    /// Enable sending transactions with this producer.
+    ///
+    /// # Prerequisites
+    ///
+    /// * The configuration used to create the producer must include a
+    ///   `transactional.id` setting.
+    /// * You must not have sent any messages or called any of the other
+    ///   transaction-related functions.
+    ///
+    /// # Details
+    ///
+    /// This function ensures any transactions initiated by previous producers
+    /// with the same `transactional.id` are completed. Any transactions left
+    /// open by any such previous producers will be aborted.
+    ///
+    /// Once previous transactions have been fenced, this function acquires an
+    /// internal producer ID and epoch that will be used by all transactional
+    /// messages sent by this producer.
+    ///
+    /// If this function returns successfully, messages may only be sent to this
+    /// producer when a transaction is active. See
+    /// [`Producer::begin_transaction`].
+    ///
+    /// This function may block for the specified `timeout`.
+    fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
+
+    /// Begins a new transaction.
+    ///
+    /// # Prerequisites
+    ///
+    /// You must have successfully called [`Producer::init_transactions`].
+    ///
+    /// # Details
+    ///
+    /// This function begins a new transaction, and implicitly associates that
+    /// open transaction with this producer.
+    ///
+    /// After a successful call to this function, any messages sent via this
+    /// producer or any calls to [`Producer::send_offsets_to_transaction`] will
+    /// be implicitly associated with this transaction, until the transaction is
+    /// finished.
+    ///
+    /// Finish the transaction by calling [`Producer::commit_transaction`] or
+    /// [`Producer::abort_transaction`].
+    ///
+    /// While a transaction is open, you must perform at least one transaction
+    /// operation every `transaction.timeout.ms` to avoid timing out the
+    /// transaction on the broker.
+    fn begin_transaction(&self) -> KafkaResult<()>;
+
+    /// Associates an offset commit operation with this transaction.
+    ///
+    /// # Prerequisites
+    ///
+    /// The producer must have an open transaction via a call to
+    /// [`Producer::begin_transaction`].
+    ///
+    /// # Details
+    ///
+    /// Sends a list of topic partition offsets to the consumer group
+    /// coordinator for `cgm`, and marks the offsets as part of the current
+    /// transaction. These offsets will be considered committed only if the
+    /// transaction is committed successfully.
+    ///
+    /// The offsets should be the next message your application will consume,
+    /// i.e., one greater than the the last processed message's offset for each
+    /// partition.
+    ///
+    /// Use this method at the end of a consume-transform-produce loop, prior to
+    /// comitting the transaction with [`Producer::commit_transaction`].
+    ///
+    /// This function may block for the specified `timeout`.
+    ///
+    /// # Hints
+    ///
+    /// To obtain the correct consumer group metadata, call
+    /// [`Consumer::group_metadata`] on the consumer for which offsets are being
+    /// committed.
+    ///
+    /// The consumer must not have automatic commits enabled.
+    ///
+    /// [`Consumer::group_metadata`]: crate::consumer::Consumer::group_metadata
+    fn send_offsets_to_transaction<T: Into<Timeout>>(
+        &self,
+        offsets: &TopicPartitionList,
+        cgm: &ConsumerGroupMetadata,
+        timeout: T,
+    ) -> KafkaResult<()>;
+
+    /// Commits the current transaction.
+    ///
+    /// # Prerequisites
+    ///
+    /// The producer must have an open transaction via a call to
+    /// [`Producer::begin_transaction`].
+    ///
+    /// # Details
+    ///
+    /// Any outstanding messages will be flushed (i.e., delivered) before
+    /// actually committing the transaction.
+    ///
+    /// If any of the outstanding messages fail permanently, the current
+    /// transaction will enter an abortable error state and this function will
+    /// return an abortable error. You must then call
+    /// [`Producer::abort_transaction`] before attemping to create another
+    /// transaction.
+    ///
+    /// This function may block for the specified `timeout`.
+    fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
+
+    /// Aborts the current transaction.
+    ///
+    /// # Prerequisites
+    ///
+    /// The producer must have an open transaction via a call to
+    /// [`Producer::begin_transaction`].
+    ///
+    /// # Details
+    ///
+    /// Any oustanding messages will be purged and failed with
+    /// [`RDKafkaErrorCode::PurgeInflight`] or [`RDKafkaErrorCode::PurgeQueue`].
+    ///
+    /// This function should also be used to recover from non-fatal abortable
+    /// transaction errors.
+    ///
+    /// This function may block for the specified `timeout`.
+    ///
+    /// [`RDKafkaErrorCode::PurgeInflight`]: crate::error::RDKafkaErrorCode::PurgeInflight
+    /// [`RDKafkaErrorCode::PurgeQueue`]: crate::error::RDKafkaErrorCode::PurgeQueue
+    fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
 }

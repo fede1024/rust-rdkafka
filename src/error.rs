@@ -1,9 +1,15 @@
 //! Error manipulations.
 
-use std::{error, ffi, fmt};
+use std::error::Error;
+use std::ffi::{self, CStr};
+use std::fmt;
+use std::ptr;
+use std::sync::Arc;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
+
+use crate::util::{KafkaDrop, NativePtr};
 
 // Re-export rdkafka error code
 pub use rdsys::types::RDKafkaErrorCode;
@@ -16,20 +22,110 @@ pub type KafkaResult<T> = Result<T, KafkaError>;
 /// Some librdkafka codes are informational, rather than true errors.
 pub trait IsError {
     /// Reports whether the value represents an error.
-    fn is_error(self) -> bool;
+    fn is_error(&self) -> bool;
 }
 
 impl IsError for RDKafkaRespErr {
-    fn is_error(self) -> bool {
-        self as i32 != RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR as i32
+    fn is_error(&self) -> bool {
+        *self as i32 != RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR as i32
     }
 }
 
 impl IsError for RDKafkaConfRes {
-    fn is_error(self) -> bool {
-        self as i32 != RDKafkaConfRes::RD_KAFKA_CONF_OK as i32
+    fn is_error(&self) -> bool {
+        *self as i32 != RDKafkaConfRes::RD_KAFKA_CONF_OK as i32
     }
 }
+
+impl IsError for RDKafkaError {
+    fn is_error(&self) -> bool {
+        self.0.is_some()
+    }
+}
+
+/// Native rdkafka error.
+#[derive(Clone)]
+pub struct RDKafkaError(Option<Arc<NativePtr<rdsys::rd_kafka_error_t>>>);
+
+unsafe impl KafkaDrop for rdsys::rd_kafka_error_t {
+    const TYPE: &'static str = "error";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_error_destroy;
+}
+
+unsafe impl Send for RDKafkaError {}
+unsafe impl Sync for RDKafkaError {}
+
+impl RDKafkaError {
+    pub(crate) unsafe fn from_ptr(ptr: *mut rdsys::rd_kafka_error_t) -> RDKafkaError {
+        RDKafkaError(NativePtr::from_ptr(ptr).map(Arc::new))
+    }
+
+    fn ptr(&self) -> *const rdsys::rd_kafka_error_t {
+        match &self.0 {
+            None => ptr::null(),
+            Some(p) => p.ptr(),
+        }
+    }
+
+    /// Returns the error code or [`RDKafkaErrorCode::NoError`] if the error is
+    /// null.
+    pub fn code(&self) -> RDKafkaErrorCode {
+        unsafe { rdsys::rd_kafka_error_code(self.ptr()).into() }
+    }
+
+    /// Returns the error code name, e.g., "ERR_UNKNOWN_MEMBER_ID" or an empty
+    /// string if the error is null.
+    pub fn name(&self) -> String {
+        let cstr = unsafe { rdsys::rd_kafka_error_name(self.ptr()) };
+        unsafe { CStr::from_ptr(cstr).to_string_lossy().into_owned() }
+    }
+
+    /// Returns a human readable error string or an empty string if the error is
+    /// null.
+    pub fn string(&self) -> String {
+        let cstr = unsafe { rdsys::rd_kafka_error_string(self.ptr()) };
+        unsafe { CStr::from_ptr(cstr).to_string_lossy().into_owned() }
+    }
+
+    /// Reports whether the error is a fatal error.
+    ///
+    /// A fatal error indicates that the client instance is no longer usable.
+    pub fn is_fatal(&self) -> bool {
+        unsafe { rdsys::rd_kafka_error_is_fatal(self.ptr()) != 0 }
+    }
+
+    /// Reports whether the operation that encountered the error can be retried.
+    pub fn is_retriable(&self) -> bool {
+        unsafe { rdsys::rd_kafka_error_is_retriable(self.ptr()) != 0 }
+    }
+
+    /// Reports whether the error is an abortable transaction error.
+    pub fn txn_requires_abort(&self) -> bool {
+        unsafe { rdsys::rd_kafka_error_txn_requires_abort(self.ptr()) != 0 }
+    }
+}
+
+impl PartialEq for RDKafkaError {
+    fn eq(&self, other: &RDKafkaError) -> bool {
+        self.code() == other.code()
+    }
+}
+
+impl Eq for RDKafkaError {}
+
+impl fmt::Debug for RDKafkaError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "RDKafkaError({})", self)
+    }
+}
+
+impl fmt::Display for RDKafkaError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.string())
+    }
+}
+
+impl Error for RDKafkaError {}
 
 // TODO: consider using macro
 
@@ -78,11 +174,13 @@ pub enum KafkaError {
     StoreOffset(RDKafkaErrorCode),
     /// Subscription creation failed.
     Subscription(String),
+    /// Transaction error.
+    Transaction(RDKafkaError),
 }
 
 impl fmt::Debug for KafkaError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
+        match self {
             KafkaError::AdminOp(err) => write!(f, "KafkaError (Admin operation error: {})", err),
             KafkaError::AdminOpCreation(ref err) => {
                 write!(f, "KafkaError (Admin operation creation error: {})", err)
@@ -129,13 +227,14 @@ impl fmt::Debug for KafkaError {
             KafkaError::Subscription(ref err) => {
                 write!(f, "KafkaError (Subscription error: {})", err)
             }
+            KafkaError::Transaction(err) => write!(f, "KafkaError (Transaction error: {})", err),
         }
     }
 }
 
 impl fmt::Display for KafkaError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
+        match self {
             KafkaError::AdminOp(err) => write!(f, "Admin operation error: {}", err),
             KafkaError::AdminOpCreation(ref err) => {
                 write!(f, "Admin operation creation error: {}", err)
@@ -162,32 +261,18 @@ impl fmt::Display for KafkaError {
             KafkaError::SetPartitionOffset(err) => write!(f, "Set partition offset error: {}", err),
             KafkaError::StoreOffset(err) => write!(f, "Store offset error: {}", err),
             KafkaError::Subscription(ref err) => write!(f, "Subscription error: {}", err),
+            KafkaError::Transaction(err) => write!(f, "Transaction error: {}", err),
         }
     }
 }
 
-impl error::Error for KafkaError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        self.rdkafka_error_code()
-            .map(|e| e as &(dyn error::Error + 'static))
-    }
-}
-
-impl From<ffi::NulError> for KafkaError {
-    fn from(err: ffi::NulError) -> KafkaError {
-        KafkaError::Nul(err)
-    }
-}
-
-impl KafkaError {
-    /// Returns the [`RDKafkaErrorCode`] underlying this error, if any.
-    #[allow(clippy::match_same_arms)]
-    pub fn rdkafka_error_code(&self) -> Option<&RDKafkaErrorCode> {
+impl Error for KafkaError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             KafkaError::AdminOp(_) => None,
             KafkaError::AdminOpCreation(_) => None,
             KafkaError::Canceled => None,
-            KafkaError::ClientConfig(_, _, _, _) => None,
+            KafkaError::ClientConfig(..) => None,
             KafkaError::ClientCreation(_) => None,
             KafkaError::ConsumerCommit(err) => Some(err),
             KafkaError::Global(err) => Some(err),
@@ -204,6 +289,43 @@ impl KafkaError {
             KafkaError::SetPartitionOffset(err) => Some(err),
             KafkaError::StoreOffset(err) => Some(err),
             KafkaError::Subscription(_) => None,
+            KafkaError::Transaction(err) => Some(err),
+        }
+    }
+}
+
+impl From<ffi::NulError> for KafkaError {
+    fn from(err: ffi::NulError) -> KafkaError {
+        KafkaError::Nul(err)
+    }
+}
+
+impl KafkaError {
+    /// Returns the [`RDKafkaErrorCode`] underlying this error, if any.
+    #[allow(clippy::match_same_arms)]
+    pub fn rdkafka_error_code(&self) -> Option<RDKafkaErrorCode> {
+        match self {
+            KafkaError::AdminOp(_) => None,
+            KafkaError::AdminOpCreation(_) => None,
+            KafkaError::Canceled => None,
+            KafkaError::ClientConfig(..) => None,
+            KafkaError::ClientCreation(_) => None,
+            KafkaError::ConsumerCommit(err) => Some(*err),
+            KafkaError::Global(err) => Some(*err),
+            KafkaError::GroupListFetch(err) => Some(*err),
+            KafkaError::MessageConsumption(err) => Some(*err),
+            KafkaError::MessageProduction(err) => Some(*err),
+            KafkaError::MetadataFetch(err) => Some(*err),
+            KafkaError::NoMessageReceived => None,
+            KafkaError::Nul(_) => None,
+            KafkaError::OffsetFetch(err) => Some(*err),
+            KafkaError::PartitionEOF(_) => None,
+            KafkaError::PauseResume(_) => None,
+            KafkaError::Seek(_) => None,
+            KafkaError::SetPartitionOffset(err) => Some(*err),
+            KafkaError::StoreOffset(err) => Some(*err),
+            KafkaError::Subscription(_) => None,
+            KafkaError::Transaction(err) => Some(err.code()),
         }
     }
 }

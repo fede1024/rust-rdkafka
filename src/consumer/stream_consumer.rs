@@ -19,7 +19,9 @@ use rdkafka_sys::types::*;
 use crate::client::{Client, ClientContext, NativeClient};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use crate::consumer::base_consumer::BaseConsumer;
-use crate::consumer::{CommitMode, Consumer, ConsumerContext, DefaultConsumerContext, Rebalance};
+use crate::consumer::{
+    CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext, Rebalance,
+};
 use crate::error::{KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
@@ -343,6 +345,10 @@ where
 {
     fn client(&self) -> &Client<StreamConsumerContext<C>> {
         self.base.client()
+    }
+
+    fn group_metadata(&self) -> Option<ConsumerGroupMetadata> {
+        self.base.group_metadata()
     }
 
     fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {

@@ -1,8 +1,9 @@
 //! Aliases for types defined in the auto-generated bindings.
 
 use std::convert::TryFrom;
+use std::error::Error;
 use std::ffi::CStr;
-use std::{error, fmt};
+use std::fmt;
 
 use crate::bindings;
 use crate::helpers;
@@ -41,6 +42,9 @@ pub type RDKafkaMetadataPartition = bindings::rd_kafka_metadata_partition_t;
 
 /// Native rdkafka broker information.
 pub type RDKafkaMetadataBroker = bindings::rd_kafka_metadata_broker_t;
+
+/// Native rdkafka consumer group metadata.
+pub type RDKafkaConsumerGroupMetadata = bindings::rd_kafka_consumer_group_metadata_t;
 
 /// Native rdkafka state.
 pub type RDKafkaState = bindings::rd_kafka_s;
@@ -396,6 +400,19 @@ pub enum RDKafkaErrorCode {
     GroupMaxSizeReached = 81,
     /// Static consumer fenced by other consumer with same group.instance.id.
     FencedInstanceId = 82,
+    /// Eligible partition leaders are not available.
+    EligibleLeadersNotAvailable = 83,
+    /// Leader election not needed for topic partition.
+    ElectionNotNeeded = 84,
+    /// No partition reassignment is in progress.
+    NoReassignmentInProgress = 85,
+    /// Deleting offsets of a topic while the consumer group is subscribed to
+    /// it.
+    GroupSubscribedToTopic = 86,
+    /// Broker failed to validate record.
+    InvalidRecord = 87,
+    /// There are unstable offsets that need to be cleared.
+    UnstableOffsetCommit = 88,
     #[doc(hidden)]
     EndAll,
 }
@@ -422,11 +439,7 @@ impl fmt::Display for RDKafkaErrorCode {
     }
 }
 
-impl error::Error for RDKafkaErrorCode {
-    fn description(&self) -> &str {
-        "Error from underlying rdkafka library"
-    }
-}
+impl Error for RDKafkaErrorCode {}
 
 #[cfg(test)]
 mod tests {

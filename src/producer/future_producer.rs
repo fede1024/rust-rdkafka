@@ -15,10 +15,12 @@ use futures::FutureExt;
 
 use crate::client::{Client, ClientContext, DefaultClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
+use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
 use crate::producer::{BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer};
 use crate::statistics::Statistics;
+use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{AsyncRuntime, DefaultRuntime, IntoOpaque, Timeout};
 
 //
@@ -356,6 +358,32 @@ where
 
     fn in_flight_count(&self) -> i32 {
         self.producer.in_flight_count()
+    }
+
+    fn init_transactions<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.init_transactions(timeout)
+    }
+
+    fn begin_transaction(&self) -> KafkaResult<()> {
+        self.producer.begin_transaction()
+    }
+
+    fn send_offsets_to_transaction<T: Into<Timeout>>(
+        &self,
+        offsets: &TopicPartitionList,
+        cgm: &ConsumerGroupMetadata,
+        timeout: T,
+    ) -> KafkaResult<()> {
+        self.producer
+            .send_offsets_to_transaction(offsets, cgm, timeout)
+    }
+
+    fn commit_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.commit_transaction(timeout)
+    }
+
+    fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.abort_transaction(timeout)
     }
 }
 

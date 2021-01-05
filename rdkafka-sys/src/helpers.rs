@@ -154,6 +154,12 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR_PREFERRED_LEADER_NOT_AVAILABLE => PreferredLeaderNotAvailable,
         RD_KAFKA_RESP_ERR_GROUP_MAX_SIZE_REACHED => GroupMaxSizeReached,
         RD_KAFKA_RESP_ERR_FENCED_INSTANCE_ID => FencedInstanceId,
+        RD_KAFKA_RESP_ERR_ELIGIBLE_LEADERS_NOT_AVAILABLE => EligibleLeadersNotAvailable,
+        RD_KAFKA_RESP_ERR_ELECTION_NOT_NEEDED => ElectionNotNeeded,
+        RD_KAFKA_RESP_ERR_NO_REASSIGNMENT_IN_PROGRESS => NoReassignmentInProgress,
+        RD_KAFKA_RESP_ERR_GROUP_SUBSCRIBED_TO_TOPIC => GroupSubscribedToTopic,
+        RD_KAFKA_RESP_ERR_INVALID_RECORD => InvalidRecord,
+        RD_KAFKA_RESP_ERR_UNSTABLE_OFFSET_COMMIT => UnstableOffsetCommit,
         RD_KAFKA_RESP_ERR_END_ALL => EndAll,
     }
 }
