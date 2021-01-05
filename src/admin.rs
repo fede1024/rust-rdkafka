@@ -463,7 +463,7 @@ impl AdminOptions {
                     native_opts.ptr(),
                     timeout.as_millis(),
                     err_buf.as_mut_ptr(),
-                    err_buf.len(),
+                    err_buf.capacity(),
                 )
             };
             check_rdkafka_invalid_arg(res, err_buf)?;
@@ -475,7 +475,7 @@ impl AdminOptions {
                     native_opts.ptr(),
                     timeout.as_millis(),
                     err_buf.as_mut_ptr(),
-                    err_buf.len(),
+                    err_buf.capacity(),
                 )
             };
             check_rdkafka_invalid_arg(res, err_buf)?;
@@ -487,7 +487,7 @@ impl AdminOptions {
                     native_opts.ptr(),
                     1, // true
                     err_buf.as_mut_ptr(),
-                    err_buf.len(),
+                    err_buf.capacity(),
                 )
             };
             check_rdkafka_invalid_arg(res, err_buf)?;
@@ -499,7 +499,7 @@ impl AdminOptions {
                     native_opts.ptr(),
                     broker_id,
                     err_buf.as_mut_ptr(),
-                    err_buf.len(),
+                    err_buf.capacity(),
                 )
             };
             check_rdkafka_invalid_arg(res, err_buf)?;
@@ -625,7 +625,7 @@ impl<'a> NewTopic<'a> {
                 self.num_partitions,
                 repl,
                 err_buf.as_mut_ptr(),
-                err_buf.len(),
+                err_buf.capacity(),
             ))
         }
         .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
@@ -639,7 +639,7 @@ impl<'a> NewTopic<'a> {
                         broker_ids.as_ptr() as *mut i32,
                         broker_ids.len(),
                         err_buf.as_mut_ptr(),
-                        err_buf.len(),
+                        err_buf.capacity(),
                     )
                 };
                 check_rdkafka_invalid_arg(res, err_buf)?;
@@ -799,7 +799,7 @@ impl<'a> NewPartitions<'a> {
                 name.as_ptr(),
                 self.new_partition_count,
                 err_buf.as_mut_ptr(),
-                err_buf.len(),
+                err_buf.capacity(),
             ))
         }
         .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
@@ -813,7 +813,7 @@ impl<'a> NewPartitions<'a> {
                         broker_ids.as_ptr() as *mut i32,
                         broker_ids.len(),
                         err_buf.as_mut_ptr(),
-                        err_buf.len(),
+                        err_buf.capacity(),
                     )
                 };
                 check_rdkafka_invalid_arg(res, err_buf)?;

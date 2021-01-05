@@ -193,6 +193,10 @@ impl ErrBuf {
     pub fn len(&self) -> usize {
         self.filled().len()
     }
+
+    pub fn capacity(&self) -> usize {
+        self.buf.len()
+    }
 }
 
 impl Default for ErrBuf {

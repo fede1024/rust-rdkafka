@@ -166,7 +166,7 @@ impl ClientConfig {
                     key_c.as_ptr(),
                     value_c.as_ptr(),
                     err_buf.as_mut_ptr(),
-                    err_buf.len(),
+                    err_buf.capacity(),
                 )
             };
             if ret.is_error() {
