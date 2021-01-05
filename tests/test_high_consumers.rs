@@ -53,7 +53,7 @@ async fn test_invalid_max_poll_interval() {
     .create();
     match res {
         Err(KafkaError::ClientConfig(RDKafkaConfRes::RD_KAFKA_CONF_INVALID, desc, key, value)) => {
-            assert_eq!(desc, "");
+            assert_eq!(desc, "Configuration property \"max.poll.interval.ms\" value -1 is outside allowed range 1..86400000\n");
             assert_eq!(key, "max.poll.interval.ms");
             assert_eq!(value, "-1");
         }

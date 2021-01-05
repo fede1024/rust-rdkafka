@@ -184,7 +184,7 @@ impl<C: ClientContext> Client<C> {
                 rd_kafka_type,
                 native_config.ptr_move(),
                 err_buf.as_mut_ptr(),
-                err_buf.len(),
+                err_buf.capacity(),
             )
         };
         trace!("Create new librdkafka client {:p}", client_ptr);
@@ -311,16 +311,14 @@ impl<C: ClientContext> Client<C> {
     /// This function is intended to be used with idempotent producers, where
     /// some errors must logically be considered fatal to retain consistency.
     pub fn fatal_error(&self) -> Option<(RDKafkaErrorCode, String)> {
-        const LEN: usize = 512;
-        let mut buf = [0; LEN];
-        let code = unsafe { rdsys::rd_kafka_fatal_error(self.native_ptr(), buf.as_mut_ptr(), LEN) };
+        let mut err_buf = ErrBuf::new();
+        let code = unsafe {
+            rdsys::rd_kafka_fatal_error(self.native_ptr(), err_buf.as_mut_ptr(), err_buf.capacity())
+        };
         if code == RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR {
             None
         } else {
-            // SAFETY: rd_kafka_fatal_error promises to null-terminate the
-            // string it writes into buf.
-            let cstr = unsafe { crate::util::cstr_to_owned(buf.as_ptr()) };
-            Some((code.into(), cstr))
+            Some((code.into(), err_buf.to_string()))
         }
     }
 
