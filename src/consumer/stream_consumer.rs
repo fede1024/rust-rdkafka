@@ -316,10 +316,10 @@ where
         self.stream()
     }
 
-    /// Yields the next message from the stream.
+    /// Receives the next message from the stream.
     ///
     /// This method will block until the next message is available or an error
-    /// occurs. It is legal to call `next` from multiple threads simultaneously.
+    /// occurs. It is legal to call `recv` from multiple threads simultaneously.
     ///
     /// Note that this method is exactly as efficient as constructing a
     /// single-use message stream and extracting one message from it:
@@ -331,7 +331,7 @@ where
     /// consumer.stream().next().await.expect("MessageStream never returns None");
     /// # }
     /// ```
-    pub async fn next(&self) -> Result<BorrowedMessage<'_>, KafkaError> {
+    pub async fn recv(&self) -> Result<BorrowedMessage<'_>, KafkaError> {
         self.stream()
             .next()
             .await

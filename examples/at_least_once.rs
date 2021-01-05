@@ -142,7 +142,7 @@ async fn main() {
     let producer = create_producer(brokers);
 
     loop {
-        match consumer.next().await {
+        match consumer.recv().await {
             Err(e) => {
                 warn!("Kafka error: {}", e);
             }
