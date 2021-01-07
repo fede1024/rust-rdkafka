@@ -103,6 +103,13 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   This runtime has poor performance, but is necessary to make the crate compile
   when the `tokio` feature is disabled.
 
+* Add the `ClientConfig::get` and `ClientConfig::remove` methods to retrieve
+  and remove configuration parameters that were set with `ClientConfig::set`.
+
+* Add the [`NativeClientConfig::get`] method, which reflects librdkafka's
+  view of a parameter value. Unlike `ClientConfig::get`, this method is capable
+  of surfacing librdkafka's default value for a parameter.
+
 [@Marwes]: https://github.com/Marwes
 [@roignpar]: https://github.com/roignpar
 

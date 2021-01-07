@@ -23,8 +23,9 @@
 //! [librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 
 use std::collections::HashMap;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::mem;
+use std::ptr;
 
 use log::{log_enabled, Level};
 
@@ -110,6 +111,59 @@ impl NativeClientConfig {
         mem::forget(self);
         ptr
     }
+
+    /// Gets the value of a parameter in the configuration.
+    ///
+    /// This method reflects librdkafka's view of the current value of the
+    /// parameter. If the parameter was overridden by the user, it returns the
+    /// user-specified value. Otherwise, it returns librdkafka's default value
+    /// for the parameter.
+    pub fn get(&self, key: &str) -> KafkaResult<String> {
+        let make_err = |res| {
+            KafkaError::ClientConfig(
+                res,
+                match res {
+                    RDKafkaConfRes::RD_KAFKA_CONF_UNKNOWN => "Unknown configuration name",
+                    RDKafkaConfRes::RD_KAFKA_CONF_INVALID => "Invalid configuration value",
+                    RDKafkaConfRes::RD_KAFKA_CONF_OK => "OK",
+                }
+                .into(),
+                key.into(),
+                "".into(),
+            )
+        };
+        let key_c = CString::new(key.to_string())?;
+
+        // Call with a `NULL` buffer to determine the size of the string.
+        let mut size = 0_usize;
+        let res = unsafe {
+            rdsys::rd_kafka_conf_get(self.ptr(), key_c.as_ptr(), ptr::null_mut(), &mut size)
+        };
+        if res.is_error() {
+            return Err(make_err(res));
+        }
+
+        // Allocate a buffer of that size and call again to get the actual
+        // string.
+        let mut buf = vec![0_u8; size];
+        let res = unsafe {
+            rdsys::rd_kafka_conf_get(
+                self.ptr(),
+                key_c.as_ptr(),
+                buf.as_mut_ptr() as *mut i8,
+                &mut size,
+            )
+        };
+        if res.is_error() {
+            return Err(make_err(res));
+        }
+
+        // Convert the C string to a Rust string.
+        Ok(CStr::from_bytes_with_nul(&buf)
+            .unwrap()
+            .to_string_lossy()
+            .into())
+    }
 }
 
 /// Client configuration.
@@ -136,13 +190,31 @@ impl ClientConfig {
         }
     }
 
-    pub(crate) fn get(&self, key: &str) -> Option<&str> {
+    /// Gets the value of a parameter in the configuration.
+    ///
+    /// Returns the current value set for `key`, or `None` if no value for `key`
+    /// exists.
+    ///
+    /// Note that this method will only ever return values that were installed
+    /// by a call to [`ClientConfig::set`]. To retrieve librdkafka's default
+    /// value for a parameter, build a [`NativeClientConfig`] and then call
+    /// [`NativeClientConfig::get`] on the resulting object.
+    pub fn get(&self, key: &str) -> Option<&str> {
         self.conf_map.get(key).map(|val| val.as_str())
     }
 
-    /// Sets a new parameter in the configuration.
+    /// Sets a parameter in the configuration.
+    ///
+    /// If there is an existing value for `key` in the configuration, it is
+    /// overridden with the new `value`.
     pub fn set<'a>(&'a mut self, key: &str, value: &str) -> &'a mut ClientConfig {
         self.conf_map.insert(key.to_string(), value.to_string());
+        self
+    }
+
+    /// Removes a parameter from the configuration.
+    pub fn remove<'a>(&'a mut self, key: &str) -> &'a mut ClientConfig {
+        self.conf_map.remove(key);
         self
     }
 
@@ -153,7 +225,7 @@ impl ClientConfig {
         self
     }
 
-    /// Returns the native rdkafka-sys configuration.
+    /// Builds a native librdkafka configuration.
     pub fn create_native_config(&self) -> KafkaResult<NativeClientConfig> {
         let conf = unsafe { NativeClientConfig::from_ptr(rdsys::rd_kafka_conf_new()) };
         let mut err_buf = ErrBuf::new();
