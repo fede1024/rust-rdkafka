@@ -13,7 +13,9 @@ use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::client::{Client, NativeClient, NativeQueue};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
+use crate::config::{
+    ClientConfig, FromClientConfig, FromClientConfigAndContext, NativeClientConfig,
+};
 use crate::consumer::{
     CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext,
 };
@@ -101,7 +103,19 @@ impl FromClientConfig for BaseConsumer {
 /// Creates a new `BaseConsumer` starting from a `ClientConfig`.
 impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
-        let native_config = config.create_native_config()?;
+        BaseConsumer::new(config, config.create_native_config()?, context)
+    }
+}
+
+impl<C> BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
+    pub(crate) fn new(
+        config: &ClientConfig,
+        native_config: NativeClientConfig,
+        context: C,
+    ) -> KafkaResult<BaseConsumer<C>> {
         unsafe {
             rdsys::rd_kafka_conf_set_rebalance_cb(
                 native_config.ptr(),
@@ -131,12 +145,7 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
             _queue: queue,
         })
     }
-}
 
-impl<C> BaseConsumer<C>
-where
-    C: ConsumerContext,
-{
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
     /// This method is for internal use only. Use poll instead.
     pub(crate) fn poll_raw(&self, mut timeout: Timeout) -> Option<NativePtr<RDKafkaMessage>> {

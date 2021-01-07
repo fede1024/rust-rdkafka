@@ -4,7 +4,10 @@ use std::time::Duration;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};
+use rdkafka::error::KafkaError;
 use rdkafka::topic_partition_list::TopicPartitionList;
+
+use rdkafka_sys::types::RDKafkaConfRes;
 
 use crate::utils::*;
 
@@ -155,5 +158,32 @@ async fn test_group_membership() {
     assert_eq!(
         consumer_member.client_id(),
         "rdkafka_integration_test_client"
+    );
+}
+
+#[tokio::test]
+async fn test_client_config() {
+    // If not overridden, `NativeConfig::get` should get the default value for
+    // a valid parameter.
+    let config = ClientConfig::new().create_native_config().unwrap();
+    assert_eq!(config.get("session.timeout.ms").unwrap(), "10000");
+
+    // But if the parameter is overridden, `NativeConfig::get` should reflect
+    // the overridden value.
+    let config = ClientConfig::new()
+        .set("session.timeout.ms", "42")
+        .create_native_config()
+        .unwrap();
+    assert_eq!(config.get("session.timeout.ms").unwrap(), "42");
+
+    // Getting an invalid parameter should produce a nice error message.
+    assert_eq!(
+        config.get("noexist"),
+        Err(KafkaError::ClientConfig(
+            RDKafkaConfRes::RD_KAFKA_CONF_UNKNOWN,
+            "Unknown configuration name".into(),
+            "noexist".into(),
+            "".into(),
+        ))
     );
 }

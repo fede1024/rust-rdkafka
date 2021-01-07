@@ -243,8 +243,17 @@ where
     R: AsyncRuntime,
 {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<Self> {
+        let native_config = config.create_native_config()?;
+        let poll_interval = {
+            let millis: u64 = native_config
+                .get("max.poll.interval.ms")?
+                .parse()
+                .expect("librdkafka validated config value is valid u64");
+            Duration::from_millis(millis)
+        };
+
         let context = StreamConsumerContext::new(context);
-        let base = BaseConsumer::from_config_and_context(config, context)?;
+        let base = BaseConsumer::new(config, native_config, context)?;
         let native_ptr = base.client().native_ptr() as usize;
 
         // Redirect rdkafka's main queue to the consumer queue so that we only
@@ -263,13 +272,6 @@ where
         // performance impact to these spurious wakeups.
         let (shutdown_trigger, shutdown_tripwire) = oneshot::channel();
         let mut shutdown_tripwire = shutdown_tripwire.fuse();
-        let poll_interval = match config.get("max.poll.interval.ms") {
-            Some(millis) => {
-                let millis = millis.parse().expect("rdkafka validated config value");
-                Duration::from_millis(millis)
-            }
-            None => Duration::from_secs(300),
-        };
         let context = base.context().clone();
         R::spawn(async move {
             trace!("Starting stream consumer wake loop: 0x{:x}", native_ptr);
