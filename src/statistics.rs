@@ -119,6 +119,10 @@ pub struct Broker {
     /// partial responses if the full message set could not fit in the remaining
     /// fetch response size.
     pub rxpartial: i64,
+    /// Request type counters. The object key is the name of the request type
+    /// and the value is the number of requests of that type that have been
+    /// sent.
+    pub req: HashMap<String, i64>,
     /// The total number of decompression buffer size increases.
     pub zbuf_grow: i64,
     /// The total number of buffer size increases (deprecated and unused).
@@ -352,6 +356,30 @@ mod tests {
         assert_eq!(stats.simple_cnt, 0);
 
         assert_eq!(stats.brokers.len(), 1);
+
+        let broker = stats.brokers.values().into_iter().collect::<Vec<_>>()[0];
+
+        assert_eq!(
+            broker.req,
+            [
+                ("Produce", 31307),
+                ("Offset", 0),
+                ("Metadata", 2),
+                ("FindCoordinator", 0),
+                ("SaslHandshake", 0),
+                ("ApiVersion", 2),
+                ("InitProducerId", 0),
+                ("AddPartitionsToTxn", 0),
+                ("AddOffsetsToTxn", 0),
+                ("EndTxn", 0),
+                ("TxnOffsetCommit", 0),
+                ("SaslAuthenticate", 0),
+            ]
+            .iter()
+            .map(|(key, value)| ((*key).to_owned(), *value as i64))
+            .collect()
+        );
+
         assert_eq!(stats.topics.len(), 1);
     }
 

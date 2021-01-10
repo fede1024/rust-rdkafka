@@ -110,7 +110,11 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   view of a parameter value. Unlike `ClientConfig::get`, this method is capable
   of surfacing librdkafka's default value for a parameter.
 
+* Add the missing `req` field, which counts the number of requests of each type
+  that librdkafka has sent, to the `Statistics` struct. Thanks, [@pablosichert]!
+
 [@Marwes]: https://github.com/Marwes
+[@pablosichert]: https://github.com/pablosichert
 [@roignpar]: https://github.com/roignpar
 
 <a name="0.24.0"></a>
