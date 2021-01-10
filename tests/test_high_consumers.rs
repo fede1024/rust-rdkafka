@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use futures::future;
 use futures::stream::StreamExt;
+use maplit::hashmap;
 
 use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext, StreamConsumer};
 use rdkafka::error::KafkaError;
@@ -48,7 +49,7 @@ where
 async fn test_invalid_max_poll_interval() {
     let res: Result<StreamConsumer, _> = consumer_config(
         &rand_test_group(),
-        Some(map!("max.poll.interval.ms" => "-1")),
+        Some(hashmap! { "max.poll.interval.ms" => "-1" }),
     )
     .create();
     match res {

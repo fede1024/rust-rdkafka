@@ -7,6 +7,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
+use maplit::hashmap;
+
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::message::{Headers, Message, OwnedHeaders, OwnedMessage};
@@ -123,7 +125,7 @@ fn threaded_producer_with_context<C: ProducerContext>(
 
 #[test]
 fn test_base_producer_queue_full() {
-    let producer = base_producer(map!("queue.buffering.max.messages" => "10"));
+    let producer = base_producer(hashmap! { "queue.buffering.max.messages" => "10" });
     let topic_name = rand_test_topic();
 
     let results = (0..30)
@@ -163,8 +165,10 @@ fn test_base_producer_timeout() {
     let context = CollectingContext::new();
     let producer = base_producer_with_context(
         context.clone(),
-        map!("message.timeout.ms" => "1000",
-             "bootstrap.servers" => "1.2.3.4"),
+        hashmap! {
+            "message.timeout.ms" => "1000",
+            "bootstrap.servers" => "1.2.3.4"
+        },
     );
     let topic_name = rand_test_topic();
 

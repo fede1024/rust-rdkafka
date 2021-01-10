@@ -19,17 +19,6 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::statistics::Statistics;
 use rdkafka::TopicPartitionList;
 
-#[macro_export]
-macro_rules! map(
-    { $($key:expr => $value:expr),+ } => {
-        {
-            let mut m = HashMap::new();
-            $( m.insert($key, $value); )+
-            m
-        }
-    };
-);
-
 pub fn rand_test_topic() -> String {
     let id = rand::thread_rng()
         .gen_ascii_chars()

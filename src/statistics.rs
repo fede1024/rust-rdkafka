@@ -337,8 +337,9 @@ pub struct ExactlyOnceSemantics {
 
 #[cfg(test)]
 mod tests {
+    use maplit::hashmap;
+
     use super::*;
-    use serde_json;
 
     #[test]
     fn test_statistics() {
@@ -361,23 +362,20 @@ mod tests {
 
         assert_eq!(
             broker.req,
-            [
-                ("Produce", 31307),
-                ("Offset", 0),
-                ("Metadata", 2),
-                ("FindCoordinator", 0),
-                ("SaslHandshake", 0),
-                ("ApiVersion", 2),
-                ("InitProducerId", 0),
-                ("AddPartitionsToTxn", 0),
-                ("AddOffsetsToTxn", 0),
-                ("EndTxn", 0),
-                ("TxnOffsetCommit", 0),
-                ("SaslAuthenticate", 0),
-            ]
-            .iter()
-            .map(|(key, value)| ((*key).to_owned(), *value as i64))
-            .collect()
+            hashmap! {
+                "Produce".to_string() => 31307,
+                "Offset".to_string() => 0,
+                "Metadata".to_string() => 2,
+                "FindCoordinator".to_string() => 0,
+                "SaslHandshake".to_string() => 0,
+                "ApiVersion".to_string() => 2,
+                "InitProducerId".to_string() => 0,
+                "AddPartitionsToTxn".to_string() => 0,
+                "AddOffsetsToTxn".to_string() => 0,
+                "EndTxn".to_string() => 0,
+                "TxnOffsetCommit".to_string() => 0,
+                "SaslAuthenticate".to_string() => 0,
+            }
         );
 
         assert_eq!(stats.topics.len(), 1);
