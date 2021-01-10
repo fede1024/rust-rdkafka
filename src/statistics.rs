@@ -119,6 +119,10 @@ pub struct Broker {
     /// partial responses if the full message set could not fit in the remaining
     /// fetch response size.
     pub rxpartial: i64,
+    /// Request type counters. The object key is the name of the request type
+    /// and the value is the number of requests of that type that have been
+    /// sent.
+    pub req: HashMap<String, i64>,
     /// The total number of decompression buffer size increases.
     pub zbuf_grow: i64,
     /// The total number of buffer size increases (deprecated and unused).
@@ -333,8 +337,9 @@ pub struct ExactlyOnceSemantics {
 
 #[cfg(test)]
 mod tests {
+    use maplit::hashmap;
+
     use super::*;
-    use serde_json;
 
     #[test]
     fn test_statistics() {
@@ -352,6 +357,27 @@ mod tests {
         assert_eq!(stats.simple_cnt, 0);
 
         assert_eq!(stats.brokers.len(), 1);
+
+        let broker = stats.brokers.values().into_iter().collect::<Vec<_>>()[0];
+
+        assert_eq!(
+            broker.req,
+            hashmap! {
+                "Produce".to_string() => 31307,
+                "Offset".to_string() => 0,
+                "Metadata".to_string() => 2,
+                "FindCoordinator".to_string() => 0,
+                "SaslHandshake".to_string() => 0,
+                "ApiVersion".to_string() => 2,
+                "InitProducerId".to_string() => 0,
+                "AddPartitionsToTxn".to_string() => 0,
+                "AddOffsetsToTxn".to_string() => 0,
+                "EndTxn".to_string() => 0,
+                "TxnOffsetCommit".to_string() => 0,
+                "SaslAuthenticate".to_string() => 0,
+            }
+        );
+
         assert_eq!(stats.topics.len(), 1);
     }
 

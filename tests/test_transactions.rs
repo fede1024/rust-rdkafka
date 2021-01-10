@@ -3,6 +3,8 @@
 use std::collections::HashMap;
 use std::error::Error;
 
+use maplit::hashmap;
+
 use rdkafka::config::ClientConfig;
 use rdkafka::config::RDKafkaLogLevel;
 use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer};
@@ -39,13 +41,13 @@ enum IsolationLevel {
 }
 
 fn count_records(topic: &str, iso: IsolationLevel) -> Result<usize, KafkaError> {
-    let consumer = create_consumer(Some(map!(
+    let consumer = create_consumer(Some(hashmap! {
         "isolation.level" => match iso {
             IsolationLevel::ReadUncommitted => "read_uncommitted",
             IsolationLevel::ReadCommitted => "read_committed",
         },
         "enable.partition.eof" => "true"
-    )))?;
+    }))?;
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition(topic, 0);
     consumer.assign(&tpl)?;
