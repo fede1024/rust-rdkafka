@@ -37,11 +37,21 @@ where
     }
 }
 
+fn add_to_env<K: AsRef<OsStr>>(key: K, value: &str) {
+    match env::var_os(&key) {
+        Some(val) => {
+            let val = val.into_string().expect("invalid unicode data");
+            env::set_var(key, format!("{} {}", val, value).as_str());
+        }
+        None => env::set_var(key, value),
+    };
+}
+
 fn main() {
     if env::var("DEP_OPENSSL_VENDORED").is_ok() {
         let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
-        env::set_var("CFLAGS", format!("-I{}/include", openssl_root));
-        env::set_var("LDFLAGS", format!("-L{}/lib", openssl_root));
+        add_to_env("CFLAGS", &format!("-I{}/include", openssl_root));
+        add_to_env("LDFLAGS", &format!("-L{}/lib", openssl_root));
     }
 
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
@@ -91,21 +101,11 @@ fn main() {
 fn build_librdkafka() {
     let mut configure_flags: Vec<String> = Vec::new();
 
-    let mut cflags = Vec::new();
-    if let Ok(var) = env::var("CFLAGS") {
-        cflags.push(var);
-    }
-
-    let mut ldflags = Vec::new();
-    if let Ok(var) = env::var("LDFLAGS") {
-        ldflags.push(var);
-    }
-
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         configure_flags.push("--enable-ssl".into());
         if let Ok(openssl_root) = env::var("DEP_OPENSSL_ROOT") {
-            cflags.push(format!("-I{}/include", openssl_root));
-            ldflags.push(format!("-L{}/lib", openssl_root));
+            add_to_env("CFLAGS", &format!("-I{}/include", openssl_root));
+            add_to_env("LDFLAGS", &format!("-L{}/lib", openssl_root));
         }
     } else {
         configure_flags.push("--disable-ssl".into());
@@ -114,8 +114,8 @@ fn build_librdkafka() {
     if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
         configure_flags.push("--enable-gssapi".into());
         if let Ok(sasl2_root) = env::var("DEP_SASL2_ROOT") {
-            cflags.push(format!("-I{}/include", sasl2_root));
-            ldflags.push(format!("-L{}/build", sasl2_root));
+            add_to_env("CFLAGS", &format!("-I{}/include", sasl2_root));
+            add_to_env("LDFLAGS", &format!("-L{}/build", sasl2_root));
         }
     } else {
         configure_flags.push("--disable-gssapi".into());
@@ -124,8 +124,8 @@ fn build_librdkafka() {
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         // There is no --enable-zlib option, but it is enabled by default.
         if let Ok(z_root) = env::var("DEP_Z_ROOT") {
-            cflags.push(format!("-I{}/include", z_root));
-            ldflags.push(format!("-L{}/build", z_root));
+            add_to_env("CFLAGS", &format!("-I{}/include", z_root));
+            add_to_env("LDFLAGS", &format!("-L{}/build", z_root));
         }
     } else {
         configure_flags.push("--disable-zlib".into());
@@ -134,8 +134,8 @@ fn build_librdkafka() {
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
         configure_flags.push("--enable-zstd".into());
         if let Ok(zstd_root) = env::var("DEP_ZSTD_ROOT") {
-            cflags.push(format!("-I{}/include", zstd_root));
-            ldflags.push(format!("-L{}", zstd_root));
+            add_to_env("CFLAGS", &format!("-I{}/include", zstd_root));
+            add_to_env("LDFLAGS", &format!("-L{}", zstd_root));
         }
     } else {
         configure_flags.push("--disable-zstd".into());
@@ -144,15 +144,12 @@ fn build_librdkafka() {
     if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
         configure_flags.push("--enable-lz4-ext".into());
         if let Ok(lz4_root) = env::var("DEP_LZ4_ROOT") {
-            cflags.push(format!("-I{}/include", lz4_root));
-            ldflags.push(format!("-L{}", lz4_root));
+            add_to_env("CFLAGS", &format!("-I{}/include", lz4_root));
+            add_to_env("LDFLAGS", &format!("-L{}", lz4_root));
         }
     } else {
         configure_flags.push("--disable-lz4-ext".into());
     }
-
-    env::set_var("CFLAGS", cflags.join(" "));
-    env::set_var("LDFLAGS", ldflags.join(" "));
 
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR missing");
 
