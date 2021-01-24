@@ -38,12 +38,6 @@ where
 }
 
 fn main() {
-    if env::var("DEP_OPENSSL_VENDORED").is_ok() {
-        let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
-        env::set_var("CFLAGS", format!("-I{}/include", openssl_root));
-        env::set_var("LDFLAGS", format!("-L{}/lib", openssl_root));
-    }
-
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
         eprintln!("librdkafka will be linked dynamically");
 
