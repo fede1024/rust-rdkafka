@@ -298,7 +298,7 @@ where
         T: Into<Timeout>,
         Self: Sized;
 
-    /// Returns the metadata information for all the topics in the cluster.
+    /// Returns the low and high watermarks for a specific topic and partition.
     fn fetch_watermarks<T>(
         &self,
         topic: &str,
