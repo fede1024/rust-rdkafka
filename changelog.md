@@ -111,15 +111,18 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   rather than only `&str`.
 
   This is technically a breaking change as values of type `&&str` are no longer
-  accepted, but this is expected to be rare case.
+  accepted, but this is expected to be a rare case.
 
-* Add the [`NativeClientConfig::get`] method, which reflects librdkafka's
+  Thanks, [@koushiro].
+
+* Add the `NativeClientConfig::get` method, which reflects librdkafka's
   view of a parameter value. Unlike `ClientConfig::get`, this method is capable
   of surfacing librdkafka's default value for a parameter.
 
 * Add the missing `req` field, which counts the number of requests of each type
   that librdkafka has sent, to the `Statistics` struct. Thanks, [@pablosichert]!
 
+[@koushiro]: https://github.com/koushiro
 [@Marwes]: https://github.com/Marwes
 [@pablosichert]: https://github.com/pablosichert
 [@roignpar]: https://github.com/roignpar
