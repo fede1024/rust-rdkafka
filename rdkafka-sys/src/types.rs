@@ -221,11 +221,15 @@ pub enum RDKafkaErrorCode {
     /// Unknown broker.
     UnknownBroker = -146,
     /// Functionality not configured.
-    NotConfigured,
+    NotConfigured = -145,
     /// Instance has been fenced.
-    Fenced,
+    Fenced = -144,
     /// Application generated error.
-    Application,
+    Application = -143,
+    /// Assignment lost.
+    AssignmentLost = -142,
+    /// No operation performed.
+    Noop = -141,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error.
@@ -413,6 +417,26 @@ pub enum RDKafkaErrorCode {
     InvalidRecord = 87,
     /// There are unstable offsets that need to be cleared.
     UnstableOffsetCommit = 88,
+    /// Throttling quota has been exceeded.
+    ThrottlingQuotaExceeded = 89,
+    /// There is a newer producer with the same transactional ID which fences
+    /// the current one.
+    ProducerFenced = 90,
+    /// Request illegally referred to resource that does not exist.
+    ResourceNotFound = 91,
+    /// Request illegally referred to the same resource twice.
+    DuplicateResource = 92,
+    /// Requested credential would not meet criteria for acceptability.
+    UnacceptableCredential = 93,
+    /// Either the sender or recipient of a voter-only request is not one of the
+    /// expected voters.
+    InconsistentVoterSet = 94,
+    /// Invalid update version.
+    InvalidUpdateVersion = 95,
+    /// Unable to update finalized features due to server error.
+    FeatureUpdateFailed = 96,
+    /// Request principal deserialization failed during forwarding.
+    PrincipalDeserializationFailure = 97,
     #[doc(hidden)]
     EndAll,
 }

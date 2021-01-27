@@ -10,7 +10,7 @@
   rust-rdkafka map to types in librdkafka as directly as possible. The
   maintainers apologize for the difficulty in upgrading through this change.
 
-* Upgrade to librdkafka v1.6.0. (TODO: pending librdkafka release.)
+* Upgrade to librdkafka v1.6.0.
 
 * Enforce a minimum zstd-sys version of 1.4.19. This bumps the vendored version
   of libzstd to at least v1.4.8, which avoids a bug in libzstd v1.4.5 that could

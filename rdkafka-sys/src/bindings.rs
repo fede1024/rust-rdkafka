@@ -46,8 +46,8 @@ impl<T> ::std::cmp::PartialEq for __BindgenUnionField<T> {
     }
 }
 impl<T> ::std::cmp::Eq for __BindgenUnionField<T> {}
-pub const RD_KAFKA_VERSION: u32 = 17105919;
-pub const RD_KAFKA_DEBUG_CONTEXTS : & 'static [u8 ; 124usize] = b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer,admin,eos,mock\0" ;
+pub const RD_KAFKA_VERSION: u32 = 17170687;
+pub const RD_KAFKA_DEBUG_CONTEXTS : & 'static [u8 ; 138usize] = b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer,admin,eos,mock,assignor,conf\0" ;
 pub const RD_KAFKA_DESTROY_F_NO_CONSUMER_CLOSE: u32 = 8;
 pub const RD_KAFKA_OFFSET_BEGINNING: i32 = -2;
 pub const RD_KAFKA_OFFSET_END: i32 = -1;
@@ -74,6 +74,9 @@ pub const RD_KAFKA_EVENT_DELETETOPICS_RESULT: u32 = 101;
 pub const RD_KAFKA_EVENT_CREATEPARTITIONS_RESULT: u32 = 102;
 pub const RD_KAFKA_EVENT_ALTERCONFIGS_RESULT: u32 = 103;
 pub const RD_KAFKA_EVENT_DESCRIBECONFIGS_RESULT: u32 = 104;
+pub const RD_KAFKA_EVENT_DELETERECORDS_RESULT: u32 = 105;
+pub const RD_KAFKA_EVENT_DELETEGROUPS_RESULT: u32 = 106;
+pub const RD_KAFKA_EVENT_DELETECONSUMERGROUPOFFSETS_RESULT: u32 = 107;
 pub const RD_KAFKA_EVENT_OAUTHBEARER_TOKEN_REFRESH: u32 = 256;
 extern "C" {
     pub fn rd_kafka_version() -> c_int;
@@ -157,6 +160,12 @@ pub struct rd_kafka_headers_s {
     _unused: [u8; 0],
 }
 pub type rd_kafka_headers_t = rd_kafka_headers_s;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_group_result_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_group_result_t = rd_kafka_group_result_s;
 #[repr(i32)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, TryFromPrimitive)]
 pub enum rd_kafka_resp_err_t {
@@ -218,6 +227,8 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__NOT_CONFIGURED = -145,
     RD_KAFKA_RESP_ERR__FENCED = -144,
     RD_KAFKA_RESP_ERR__APPLICATION = -143,
+    RD_KAFKA_RESP_ERR__ASSIGNMENT_LOST = -142,
+    RD_KAFKA_RESP_ERR__NOOP = -141,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,
@@ -309,7 +320,16 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR_GROUP_SUBSCRIBED_TO_TOPIC = 86,
     RD_KAFKA_RESP_ERR_INVALID_RECORD = 87,
     RD_KAFKA_RESP_ERR_UNSTABLE_OFFSET_COMMIT = 88,
-    RD_KAFKA_RESP_ERR_END_ALL = 89,
+    RD_KAFKA_RESP_ERR_THROTTLING_QUOTA_EXCEEDED = 89,
+    RD_KAFKA_RESP_ERR_PRODUCER_FENCED = 90,
+    RD_KAFKA_RESP_ERR_RESOURCE_NOT_FOUND = 91,
+    RD_KAFKA_RESP_ERR_DUPLICATE_RESOURCE = 92,
+    RD_KAFKA_RESP_ERR_UNACCEPTABLE_CREDENTIAL = 93,
+    RD_KAFKA_RESP_ERR_INCONSISTENT_VOTER_SET = 94,
+    RD_KAFKA_RESP_ERR_INVALID_UPDATE_VERSION = 95,
+    RD_KAFKA_RESP_ERR_FEATURE_UPDATE_FAILED = 96,
+    RD_KAFKA_RESP_ERR_PRINCIPAL_DESERIALIZATION_FAILURE = 97,
+    RD_KAFKA_RESP_ERR_END_ALL = 98,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -450,7 +470,7 @@ extern "C" {
 }
 extern "C" {
     pub fn rd_kafka_topic_partition_list_find(
-        rktparlist: *mut rd_kafka_topic_partition_list_t,
+        rktparlist: *const rd_kafka_topic_partition_list_t,
         topic: *const c_char,
         partition: i32,
     ) -> *mut rd_kafka_topic_partition_t;
@@ -894,6 +914,11 @@ extern "C" {
     );
 }
 extern "C" {
+    pub fn rd_kafka_conf_get_default_topic_conf(
+        conf: *mut rd_kafka_conf_t,
+    ) -> *mut rd_kafka_topic_conf_t;
+}
+extern "C" {
     pub fn rd_kafka_conf_get(
         conf: *const rd_kafka_conf_t,
         name: *const c_char,
@@ -1197,6 +1222,9 @@ extern "C" {
     );
 }
 extern "C" {
+    pub fn rd_kafka_queue_yield(rkqu: *mut rd_kafka_queue_t);
+}
+extern "C" {
     pub fn rd_kafka_consume_start(rkt: *mut rd_kafka_topic_t, partition: i32, offset: i64)
         -> c_int;
 }
@@ -1218,6 +1246,13 @@ extern "C" {
         offset: i64,
         timeout_ms: c_int,
     ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_seek_partitions(
+        rk: *mut rd_kafka_t,
+        partitions: *mut rd_kafka_topic_partition_list_t,
+        timeout_ms: c_int,
+    ) -> *mut rd_kafka_error_t;
 }
 extern "C" {
     pub fn rd_kafka_consume(
@@ -1308,6 +1343,21 @@ extern "C" {
     pub fn rd_kafka_consumer_close(rk: *mut rd_kafka_t) -> rd_kafka_resp_err_t;
 }
 extern "C" {
+    pub fn rd_kafka_incremental_assign(
+        rk: *mut rd_kafka_t,
+        partitions: *const rd_kafka_topic_partition_list_t,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_incremental_unassign(
+        rk: *mut rd_kafka_t,
+        partitions: *const rd_kafka_topic_partition_list_t,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_rebalance_protocol(rk: *mut rd_kafka_t) -> *const c_char;
+}
+extern "C" {
     pub fn rd_kafka_assign(
         rk: *mut rd_kafka_t,
         partitions: *const rd_kafka_topic_partition_list_t,
@@ -1318,6 +1368,9 @@ extern "C" {
         rk: *mut rd_kafka_t,
         partitions: *mut *mut rd_kafka_topic_partition_list_t,
     ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_assignment_lost(rk: *mut rd_kafka_t) -> c_int;
 }
 extern "C" {
     pub fn rd_kafka_commit(
@@ -1370,6 +1423,14 @@ extern "C" {
 extern "C" {
     pub fn rd_kafka_consumer_group_metadata_new(
         group_id: *const c_char,
+    ) -> *mut rd_kafka_consumer_group_metadata_t;
+}
+extern "C" {
+    pub fn rd_kafka_consumer_group_metadata_new_with_genid(
+        group_id: *const c_char,
+        generation_id: i32,
+        member_id: *const c_char,
+        group_instance_id: *const c_char,
     ) -> *mut rd_kafka_consumer_group_metadata_t;
 }
 extern "C" {
@@ -1645,6 +1706,9 @@ pub type rd_kafka_DeleteTopics_result_t = rd_kafka_event_t;
 pub type rd_kafka_CreatePartitions_result_t = rd_kafka_event_t;
 pub type rd_kafka_AlterConfigs_result_t = rd_kafka_event_t;
 pub type rd_kafka_DescribeConfigs_result_t = rd_kafka_event_t;
+pub type rd_kafka_DeleteRecords_result_t = rd_kafka_event_t;
+pub type rd_kafka_DeleteGroups_result_t = rd_kafka_event_t;
+pub type rd_kafka_DeleteConsumerGroupOffsets_result_t = rd_kafka_event_t;
 extern "C" {
     pub fn rd_kafka_event_CreateTopics_result(
         rkev: *mut rd_kafka_event_t,
@@ -1669,6 +1733,21 @@ extern "C" {
     pub fn rd_kafka_event_DescribeConfigs_result(
         rkev: *mut rd_kafka_event_t,
     ) -> *const rd_kafka_DescribeConfigs_result_t;
+}
+extern "C" {
+    pub fn rd_kafka_event_DeleteRecords_result(
+        rkev: *mut rd_kafka_event_t,
+    ) -> *const rd_kafka_DeleteRecords_result_t;
+}
+extern "C" {
+    pub fn rd_kafka_event_DeleteGroups_result(
+        rkev: *mut rd_kafka_event_t,
+    ) -> *const rd_kafka_DeleteGroups_result_t;
+}
+extern "C" {
+    pub fn rd_kafka_event_DeleteConsumerGroupOffsets_result(
+        rkev: *mut rd_kafka_event_t,
+    ) -> *const rd_kafka_DeleteConsumerGroupOffsets_result_t;
 }
 extern "C" {
     pub fn rd_kafka_queue_poll(
@@ -1887,6 +1966,19 @@ extern "C" {
 extern "C" {
     pub fn rd_kafka_topic_result_name(topicres: *const rd_kafka_topic_result_t) -> *const c_char;
 }
+extern "C" {
+    pub fn rd_kafka_group_result_error(
+        groupres: *const rd_kafka_group_result_t,
+    ) -> *const rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_group_result_name(groupres: *const rd_kafka_group_result_t) -> *const c_char;
+}
+extern "C" {
+    pub fn rd_kafka_group_result_partitions(
+        groupres: *const rd_kafka_group_result_t,
+    ) -> *const rd_kafka_topic_partition_list_t;
+}
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum rd_kafka_admin_op_t {
@@ -1896,7 +1988,10 @@ pub enum rd_kafka_admin_op_t {
     RD_KAFKA_ADMIN_OP_CREATEPARTITIONS = 3,
     RD_KAFKA_ADMIN_OP_ALTERCONFIGS = 4,
     RD_KAFKA_ADMIN_OP_DESCRIBECONFIGS = 5,
-    RD_KAFKA_ADMIN_OP__CNT = 6,
+    RD_KAFKA_ADMIN_OP_DELETERECORDS = 6,
+    RD_KAFKA_ADMIN_OP_DELETEGROUPS = 7,
+    RD_KAFKA_ADMIN_OP_DELETECONSUMERGROUPOFFSETS = 8,
+    RD_KAFKA_ADMIN_OP__CNT = 9,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -2231,6 +2326,111 @@ extern "C" {
         result: *const rd_kafka_DescribeConfigs_result_t,
         cntp: *mut size_t,
     ) -> *mut *const rd_kafka_ConfigResource_t;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_DeleteRecords_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_DeleteRecords_t = rd_kafka_DeleteRecords_s;
+extern "C" {
+    pub fn rd_kafka_DeleteRecords_new(
+        before_offsets: *const rd_kafka_topic_partition_list_t,
+    ) -> *mut rd_kafka_DeleteRecords_t;
+}
+extern "C" {
+    pub fn rd_kafka_DeleteRecords_destroy(del_records: *mut rd_kafka_DeleteRecords_t);
+}
+extern "C" {
+    pub fn rd_kafka_DeleteRecords_destroy_array(
+        del_records: *mut *mut rd_kafka_DeleteRecords_t,
+        del_record_cnt: size_t,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_DeleteRecords(
+        rk: *mut rd_kafka_t,
+        del_records: *mut *mut rd_kafka_DeleteRecords_t,
+        del_record_cnt: size_t,
+        options: *const rd_kafka_AdminOptions_t,
+        rkqu: *mut rd_kafka_queue_t,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_DeleteRecords_result_offsets(
+        result: *const rd_kafka_DeleteRecords_result_t,
+    ) -> *const rd_kafka_topic_partition_list_t;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_DeleteGroup_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_DeleteGroup_t = rd_kafka_DeleteGroup_s;
+extern "C" {
+    pub fn rd_kafka_DeleteGroup_new(group: *const c_char) -> *mut rd_kafka_DeleteGroup_t;
+}
+extern "C" {
+    pub fn rd_kafka_DeleteGroup_destroy(del_group: *mut rd_kafka_DeleteGroup_t);
+}
+extern "C" {
+    pub fn rd_kafka_DeleteGroup_destroy_array(
+        del_groups: *mut *mut rd_kafka_DeleteGroup_t,
+        del_group_cnt: size_t,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_DeleteGroups(
+        rk: *mut rd_kafka_t,
+        del_groups: *mut *mut rd_kafka_DeleteGroup_t,
+        del_group_cnt: size_t,
+        options: *const rd_kafka_AdminOptions_t,
+        rkqu: *mut rd_kafka_queue_t,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_DeleteGroups_result_groups(
+        result: *const rd_kafka_DeleteGroups_result_t,
+        cntp: *mut size_t,
+    ) -> *mut *const rd_kafka_group_result_t;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_DeleteConsumerGroupOffsets_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_DeleteConsumerGroupOffsets_t = rd_kafka_DeleteConsumerGroupOffsets_s;
+extern "C" {
+    pub fn rd_kafka_DeleteConsumerGroupOffsets_new(
+        group: *const c_char,
+        partitions: *const rd_kafka_topic_partition_list_t,
+    ) -> *mut rd_kafka_DeleteConsumerGroupOffsets_t;
+}
+extern "C" {
+    pub fn rd_kafka_DeleteConsumerGroupOffsets_destroy(
+        del_grpoffsets: *mut rd_kafka_DeleteConsumerGroupOffsets_t,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_DeleteConsumerGroupOffsets_destroy_array(
+        del_grpoffsets: *mut *mut rd_kafka_DeleteConsumerGroupOffsets_t,
+        del_grpoffset_cnt: size_t,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_DeleteConsumerGroupOffsets(
+        rk: *mut rd_kafka_t,
+        del_grpoffsets: *mut *mut rd_kafka_DeleteConsumerGroupOffsets_t,
+        del_grpoffsets_cnt: size_t,
+        options: *const rd_kafka_AdminOptions_t,
+        rkqu: *mut rd_kafka_queue_t,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_DeleteConsumerGroupOffsets_result_groups(
+        result: *const rd_kafka_DeleteConsumerGroupOffsets_result_t,
+        cntp: *mut size_t,
+    ) -> *mut *const rd_kafka_group_result_t;
 }
 extern "C" {
     pub fn rd_kafka_oauthbearer_set_token(

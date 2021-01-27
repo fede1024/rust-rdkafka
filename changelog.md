@@ -106,6 +106,9 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Add the `ClientConfig::get` and `ClientConfig::remove` methods to retrieve
   and remove configuration parameters that were set with `ClientConfig::set`.
 
+* Change the `key` and `value` parameters of the `ClientConfig::set` method to
+  accept any type that implements `Into<String>`, rather than only `&str`.
+
 * Add the [`NativeClientConfig::get`] method, which reflects librdkafka's
   view of a parameter value. Unlike `ClientConfig::get`, this method is capable
   of surfacing librdkafka's default value for a parameter.
