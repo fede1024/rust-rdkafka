@@ -207,8 +207,12 @@ impl ClientConfig {
     ///
     /// If there is an existing value for `key` in the configuration, it is
     /// overridden with the new `value`.
-    pub fn set<'a>(&'a mut self, key: &str, value: &str) -> &'a mut ClientConfig {
-        self.conf_map.insert(key.to_string(), value.to_string());
+    pub fn set<K, V>(&mut self, key: K, value: V) -> &mut ClientConfig
+    where
+        K: Into<String>,
+        V: Into<String>,
+    {
+        self.conf_map.insert(key.into(), value.into());
         self
     }
 
