@@ -5,6 +5,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 <a name="0.25.0"></a>
 ## 0.25.0 (Unreleased)
 
+* **Known issue.** Queue forwarding for partition queues is broken. This
+  is a bug introduced in librdkafka v1.6.0.
+  See [edenhill/librdkafka#3231](https://github.com/edenhill/librdkafka/issues/3231].
+
 * Add support for transactional producers. The new methods are
   `Producer::init_transactions`, `Producer::begin_transaction`,
   `Producer::commit_transaction`, `Producer::abort_transaction`, and
