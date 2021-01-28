@@ -2,10 +2,6 @@
 
 ## v3.0.0+1.6.0 (Unreleased)
 
-* **Known issue.** Queue forwarding for partition queues is broken. This
-  is a bug introduced in librdkafka v1.6.0.
-  See [edenhill/librdkafka#3231](https://github.com/edenhill/librdkafka/issues/3231].
-
 * **Breaking change.** Rename `RDKafkaError` to `RDKafkaErrorCode`. This makes
   space for the new `RDKafkaError` type, which mirrors the `rd_kafka_error_t`
   type added to librdkafka in v1.4.0.

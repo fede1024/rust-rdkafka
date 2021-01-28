@@ -244,6 +244,10 @@ where
     /// You must continue to call `BaseConsumer::poll`, even if no messages are
     /// expected, to serve callbacks.
     ///
+    /// Note that calling [`Consumer::assign`] will deactivate any existing
+    /// partition queues. You will need to call this method for every partition
+    /// that should be split after every call to `assign`.
+    ///
     /// Beware that this method is implemented for `&Arc<Self>`, not `&self`.
     /// You will need to wrap your consumer in an `Arc` in order to call this
     /// method. This design permits moving the partition queue to another thread

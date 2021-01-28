@@ -5,10 +5,6 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 <a name="0.25.0"></a>
 ## 0.25.0 (Unreleased)
 
-* **Known issue.** Queue forwarding for partition queues is broken. This
-  is a bug introduced in librdkafka v1.6.0.
-  See [edenhill/librdkafka#3231](https://github.com/edenhill/librdkafka/issues/3231].
-
 * Add support for transactional producers. The new methods are
   `Producer::init_transactions`, `Producer::begin_transaction`,
   `Producer::commit_transaction`, `Producer::abort_transaction`, and
@@ -77,6 +73,15 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   * Move the `client`, `in_flight_count`, and `flush` methods inherent to all
     producers to a new `Producer` trait. This trait is analogous to the
     `Consumer` trait.
+
+* **Breaking change.** Calls to `BaseConsumer::assign` deactivate any
+  partition queues previously created with
+  `BaseConsumer::split_partition_queue`. You will need to re-split all
+  partition queues after every call to `assign`.
+
+  This is due to an upstream change in librdkafka. See
+  [edenhill/librdkafka#3231](https://github.com/edenhill/librdkafka/issues/3231)
+  for details.
 
 * **Breaking change.** Several `TopicPartitionList`-related methods now return
   `Result<T, KafkaError>` rather than `T`:
