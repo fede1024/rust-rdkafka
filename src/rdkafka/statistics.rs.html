@@ -684,6 +684,32 @@
 <span id="681">681</span>
 <span id="682">682</span>
 <span id="683">683</span>
+<span id="684">684</span>
+<span id="685">685</span>
+<span id="686">686</span>
+<span id="687">687</span>
+<span id="688">688</span>
+<span id="689">689</span>
+<span id="690">690</span>
+<span id="691">691</span>
+<span id="692">692</span>
+<span id="693">693</span>
+<span id="694">694</span>
+<span id="695">695</span>
+<span id="696">696</span>
+<span id="697">697</span>
+<span id="698">698</span>
+<span id="699">699</span>
+<span id="700">700</span>
+<span id="701">701</span>
+<span id="702">702</span>
+<span id="703">703</span>
+<span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
+<span id="707">707</span>
+<span id="708">708</span>
+<span id="709">709</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Client and broker statistics.</span>
 <span class="doccomment">//!</span>
@@ -806,6 +832,10 @@
     <span class="doccomment">/// partial responses if the full message set could not fit in the remaining</span>
     <span class="doccomment">/// fetch response size.</span>
     <span class="kw">pub</span> <span class="ident">rxpartial</span>: <span class="ident">i64</span>,
+    <span class="doccomment">/// Request type counters. The object key is the name of the request type</span>
+    <span class="doccomment">/// and the value is the number of requests of that type that have been</span>
+    <span class="doccomment">/// sent.</span>
+    <span class="kw">pub</span> <span class="ident">req</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">i64</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The total number of decompression buffer size increases.</span>
     <span class="kw">pub</span> <span class="ident">zbuf_grow</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The total number of buffer size increases (deprecated and unused).</span>
@@ -1020,8 +1050,9 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
+    <span class="kw">use</span> <span class="ident">maplit</span>::<span class="ident">hashmap</span>;
+
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">serde_json</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_statistics</span>() {
@@ -1039,6 +1070,27 @@
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">stats</span>.<span class="ident">simple_cnt</span>, <span class="number">0</span>);
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">stats</span>.<span class="ident">brokers</span>.<span class="ident">len</span>(), <span class="number">1</span>);
+
+        <span class="kw">let</span> <span class="ident">broker</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">brokers</span>.<span class="ident">values</span>().<span class="ident">into_iter</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()[<span class="number">0</span>];
+
+        <span class="macro">assert_eq</span><span class="macro">!</span>(
+            <span class="ident">broker</span>.<span class="ident">req</span>,
+            <span class="macro">hashmap</span><span class="macro">!</span> {
+                <span class="string">&quot;Produce&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">31307</span>,
+                <span class="string">&quot;Offset&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+                <span class="string">&quot;Metadata&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">2</span>,
+                <span class="string">&quot;FindCoordinator&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+                <span class="string">&quot;SaslHandshake&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+                <span class="string">&quot;ApiVersion&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">2</span>,
+                <span class="string">&quot;InitProducerId&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+                <span class="string">&quot;AddPartitionsToTxn&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+                <span class="string">&quot;AddOffsetsToTxn&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+                <span class="string">&quot;EndTxn&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+                <span class="string">&quot;TxnOffsetCommit&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+                <span class="string">&quot;SaslAuthenticate&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+            }
+        );
+
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">stats</span>.<span class="ident">topics</span>.<span class="ident">len</span>(), <span class="number">1</span>);
     }
 

@@ -493,6 +493,8 @@
 <span id="490">490</span>
 <span id="491">491</span>
 <span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! High-level consumers with a [`Stream`](futures::Stream) interface.</span>
 
@@ -739,8 +741,17 @@
     <span class="ident">R</span>: <span class="ident">AsyncRuntime</span>,
 {
     <span class="kw">fn</span> <span class="ident">from_config_and_context</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>, <span class="ident">context</span>: <span class="ident">C</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">native_config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">create_native_config</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">poll_interval</span> <span class="op">=</span> {
+            <span class="kw">let</span> <span class="ident">millis</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">native_config</span>
+                .<span class="ident">get</span>(<span class="string">&quot;max.poll.interval.ms&quot;</span>)<span class="question-mark">?</span>
+                .<span class="ident">parse</span>()
+                .<span class="ident">expect</span>(<span class="string">&quot;librdkafka validated config value is valid u64&quot;</span>);
+            <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="ident">millis</span>)
+        };
+
         <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">StreamConsumerContext</span>::<span class="ident">new</span>(<span class="ident">context</span>);
-        <span class="kw">let</span> <span class="ident">base</span> <span class="op">=</span> <span class="ident">BaseConsumer</span>::<span class="ident">from_config_and_context</span>(<span class="ident">config</span>, <span class="ident">context</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">base</span> <span class="op">=</span> <span class="ident">BaseConsumer</span>::<span class="ident">new</span>(<span class="ident">config</span>, <span class="ident">native_config</span>, <span class="ident">context</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">native_ptr</span> <span class="op">=</span> <span class="ident">base</span>.<span class="ident">client</span>().<span class="ident">native_ptr</span>() <span class="kw">as</span> <span class="ident">usize</span>;
 
         <span class="comment">// Redirect rdkafka&#39;s main queue to the consumer queue so that we only</span>
@@ -759,13 +770,6 @@
         <span class="comment">// performance impact to these spurious wakeups.</span>
         <span class="kw">let</span> (<span class="ident">shutdown_trigger</span>, <span class="ident">shutdown_tripwire</span>) <span class="op">=</span> <span class="ident">oneshot</span>::<span class="ident">channel</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shutdown_tripwire</span> <span class="op">=</span> <span class="ident">shutdown_tripwire</span>.<span class="ident">fuse</span>();
-        <span class="kw">let</span> <span class="ident">poll_interval</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">config</span>.<span class="ident">get</span>(<span class="string">&quot;max.poll.interval.ms&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">millis</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">millis</span> <span class="op">=</span> <span class="ident">millis</span>.<span class="ident">parse</span>().<span class="ident">expect</span>(<span class="string">&quot;rdkafka validated config value&quot;</span>);
-                <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="ident">millis</span>)
-            }
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">300</span>),
-        };
         <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">base</span>.<span class="ident">context</span>().<span class="ident">clone</span>();
         <span class="ident">R</span>::<span class="ident">spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Starting stream consumer wake loop: 0x{:x}&quot;</span>, <span class="ident">native_ptr</span>);

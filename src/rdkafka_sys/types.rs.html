@@ -458,6 +458,30 @@
 <span id="455">455</span>
 <span id="456">456</span>
 <span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Aliases for types defined in the auto-generated bindings.</span>
 
@@ -682,11 +706,15 @@
     <span class="doccomment">/// Unknown broker.</span>
     <span class="ident">UnknownBroker</span> <span class="op">=</span> <span class="op">-</span><span class="number">146</span>,
     <span class="doccomment">/// Functionality not configured.</span>
-    <span class="ident">NotConfigured</span>,
+    <span class="ident">NotConfigured</span> <span class="op">=</span> <span class="op">-</span><span class="number">145</span>,
     <span class="doccomment">/// Instance has been fenced.</span>
-    <span class="ident">Fenced</span>,
+    <span class="ident">Fenced</span> <span class="op">=</span> <span class="op">-</span><span class="number">144</span>,
     <span class="doccomment">/// Application generated error.</span>
-    <span class="ident">Application</span>,
+    <span class="ident">Application</span> <span class="op">=</span> <span class="op">-</span><span class="number">143</span>,
+    <span class="doccomment">/// Assignment lost.</span>
+    <span class="ident">AssignmentLost</span> <span class="op">=</span> <span class="op">-</span><span class="number">142</span>,
+    <span class="doccomment">/// No operation performed.</span>
+    <span class="ident">Noop</span> <span class="op">=</span> <span class="op">-</span><span class="number">141</span>,
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
     <span class="ident">End</span> <span class="op">=</span> <span class="op">-</span><span class="number">100</span>,
     <span class="doccomment">/// Unknown broker error.</span>
@@ -874,6 +902,26 @@
     <span class="ident">InvalidRecord</span> <span class="op">=</span> <span class="number">87</span>,
     <span class="doccomment">/// There are unstable offsets that need to be cleared.</span>
     <span class="ident">UnstableOffsetCommit</span> <span class="op">=</span> <span class="number">88</span>,
+    <span class="doccomment">/// Throttling quota has been exceeded.</span>
+    <span class="ident">ThrottlingQuotaExceeded</span> <span class="op">=</span> <span class="number">89</span>,
+    <span class="doccomment">/// There is a newer producer with the same transactional ID which fences</span>
+    <span class="doccomment">/// the current one.</span>
+    <span class="ident">ProducerFenced</span> <span class="op">=</span> <span class="number">90</span>,
+    <span class="doccomment">/// Request illegally referred to resource that does not exist.</span>
+    <span class="ident">ResourceNotFound</span> <span class="op">=</span> <span class="number">91</span>,
+    <span class="doccomment">/// Request illegally referred to the same resource twice.</span>
+    <span class="ident">DuplicateResource</span> <span class="op">=</span> <span class="number">92</span>,
+    <span class="doccomment">/// Requested credential would not meet criteria for acceptability.</span>
+    <span class="ident">UnacceptableCredential</span> <span class="op">=</span> <span class="number">93</span>,
+    <span class="doccomment">/// Either the sender or recipient of a voter-only request is not one of the</span>
+    <span class="doccomment">/// expected voters.</span>
+    <span class="ident">InconsistentVoterSet</span> <span class="op">=</span> <span class="number">94</span>,
+    <span class="doccomment">/// Invalid update version.</span>
+    <span class="ident">InvalidUpdateVersion</span> <span class="op">=</span> <span class="number">95</span>,
+    <span class="doccomment">/// Unable to update finalized features due to server error.</span>
+    <span class="ident">FeatureUpdateFailed</span> <span class="op">=</span> <span class="number">96</span>,
+    <span class="doccomment">/// Request principal deserialization failed during forwarding.</span>
+    <span class="ident">PrincipalDeserializationFailure</span> <span class="op">=</span> <span class="number">97</span>,
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
     <span class="ident">EndAll</span>,
 }
