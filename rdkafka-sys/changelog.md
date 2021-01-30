@@ -1,6 +1,6 @@
 # Changelog
 
-## v3.0.0+1.6.0 (Unreleased)
+## v3.0.0+1.6.0 (2021-01-30)
 
 * **Breaking change.** Rename `RDKafkaError` to `RDKafkaErrorCode`. This makes
   space for the new `RDKafkaError` type, which mirrors the `rd_kafka_error_t`

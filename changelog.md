@@ -3,7 +3,7 @@
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 <a name="0.25.0"></a>
-## 0.25.0 (Unreleased)
+## 0.25.0 (2021-01-30)
 
 * Add support for transactional producers. The new methods are
   `Producer::init_transactions`, `Producer::begin_transaction`,
