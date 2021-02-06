@@ -12,7 +12,7 @@ library for Rust based on [librdkafka].
 ## The library
 
 `rust-rdkafka` provides a safe Rust interface to librdkafka. The master
-branch is currently based on librdkafka 1.5.3.
+branch is currently based on librdkafka 1.6.0.
 
 ### Documentation
 
@@ -148,7 +148,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.24", features = ["cmake-build"] }
+rdkafka = { version = "0.25", features = ["cmake-build"] }
 ```
 
 This crate will compile librdkafka from sources and link it statically to
@@ -173,7 +173,7 @@ the system's version of librdkafka. Example:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.24", features = ["dynamic-linking"] }
+rdkafka = { version = "0.25", features = ["dynamic-linking"] }
 ```
 
 For a full listing of features, consult the [rdkafka-sys crate's
@@ -195,7 +195,7 @@ enabled by default, but can be disabled by turning off default features:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.24", default-features = false }
+rdkafka = { version = "0.25", default-features = false }
 ```
 
 If you would like to use an asynchronous runtime besides Tokio, you can
