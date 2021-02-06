@@ -2,6 +2,10 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
+## Unreleased
+
+* Fix compilation for the aarch64 target.
+
 <a name="0.25.0"></a>
 ## 0.25.0 (2021-01-30)
 

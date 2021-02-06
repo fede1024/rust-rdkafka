@@ -25,6 +25,7 @@
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::mem;
+use std::os::raw::c_char;
 use std::ptr;
 
 use log::{log_enabled, Level};
@@ -150,7 +151,7 @@ impl NativeClientConfig {
             rdsys::rd_kafka_conf_get(
                 self.ptr(),
                 key_c.as_ptr(),
-                buf.as_mut_ptr() as *mut i8,
+                buf.as_mut_ptr() as *mut c_char,
                 &mut size,
             )
         };
