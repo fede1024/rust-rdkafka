@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+* Ensure librdkafka is configured to probe for the system's trusted certificate
+  authorities (CAs) when using CMake build system with the
+  `ssl-vendored` feature enabled.
+
+  This is a fix for an upstream bug ([edenhill/librdkafka#3249]).
+
 ## v3.0.0+1.6.0 (2021-01-30)
 
 * **Breaking change.** Rename `RDKafkaError` to `RDKafkaErrorCode`. This makes
@@ -33,3 +41,4 @@
 * Correct several references to `usize` in the generated bindings to `size_t`.
 
 [edenhill/librdkafka#2672]: https://github.com/edenhill/librdkafka/issues/2672
+[edenhill/librdkafka#3249]: https://github.com/edenhill/librdkafka/issues/3249
