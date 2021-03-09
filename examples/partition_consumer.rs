@@ -83,8 +83,7 @@ async fn consume_and_print(brokers: &str, group_id: &str, topic: &str) {
         .subscribe(&vec![topic])
         .expect("Can't subscribe to specified topics");
 
-
-    let streams = partitions
+    let mut streams = partitions
         .into_iter()
         .map(|p| {
             consumer
@@ -93,6 +92,13 @@ async fn consume_and_print(brokers: &str, group_id: &str, topic: &str) {
                 .map(move |msg| (p, msg))
         })
         .collect::<Vec<_>>();
+
+    let mut mine = streams.pop().unwrap();
+    tokio::spawn(async move {
+        while let Some((p, _msg)) = mine.next().await {
+            info!("hello from the other side of partition: {}", p);
+        }
+    });
 
     let mut streams = futures::stream::select_all(streams);
     loop {
@@ -108,15 +114,21 @@ async fn consume_and_print(brokers: &str, group_id: &str, topic: &str) {
                             ""
                         }
                     };
-                    info!("key: '{:?}', payload: '{}', partition: {} == {}, offset: {}",
-                          m.key(), payload, p, m.partition(), m.offset());
+                    info!(
+                        "key: '{:?}', payload: '{}', partition: {} == {}, offset: {}",
+                        m.key(),
+                        payload,
+                        p,
+                        m.partition(),
+                        m.offset()
+                    );
                     if let Some(headers) = m.headers() {
                         for i in 0..headers.count() {
                             let header = headers.get(i).unwrap();
                             info!("  Header {:#?}: {:?}", header.0, header.1);
                         }
                     }
-                    consumer.commit_message(&m, CommitMode::Async).unwrap();
+                    // consumer.commit_message(&m, CommitMode::Async).unwrap();
                 }
             }
         }

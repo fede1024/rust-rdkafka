@@ -1,16 +1,19 @@
 //! Store and manipulate Kafka messages.
 
+use std::borrow::ToOwned;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
 use std::os::raw::c_void;
 use std::ptr;
 use std::str;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
+use crate::consumer::{BaseConsumer, ConsumerContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::util::{self, millis_to_epoch, KafkaDrop, NativePtr};
 
@@ -373,6 +376,152 @@ impl<'a> Message for BorrowedMessage<'a> {
 
 unsafe impl<'a> Send for BorrowedMessage<'a> {}
 unsafe impl<'a> Sync for BorrowedMessage<'a> {}
+
+/// A zero-copy Kafka message.
+///
+/// Provides a read-only access to headers owned by a Kafka consumer or producer
+/// or by an [`OwnedMessage`] struct. `ArcMessage` differs from
+/// [`BorrowedMessage`] in that rather than having it's lifetime tied
+/// to a consumer, it insteads holds an Arc to a consumer instead.
+pub struct ArcMessage<C: ConsumerContext> {
+    ptr: NativePtr<RDKafkaMessage>,
+    _owner: Arc<BaseConsumer<C>>,
+}
+
+impl<C: ConsumerContext> fmt::Debug for ArcMessage<C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Message {{ ptr: {:?} }}", self.ptr())
+    }
+}
+
+impl<C: ConsumerContext> ArcMessage<C> {
+    /// Creates a new `ArcMessage` that wraps the native Kafka message
+    /// pointer returned by a consumer. The message will hold an Arc to the
+    /// consumer ensuring that it's data does not outlive the consumer.
+    /// If the message contains an error, only the error is returned and
+    /// the message structure is freed.
+    pub(crate) unsafe fn from_consumer(
+        ptr: NativePtr<RDKafkaMessage>,
+        consumer: &Arc<BaseConsumer<C>>,
+    ) -> KafkaResult<ArcMessage<C>> {
+        if ptr.err.is_error() {
+            let err = match ptr.err {
+                rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
+                    KafkaError::PartitionEOF((*ptr).partition)
+                }
+                e => KafkaError::MessageConsumption(e.into()),
+            };
+            Err(err)
+        } else {
+            Ok(ArcMessage {
+                ptr,
+                _owner: consumer.clone(),
+            })
+        }
+    }
+
+    /// Returns a pointer to the [`RDKafkaMessage`].
+    pub fn ptr(&self) -> *mut RDKafkaMessage {
+        self.ptr.ptr()
+    }
+
+    /// Returns a pointer to the message's [`RDKafkaTopic`]
+    pub fn topic_ptr(&self) -> *mut RDKafkaTopic {
+        self.ptr.rkt
+    }
+
+    /// Returns the length of the key field of the message.
+    pub fn key_len(&self) -> usize {
+        self.ptr.key_len
+    }
+
+    /// Returns the length of the payload field of the message.
+    pub fn payload_len(&self) -> usize {
+        self.ptr.len
+    }
+
+    /// Clones the content of the `ArcMessage` and returns an
+    /// [`OwnedMessage`] that can outlive the consumer.
+    ///
+    /// This operation requires memory allocation and can be expensive.
+    pub fn detach(&self) -> OwnedMessage {
+        OwnedMessage {
+            key: self.key().map(|k| k.to_vec()),
+            payload: self.payload().map(|p| p.to_vec()),
+            topic: self.topic().to_owned(),
+            timestamp: self.timestamp(),
+            partition: self.partition(),
+            offset: self.offset(),
+            headers: self.headers().map(BorrowedHeaders::detach),
+        }
+    }
+}
+
+impl<C: ConsumerContext> Message for ArcMessage<C> {
+    type Headers = BorrowedHeaders;
+
+    fn key(&self) -> Option<&[u8]> {
+        unsafe { util::ptr_to_opt_slice((*self.ptr).key, (*self.ptr).key_len) }
+    }
+
+    fn payload(&self) -> Option<&[u8]> {
+        unsafe { util::ptr_to_opt_slice((*self.ptr).payload, (*self.ptr).len) }
+    }
+
+    fn topic(&self) -> &str {
+        unsafe {
+            CStr::from_ptr(rdsys::rd_kafka_topic_name((*self.ptr).rkt))
+                .to_str()
+                .expect("Topic name is not valid UTF-8")
+        }
+    }
+
+    fn partition(&self) -> i32 {
+        self.ptr.partition
+    }
+
+    fn offset(&self) -> i64 {
+        self.ptr.offset
+    }
+
+    fn timestamp(&self) -> Timestamp {
+        let mut timestamp_type = rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_NOT_AVAILABLE;
+        let timestamp =
+            unsafe { rdsys::rd_kafka_message_timestamp(self.ptr.ptr(), &mut timestamp_type) };
+        if timestamp == -1 {
+            Timestamp::NotAvailable
+        } else {
+            match timestamp_type {
+                rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_NOT_AVAILABLE => {
+                    Timestamp::NotAvailable
+                }
+                rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_CREATE_TIME => {
+                    Timestamp::CreateTime(timestamp)
+                }
+                rdsys::rd_kafka_timestamp_type_t::RD_KAFKA_TIMESTAMP_LOG_APPEND_TIME => {
+                    Timestamp::LogAppendTime(timestamp)
+                }
+            }
+        }
+    }
+
+    fn headers(&self) -> Option<&BorrowedHeaders> {
+        let mut native_headers_ptr = ptr::null_mut();
+        unsafe {
+            let err = rdsys::rd_kafka_message_headers(self.ptr.ptr(), &mut native_headers_ptr);
+            match err.into() {
+                RDKafkaErrorCode::NoError => {
+                    Some(BorrowedHeaders::from_native_ptr(self, native_headers_ptr))
+                }
+                RDKafkaErrorCode::NoEnt => None,
+                _ => None,
+            }
+        }
+    }
+}
+
+unsafe impl<C: ConsumerContext> Send for ArcMessage<C> {}
+unsafe impl<C: ConsumerContext> Sync for ArcMessage<C> {}
 
 //
 // ********** OWNED MESSAGE **********
