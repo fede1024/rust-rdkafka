@@ -30,6 +30,8 @@ use crate::statistics::Statistics;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
 use crate::util::{AsyncRuntime, DefaultRuntime, NativePtr, Timeout};
 
+use super::base_consumer::PartitionQueue;
+
 /// A consumer context wrapper for a stream consumer.
 ///
 /// This context will automatically wake up the message stream when new data is
@@ -118,6 +120,14 @@ where
     }
 }
 
+enum MessageStreamConsumer<'a, C: ConsumerContext + 'static, R = DefaultRuntime> {
+    Stream(&'a StreamConsumer<C, R>),
+    Partition(
+        &'a BaseConsumer<StreamConsumerContext<C>>,
+        PartitionQueue<StreamConsumerContext<C>>,
+    ),
+}
+
 /// A stream of messages from a [`StreamConsumer`].
 ///
 /// See the documentation of [`StreamConsumer::stream`] for details.
@@ -125,7 +135,7 @@ pub struct MessageStream<'a, C, R = DefaultRuntime>
 where
     C: ConsumerContext + 'static,
 {
-    consumer: &'a StreamConsumer<C, R>,
+    consumer: MessageStreamConsumer<'a, C, R>, // &'a StreamConsumer<C, R>,
     slot: usize,
 }
 
@@ -139,15 +149,39 @@ where
             let mut wakers = context.wakers.lock().expect("lock poisoned");
             wakers.insert(None)
         };
-        MessageStream { consumer, slot }
+        MessageStream {
+            consumer: MessageStreamConsumer::Stream(consumer),
+            slot,
+        }
+    }
+
+    fn new_partition(
+        consumer: &'a Arc<BaseConsumer<StreamConsumerContext<C>>>,
+        partition: PartitionQueue<StreamConsumerContext<C>>,
+    ) -> MessageStream<'a, C, R> {
+        let slot = {
+            let context = consumer.context();
+            let mut wakers = context.wakers.lock().expect("lock poisoned");
+            wakers.insert(None)
+        };
+        MessageStream {
+            consumer: MessageStreamConsumer::Partition(consumer.as_ref(), partition),
+            slot,
+        }
     }
 
     fn context(&self) -> &StreamConsumerContext<C> {
-        self.consumer.base.context()
+        match &self.consumer {
+            MessageStreamConsumer::Stream(s) => s.base.context(),
+            MessageStreamConsumer::Partition(s, _) => s.context().as_ref(),
+        }
     }
 
     fn client_ptr(&self) -> *mut RDKafka {
-        self.consumer.client().native_ptr()
+        match &self.consumer {
+            MessageStreamConsumer::Stream(s) => s.client().native_ptr(),
+            MessageStreamConsumer::Partition(s, _) => s.client().native_ptr(),
+        }
     }
 
     fn set_waker(&self, waker: Waker) {
@@ -156,9 +190,16 @@ where
     }
 
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
-        unsafe {
-            NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client_ptr(), 0))
-                .map(|p| BorrowedMessage::from_consumer(p, self.consumer))
+        match self.consumer {
+            MessageStreamConsumer::Stream(s) => unsafe {
+                NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client_ptr(), 0))
+                    .map(|p| BorrowedMessage::from_consumer(p, s))
+            },
+            MessageStreamConsumer::Partition(s, ref p) => unsafe {
+                rdsys::rd_kafka_poll(s.client().native_ptr(), 0);
+                NativePtr::from_ptr(rdsys::rd_kafka_consume_queue(p.native_queue().ptr(), 0))
+            }
+            .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, s) }),
         }
     }
 }
@@ -222,7 +263,7 @@ pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
 {
-    base: BaseConsumer<StreamConsumerContext<C>>,
+    base: Arc<BaseConsumer<StreamConsumerContext<C>>>,
     _shutdown_trigger: oneshot::Sender<()>,
     _runtime: PhantomData<R>,
 }
@@ -285,7 +326,7 @@ where
         });
 
         Ok(StreamConsumer {
-            base,
+            base: Arc::new(base),
             _shutdown_trigger: shutdown_trigger,
             _runtime: PhantomData,
         })
@@ -339,6 +380,17 @@ where
             .next()
             .await
             .expect("kafka streams never terminate")
+    }
+
+    /// TODO (nemosupremo)
+    pub fn split_partition_queue(
+        &self,
+        topic: &str,
+        partition: i32,
+    ) -> Option<MessageStream<'_, C, R>> {
+        self.base
+            .split_partition_queue(topic, partition)
+            .map(|partition| MessageStream::new_partition(&self.base, partition))
     }
 }
 

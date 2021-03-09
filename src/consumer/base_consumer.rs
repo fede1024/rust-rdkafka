@@ -626,6 +626,10 @@ where
         PartitionQueue { consumer, queue }
     }
 
+    pub(super) fn native_queue(&self) -> &NativeQueue {
+        &self.queue
+    }
+
     /// Polls the partition for new messages.
     ///
     /// The `timeout` parameter controls how long to block if no messages are
