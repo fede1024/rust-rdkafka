@@ -86,20 +86,28 @@ async fn consume_and_print(brokers: &str, group_id: &str, topic: &str) {
     let mut streams = partitions
         .into_iter()
         .map(|p| {
-            consumer
-                .split_partition_queue(topic, p)
-                .expect("Failed to get partition")
-                .map(move |msg| (p, msg))
+            (
+                p,
+                consumer
+                    .split_partition_queue(topic, p)
+                    .expect("Failed to get partition"),
+            )
         })
         .collect::<Vec<_>>();
 
-    let mut mine = streams.pop().unwrap();
+    let mine = streams.pop().unwrap();
     tokio::spawn(async move {
-        while let Some((p, _msg)) = mine.next().await {
+        let (p, mine) = mine;
+        let mut mine = mine.stream();
+        while let Some(_msg) = mine.next().await {
             info!("hello from the other side of partition: {}", p);
         }
     });
 
+    let streams = streams
+        .iter()
+        .map(|(p, s)| s.stream().map(move |m| (p, m)))
+        .collect::<Vec<_>>();
     let mut streams = futures::stream::select_all(streams);
     loop {
         while let Some((p, msg)) = streams.next().await {
@@ -128,7 +136,7 @@ async fn consume_and_print(brokers: &str, group_id: &str, topic: &str) {
                             info!("  Header {:#?}: {:?}", header.0, header.1);
                         }
                     }
-                    // consumer.commit_message(&m, CommitMode::Async).unwrap();
+                    consumer.commit_message(&m, CommitMode::Async).unwrap();
                 }
             }
         }

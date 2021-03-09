@@ -24,7 +24,7 @@ use crate::consumer::{
 };
 use crate::error::{KafkaError, KafkaResult};
 use crate::groups::GroupList;
-use crate::message::{ArcMessage, BorrowedMessage, Message};
+use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
 use crate::statistics::Statistics;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
@@ -118,117 +118,80 @@ where
     }
 }
 
-enum ConsumerRef<'a, C: ConsumerContext + 'static, R = DefaultRuntime> {
-    Borrowed(&'a StreamConsumer<C, R>),
-    Arc(Arc<BaseConsumer<StreamConsumerContext<C>>>),
-}
-
 /// A stream of messages from a [`StreamConsumer`].
 ///
 /// See the documentation of [`StreamConsumer::stream`] for details.
-pub struct MessageStream<'a, C, R = DefaultRuntime, M = BorrowedMessage<'a>>
+pub struct MessageStream<'a, C, R = DefaultRuntime>
 where
     C: ConsumerContext + 'static,
-    M: Message,
 {
-    consumer: ConsumerRef<'a, C, R>,
-    partition: Option<PartitionQueue<StreamConsumerContext<C>>>,
+    consumer: &'a StreamConsumer<C, R>,
+    partition: Option<&'a PartitionQueue<StreamConsumerContext<C>>>,
     slot: usize,
-    message: PhantomData<M>,
 }
 
-impl<'a, C, R, M> MessageStream<'a, C, R, M>
-where
-    C: ConsumerContext + 'static,
-    M: Message,
-{
-    fn context(&self) -> &StreamConsumerContext<C> {
-        match &self.consumer {
-            ConsumerRef::Borrowed(s) => s.base.context(),
-            ConsumerRef::Arc(s) => s.context().as_ref(),
-        }
-    }
-
-    fn client_ptr(&self) -> *mut RDKafka {
-        match &self.consumer {
-            ConsumerRef::Borrowed(s) => s.client().native_ptr(),
-            ConsumerRef::Arc(s) => s.client().native_ptr(),
-        }
-    }
-
-    fn set_waker(&self, waker: Waker) {
-        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
-        wakers[self.slot].replace(waker);
-    }
-}
-
-impl<'a, C, R> MessageStream<'a, C, R, BorrowedMessage<'a>>
+impl<'a, C, R> MessageStream<'a, C, R>
 where
     C: ConsumerContext + 'static,
 {
-    fn new(consumer: &'a StreamConsumer<C, R>) -> MessageStream<'a, C, R, BorrowedMessage<'a>> {
+    fn new(consumer: &'a StreamConsumer<C, R>) -> MessageStream<'a, C, R> {
         let slot = {
             let context = consumer.base.context();
             let mut wakers = context.wakers.lock().expect("lock poisoned");
             wakers.insert(None)
         };
         MessageStream {
-            consumer: ConsumerRef::Borrowed(consumer),
+            consumer,
+            partition: None,
             slot,
-            message: Default::default(),
-            partition: Default::default(),
         }
     }
 
-    fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
-        match self.consumer {
-            ConsumerRef::Borrowed(s) => unsafe {
-                NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client_ptr(), 0))
-                    .map(|p| BorrowedMessage::from_consumer(p, s))
-            },
-            ConsumerRef::Arc(_) => unreachable!(),
-        }
-    }
-}
-
-impl<'a, C, R> MessageStream<'a, C, R, ArcMessage<C>>
-where
-    C: ConsumerContext + 'static,
-{
-    fn new(
-        consumer: &StreamConsumer<C, R>,
-        topic: &str,
-        partition: i32,
-    ) -> Option<MessageStream<'a, C, R, ArcMessage<C>>> {
+    fn new_partition(
+        consumer: &'a StreamConsumer<C, R>,
+        partition: &'a PartitionQueue<StreamConsumerContext<C>>,
+    ) -> MessageStream<'a, C, R> {
         let slot = {
-            let context = consumer.context();
+            let context = consumer.base.context();
             let mut wakers = context.wakers.lock().expect("lock poisoned");
             wakers.insert(None)
         };
-        consumer
-            .base
-            .split_partition_queue(topic, partition)
-            .map(|partition| MessageStream {
-                consumer: ConsumerRef::Arc(consumer.base.clone()),
-                slot,
-                message: Default::default(),
-                partition: Some(partition),
-            })
+        MessageStream {
+            consumer,
+            partition: Some(partition),
+            slot,
+        }
     }
 
-    fn poll(&self) -> Option<KafkaResult<ArcMessage<StreamConsumerContext<C>>>> {
-        match (&self.consumer, &self.partition) {
-            (ConsumerRef::Arc(s), Some(p)) => unsafe {
-                rdsys::rd_kafka_poll(s.client().native_ptr(), 0);
+    fn context(&self) -> &StreamConsumerContext<C> {
+        self.consumer.base.context()
+    }
+
+    fn client_ptr(&self) -> *mut RDKafka {
+        self.consumer.client().native_ptr()
+    }
+
+    fn set_waker(&self, waker: Waker) {
+        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
+        wakers[self.slot].replace(waker);
+    }
+
+    fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
+        match self.partition {
+            Some(p) => unsafe {
+                rdsys::rd_kafka_poll(self.client_ptr(), 0);
                 NativePtr::from_ptr(rdsys::rd_kafka_consume_queue(p.native_queue().ptr(), 0))
-                    .map(|ptr| ArcMessage::from_consumer(ptr, &s))
+                    .map(|ptr| BorrowedMessage::from_consumer(ptr, p))
             },
-            _ => unreachable!(),
+            None => unsafe {
+                NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client_ptr(), 0))
+                    .map(|p| BorrowedMessage::from_consumer(p, self.consumer))
+            },
         }
     }
 }
 
-impl<'a, C, R> Stream for MessageStream<'a, C, R, BorrowedMessage<'a>>
+impl<'a, C, R> Stream for MessageStream<'a, C, R>
 where
     C: ConsumerContext + 'a,
 {
@@ -258,40 +221,9 @@ where
     }
 }
 
-impl<'a, C, R> Stream for MessageStream<'a, C, R, ArcMessage<C>>
-where
-    C: ConsumerContext + 'a,
-{
-    type Item = KafkaResult<ArcMessage<StreamConsumerContext<C>>>;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        // If there is a message ready, yield it immediately to avoid the
-        // taking the lock in `self.set_waker`.
-        if let Some(message) = self.poll() {
-            return Poll::Ready(Some(message));
-        }
-
-        // Otherwise, we need to wait for a message to become available. Store
-        // the waker so that we are woken up if the queue flips from non-empty
-        // to empty. We have to store the waker repatedly in case this future
-        // migrates between tasks.
-        self.set_waker(cx.waker().clone());
-
-        // Check whether a new message became available after we installed the
-        // waker. This avoids a race where `poll` returns None to indicate that
-        // the queue is empty, but the queue becomes non-empty before we've
-        // installed the waker.
-        match self.poll() {
-            None => Poll::Pending,
-            Some(message) => Poll::Ready(Some(message)),
-        }
-    }
-}
-
-impl<'a, C, R, M> Drop for MessageStream<'a, C, R, M>
+impl<'a, C, R> Drop for MessageStream<'a, C, R>
 where
     C: ConsumerContext + 'static,
-    M: Message,
 {
     fn drop(&mut self) {
         let mut wakers = self.context().wakers.lock().expect("lock poisoned");
@@ -404,22 +336,13 @@ where
     ///
     /// If you want multiple independent views of a Kafka topic, create multiple
     /// consumers, not multiple message streams.
-    pub fn stream<'a>(&'a self) -> MessageStream<'_, C, R, BorrowedMessage<'a>> {
-        MessageStream::<_, _, BorrowedMessage<'a>>::new(self)
-    }
-
-    /// TODO(nemo_supremo)
-    pub fn split_partition_queue(
-        &self,
-        topic: &str,
-        partition: i32,
-    ) -> Option<MessageStream<'static, C, R, ArcMessage<C>>> {
-        MessageStream::<_, _, ArcMessage<C>>::new(self, topic, partition)
+    pub fn stream(&self) -> MessageStream<'_, C, R> {
+        MessageStream::new(self)
     }
 
     /// Constructs a stream that yields messages from this consumer.
     #[deprecated = "use the more clearly named \"StreamConsumer::stream\" method instead"]
-    pub fn start<'a>(&'a self) -> MessageStream<'_, C, R, BorrowedMessage<'a>> {
+    pub fn start(&self) -> MessageStream<'_, C, R> {
         self.stream()
     }
 
@@ -444,6 +367,27 @@ where
             .next()
             .await
             .expect("kafka streams never terminate")
+    }
+
+    /// Splits messages for the specified partition into their own queue and
+    /// returns an async PartitionQueue.
+    ///
+    /// If the `topic` or `partition` is invalid, returns `None`.
+    ///
+    /// Unlike [`PartitionQueue`], [`PartitionStream`] does not
+    /// require the [`StreamConsumer`] to be polled seperately.
+    ///
+    /// Note that calling [`Consumer::assign`] will deactivate any existing
+    /// partition queues. You will need to call this method for every partition
+    /// that should be split after every call to `assign`.
+    pub fn split_partition_queue(
+        self: &Arc<Self>,
+        topic: &str,
+        partition: i32,
+    ) -> Option<PartitionStream<C, R>> {
+        self.base
+            .split_partition_queue(topic, partition)
+            .map(|partition| PartitionStream::new(self, partition))
     }
 }
 
@@ -595,5 +539,59 @@ where
 
     fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
         self.base.resume(partitions)
+    }
+}
+
+/// An asynchronous message queue for a single partition.
+pub struct PartitionStream<C = DefaultConsumerContext, R = DefaultRuntime>
+where
+    C: ConsumerContext,
+{
+    consumer: Arc<StreamConsumer<C, R>>,
+    queue: PartitionQueue<StreamConsumerContext<C>>,
+}
+
+impl<C, R> PartitionStream<C, R>
+where
+    C: ConsumerContext + 'static,
+{
+    fn new(
+        consumer: &Arc<StreamConsumer<C, R>>,
+        queue: PartitionQueue<StreamConsumerContext<C>>,
+    ) -> Self {
+        PartitionStream {
+            consumer: consumer.clone(),
+            queue,
+        }
+    }
+
+    /// Constructs a stream that yields messages from this consumer.
+    ///
+    /// It is legal to have multiple live message streams for the same consumer,
+    /// and to move those message streams across threads. Note, however, that
+    /// the message streams share the same underlying state. A message received
+    /// by the consumer will be delivered to only one of the live message
+    /// streams. If you seek the underlying consumer, all message streams
+    /// created from the consumer will begin to draw messages from the new
+    /// position of the consumer.
+    ///
+    /// If you want multiple independent views of a Kafka topic, create multiple
+    /// consumers, not multiple message streams.
+    pub fn stream(&self) -> MessageStream<'_, C, R> {
+        MessageStream::new_partition(self.consumer.as_ref(), &self.queue)
+    }
+
+    /// Receives the next message from the stream.
+    ///
+    /// This method will block until the next message is available or an error
+    /// occurs. It is legal to call `recv` from multiple threads simultaneously.
+    ///
+    /// Note that this method is exactly as efficient as constructing a
+    /// single-use message stream and extracting one message from it:
+    pub async fn recv(&self) -> Result<BorrowedMessage<'_>, KafkaError> {
+        self.stream()
+            .next()
+            .await
+            .expect("kafka streams never terminate")
     }
 }
