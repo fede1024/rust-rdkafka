@@ -1,7 +1,9 @@
 //! High-level consumers with a [`Stream`](futures::Stream) interface.
 
+use std::ffi::CString;
 use std::marker::PhantomData;
 use std::pin::Pin;
+use std::ptr;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
@@ -16,9 +18,9 @@ use slab::Slab;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, ClientContext, NativeClient};
+use crate::client::{Client, ClientContext, NativeClient, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
-use crate::consumer::base_consumer::{BaseConsumer, PartitionQueue};
+use crate::consumer::base_consumer::{enable_nonempty_callback, BaseConsumer, PartitionQueue};
 use crate::consumer::{
     CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext, Rebalance,
 };
@@ -126,7 +128,7 @@ where
     C: ConsumerContext + 'static,
 {
     consumer: &'a StreamConsumer<C, R>,
-    partition: Option<&'a PartitionQueue<StreamConsumerContext<C>>>,
+    partition: Option<&'a PartitionQueue<StreamConsumerContext<C>, StreamConsumer<C, R>>>,
     slot: usize,
 }
 
@@ -149,7 +151,7 @@ where
 
     fn new_partition(
         consumer: &'a StreamConsumer<C, R>,
-        partition: &'a PartitionQueue<StreamConsumerContext<C>>,
+        partition: &'a PartitionQueue<StreamConsumerContext<C>, StreamConsumer<C, R>>,
     ) -> MessageStream<'a, C, R> {
         let slot = {
             let context = consumer.base.context();
@@ -250,7 +252,7 @@ pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
 {
-    base: Arc<BaseConsumer<StreamConsumerContext<C>>>,
+    base: BaseConsumer<StreamConsumerContext<C>>,
     _shutdown_trigger: oneshot::Sender<()>,
     _runtime: PhantomData<R>,
 }
@@ -313,7 +315,7 @@ where
         });
 
         Ok(StreamConsumer {
-            base: Arc::new(base),
+            base,
             _shutdown_trigger: shutdown_trigger,
             _runtime: PhantomData,
         })
@@ -385,8 +387,25 @@ where
         topic: &str,
         partition: i32,
     ) -> Option<PartitionStream<C, R>> {
-        self.base
-            .split_partition_queue(topic, partition)
+        let topic = match CString::new(topic) {
+            Ok(topic) => topic,
+            Err(_) => return None,
+        };
+        let queue = unsafe {
+            NativeQueue::from_ptr(rdsys::rd_kafka_queue_get_partition(
+                self.base.client().native_ptr(),
+                topic.as_ptr(),
+                partition,
+            ))
+        };
+        queue
+            .map(|queue| {
+                unsafe {
+                    enable_nonempty_callback(&queue, self.base.client().context());
+                    rdsys::rd_kafka_queue_forward(queue.ptr(), ptr::null_mut());
+                }
+                PartitionQueue::new(self.clone(), queue)
+            })
             .map(|partition| PartitionStream::new(self, partition))
     }
 }
@@ -548,7 +567,7 @@ where
     C: ConsumerContext,
 {
     consumer: Arc<StreamConsumer<C, R>>,
-    queue: PartitionQueue<StreamConsumerContext<C>>,
+    queue: PartitionQueue<StreamConsumerContext<C>, StreamConsumer<C, R>>,
 }
 
 impl<C, R> PartitionStream<C, R>
@@ -557,7 +576,7 @@ where
 {
     fn new(
         consumer: &Arc<StreamConsumer<C, R>>,
-        queue: PartitionQueue<StreamConsumerContext<C>>,
+        queue: PartitionQueue<StreamConsumerContext<C>, StreamConsumer<C, R>>,
     ) -> Self {
         PartitionStream {
             consumer: consumer.clone(),

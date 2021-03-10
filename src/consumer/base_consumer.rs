@@ -2,6 +2,7 @@
 
 use std::cmp;
 use std::ffi::CString;
+use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
@@ -73,7 +74,10 @@ unsafe extern "C" fn native_message_queue_nonempty_cb<C: ConsumerContext>(
     (*context).message_queue_nonempty_callback();
 }
 
-unsafe fn enable_nonempty_callback<C: ConsumerContext>(queue: &NativeQueue, context: &Arc<C>) {
+pub(super) unsafe fn enable_nonempty_callback<C: ConsumerContext>(
+    queue: &NativeQueue,
+    context: &Arc<C>,
+) {
     rdsys::rd_kafka_queue_cb_event_enable(
         queue.ptr(),
         Some(native_message_queue_nonempty_cb::<C>),
@@ -610,20 +614,27 @@ where
 }
 
 /// A message queue for a single partition.
-pub struct PartitionQueue<C>
+pub struct PartitionQueue<C, D = BaseConsumer<C>>
 where
     C: ConsumerContext,
+    D: Consumer<C>,
 {
-    consumer: Arc<BaseConsumer<C>>,
+    consumer: Arc<D>,
     queue: NativeQueue,
+    context: PhantomData<C>,
 }
 
-impl<C> PartitionQueue<C>
+impl<C, D> PartitionQueue<C, D>
 where
     C: ConsumerContext,
+    D: Consumer<C>,
 {
-    fn new(consumer: Arc<BaseConsumer<C>>, queue: NativeQueue) -> Self {
-        PartitionQueue { consumer, queue }
+    pub(super) fn new(consumer: Arc<D>, queue: NativeQueue) -> Self {
+        PartitionQueue {
+            consumer,
+            queue,
+            context: Default::default(),
+        }
     }
 
     pub(super) fn native_queue(&self) -> &NativeQueue {
