@@ -324,10 +324,15 @@ where
 /// support for any runtime that can satisfy this trait.
 ///
 /// For an example of using the [smol] runtime with rust-rdkafka, see the
-/// [smol_runtime] example.
+/// [runtime_smol] example.
+///
+/// For an example of using the [async-std] runtime with rust-rdkafka, see the
+/// [runtime_async_std] example.
 ///
 /// [smol]: https://docs.rs/smol
-/// [smol_runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs
+/// [async-std]: https://docs.rs/async-std
+/// [runtime_smol]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/runtime_smol.rs
+/// [runtime_async_std]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/runtime_async_std.rs
 pub trait AsyncRuntime: Send + Sync + 'static {
     /// The type of the future returned by
     /// [`delay_for`](AsyncRuntime::delay_for).

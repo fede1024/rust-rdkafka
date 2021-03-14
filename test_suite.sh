@@ -60,6 +60,12 @@ echo_good "*** Integration tests succeeded ***"
 
 # Run smol runtime example.
 
-echo_good "*** Run smol_runtime example ***"
-cargo run --example smol_runtime --no-default-features --features cmake-build -- --topic smol
-echo_good "*** smol_runtime example succeeded ***"
+echo_good "*** Run runtime_smol example ***"
+cargo run --example runtime_smol --no-default-features --features cmake-build -- --topic smol
+echo_good "*** runtime_smol example succeeded ***"
+
+# Run async-std runtime example.
+
+echo_good "*** Run runtime_async_std example ***"
+cargo run --example runtime_async_std --no-default-features --features cmake-build -- --topic async-std
+echo_good "*** runtime_async_std example succeeded ***"

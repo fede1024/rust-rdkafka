@@ -200,8 +200,10 @@ rdkafka = { version = "0.25", default-features = false }
 
 If you would like to use an asynchronous runtime besides Tokio, you can
 integrate it with rust-rdkafka by providing a shim that implements the
-[`AsyncRuntime`] trait. See the [smol runtime example] for an example
-integration with [smol].
+[`AsyncRuntime`] trait. See the following examples for details:
+
+  * [smol][runtime-smol]
+  * [async-std][runtime-async-std]
 
 ## Examples
 
@@ -244,7 +246,8 @@ logging framework.
 [Apache Kafka]: https://kafka.apache.org
 [asynchronous processing example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs
 [at-least-once delivery example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/at_least_once.rs
-[smol runtime example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/smol_runtime.rs
+[runtime-smol]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_smol.rs
+[runtime-async-std]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_async_std.rs
 [broker-compat]: https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility
 [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
 [futures]: https://github.com/rust-lang/futures-rs
