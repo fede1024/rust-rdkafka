@@ -64,6 +64,12 @@ where
             }
         }
     }
+
+    /// Returns a reference to the inner [`ConsumerContext`] used to create
+    /// this context.
+    pub fn inner(&self) -> &C {
+        &self.inner
+    }
 }
 
 impl<C> ClientContext for StreamConsumerContext<C>
