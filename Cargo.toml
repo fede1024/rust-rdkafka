@@ -25,6 +25,7 @@ slab = "0.4"
 tokio = { version = "1.0", features = ["rt", "time"], optional = true }
 
 [dev-dependencies]
+async-std = { version = "1.9.0", features = ["attributes"] }
 backoff = "0.1.5"
 chrono = "0.4.0"
 clap = "2.18.0"
