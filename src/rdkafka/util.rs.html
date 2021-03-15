@@ -414,6 +414,11 @@
 <span id="411">411</span>
 <span id="412">412</span>
 <span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Utility functions and types.</span>
 
@@ -741,10 +746,15 @@
 <span class="doccomment">/// support for any runtime that can satisfy this trait.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// For an example of using the [smol] runtime with rust-rdkafka, see the</span>
-<span class="doccomment">/// [smol_runtime] example.</span>
+<span class="doccomment">/// [runtime_smol] example.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// For an example of using the [async-std] runtime with rust-rdkafka, see the</span>
+<span class="doccomment">/// [runtime_async_std] example.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// [smol]: https://docs.rs/smol</span>
-<span class="doccomment">/// [smol_runtime]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/smol_runtime.rs</span>
+<span class="doccomment">/// [async-std]: https://docs.rs/async-std</span>
+<span class="doccomment">/// [runtime_smol]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/runtime_smol.rs</span>
+<span class="doccomment">/// [runtime_async_std]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/runtime_async_std.rs</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AsyncRuntime</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
     <span class="doccomment">/// The type of the future returned by</span>
     <span class="doccomment">/// [`delay_for`](AsyncRuntime::delay_for).</span>
@@ -829,4 +839,5 @@
     }
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "rdkafka";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rdkafka"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

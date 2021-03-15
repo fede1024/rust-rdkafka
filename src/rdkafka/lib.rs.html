@@ -284,6 +284,9 @@
 <span id="281">281</span>
 <span id="282">282</span>
 <span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A fully asynchronous, [futures]-enabled [Apache Kafka] client</span>
 <span class="doccomment">//! library for Rust based on [librdkafka].</span>
@@ -291,7 +294,7 @@
 <span class="doccomment">//! ## The library</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! `rust-rdkafka` provides a safe Rust interface to librdkafka. The master</span>
-<span class="doccomment">//! branch is currently based on librdkafka 1.5.3.</span>
+<span class="doccomment">//! branch is currently based on librdkafka 1.6.0.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ### Documentation</span>
 <span class="doccomment">//!</span>
@@ -427,7 +430,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```toml</span>
 <span class="doccomment">//! [dependencies]</span>
-<span class="doccomment">//! rdkafka = { version = &quot;0.24&quot;, features = [&quot;cmake-build&quot;] }</span>
+<span class="doccomment">//! rdkafka = { version = &quot;0.25&quot;, features = [&quot;cmake-build&quot;] }</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! This crate will compile librdkafka from sources and link it statically to</span>
@@ -452,7 +455,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```toml</span>
 <span class="doccomment">//! [dependencies]</span>
-<span class="doccomment">//! rdkafka = { version = &quot;0.24&quot;, features = [&quot;dynamic-linking&quot;] }</span>
+<span class="doccomment">//! rdkafka = { version = &quot;0.25&quot;, features = [&quot;dynamic-linking&quot;] }</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! For a full listing of features, consult the [rdkafka-sys crate&#39;s</span>
@@ -474,13 +477,15 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```toml</span>
 <span class="doccomment">//! [dependencies]</span>
-<span class="doccomment">//! rdkafka = { version = &quot;0.24&quot;, default-features = false }</span>
+<span class="doccomment">//! rdkafka = { version = &quot;0.25&quot;, default-features = false }</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! If you would like to use an asynchronous runtime besides Tokio, you can</span>
 <span class="doccomment">//! integrate it with rust-rdkafka by providing a shim that implements the</span>
-<span class="doccomment">//! [`AsyncRuntime`] trait. See the [smol runtime example] for an example</span>
-<span class="doccomment">//! integration with [smol].</span>
+<span class="doccomment">//! [`AsyncRuntime`] trait. See the following examples for details:</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!   * [smol][runtime-smol]</span>
+<span class="doccomment">//!   * [async-std][runtime-async-std]</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Examples</span>
 <span class="doccomment">//!</span>
@@ -523,7 +528,8 @@
 <span class="doccomment">//! [Apache Kafka]: https://kafka.apache.org</span>
 <span class="doccomment">//! [asynchronous processing example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs</span>
 <span class="doccomment">//! [at-least-once delivery example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/at_least_once.rs</span>
-<span class="doccomment">//! [smol runtime example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/smol_runtime.rs</span>
+<span class="doccomment">//! [runtime-smol]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_smol.rs</span>
+<span class="doccomment">//! [runtime-async-std]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_async_std.rs</span>
 <span class="doccomment">//! [broker-compat]: https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility</span>
 <span class="doccomment">//! [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/</span>
 <span class="doccomment">//! [futures]: https://github.com/rust-lang/futures-rs</span>
@@ -569,4 +575,5 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">topic_partition_list</span>::{<span class="ident">Offset</span>, <span class="ident">TopicPartitionList</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::<span class="ident">IntoOpaque</span>;
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "rdkafka";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rdkafka"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
