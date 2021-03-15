@@ -211,12 +211,6 @@ fn build_librdkafka() {
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         config.define("WITH_SSL", "1");
         config.register_dep("openssl");
-        // Work around a bug in the CMake build system in which this define is
-        // not set correctly when statically linking OpenSSL.
-        // See: https://github.com/edenhill/librdkafka/pull/3249
-        //
-        // TODO(benesch): remove if upstream PR lands.
-        config.cflag("-DWITH_STATIC_LIB_libcrypto");
     } else {
         config.define("WITH_SSL", "0");
     }

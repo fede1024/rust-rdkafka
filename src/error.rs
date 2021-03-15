@@ -133,6 +133,7 @@ impl Error for RDKafkaError {}
 ///
 /// If applicable, check the underlying [`RDKafkaErrorCode`] to get details.
 #[derive(Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum KafkaError {
     /// Creation of admin operation failed.
     AdminOpCreation(String),

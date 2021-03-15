@@ -1,12 +1,11 @@
 # Changelog
 
-## Unreleased
+## v4.0.0+1.6.1 (2021-03-14)
 
-* Ensure librdkafka is configured to probe for the system's trusted certificate
-  authorities (CAs) when using CMake build system with the
-  `ssl-vendored` feature enabled.
+* **Breaking change.** Mark the `RDKafkaErrorCode` enum as [non-exhaustive], so
+  that future additions to the enum will not be considered breaking changes.
 
-  This is a fix for an upstream bug ([edenhill/librdkafka#3249]).
+* Upgrade to librdkafka v1.6.1.
 
 ## v3.0.0+1.6.0 (2021-01-30)
 
@@ -42,3 +41,4 @@
 
 [edenhill/librdkafka#2672]: https://github.com/edenhill/librdkafka/issues/2672
 [edenhill/librdkafka#3249]: https://github.com/edenhill/librdkafka/issues/3249
+[non-exhaustive]: https://doc.rust-lang.org/reference/attributes/type_system.html#the-non_exhaustive-attribute

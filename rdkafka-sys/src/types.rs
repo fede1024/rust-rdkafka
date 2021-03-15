@@ -109,6 +109,7 @@ pub use bindings::rd_kafka_ConfigSource_t as RDKafkaConfigSource;
 
 /// Native rdkafka error code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum RDKafkaErrorCode {
     #[doc(hidden)]
     Begin = -200,
@@ -230,6 +231,8 @@ pub enum RDKafkaErrorCode {
     AssignmentLost = -142,
     /// No operation performed.
     Noop = -141,
+    /// No offset to automatically reset to.
+    AutoOffsetReset = -140,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error.
