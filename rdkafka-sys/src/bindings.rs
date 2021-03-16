@@ -46,7 +46,7 @@ impl<T> ::std::cmp::PartialEq for __BindgenUnionField<T> {
     }
 }
 impl<T> ::std::cmp::Eq for __BindgenUnionField<T> {}
-pub const RD_KAFKA_VERSION: u32 = 17170687;
+pub const RD_KAFKA_VERSION: u32 = 17170943;
 pub const RD_KAFKA_DEBUG_CONTEXTS : & 'static [u8 ; 138usize] = b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer,admin,eos,mock,assignor,conf\0" ;
 pub const RD_KAFKA_DESTROY_F_NO_CONSUMER_CLOSE: u32 = 8;
 pub const RD_KAFKA_OFFSET_BEGINNING: i32 = -2;
@@ -229,6 +229,7 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR__APPLICATION = -143,
     RD_KAFKA_RESP_ERR__ASSIGNMENT_LOST = -142,
     RD_KAFKA_RESP_ERR__NOOP = -141,
+    RD_KAFKA_RESP_ERR__AUTO_OFFSET_RESET = -140,
     RD_KAFKA_RESP_ERR__END = -100,
     RD_KAFKA_RESP_ERR_UNKNOWN = -1,
     RD_KAFKA_RESP_ERR_NO_ERROR = 0,
@@ -1841,6 +1842,21 @@ pub type rd_kafka_interceptor_f_on_request_sent_t = Option<
         ic_opaque: *mut c_void,
     ) -> rd_kafka_resp_err_t,
 >;
+pub type rd_kafka_interceptor_f_on_response_received_t = Option<
+    unsafe extern "C" fn(
+        rk: *mut rd_kafka_t,
+        sockfd: c_int,
+        brokername: *const c_char,
+        brokerid: i32,
+        ApiKey: i16,
+        ApiVersion: i16,
+        CorrId: i32,
+        size: size_t,
+        rtt: i64,
+        err: rd_kafka_resp_err_t,
+        ic_opaque: *mut c_void,
+    ) -> rd_kafka_resp_err_t,
+>;
 pub type rd_kafka_interceptor_f_on_thread_start_t = Option<
     unsafe extern "C" fn(
         rk: *mut rd_kafka_t,
@@ -1934,6 +1950,14 @@ extern "C" {
         rk: *mut rd_kafka_t,
         ic_name: *const c_char,
         on_request_sent: rd_kafka_interceptor_f_on_request_sent_t,
+        ic_opaque: *mut c_void,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_interceptor_add_on_response_received(
+        rk: *mut rd_kafka_t,
+        ic_name: *const c_char,
+        on_response_received: rd_kafka_interceptor_f_on_response_received_t,
         ic_opaque: *mut c_void,
     ) -> rd_kafka_resp_err_t;
 }

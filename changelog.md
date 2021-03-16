@@ -2,9 +2,20 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
-## Unreleased
+<a name="0.26.0"></a>
+## 0.26.0 (2021-03-14)
 
 * Fix compilation for the aarch64 target.
+
+* Add an `inner` method to `StreamConsumerContext` to enable access to the
+  underlying context.
+
+  Thanks, [@marcelo140].
+
+* Mark the `KafkaError` enum as [non-exhaustive] so that future additions to
+  the enum will not be considered breaking changes.
+
+[@marcelo140]: https://github.com/marcelo140
 
 <a name="0.25.0"></a>
 ## 0.25.0 (2021-01-30)
@@ -505,3 +516,5 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * More metadata for consumers
 * Watermark API
 * First iteration of integration test suite
+
+[non-exhaustive]: https://doc.rust-lang.org/reference/attributes/type_system.html#the-non_exhaustive-attribute
