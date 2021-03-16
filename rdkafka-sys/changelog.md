@@ -1,6 +1,6 @@
 # Changelog
 
-## v4.0.0+1.6.1 (2021-03-14)
+## v4.0.0+1.6.1 (2021-03-16)
 
 * **Breaking change.** Mark the `RDKafkaErrorCode` enum as [non-exhaustive], so
   that future additions to the enum will not be considered breaking changes.

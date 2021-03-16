@@ -3,7 +3,7 @@
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 <a name="0.26.0"></a>
-## 0.26.0 (2021-03-14)
+## 0.26.0 (2021-03-16)
 
 * Fix compilation for the aarch64 target.
 
