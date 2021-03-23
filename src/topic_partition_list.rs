@@ -69,7 +69,7 @@ impl Offset {
             Offset::End => Some(OFFSET_END),
             Offset::Stored => Some(OFFSET_STORED),
             Offset::Invalid => Some(OFFSET_INVALID),
-            Offset::Offset(n) if n > 0 => Some(n),
+            Offset::Offset(n) if n >= 0 => Some(n),
             Offset::OffsetTail(n) if n > 0 => Some(OFFSET_TAIL_BASE - n),
             Offset::Offset(_) | Offset::OffsetTail(_) => None,
         }
