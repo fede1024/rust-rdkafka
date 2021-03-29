@@ -35,7 +35,7 @@ docker-compose up -d
 # Run unit tests.
 
 echo_good "*** Run unit tests ***"
-for test_file in target/debug/rdkafka-*
+for test_file in target/debug/deps/rdkafka-*
 do
     if [[ -x "$test_file" ]]
     then
@@ -48,7 +48,7 @@ echo_good "*** Unit tests succeeded ***"
 # Run integration tests.
 
 echo_good "*** Run unit tests ***"
-for test_file in target/debug/test_*
+for test_file in target/debug/deps/test_*
 do
     if [[ -x "$test_file" ]]
     then
