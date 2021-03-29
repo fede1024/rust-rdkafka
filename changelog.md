@@ -2,6 +2,18 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
+<a name="0.26.1"></a>
+## 0.26.1 (Unreleased)
+
+* Allow offset 0 in `Offset::to_raw`.
+
+  Thanks, [@roignpar].
+
+* Fix a segfault when calling `Consumer::position` on a consumer that was
+  improperly configured ([#360]).
+
+[#360]: https://github.com/fede1024/rust-rdkafka/issues/360
+
 <a name="0.26.0"></a>
 ## 0.26.0 (2021-03-16)
 
