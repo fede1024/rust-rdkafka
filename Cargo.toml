@@ -9,6 +9,7 @@ description = "Rust wrapper for librdkafka"
 keywords = ["kafka", "rdkafka"]
 categories = ["api-bindings"]
 edition = "2018"
+exclude = ["Cargo.lock"]
 
 [workspace]
 members = ["rdkafka-sys"]
