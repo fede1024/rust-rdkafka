@@ -502,17 +502,12 @@ where
     }
 
     fn position(&self) -> KafkaResult<TopicPartitionList> {
-        let mut tpl_ptr = ptr::null_mut();
-        let error = unsafe {
-            // TODO: improve error handling
-            rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr);
-            rdsys::rd_kafka_position(self.client.native_ptr(), tpl_ptr)
-        };
-
+        let tpl = self.assignment()?;
+        let error = unsafe { rdsys::rd_kafka_position(self.client.native_ptr(), tpl.ptr()) };
         if error.is_error() {
             Err(KafkaError::MetadataFetch(error.into()))
         } else {
-            Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
+            Ok(tpl)
         }
     }
 

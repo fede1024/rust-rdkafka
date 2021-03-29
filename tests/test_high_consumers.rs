@@ -253,13 +253,13 @@ async fn test_consumer_commit_message() {
 
     let mut assignment = TopicPartitionList::new();
     assignment
-        .add_partition_offset(&topic_name, 0, Offset::Invalid)
+        .add_partition_offset(&topic_name, 0, Offset::Stored)
         .unwrap();
     assignment
-        .add_partition_offset(&topic_name, 1, Offset::Invalid)
+        .add_partition_offset(&topic_name, 1, Offset::Stored)
         .unwrap();
     assignment
-        .add_partition_offset(&topic_name, 2, Offset::Invalid)
+        .add_partition_offset(&topic_name, 2, Offset::Stored)
         .unwrap();
     assert_eq!(assignment, consumer.assignment().unwrap());
 
@@ -338,13 +338,13 @@ async fn test_consumer_store_offset_commit() {
 
     let mut assignment = TopicPartitionList::new();
     assignment
-        .add_partition_offset(&topic_name, 0, Offset::Invalid)
+        .add_partition_offset(&topic_name, 0, Offset::Stored)
         .unwrap();
     assignment
-        .add_partition_offset(&topic_name, 1, Offset::Invalid)
+        .add_partition_offset(&topic_name, 1, Offset::Stored)
         .unwrap();
     assignment
-        .add_partition_offset(&topic_name, 2, Offset::Invalid)
+        .add_partition_offset(&topic_name, 2, Offset::Stored)
         .unwrap();
     assert_eq!(assignment, consumer.assignment().unwrap());
 

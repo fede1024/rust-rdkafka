@@ -10,7 +10,7 @@ use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext};
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::{current_time_millis, Timeout};
-use rdkafka::{Message, Timestamp};
+use rdkafka::{ClientConfig, Message, Timestamp};
 
 use crate::utils::*;
 
@@ -183,19 +183,6 @@ async fn test_consume_partition_order() {
     populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(1), None).await;
     populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(2), None).await;
 
-    // The default settings should result in consuming all the messages in
-    // partition 0, then all the messages in partition 1, and so on.
-    {
-        let consumer = create_base_consumer(&rand_test_group(), None);
-        consumer.subscribe(&[topic_name.as_str()]).unwrap();
-        for (i, m) in consumer.iter().take(12).enumerate() {
-            match m {
-                Ok(m) => assert_eq!(m.partition(), (i as i32) / 4),
-                Err(e) => panic!("Error receiving message: {:?}", e),
-            }
-        }
-    }
-
     // Using partition queues should allow us to consume the partitions
     // in a round-robin fashion.
     {
@@ -354,4 +341,15 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     consumer.split_partition_queue(&topic_name, 0).unwrap();
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None).await;
     wait_for_wakeups(4);
+}
+
+#[tokio::test]
+async fn test_invalid_consumer_position() {
+    // Regression test for #360, in which calling `position` on a consumer which
+    // does not have a `group.id` configured segfaulted.
+    let consumer: BaseConsumer = ClientConfig::new().create().unwrap();
+    assert_eq!(
+        consumer.position(),
+        Err(KafkaError::MetadataFetch(RDKafkaErrorCode::UnknownGroup))
+    );
 }
