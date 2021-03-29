@@ -1,7 +1,9 @@
 //! High-level consumers with a [`Stream`](futures::Stream) interface.
 
+use std::ffi::CString;
 use std::marker::PhantomData;
 use std::pin::Pin;
+use std::ptr;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
@@ -16,9 +18,9 @@ use slab::Slab;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, ClientContext, NativeClient};
+use crate::client::{Client, ClientContext, NativeClient, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
-use crate::consumer::base_consumer::BaseConsumer;
+use crate::consumer::base_consumer::{enable_nonempty_callback, BaseConsumer, PartitionQueue};
 use crate::consumer::{
     CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext, Rebalance,
 };
@@ -132,6 +134,7 @@ where
     C: ConsumerContext + 'static,
 {
     consumer: &'a StreamConsumer<C, R>,
+    partition: Option<&'a PartitionQueue<StreamConsumerContext<C>, StreamConsumer<C, R>>>,
     slot: usize,
 }
 
@@ -145,7 +148,27 @@ where
             let mut wakers = context.wakers.lock().expect("lock poisoned");
             wakers.insert(None)
         };
-        MessageStream { consumer, slot }
+        MessageStream {
+            consumer,
+            partition: None,
+            slot,
+        }
+    }
+
+    fn new_partition(
+        consumer: &'a StreamConsumer<C, R>,
+        partition: &'a PartitionQueue<StreamConsumerContext<C>, StreamConsumer<C, R>>,
+    ) -> MessageStream<'a, C, R> {
+        let slot = {
+            let context = consumer.base.context();
+            let mut wakers = context.wakers.lock().expect("lock poisoned");
+            wakers.insert(None)
+        };
+        MessageStream {
+            consumer,
+            partition: Some(partition),
+            slot,
+        }
     }
 
     fn context(&self) -> &StreamConsumerContext<C> {
@@ -162,9 +185,16 @@ where
     }
 
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
-        unsafe {
-            NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client_ptr(), 0))
-                .map(|p| BorrowedMessage::from_consumer(p, self.consumer))
+        match self.partition {
+            Some(p) => unsafe {
+                rdsys::rd_kafka_poll(self.client_ptr(), 0);
+                NativePtr::from_ptr(rdsys::rd_kafka_consume_queue(p.native_queue().ptr(), 0))
+                    .map(|ptr| BorrowedMessage::from_consumer(ptr, p))
+            },
+            None => unsafe {
+                NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client_ptr(), 0))
+                    .map(|p| BorrowedMessage::from_consumer(p, self.consumer))
+            },
         }
     }
 }
@@ -346,6 +376,44 @@ where
             .await
             .expect("kafka streams never terminate")
     }
+
+    /// Splits messages for the specified partition into their own queue and
+    /// returns an async PartitionQueue.
+    ///
+    /// If the `topic` or `partition` is invalid, returns `None`.
+    ///
+    /// Unlike [`PartitionQueue`], [`PartitionStream`] does not
+    /// require the [`StreamConsumer`] to be polled seperately.
+    ///
+    /// Note that calling [`Consumer::assign`] will deactivate any existing
+    /// partition queues. You will need to call this method for every partition
+    /// that should be split after every call to `assign`.
+    pub fn split_partition_queue(
+        self: &Arc<Self>,
+        topic: &str,
+        partition: i32,
+    ) -> Option<PartitionStream<C, R>> {
+        let topic = match CString::new(topic) {
+            Ok(topic) => topic,
+            Err(_) => return None,
+        };
+        let queue = unsafe {
+            NativeQueue::from_ptr(rdsys::rd_kafka_queue_get_partition(
+                self.base.client().native_ptr(),
+                topic.as_ptr(),
+                partition,
+            ))
+        };
+        queue
+            .map(|queue| {
+                unsafe {
+                    enable_nonempty_callback(&queue, self.base.client().context());
+                    rdsys::rd_kafka_queue_forward(queue.ptr(), ptr::null_mut());
+                }
+                PartitionQueue::new(self.clone(), queue)
+            })
+            .map(|partition| PartitionStream::new(self, partition))
+    }
 }
 
 impl<C, R> Consumer<StreamConsumerContext<C>> for StreamConsumer<C, R>
@@ -496,5 +564,59 @@ where
 
     fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
         self.base.resume(partitions)
+    }
+}
+
+/// An asynchronous message queue for a single partition.
+pub struct PartitionStream<C = DefaultConsumerContext, R = DefaultRuntime>
+where
+    C: ConsumerContext,
+{
+    consumer: Arc<StreamConsumer<C, R>>,
+    queue: PartitionQueue<StreamConsumerContext<C>, StreamConsumer<C, R>>,
+}
+
+impl<C, R> PartitionStream<C, R>
+where
+    C: ConsumerContext + 'static,
+{
+    fn new(
+        consumer: &Arc<StreamConsumer<C, R>>,
+        queue: PartitionQueue<StreamConsumerContext<C>, StreamConsumer<C, R>>,
+    ) -> Self {
+        PartitionStream {
+            consumer: consumer.clone(),
+            queue,
+        }
+    }
+
+    /// Constructs a stream that yields messages from this consumer.
+    ///
+    /// It is legal to have multiple live message streams for the same consumer,
+    /// and to move those message streams across threads. Note, however, that
+    /// the message streams share the same underlying state. A message received
+    /// by the consumer will be delivered to only one of the live message
+    /// streams. If you seek the underlying consumer, all message streams
+    /// created from the consumer will begin to draw messages from the new
+    /// position of the consumer.
+    ///
+    /// If you want multiple independent views of a Kafka topic, create multiple
+    /// consumers, not multiple message streams.
+    pub fn stream(&self) -> MessageStream<'_, C, R> {
+        MessageStream::new_partition(self.consumer.as_ref(), &self.queue)
+    }
+
+    /// Receives the next message from the stream.
+    ///
+    /// This method will block until the next message is available or an error
+    /// occurs. It is legal to call `recv` from multiple threads simultaneously.
+    ///
+    /// Note that this method is exactly as efficient as constructing a
+    /// single-use message stream and extracting one message from it:
+    pub async fn recv(&self) -> Result<BorrowedMessage<'_>, KafkaError> {
+        self.stream()
+            .next()
+            .await
+            .expect("kafka streams never terminate")
     }
 }
