@@ -109,15 +109,18 @@ impl<C: ClientContext> AdminClient<C> {
         topic_names: &[&str],
         opts: &AdminOptions,
     ) -> KafkaResult<oneshot::Receiver<NativeEvent>> {
-        let mut native_topics = Vec::new();
         let mut err_buf = ErrBuf::new();
-        for tn in topic_names {
-            let tn_c = CString::new(*tn)?;
-            let native_topic = unsafe {
-                NativeDeleteTopic::from_ptr(rdsys::rd_kafka_DeleteTopic_new(tn_c.as_ptr())).unwrap()
-            };
-            native_topics.push(native_topic);
-        }
+        let native_topics = topic_names
+            .into_iter()
+            .map(|tn| {
+                let tn_c = CString::new(*tn)?;
+                let native_topic = unsafe {
+                    NativeDeleteTopic::from_ptr(rdsys::rd_kafka_DeleteTopic_new(tn_c.as_ptr()))
+                        .unwrap()
+                };
+                Ok(native_topic)
+            })
+            .collect::<KafkaResult<Vec<_>>>()?;
         let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
         unsafe {
             rdsys::rd_kafka_DeleteTopics(
@@ -160,11 +163,11 @@ impl<C: ClientContext> AdminClient<C> {
     where
         I: IntoIterator<Item = &'a NewPartitions<'a>>,
     {
-        let mut native_partitions = Vec::new();
         let mut err_buf = ErrBuf::new();
-        for p in partitions {
-            native_partitions.push(p.to_native(&mut err_buf)?);
-        }
+        let native_partitions = partitions
+            .into_iter()
+            .map(|x| x.to_native(&mut err_buf))
+            .collect::<KafkaResult<Vec<_>>>()?;
         let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
         unsafe {
             rdsys::rd_kafka_CreatePartitions(
@@ -205,31 +208,33 @@ impl<C: ClientContext> AdminClient<C> {
     where
         I: IntoIterator<Item = &'a ResourceSpecifier<'a>>,
     {
-        let mut native_configs = Vec::new();
         let mut err_buf = ErrBuf::new();
-        for c in configs {
-            let (name, typ) = match c {
-                ResourceSpecifier::Topic(name) => (
-                    CString::new(*name)?,
-                    RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC,
-                ),
-                ResourceSpecifier::Group(name) => (
-                    CString::new(*name)?,
-                    RDKafkaResourceType::RD_KAFKA_RESOURCE_GROUP,
-                ),
-                ResourceSpecifier::Broker(id) => (
-                    CString::new(format!("{}", id))?,
-                    RDKafkaResourceType::RD_KAFKA_RESOURCE_BROKER,
-                ),
-            };
-            native_configs.push(unsafe {
-                NativeConfigResource::from_ptr(rdsys::rd_kafka_ConfigResource_new(
-                    typ,
-                    name.as_ptr(),
-                ))
-                .unwrap()
-            });
-        }
+        let native_configs = configs
+            .into_iter()
+            .map(|c| {
+                let (name, typ) = match c {
+                    ResourceSpecifier::Topic(name) => (
+                        CString::new(*name)?,
+                        RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC,
+                    ),
+                    ResourceSpecifier::Group(name) => (
+                        CString::new(*name)?,
+                        RDKafkaResourceType::RD_KAFKA_RESOURCE_GROUP,
+                    ),
+                    ResourceSpecifier::Broker(id) => (
+                        CString::new(format!("{}", id))?,
+                        RDKafkaResourceType::RD_KAFKA_RESOURCE_BROKER,
+                    ),
+                };
+                Ok(unsafe {
+                    NativeConfigResource::from_ptr(rdsys::rd_kafka_ConfigResource_new(
+                        typ,
+                        name.as_ptr(),
+                    ))
+                    .unwrap()
+                })
+            })
+            .collect::<KafkaResult<Vec<_>>>()?;
         let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
         unsafe {
             rdsys::rd_kafka_DescribeConfigs(
