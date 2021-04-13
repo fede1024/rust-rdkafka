@@ -74,20 +74,23 @@ pub trait ConsumerContext: ClientContext {
         unsafe {
             match err {
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-                    if self.is_incremental_assign() {
-                        rdsys::rd_kafka_incremental_assign(native_client.ptr(), tpl.ptr());
-                    } else {
-                        rdsys::rd_kafka_assign(native_client.ptr(), tpl.ptr());
+                    match native_client.rebalance_protocol() {
+                        RebalanceProtocol::Cooperative => {
+                            rdsys::rd_kafka_incremental_assign(native_client.ptr(), tpl.ptr());
+                        }
+                        _ => {
+                            rdsys::rd_kafka_assign(native_client.ptr(), tpl.ptr());
+                        }
                     }
                 }
-                _ => {
-                    // Also for RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS
-                    if self.is_incremental_assign() {
-                        rdsys::rd_kafka_incremental_assign(native_client.ptr(), ptr::null());
-                    } else {
+                _ => match native_client.rebalance_protocol() {
+                    RebalanceProtocol::Cooperative => {
+                        rdsys::rd_kafka_incremental_unassign(native_client.ptr(), tpl.ptr());
+                    }
+                    _ => {
                         rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
                     }
-                }
+                },
             }
         }
         trace!("Running post-rebalance with {:?}", rebalance);
@@ -98,12 +101,6 @@ pub trait ConsumerContext: ClientContext {
     /// should terminate its execution quickly.
     #[allow(unused_variables)]
     fn pre_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
-
-    /// Override this to return true when using cooperative-sticky option for
-    /// partition.assignment.strategy
-    fn is_incremental_assign(&self) -> bool {
-        false
-    }
 
     /// Post-rebalance callback. This method will run after the rebalance and
     /// should terminate its execution quickly.
@@ -180,6 +177,16 @@ unsafe impl KafkaDrop for RDKafkaConsumerGroupMetadata {
 
 unsafe impl Send for ConsumerGroupMetadata {}
 unsafe impl Sync for ConsumerGroupMetadata {}
+
+/// The rebalance protocol for a consumer.
+pub enum RebalanceProtocol {
+    /// The consumer has not (yet) joined a group.
+    None,
+    /// Eager rebalance protocol.
+    Eager,
+    /// Cooperative rebalance protocol.
+    Cooperative,
+}
 
 /// Common trait for all consumers.
 ///
@@ -339,4 +346,7 @@ where
 
     /// Resumes consumption for the provided list of partitions.
     fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()>;
+
+    /// Reports the rebalance protocol in use.
+    fn rebalance_protocol(&self) -> RebalanceProtocol;
 }

@@ -18,6 +18,7 @@ use crate::config::{
 };
 use crate::consumer::{
     CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext,
+    RebalanceProtocol,
 };
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
@@ -565,6 +566,10 @@ where
             return Err(KafkaError::PauseResume(error));
         };
         Ok(())
+    }
+
+    fn rebalance_protocol(&self) -> RebalanceProtocol {
+        self.client.native_client().rebalance_protocol()
     }
 }
 

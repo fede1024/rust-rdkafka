@@ -20,7 +20,8 @@ use crate::client::{Client, ClientContext, NativeClient};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use crate::consumer::base_consumer::BaseConsumer;
 use crate::consumer::{
-    CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext, Rebalance,
+    CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext,
+    Rebalance, RebalanceProtocol,
 };
 use crate::error::{KafkaError, KafkaResult};
 use crate::groups::GroupList;
@@ -500,5 +501,9 @@ where
 
     fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
         self.base.resume(partitions)
+    }
+
+    fn rebalance_protocol(&self) -> RebalanceProtocol {
+        self.base.rebalance_protocol()
     }
 }
