@@ -74,11 +74,19 @@ pub trait ConsumerContext: ClientContext {
         unsafe {
             match err {
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-                    rdsys::rd_kafka_assign(native_client.ptr(), tpl.ptr());
+                    if self.is_incremental_assign() {
+                        rdsys::rd_kafka_incremental_assign(native_client.ptr(), tpl.ptr());
+                    } else {
+                        rdsys::rd_kafka_assign(native_client.ptr(), tpl.ptr());
+                    }
                 }
                 _ => {
                     // Also for RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS
-                    rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
+                    if self.is_incremental_assign() {
+                        rdsys::rd_kafka_incremental_assign(native_client.ptr(), ptr::null());
+                    } else {
+                        rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
+                    }
                 }
             }
         }
@@ -90,6 +98,12 @@ pub trait ConsumerContext: ClientContext {
     /// should terminate its execution quickly.
     #[allow(unused_variables)]
     fn pre_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
+
+    /// Override this to return true when using cooperative-sticky option for
+    /// partition.assignment.strategy
+    fn is_incremental_assign(&self) -> bool {
+        false
+    }
 
     /// Post-rebalance callback. This method will run after the rebalance and
     /// should terminate its execution quickly.
