@@ -163,7 +163,7 @@ async fn main() {
                 .expect("Message delivery failed for some topic");
                 // Now that the message is completely processed, add it's position to the offset
                 // store. The actual offset will be committed every 5 seconds.
-                if let Err(e) = consumer.store_offset(&m) {
+                if let Err(e) = consumer.store_offset_from_message(&m) {
                     warn!("Error while storing offset: {}", e);
                 }
             }

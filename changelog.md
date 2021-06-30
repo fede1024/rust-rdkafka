@@ -20,6 +20,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
   Thanks, [@djKooks].
 
+* **Breaking change.** Change `Consumer::store_offset` to accept the topic,
+  partition, and offset directly ([#89], [#368]). The old API, which took a
+  `BorrowedMessage`, is still accessible as
+  `Consumer::store_offset_from_message`.
+
+[#89]: https://github.com/fede1024/rust-rdkafka/issues/89
 [#95]: https://github.com/fede1024/rust-rdkafka/issues/95
 [#360]: https://github.com/fede1024/rust-rdkafka/issues/360
 [#367]: https://github.com/fede1024/rust-rdkafka/issues/367
