@@ -46,7 +46,7 @@ impl<T> ::std::cmp::PartialEq for __BindgenUnionField<T> {
     }
 }
 impl<T> ::std::cmp::Eq for __BindgenUnionField<T> {}
-pub const RD_KAFKA_VERSION: u32 = 17170943;
+pub const RD_KAFKA_VERSION: u32 = 17236223;
 pub const RD_KAFKA_DEBUG_CONTEXTS : & 'static [u8 ; 138usize] = b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer,admin,eos,mock,assignor,conf\0" ;
 pub const RD_KAFKA_DESTROY_F_NO_CONSUMER_CLOSE: u32 = 8;
 pub const RD_KAFKA_OFFSET_BEGINNING: i32 = -2;
@@ -903,6 +903,12 @@ extern "C" {
     ) -> rd_kafka_conf_res_t;
 }
 extern "C" {
+    pub fn rd_kafka_conf_set_engine_callback_data(
+        conf: *mut rd_kafka_conf_t,
+        callback_data: *mut c_void,
+    );
+}
+extern "C" {
     pub fn rd_kafka_conf_set_opaque(conf: *mut rd_kafka_conf_t, opaque: *mut c_void);
 }
 extern "C" {
@@ -1169,6 +1175,12 @@ extern "C" {
         offsets: *mut rd_kafka_topic_partition_list_t,
         timeout_ms: c_int,
     ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_mem_calloc(rk: *mut rd_kafka_t, num: size_t, size: size_t) -> *mut c_void;
+}
+extern "C" {
+    pub fn rd_kafka_mem_malloc(rk: *mut rd_kafka_t, size: size_t) -> *mut c_void;
 }
 extern "C" {
     pub fn rd_kafka_mem_free(rk: *mut rd_kafka_t, ptr: *mut c_void);

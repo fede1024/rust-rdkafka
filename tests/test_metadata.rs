@@ -166,7 +166,7 @@ async fn test_client_config() {
     // If not overridden, `NativeConfig::get` should get the default value for
     // a valid parameter.
     let config = ClientConfig::new().create_native_config().unwrap();
-    assert_eq!(config.get("session.timeout.ms").unwrap(), "10000");
+    assert_eq!(config.get("session.timeout.ms").unwrap(), "45000");
 
     // But if the parameter is overridden, `NativeConfig::get` should reflect
     // the overridden value.
