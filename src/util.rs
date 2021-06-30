@@ -93,6 +93,17 @@ pub(crate) unsafe fn ptr_to_opt_slice<'a, T>(ptr: *const c_void, size: usize) ->
     }
 }
 
+pub(crate) unsafe fn ptr_to_opt_mut_slice<'a, T>(
+    ptr: *const c_void,
+    size: usize,
+) -> Option<&'a mut [T]> {
+    if ptr.is_null() {
+        None
+    } else {
+        Some(slice::from_raw_parts_mut::<T>(ptr as *mut T, size))
+    }
+}
+
 /// Converts a pointer to an array to a slice. If the pointer is null or the
 /// size is zero, returns a zero-length slice..
 pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> &'a [T] {

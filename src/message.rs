@@ -97,6 +97,16 @@ pub trait Message {
     /// Returns the payload of the message, or `None` if there is no payload.
     fn payload(&self) -> Option<&[u8]>;
 
+    /// Returns a mutable reference to the payload of the message, or `None` if
+    /// there is no payload.
+    ///
+    ///
+    /// # Safety
+    ///
+    /// librdkafka does not formally guarantee that modifying the payload is
+    /// safe. Calling this method may therefore result in undefined behavior.
+    unsafe fn payload_mut(&mut self) -> Option<&mut [u8]>;
+
     /// Returns the source topic of the message.
     fn topic(&self) -> &str;
 
@@ -319,6 +329,10 @@ impl<'a> Message for BorrowedMessage<'a> {
         unsafe { util::ptr_to_opt_slice((*self.ptr).payload, (*self.ptr).len) }
     }
 
+    unsafe fn payload_mut(&mut self) -> Option<&mut [u8]> {
+        util::ptr_to_opt_mut_slice((*self.ptr).payload, (*self.ptr).len)
+    }
+
     fn topic(&self) -> &str {
         unsafe {
             CStr::from_ptr(rdsys::rd_kafka_topic_name((*self.ptr).rkt))
@@ -516,10 +530,11 @@ impl Message for OwnedMessage {
     }
 
     fn payload(&self) -> Option<&[u8]> {
-        match self.payload {
-            Some(ref p) => Some(p.as_slice()),
-            None => None,
-        }
+        self.payload.as_deref()
+    }
+
+    unsafe fn payload_mut(&mut self) -> Option<&mut [u8]> {
+        self.payload.as_deref_mut()
     }
 
     fn topic(&self) -> &str {

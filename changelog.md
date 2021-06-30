@@ -12,6 +12,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Fix a segfault when calling `Consumer::position` on a consumer that was
   improperly configured ([#360]).
 
+* Provide a mutable accessor (`Message::payload_mut`) for a message's
+  payload ([#95]).
+
+[#95]: https://github.com/fede1024/rust-rdkafka/issues/95
 [#360]: https://github.com/fede1024/rust-rdkafka/issues/360
 
 <a name="0.26.0"></a>
