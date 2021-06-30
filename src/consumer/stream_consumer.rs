@@ -398,8 +398,12 @@ where
         self.base.commit_message(message, mode)
     }
 
-    fn store_offset(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
-        self.base.store_offset(message)
+    fn store_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()> {
+        self.base.store_offset(topic, partition, offset)
+    }
+
+    fn store_offset_from_message(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
+        self.base.store_offset_from_message(message)
     }
 
     fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
