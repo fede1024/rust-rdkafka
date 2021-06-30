@@ -384,7 +384,17 @@ where
         }
     }
 
-    fn store_offset(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
+    fn store_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()> {
+        let topic = self.client.native_topic(topic)?;
+        let error = unsafe { rdsys::rd_kafka_offset_store(topic.ptr(), partition, offset) };
+        if error.is_error() {
+            Err(KafkaError::StoreOffset(error.into()))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn store_offset_from_message(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
         let error = unsafe {
             rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset())
         };

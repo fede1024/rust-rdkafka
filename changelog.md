@@ -12,6 +12,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Fix a segfault when calling `Consumer::position` on a consumer that was
   improperly configured ([#360]).
 
+* **Breaking change.** Change `Consumer::store_offset` to accept the topic,
+  partition, and offset directly ([#89], [#368]). The old API, which took a
+  `BorrowedMessage`, is still accessible as
+  `Consumer::store_offset_from_message`.
+
+[#89]: https://github.com/fede1024/rust-rdkafka/issues/89
 [#360]: https://github.com/fede1024/rust-rdkafka/issues/360
 
 <a name="0.26.0"></a>

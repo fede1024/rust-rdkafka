@@ -238,10 +238,14 @@ where
     /// commit every message with lower offset within the same partition.
     fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()>;
 
-    /// Stores offset for this message to be used on the next (auto)commit. When
+    /// Stores offset to be used on the next (auto)commit. When
     /// using this `enable.auto.offset.store` should be set to `false` in the
     /// config.
-    fn store_offset(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()>;
+    fn store_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()>;
+
+    /// Like [`Consumer::store_offset`], but the offset to store is derived from
+    /// the provided message.
+    fn store_offset_from_message(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()>;
 
     /// Store offsets to be used on the next (auto)commit. When using this
     /// `enable.auto.offset.store` should be set to `false` in the config.
