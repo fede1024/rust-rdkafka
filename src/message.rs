@@ -27,8 +27,8 @@ pub enum Timestamp {
 
 impl Timestamp {
     /// Convert the timestamp to milliseconds since epoch.
-    pub fn to_millis(&self) -> Option<i64> {
-        match *self {
+    pub fn to_millis(self) -> Option<i64> {
+        match self {
             Timestamp::NotAvailable | Timestamp::CreateTime(-1) | Timestamp::LogAppendTime(-1) => {
                 None
             }

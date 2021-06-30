@@ -6,7 +6,7 @@
    <statx1>
    Memcheck:Param
    statx(file_name)
-   fun:syscall
+   fun:statx
    fun:statx
    fun:_ZN3std3sys4unix2fs9try_statx*
    ...
@@ -15,7 +15,7 @@
    <statx2>
    Memcheck:Param
    statx(buf)
-   fun:syscall
+   fun:statx
    fun:statx
    fun:_ZN3std3sys4unix2fs9try_statx*
    ...
