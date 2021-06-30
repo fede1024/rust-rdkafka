@@ -7,7 +7,7 @@ on:
     branches: [master]
 
 env:
-  rust_version: 1.45.0
+  rust_version: 1.53.0
 
 jobs:
   lint:
