@@ -19,7 +19,7 @@
 //! the one executing the user-specified delivery callback for every delivery
 //! event. If `poll` is not called, or not frequently enough, the producer will
 //! return a [`RDKafkaErrorCode::QueueFull`] error and it won't be able to send
-//! any other message until more delivery event are processed via `poll`. The
+//! any other message until more delivery events are processed via `poll`. The
 //! `QueueFull` error can also be returned if Kafka is not able to receive the
 //! messages quickly enough.
 //!
