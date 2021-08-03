@@ -316,6 +316,112 @@ where
         }
     }
 
+    /// Sends a prefix of messages to Kafka, returning the results of the sends.
+    ///
+    /// NOTE: this relies on the ordering that the client is configured with.
+    /// This method attempts to send each message in order, if any enqeue of a
+    /// message fails, we don't try to enqueue later messages. If any await of
+    /// an enqueued message fails, we don't assume later messages also failed.
+    /// The return Vec will therefore contain a prefix of successful results,
+    /// and between 0 and 2 error results (at most one enqueue error, at most
+    /// one await error.)
+    ///
+    /// The `queue_timeout` parameter controls how long to retry for if the
+    /// librdkafka producer queue is full. Set it to `Timeout::Never` to retry
+    /// forever or `Timeout::After(0)` to never block. If the timeout is reached
+    /// and the queue is still full, an [`RDKafkaErrorCode::QueueFull`] error
+    /// will be reported in the [`OwnedDeliveryResult`].
+    ///
+    /// Keep in mind that `queue_timeout` only applies to the first phase of the
+    /// send operation. Once the message is queued, the underlying librdkafka
+    /// client has separate timeout parameters that apply, like
+    /// `delivery.timeout.ms`.
+    ///
+    /// See also the [`FutureProducer::send_result`] method, which will not
+    /// retry the queue operation if the queue is full.
+    pub async fn send_batch<K, P, T>(
+        &self,
+        records: Vec<FutureRecord<'_, K, P>>,
+        queue_timeout: T,
+    ) -> Vec<OwnedDeliveryResult>
+    where
+        K: ToBytes + ?Sized,
+        P: ToBytes + ?Sized,
+        T: Into<Timeout>,
+    {
+        let start_time = Instant::now();
+        let queue_timeout = queue_timeout.into();
+        let can_retry = || match queue_timeout {
+            Timeout::Never => true,
+            Timeout::After(t) if start_time.elapsed() < t => true,
+            _ => false,
+        };
+
+        let mut rxs = Vec::new();
+        let mut enqueue_err = None;
+
+        for record in records {
+            let (tx, rx) = oneshot::channel();
+
+            let mut base_record = record.into_base_record(Box::new(tx));
+
+            loop {
+                match self.producer.send(base_record) {
+                    Err((e, record))
+                        if e == KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull)
+                            && can_retry() =>
+                    {
+                        base_record = record;
+                        R::delay_for(Duration::from_millis(100)).await;
+                    }
+                    Ok(_) => {
+                        rxs.push(rx);
+                        break;
+                    }
+                    Err((e, record)) => {
+                        let owned_message = OwnedMessage::new(
+                            record.payload.map(|p| p.to_bytes().to_vec()),
+                            record.key.map(|k| k.to_bytes().to_vec()),
+                            record.topic.to_owned(),
+                            record
+                                .timestamp
+                                .map_or(Timestamp::NotAvailable, Timestamp::CreateTime),
+                            record.partition.unwrap_or(-1),
+                            0,
+                            record.headers,
+                        );
+                        // as soon as we fail to enqueue a message, do not attempt to enqueue
+                        // anymore, we want to emit an ordered stream of messages, and error means
+                        // the best we can do is emit a prefix of messages
+                        enqueue_err = Some(Err((e, owned_message)));
+                        break;
+                    }
+                }
+            }
+            if enqueue_err.is_some() {
+                break;
+            }
+        }
+
+        // our assumption is that the producer respects ordering, we check the rx
+        // channels in order, the first that fails means (we hope!) the all the
+        // following also fail. The best we can do is a prefix of successful awaits.
+        let mut results = Vec::new();
+        for rx in rxs {
+            match rx.await.expect("producer unexpectedly dropped") {
+                Ok((p, o)) => results.push(Ok((p, o))),
+                Err((e, om)) => {
+                    results.push(Err((e, om)));
+                    break;
+                }
+            }
+        }
+        if let Some(enqueue_err) = enqueue_err {
+            results.push(enqueue_err);
+        }
+        results
+    }
+
     /// Like [`FutureProducer::send`], but if enqueuing fails, an error will be
     /// returned immediately, alongside the [`FutureRecord`] provided.
     pub fn send_result<'a, K, P>(

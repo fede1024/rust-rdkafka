@@ -309,7 +309,7 @@ async fn test_consumer_store_offset_commit() {
             match message {
                 Ok(m) => {
                     if m.partition() == 1 {
-                        consumer.store_offset(&m).unwrap();
+                        consumer.store_offset_from_message(&m).unwrap();
                     }
                 }
                 Err(KafkaError::PartitionEOF(_)) => {}
