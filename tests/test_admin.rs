@@ -102,7 +102,7 @@ async fn test_topics() {
             .create_topics(&[topic1, topic2], &opts)
             .await
             .expect("topic creation failed");
-        assert_eq!(res, &[Ok(name1.clone()), Ok(name2.clone())]);
+        assert_eq!(res.0, &[Ok(name1.clone()), Ok(name2.clone())]);
 
         let metadata1 = fetch_metadata(&name1);
         let metadata2 = fetch_metadata(&name2);
@@ -125,8 +125,12 @@ async fn test_topics() {
             )
             .await
             .expect("describe configs failed");
-        let config1 = &res[0].as_ref().expect("describe configs failed on topic 1");
-        let config2 = &res[1].as_ref().expect("describe configs failed on topic 2");
+        let config1 = &res.0[0]
+            .as_ref()
+            .expect("describe configs failed on topic 1");
+        let config2 = &res.0[1]
+            .as_ref()
+            .expect("describe configs failed on topic 2");
         let mut expected_entry1 = ConfigEntry {
             name: "max.message.bytes".into(),
             value: Some("1234".into()),
@@ -166,7 +170,7 @@ async fn test_topics() {
             .create_partitions(&[partitions1], &opts)
             .await
             .expect("partition creation failed");
-        assert_eq!(res, &[Ok(name1.clone())]);
+        assert_eq!(res.0, &[Ok(name1.clone())]);
 
         let mut tries = 0;
         loop {
@@ -187,7 +191,7 @@ async fn test_topics() {
             .delete_topics(&[&name1, &name2], &opts)
             .await
             .expect("topic deletion failed");
-        assert_eq!(res, &[Ok(name1.clone()), Ok(name2.clone())]);
+        assert_eq!(res.0, &[Ok(name1.clone()), Ok(name2.clone())]);
         verify_delete(&name1);
         verify_delete(&name2);
     }
@@ -217,7 +221,7 @@ async fn test_topics() {
             .create_topics(vec![&topic], &opts)
             .await
             .expect("topic creation failed");
-        assert_eq!(res, &[Ok(name.clone())]);
+        assert_eq!(res.0, &[Ok(name.clone())]);
         let _ = fetch_metadata(&name);
 
         // This partition specification is obviously garbage, and so trips
@@ -240,7 +244,7 @@ async fn test_topics() {
             .await
             .expect("partition creation failed");
         assert_eq!(
-            res,
+            res.0,
             &[Err((name, RDKafkaErrorCode::InvalidReplicaAssignment))],
         );
     }
@@ -253,7 +257,7 @@ async fn test_topics() {
             .await
             .expect("delete topics failed");
         assert_eq!(
-            res,
+            res.0,
             &[Err((name, RDKafkaErrorCode::UnknownTopicOrPartition))]
         );
     }
@@ -271,7 +275,7 @@ async fn test_topics() {
             .create_topics(vec![&topic1], &opts)
             .await
             .expect("topic creation failed");
-        assert_eq!(res, &[Ok(name1.clone())]);
+        assert_eq!(res.0, &[Ok(name1.clone())]);
         let _ = fetch_metadata(&name1);
 
         let res = admin_client
@@ -279,7 +283,7 @@ async fn test_topics() {
             .await
             .expect("topic creation failed");
         assert_eq!(
-            res,
+            res.0,
             &[
                 Err((name1.clone(), RDKafkaErrorCode::TopicAlreadyExists)),
                 Ok(name2.clone())
@@ -291,7 +295,7 @@ async fn test_topics() {
             .delete_topics(&[&name1], &opts)
             .await
             .expect("topic deletion failed");
-        assert_eq!(res, &[Ok(name1.clone())]);
+        assert_eq!(res.0, &[Ok(name1.clone())]);
         verify_delete(&name1);
 
         let res = admin_client
@@ -299,7 +303,7 @@ async fn test_topics() {
             .await
             .expect("topic deletion failed");
         assert_eq!(
-            res,
+            res.0,
             &[
                 Ok(name2.clone()),
                 Err((name1.clone(), RDKafkaErrorCode::UnknownTopicOrPartition))
@@ -318,7 +322,7 @@ async fn test_configs() {
         .describe_configs(&[broker], &opts)
         .await
         .expect("describe configs failed");
-    let config = &res[0].as_ref().expect("describe configs failed");
+    let config = &res.0[0].as_ref().expect("describe configs failed");
     let orig_val = config
         .get("log.flush.interval.messages")
         .expect("original config entry missing")
@@ -331,7 +335,7 @@ async fn test_configs() {
         .alter_configs(&[config], &opts)
         .await
         .expect("alter configs failed");
-    assert_eq!(res, &[Ok(OwnedResourceSpecifier::Broker(0))]);
+    assert_eq!(res.0, &[Ok(OwnedResourceSpecifier::Broker(0))]);
 
     let mut tries = 0;
     loop {
@@ -339,7 +343,7 @@ async fn test_configs() {
             .describe_configs(&[broker], &opts)
             .await
             .expect("describe configs failed");
-        let config = &res[0].as_ref().expect("describe configs failed");
+        let config = &res.0[0].as_ref().expect("describe configs failed");
         let entry = config.get("log.flush.interval.messages");
         let expected_entry = if get_broker_version() < KafkaVersion(1, 1, 0, 0) {
             // Pre-1.1, the AlterConfig operation will silently fail, and the
@@ -377,7 +381,7 @@ async fn test_configs() {
         .alter_configs(&[config], &opts)
         .await
         .expect("alter configs failed");
-    assert_eq!(res, &[Ok(OwnedResourceSpecifier::Broker(0))]);
+    assert_eq!(res.0, &[Ok(OwnedResourceSpecifier::Broker(0))]);
 }
 
 // Tests whether each admin operation properly reports an error if the entire

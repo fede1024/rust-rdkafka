@@ -330,3 +330,16 @@ impl KafkaError {
         }
     }
 }
+
+/// Vector of results.
+///
+/// This type is marked as `must_use`, in contrast to a simple `Vec<Result<T, E>>`.
+#[derive(Debug, PartialEq, Eq)]
+#[must_use]
+pub struct ResultVec<T, E>(pub Vec<Result<T, E>>);
+
+impl<T, E> From<Vec<Result<T, E>>> for ResultVec<T, E> {
+    fn from(v: Vec<Result<T, E>>) -> Self {
+        Self(v)
+    }
+}

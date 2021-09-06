@@ -88,13 +88,16 @@ impl ClientContext for ProducerTestContext {
 
 pub async fn create_topic(name: &str, partitions: i32) {
     let client: AdminClient<_> = consumer_config("create_topic", None).create().unwrap();
-    client
+    let results = client
         .create_topics(
             &[NewTopic::new(name, partitions, TopicReplication::Fixed(1))],
             &AdminOptions::new(),
         )
         .await
         .unwrap();
+    for result in results.0 {
+        result.unwrap();
+    }
 }
 
 /// Produce the specified count of messages to the topic and partition specified. A map

@@ -24,7 +24,7 @@ use rdkafka_sys::types::*;
 
 use crate::client::{Client, ClientContext, DefaultClientContext, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::error::{IsError, KafkaError, KafkaResult, ResultVec};
 use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, KafkaDrop, NativePtr, Timeout};
 
 //
@@ -52,7 +52,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         topics: I,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<TopicResult>>>
+    ) -> impl Future<Output = KafkaResult<TopicResults>>
     where
         I: IntoIterator<Item = &'a NewTopic<'a>>,
     {
@@ -97,7 +97,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         topic_names: &[&str],
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<TopicResult>>> {
+    ) -> impl Future<Output = KafkaResult<TopicResults>> {
         match self.delete_topics_inner(topic_names, opts) {
             Ok(rx) => Either::Left(DeleteTopicsFuture { rx }),
             Err(err) => Either::Right(future::err(err)),
@@ -142,7 +142,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         partitions: I,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<TopicResult>>>
+    ) -> impl Future<Output = KafkaResult<TopicResults>>
     where
         I: IntoIterator<Item = &'a NewPartitions<'a>>,
     {
@@ -187,7 +187,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         configs: I,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<ConfigResourceResult>>>
+    ) -> impl Future<Output = KafkaResult<ConfigResourceResults>>
     where
         I: IntoIterator<Item = &'a ResourceSpecifier<'a>>,
     {
@@ -252,7 +252,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         configs: I,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<AlterConfigsResult>>>
+    ) -> impl Future<Output = KafkaResult<AlterConfigsResults>>
     where
         I: IntoIterator<Item = &'a AlterConfig<'a>>,
     {
@@ -546,7 +546,10 @@ fn check_rdkafka_invalid_arg(res: RDKafkaRespErr, err_buf: &ErrBuf) -> KafkaResu
 /// CreatePartition operation.
 pub type TopicResult = Result<String, (String, RDKafkaErrorCode)>;
 
-fn build_topic_results(topics: *const *const RDKafkaTopicResult, n: usize) -> Vec<TopicResult> {
+/// One [`TopicResult`] per topic.
+pub type TopicResults = ResultVec<String, (String, RDKafkaErrorCode)>;
+
+fn build_topic_results(topics: *const *const RDKafkaTopicResult, n: usize) -> TopicResults {
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
         let topic = unsafe { *topics.add(i) };
@@ -558,7 +561,7 @@ fn build_topic_results(topics: *const *const RDKafkaTopicResult, n: usize) -> Ve
             out.push(Ok(name));
         }
     }
-    out
+    out.into()
 }
 
 //
@@ -686,7 +689,7 @@ struct CreateTopicsFuture {
 }
 
 impl Future for CreateTopicsFuture {
-    type Output = KafkaResult<Vec<TopicResult>>;
+    type Output = KafkaResult<TopicResults>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
@@ -721,7 +724,7 @@ struct DeleteTopicsFuture {
 }
 
 impl Future for DeleteTopicsFuture {
-    type Output = KafkaResult<Vec<TopicResult>>;
+    type Output = KafkaResult<TopicResults>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
@@ -835,7 +838,7 @@ struct CreatePartitionsFuture {
 }
 
 impl Future for CreatePartitionsFuture {
-    type Output = KafkaResult<Vec<TopicResult>>;
+    type Output = KafkaResult<TopicResults>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
@@ -860,6 +863,9 @@ impl Future for CreatePartitionsFuture {
 
 /// The result of an individual DescribeConfig operation.
 pub type ConfigResourceResult = Result<ConfigResource, RDKafkaErrorCode>;
+
+/// One [`ConfigResourceResult`] per DescribeConfig operation.
+pub type ConfigResourceResults = ResultVec<ConfigResource, RDKafkaErrorCode>;
 
 /// Specification of a configurable resource.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -1009,7 +1015,7 @@ struct DescribeConfigsFuture {
 }
 
 impl Future for DescribeConfigsFuture {
-    type Output = KafkaResult<Vec<ConfigResourceResult>>;
+    type Output = KafkaResult<ConfigResourceResults>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
@@ -1058,7 +1064,7 @@ impl Future for DescribeConfigsFuture {
                 entries: entries_out,
             }))
         }
-        Poll::Ready(Ok(out))
+        Poll::Ready(Ok(out.into()))
     }
 }
 
@@ -1069,6 +1075,10 @@ impl Future for DescribeConfigsFuture {
 /// The result of an individual AlterConfig operation.
 pub type AlterConfigsResult =
     Result<OwnedResourceSpecifier, (OwnedResourceSpecifier, RDKafkaErrorCode)>;
+
+/// One [`AlterConfigsResult`] per AlterConfig operation.
+pub type AlterConfigsResults =
+    ResultVec<OwnedResourceSpecifier, (OwnedResourceSpecifier, RDKafkaErrorCode)>;
 
 /// Configuration for an AlterConfig operation.
 pub struct AlterConfig<'a> {
@@ -1135,7 +1145,7 @@ struct AlterConfigsFuture {
 }
 
 impl Future for AlterConfigsFuture {
-    type Output = KafkaResult<Vec<AlterConfigsResult>>;
+    type Output = KafkaResult<AlterConfigsResults>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
@@ -1156,6 +1166,6 @@ impl Future for AlterConfigsFuture {
             let specifier = extract_config_specifier(resource)?;
             out.push(Ok(specifier));
         }
-        Poll::Ready(Ok(out))
+        Poll::Ready(Ok(out.into()))
     }
 }
