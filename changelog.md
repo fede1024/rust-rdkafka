@@ -38,12 +38,20 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
   Thanks, [@SreeniIO].
 
+* Support reading and writing commit metadata via
+  `TopicPartitionListElem::metadata` and `TopicPartitionListElem::set_metadata`,
+  respectively ([#391]).
+
+  Thanks, [@phaazon].
+
 [#89]: https://github.com/fede1024/rust-rdkafka/issues/89
 [#95]: https://github.com/fede1024/rust-rdkafka/issues/95
 [#360]: https://github.com/fede1024/rust-rdkafka/issues/360
 [#364]: https://github.com/fede1024/rust-rdkafka/issues/364
 [#367]: https://github.com/fede1024/rust-rdkafka/issues/367
+[#391]: https://github.com/fede1024/rust-rdkafka/issues/391
 [@djKooks]: https://github.com/djKooks
+[@phaazon]: https://github.com/phaazon
 [@SreeniIO]: https://github.com/SreeniIO
 
 <a name="0.26.0"></a>

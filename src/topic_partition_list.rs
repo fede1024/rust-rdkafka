@@ -6,12 +6,14 @@ use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::slice;
+use std::str;
 
+use libc::c_void;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::util::{KafkaDrop, NativePtr};
+use crate::util::{self, KafkaDrop, NativePtr};
 
 const PARTITION_UNASSIGNED: i32 = -1;
 
@@ -134,6 +136,24 @@ impl<'a> TopicPartitionListElem<'a> {
             )),
         }
     }
+
+    /// Returns the optional metadata associated with the entry.
+    pub fn metadata(&self) -> &str {
+        let bytes = unsafe { util::ptr_to_slice(self.ptr.metadata, self.ptr.metadata_size) };
+        str::from_utf8(bytes).expect("Metadata is not UTF-8")
+    }
+
+    /// Sets the optional metadata associated with the entry.
+    pub fn set_metadata<M>(&mut self, metadata: M)
+    where
+        M: AsRef<str>,
+    {
+        let metadata = metadata.as_ref();
+        let buf = unsafe { libc::malloc(metadata.len()) };
+        unsafe { libc::memcpy(buf, metadata.as_ptr() as *const c_void, metadata.len()) };
+        self.ptr.metadata = buf;
+        self.ptr.metadata_size = metadata.len();
+    }
 }
 
 impl<'a> PartialEq for TopicPartitionListElem<'a> {
@@ -141,6 +161,7 @@ impl<'a> PartialEq for TopicPartitionListElem<'a> {
         self.topic() == other.topic()
             && self.partition() == other.partition()
             && self.offset() == other.offset()
+            && self.metadata() == other.metadata()
     }
 }
 
@@ -360,14 +381,18 @@ impl Default for TopicPartitionList {
 impl fmt::Debug for TopicPartitionList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "TPL {{")?;
-        for elem in self.elements() {
+        for (i, elem) in self.elements().iter().enumerate() {
+            if i > 0 {
+                write!(f, "; ")?;
+            }
             write!(
                 f,
-                "({}, {}): {:?}, ",
+                "{}/{}: offset={:?} metadata={:?}",
                 elem.topic(),
                 elem.partition(),
-                elem.offset()
-            )?
+                elem.offset(),
+                elem.metadata(),
+            )?;
         }
         write!(f, "}}")
     }
