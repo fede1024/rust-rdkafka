@@ -18,7 +18,7 @@ use rdkafka_sys::types::*;
 
 use crate::client::{Client, ClientContext, NativeClient};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
-use crate::consumer::base_consumer::BaseConsumer;
+use crate::consumer::base_consumer::{BaseConsumer, PartitionQueue};
 use crate::consumer::{
     CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext, Rebalance,
 };
@@ -209,6 +209,88 @@ where
     }
 }
 
+/// A stream of messages from a [`PartitionQueue`].
+///
+/// See the documentation of [`StreamConsumer::split_partition_stream`] for details.
+pub struct PartitionStream<'a, C, R = DefaultRuntime>
+where
+    C: ConsumerContext + 'static,
+{
+    consumer: &'a StreamConsumer<C, R>,
+    queue: PartitionQueue<StreamConsumerContext<C>>,
+    slot: usize,
+}
+
+impl<'a, C, R> PartitionStream<'a, C, R>
+where
+    C: ConsumerContext + 'static,
+{
+    fn new(consumer: &'a StreamConsumer<C, R>, queue: PartitionQueue<StreamConsumerContext<C>>) -> PartitionStream<'a, C, R> {
+        let slot = {
+            let context = consumer.context();
+            let mut wakers = context.wakers.lock().expect("lock poisoned");
+            wakers.insert(None)
+        };
+        PartitionStream { consumer, queue, slot }
+    }
+
+    fn context(&self) -> &StreamConsumerContext<C> {
+        self.consumer.context()
+    }
+
+    fn set_waker(&self, waker: Waker) {
+        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
+        wakers[self.slot].replace(waker);
+    }
+
+    fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
+        unsafe {
+            NativePtr::from_ptr(rdsys::rd_kafka_consume_queue(self.queue.queue.ptr(), 0))
+                .map(|p| BorrowedMessage::from_consumer(p, self.consumer))
+        }
+    }
+}
+
+impl<'a, C, R> Stream for PartitionStream<'a, C, R>
+where
+    C: ConsumerContext + 'a,
+{
+    type Item = KafkaResult<BorrowedMessage<'a>>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        // If there is a message ready, yield it immediately to avoid the
+        // taking the lock in `self.set_waker`.
+        if let Some(message) = self.poll() {
+            return Poll::Ready(Some(message));
+        }
+
+        // Otherwise, we need to wait for a message to become available. Store
+        // the waker so that we are woken up if the queue flips from non-empty
+        // to empty. We have to store the waker repatedly in case this future
+        // migrates between tasks.
+        self.set_waker(cx.waker().clone());
+
+        // Check whether a new message became available after we installed the
+        // waker. This avoids a race where `poll` returns None to indicate that
+        // the queue is empty, but the queue becomes non-empty before we've
+        // installed the waker.
+        match self.poll() {
+            None => Poll::Pending,
+            Some(message) => Poll::Ready(Some(message)),
+        }
+    }
+}
+
+impl<'a, C, R> Drop for PartitionStream<'a, C, R>
+where
+    C: ConsumerContext + 'static,
+{
+    fn drop(&mut self) {
+        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
+        wakers.remove(self.slot);
+    }
+}
+
 /// A high-level consumer with a [`Stream`](futures::Stream) interface.
 ///
 /// This consumer doesn't need to be polled explicitly. Extracting an item from
@@ -228,7 +310,7 @@ pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
 {
-    base: BaseConsumer<StreamConsumerContext<C>>,
+    base: Arc<BaseConsumer<StreamConsumerContext<C>>>,
     _shutdown_trigger: oneshot::Sender<()>,
     _runtime: PhantomData<R>,
 }
@@ -259,7 +341,7 @@ where
         };
 
         let context = StreamConsumerContext::new(context);
-        let base = BaseConsumer::new(config, native_config, context)?;
+        let base = Arc::new(BaseConsumer::new(config, native_config, context)?);
         let native_ptr = base.client().native_ptr() as usize;
 
         // Redirect rdkafka's main queue to the consumer queue so that we only
@@ -345,6 +427,38 @@ where
             .next()
             .await
             .expect("kafka streams never terminate")
+    }
+
+    /// Splits messages for the specified partition into their own stream.
+    ///
+    /// If the `topic` or `partition` is invalid, returns `None`.
+    ///
+    /// After calling this method, newly-fetched messages for the specified
+    /// partition will be returned via [`PartitionStream::poll_next`] rather than
+    /// [`MessageStream::poll_next`]. Note that there may be buffered messages for the
+    /// specified partition that will continue to be returned by
+    /// `MessageStream::poll_next`. For best results, call `split_partition_stream`
+    /// before the first call to `StreamConsumer::stream`.
+    ///
+    /// Note that calling [`Consumer::assign`] will deactivate any existing
+    /// partition queues. You will need to call this method for every partition
+    /// that should be split after every call to `assign`.
+    ///
+    /// Beware that this method is implemented for `&Arc<Self>`, not `&self`.
+    /// You will need to wrap your consumer in an `Arc` in order to call this
+    /// method. This design permits moving the partition queue to another thread
+    /// while ensuring the partition queue does not outlive the consumer.
+    pub fn split_partition_stream<'a>(
+        self: &'a Arc<Self>,
+        topic: &str,
+        partition: i32,
+    ) -> Option<PartitionStream<'a, C, R>> {
+        match self.base.split_partition_queue(topic, partition) {
+            Some(queue) => {
+                Some(PartitionStream::new(&*self, queue))
+            },
+            None => None
+        }
     }
 }
 
