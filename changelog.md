@@ -55,6 +55,11 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   essentially implementation details of `StreamConsumer` that had leaked into
   the public API. The vast majority of users should be unaffected.
 
+* **Breaking change.** The `MessageStream` type is no longer generic.
+
+* Add the `StreamConsumer::split_partition_queue` method to mirror
+  `BaseConsumer::split_partition_queue`.
+
 [#398]: https://github.com/fede1024/rust-rdkafka/issues/398
 
 <a name="0.27.0"></a>

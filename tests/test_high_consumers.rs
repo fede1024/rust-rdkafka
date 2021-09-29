@@ -3,11 +3,11 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
-use std::time::Duration;
 
-use futures::future;
+use futures::future::{self, FutureExt};
 use futures::stream::StreamExt;
 use maplit::hashmap;
+use tokio::time::{self, Duration};
 
 use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext, StreamConsumer};
 use rdkafka::error::KafkaError;
@@ -423,4 +423,102 @@ async fn test_consumer_commit_metadata() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+#[tokio::test]
+async fn test_consume_partition_order() {
+    let _r = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(2), None).await;
+
+    // Using partition queues should allow us to consume the partitions
+    // in a round-robin fashion.
+    {
+        let consumer = Arc::new(create_stream_consumer(&rand_test_group(), None));
+        let mut tpl = TopicPartitionList::new();
+        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+            .unwrap();
+        tpl.add_partition_offset(&topic_name, 1, Offset::Beginning)
+            .unwrap();
+        tpl.add_partition_offset(&topic_name, 2, Offset::Beginning)
+            .unwrap();
+        consumer.assign(&tpl).unwrap();
+
+        let mut partition_streams: Vec<_> = (0..3)
+            .map(|i| consumer.split_partition_queue(&topic_name, i).unwrap())
+            .collect();
+
+        for _ in 0..4 {
+            let main_message =
+                time::timeout(Duration::from_millis(100), consumer.stream().next()).await;
+            assert!(main_message.is_err());
+
+            for (i, stream) in partition_streams.iter_mut().enumerate() {
+                let queue_message = stream.recv().await.unwrap();
+                assert_eq!(queue_message.partition(), i as i32);
+            }
+        }
+    }
+
+    // When not all partitions have been split into separate queues, the
+    // unsplit partitions should still be accessible via the main queue.
+    {
+        let consumer = Arc::new(create_stream_consumer(&rand_test_group(), None));
+        let mut tpl = TopicPartitionList::new();
+        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+            .unwrap();
+        tpl.add_partition_offset(&topic_name, 1, Offset::Beginning)
+            .unwrap();
+        tpl.add_partition_offset(&topic_name, 2, Offset::Beginning)
+            .unwrap();
+        consumer.assign(&tpl).unwrap();
+
+        let partition1 = consumer.split_partition_queue(&topic_name, 1).unwrap();
+
+        let mut i = 0;
+        while i < 12 {
+            if let Some(m) = consumer.recv().now_or_never() {
+                let partition = m.unwrap().partition();
+                assert!(partition == 0 || partition == 2);
+                i += 1;
+            }
+
+            if let Some(m) = partition1.recv().now_or_never() {
+                assert_eq!(m.unwrap().partition(), 1);
+                i += 1;
+            }
+        }
+    }
+
+    // Sending the queue to another task that is likely to outlive the
+    // original thread should work. This is not idiomatic, as the consumer
+    // should be continuously polled to serve callbacks, but it should not panic
+    // or result in memory unsafety, etc.
+    {
+        let consumer = Arc::new(create_stream_consumer(&rand_test_group(), None));
+        let mut tpl = TopicPartitionList::new();
+        tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+            .unwrap();
+        consumer.assign(&tpl).unwrap();
+        let stream = consumer.split_partition_queue(&topic_name, 0).unwrap();
+
+        let worker = tokio::spawn({
+            async move {
+                for _ in 0..4 {
+                    let stream_message = stream.recv().await.unwrap();
+                    assert_eq!(stream_message.partition(), 0);
+                }
+            }
+        });
+
+        let main_message =
+            time::timeout(Duration::from_millis(100), consumer.stream().next()).await;
+        assert!(main_message.is_err());
+
+        drop(consumer);
+        worker.await.unwrap();
+    }
 }

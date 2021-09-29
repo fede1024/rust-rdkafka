@@ -593,15 +593,15 @@ pub struct PartitionQueue<C>
 where
     C: ConsumerContext,
 {
-    consumer: Arc<BaseConsumer<C>>,
-    queue: NativeQueue,
+    pub(crate) consumer: Arc<BaseConsumer<C>>,
+    pub(crate) queue: NativeQueue,
 }
 
 impl<C> PartitionQueue<C>
 where
     C: ConsumerContext,
 {
-    fn new(consumer: Arc<BaseConsumer<C>>, queue: NativeQueue) -> Self {
+    pub(crate) fn new(consumer: Arc<BaseConsumer<C>>, queue: NativeQueue) -> Self {
         PartitionQueue { consumer, queue }
     }
 
