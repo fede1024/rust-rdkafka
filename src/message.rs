@@ -547,7 +547,7 @@ impl Message for OwnedMessage {
 ///
 /// If message production is successful `DeliveryResult` will contain the sent
 /// message, which can be used to find which partition and offset the message
-/// was sent to. If message production is not successful, the `DeliveryReport`
+/// was sent to. If message production is not successful, the `DeliveryResult`
 /// will contain an error and the message that failed to be sent. The partition
 /// and offset, in this case, will default to -1 and 0 respectively.
 ///
