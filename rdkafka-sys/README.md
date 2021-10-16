@@ -30,6 +30,9 @@ instead directly correspond to the bundled librdkafka version.
   dependency is present. The current design of Cargo unfortunately makes
   this nearly impossible to fix.
 
+* Windows is only supported when using the CMake build system via the
+  `cmake-build` Cargo feature.
+
 ### Features
 
 By default a submodule with the librdkafka sources will be used to compile
