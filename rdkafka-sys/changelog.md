@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.1.0+1.8.0 (2021-10-16)
+
+* Upgrade to librdkafka v1.8.0.
+
 ## v4.1.0+1.7.0 (2021-10-16)
 
 * Upgrade to librdkafka v1.7.0.

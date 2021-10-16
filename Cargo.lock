@@ -1148,7 +1148,7 @@ dependencies = [
 
 [[package]]
 name = "rdkafka-sys"
-version = "4.1.0+1.7.0"
+version = "4.2.0+1.8.2"
 dependencies = [
  "cmake",
  "libc",
