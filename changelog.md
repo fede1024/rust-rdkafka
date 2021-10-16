@@ -15,8 +15,15 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Provide a mutable accessor (`Message::payload_mut`) for a message's
   payload ([#95]).
 
+* Implement `std::iter::Extend<(String, String)>` and
+  `std::iter::FromIterator<(String, String)` for `ClientConfig` ([#367]).
+
+  Thanks, [@djKooks].
+
 [#95]: https://github.com/fede1024/rust-rdkafka/issues/95
 [#360]: https://github.com/fede1024/rust-rdkafka/issues/360
+[#367]: https://github.com/fede1024/rust-rdkafka/issues/367
+[@djKooks]: https://github.com/djKooks
 
 <a name="0.26.0"></a>
 ## 0.26.0 (2021-03-16)
