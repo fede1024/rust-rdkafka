@@ -2,8 +2,8 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
-<a name="0.26.1"></a>
-## 0.26.1 (Unreleased)
+<a name="0.27.0"></a>
+## 0.27.0 (Unreleased)
 
 * Allow offset 0 in `Offset::to_raw`.
 
@@ -25,11 +25,26 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   `BorrowedMessage`, is still accessible as
   `Consumer::store_offset_from_message`.
 
+* Support incremental cooperative rebalancing ([#364]). There are two changes
+  of note:
+
+    * The addition of `Consumer::rebalance_protocol` to determine the rebalance
+      protocol in use.
+
+    * The modification of the default rebalance callback
+      (`ConsumerContext::rebalance`) to perform incremental assignments and
+      unassignments when the rebalance protocol in use is
+      [`RebalanceProtocol::Cooperative`].
+
+  Thanks, [@SreeniIO].
+
 [#89]: https://github.com/fede1024/rust-rdkafka/issues/89
 [#95]: https://github.com/fede1024/rust-rdkafka/issues/95
 [#360]: https://github.com/fede1024/rust-rdkafka/issues/360
+[#364]: https://github.com/fede1024/rust-rdkafka/issues/364
 [#367]: https://github.com/fede1024/rust-rdkafka/issues/367
 [@djKooks]: https://github.com/djKooks
+[@SreeniIO]: https://github.com/SreeniIO
 
 <a name="0.26.0"></a>
 ## 0.26.0 (2021-03-16)

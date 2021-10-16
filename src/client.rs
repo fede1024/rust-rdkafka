@@ -26,6 +26,7 @@ use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
+use crate::consumer::RebalanceProtocol;
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::metadata::Metadata;
@@ -136,6 +137,16 @@ impl NativeClient {
     /// Returns the wrapped pointer to RDKafka.
     pub fn ptr(&self) -> *mut RDKafka {
         self.ptr.ptr()
+    }
+
+    pub(crate) fn rebalance_protocol(&self) -> RebalanceProtocol {
+        let protocol = unsafe { CStr::from_ptr(rdsys::rd_kafka_rebalance_protocol(self.ptr())) };
+        match protocol.to_bytes() {
+            b"NONE" => RebalanceProtocol::None,
+            b"EAGER" => RebalanceProtocol::Eager,
+            b"COOPERATIVE" => RebalanceProtocol::Cooperative,
+            _ => unreachable!(),
+        }
     }
 }
 
