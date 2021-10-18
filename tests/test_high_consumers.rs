@@ -1,6 +1,7 @@
 //! Test data consumption using high level consumers.
 
 use std::collections::HashMap;
+use std::error::Error;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::time::Duration;
@@ -371,4 +372,59 @@ async fn test_consumer_store_offset_commit() {
         .add_partition_offset(&topic_name, 2, Offset::Offset(12))
         .unwrap();
     assert_eq!(position, consumer.position().unwrap());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_consumer_commit_metadata() -> Result<(), Box<dyn Error>> {
+    let _ = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+    let group_name = rand_test_group();
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None).await;
+
+    let create_consumer = || async {
+        // Disable auto-commit so we can manually drive the commits.
+        let mut config = HashMap::new();
+        config.insert("enable.auto.commit", "false");
+        let consumer = create_stream_consumer(&group_name, Some(config));
+
+        // Subscribe to the topic and wait for at least one message, which
+        // ensures that the consumer group has been joined and such.
+        consumer.subscribe(&[topic_name.as_str()])?;
+        let _ = consumer.stream().next().await;
+
+        Ok::<_, Box<dyn Error>>(consumer)
+    };
+
+    // Create a topic partition list where each element has some associated
+    // metadata.
+    let tpl = {
+        let mut tpl = TopicPartitionList::new();
+        let mut tpl1 = tpl.add_partition(&topic_name, 0);
+        tpl1.set_offset(Offset::Offset(1))?;
+        tpl1.set_metadata("one");
+        let mut tpl2 = tpl.add_partition(&topic_name, 1);
+        tpl2.set_offset(Offset::Offset(1))?;
+        tpl2.set_metadata("two");
+        let mut tpl3 = tpl.add_partition(&topic_name, 2);
+        tpl3.set_offset(Offset::Offset(1))?;
+        tpl3.set_metadata("three");
+        tpl
+    };
+
+    // Ensure that the commit state immediately includes the metadata.
+    {
+        let consumer = create_consumer().await?;
+        consumer.commit(&tpl, CommitMode::Sync)?;
+        assert_eq!(consumer.committed(None)?, tpl);
+    }
+
+    // Ensure that the commit state on a new consumer in the same group
+    // can see the same metadata.
+    {
+        let consumer = create_consumer().await?;
+        assert_eq!(consumer.committed(None)?, tpl);
+    }
+
+    Ok(())
 }
