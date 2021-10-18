@@ -3,7 +3,7 @@
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 <a name="0.27.0"></a>
-## 0.27.0 (Unreleased)
+## 0.27.0 (2021-10-17)
 
 * Allow offset 0 in `Offset::to_raw`.
 
@@ -49,6 +49,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 [#360]: https://github.com/fede1024/rust-rdkafka/issues/360
 [#364]: https://github.com/fede1024/rust-rdkafka/issues/364
 [#367]: https://github.com/fede1024/rust-rdkafka/issues/367
+[#368]: https://github.com/fede1024/rust-rdkafka/issues/368
 [#391]: https://github.com/fede1024/rust-rdkafka/issues/391
 [@djKooks]: https://github.com/djKooks
 [@phaazon]: https://github.com/phaazon

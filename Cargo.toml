@@ -1,6 +1,6 @@
 [package]
 name = "rdkafka"
-version = "0.26.0"
+version = "0.27.0"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 repository = "https://github.com/fede1024/rust-rdkafka"
 readme = "README.md"
