@@ -1,7 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/error.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>error.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
-<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
-                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;error.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>error.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -332,22 +329,22 @@
 <span id="329">329</span>
 <span id="330">330</span>
 <span id="331">331</span>
-</pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Error manipulations.</span>
+<span id="332">332</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Error manipulations.</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::{<span class="self">self</span>, <span class="ident">CStr</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
+<span class="kw">use</span> <span class="ident">std::error::Error</span>;
+<span class="kw">use</span> <span class="ident">std::ffi</span>::{<span class="self">self</span>, <span class="ident">CStr</span>};
+<span class="kw">use</span> <span class="ident">std::fmt</span>;
+<span class="kw">use</span> <span class="ident">std::ptr</span>;
+<span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
-<span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">rdkafka_sys::types</span>::<span class="kw-2">*</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::{<span class="ident">KafkaDrop</span>, <span class="ident">NativePtr</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::util</span>::{<span class="ident">KafkaDrop</span>, <span class="ident">NativePtr</span>};
 
 <span class="comment">// Re-export rdkafka error code</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">rdsys</span>::<span class="ident">types</span>::<span class="ident">RDKafkaErrorCode</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">rdsys::types::RDKafkaErrorCode</span>;
 
 <span class="doccomment">/// Kafka result.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">KafkaError</span><span class="op">&gt;</span>;
@@ -362,13 +359,13 @@
 
 <span class="kw">impl</span> <span class="ident">IsError</span> <span class="kw">for</span> <span class="ident">RDKafkaRespErr</span> {
     <span class="kw">fn</span> <span class="ident">is_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">!</span><span class="op">=</span> <span class="ident">RDKafkaRespErr</span>::<span class="ident">RD_KAFKA_RESP_ERR_NO_ERROR</span> <span class="kw">as</span> <span class="ident">i32</span>
+        <span class="kw-2">*</span><span class="self">self</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">!</span><span class="op">=</span> <span class="ident">RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR</span> <span class="kw">as</span> <span class="ident">i32</span>
     }
 }
 
 <span class="kw">impl</span> <span class="ident">IsError</span> <span class="kw">for</span> <span class="ident">RDKafkaConfRes</span> {
     <span class="kw">fn</span> <span class="ident">is_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">!</span><span class="op">=</span> <span class="ident">RDKafkaConfRes</span>::<span class="ident">RD_KAFKA_CONF_OK</span> <span class="kw">as</span> <span class="ident">i32</span>
+        <span class="kw-2">*</span><span class="self">self</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">!</span><span class="op">=</span> <span class="ident">RDKafkaConfRes::RD_KAFKA_CONF_OK</span> <span class="kw">as</span> <span class="ident">i32</span>
     }
 }
 
@@ -380,24 +377,24 @@
 
 <span class="doccomment">/// Native rdkafka error.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RDKafkaError</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_t</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>);
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RDKafkaError</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">rdsys::rd_kafka_error_t</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>);
 
-<span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">KafkaDrop</span> <span class="kw">for</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_t</span> {
+<span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">KafkaDrop</span> <span class="kw">for</span> <span class="ident">rdsys::rd_kafka_error_t</span> {
     <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;error&quot;</span>;
-    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_destroy</span>;
+    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys::rd_kafka_error_destroy</span>;
 }
 
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Send</span> <span class="kw">for</span> <span class="ident">RDKafkaError</span> {}
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Sync</span> <span class="kw">for</span> <span class="ident">RDKafkaError</span> {}
 
 <span class="kw">impl</span> <span class="ident">RDKafkaError</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_t</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RDKafkaError</span> {
-        <span class="ident">RDKafkaError</span>(<span class="ident">NativePtr</span>::<span class="ident">from_ptr</span>(<span class="ident">ptr</span>).<span class="ident">map</span>(<span class="ident">Arc</span>::<span class="ident">new</span>))
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_ptr</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">rdsys::rd_kafka_error_t</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RDKafkaError</span> {
+        <span class="ident">RDKafkaError</span>(<span class="ident">NativePtr::from_ptr</span>(<span class="ident">ptr</span>).<span class="ident">map</span>(<span class="ident">Arc::new</span>))
     }
 
-    <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_t</span> {
+    <span class="kw">fn</span> <span class="ident">ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">rdsys::rd_kafka_error_t</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span> {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ptr</span>::<span class="ident">null</span>(),
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ptr::null</span>(),
             <span class="prelude-val">Some</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">ptr</span>(),
         }
     }
@@ -405,38 +402,38 @@
     <span class="doccomment">/// Returns the error code or [`RDKafkaErrorCode::NoError`] if the error is</span>
     <span class="doccomment">/// null.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">code</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RDKafkaErrorCode</span> {
-        <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_code</span>(<span class="self">self</span>.<span class="ident">ptr</span>()).<span class="ident">into</span>() }
+        <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_error_code</span>(<span class="self">self</span>.<span class="ident">ptr</span>()).<span class="ident">into</span>() }
     }
 
     <span class="doccomment">/// Returns the error code name, e.g., &quot;ERR_UNKNOWN_MEMBER_ID&quot; or an empty</span>
     <span class="doccomment">/// string if the error is null.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-        <span class="kw">let</span> <span class="ident">cstr</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_name</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) };
-        <span class="kw">unsafe</span> { <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">cstr</span>).<span class="ident">to_string_lossy</span>().<span class="ident">into_owned</span>() }
+        <span class="kw">let</span> <span class="ident">cstr</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_error_name</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) };
+        <span class="kw">unsafe</span> { <span class="ident">CStr::from_ptr</span>(<span class="ident">cstr</span>).<span class="ident">to_string_lossy</span>().<span class="ident">into_owned</span>() }
     }
 
     <span class="doccomment">/// Returns a human readable error string or an empty string if the error is</span>
     <span class="doccomment">/// null.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">string</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-        <span class="kw">let</span> <span class="ident">cstr</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_string</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) };
-        <span class="kw">unsafe</span> { <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">cstr</span>).<span class="ident">to_string_lossy</span>().<span class="ident">into_owned</span>() }
+        <span class="kw">let</span> <span class="ident">cstr</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_error_string</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) };
+        <span class="kw">unsafe</span> { <span class="ident">CStr::from_ptr</span>(<span class="ident">cstr</span>).<span class="ident">to_string_lossy</span>().<span class="ident">into_owned</span>() }
     }
 
     <span class="doccomment">/// Reports whether the error is a fatal error.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// A fatal error indicates that the client instance is no longer usable.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_fatal</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_is_fatal</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
+        <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_error_is_fatal</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
     }
 
     <span class="doccomment">/// Reports whether the operation that encountered the error can be retried.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_retriable</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_is_retriable</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
+        <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_error_is_retriable</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
     }
 
     <span class="doccomment">/// Reports whether the error is an abortable transaction error.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">txn_requires_abort</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_error_txn_requires_abort</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
+        <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_error_txn_requires_abort</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
     }
 }
 
@@ -448,14 +445,14 @@
 
 <span class="kw">impl</span> <span class="ident">Eq</span> <span class="kw">for</span> <span class="ident">RDKafkaError</span> {}
 
-<span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">RDKafkaError</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
-        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;RDKafkaError({})&quot;</span>, <span class="self">self</span>)
+<span class="kw">impl</span> <span class="ident">fmt::Debug</span> <span class="kw">for</span> <span class="ident">RDKafkaError</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt::Result</span> {
+        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;RDKafkaError({})&quot;</span>, <span class="self">self</span>)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">RDKafkaError</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">RDKafkaError</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt::Result</span> {
         <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">string</span>())
     }
 }
@@ -468,6 +465,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// If applicable, check the underlying [`RDKafkaErrorCode`] to get details.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">KafkaError</span> {
     <span class="doccomment">/// Creation of admin operation failed.</span>
     <span class="ident">AdminOpCreation</span>(<span class="ident">String</span>),
@@ -494,7 +492,7 @@
     <span class="doccomment">/// No message was received.</span>
     <span class="ident">NoMessageReceived</span>,
     <span class="doccomment">/// Unexpected null pointer</span>
-    <span class="ident">Nul</span>(<span class="ident">ffi</span>::<span class="ident">NulError</span>),
+    <span class="ident">Nul</span>(<span class="ident">ffi::NulError</span>),
     <span class="doccomment">/// Offset fetch failed.</span>
     <span class="ident">OffsetFetch</span>(<span class="ident">RDKafkaErrorCode</span>),
     <span class="doccomment">/// End of partition reached.</span>
@@ -513,90 +511,90 @@
     <span class="ident">Transaction</span>(<span class="ident">RDKafkaError</span>),
 }
 
-<span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">KafkaError</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+<span class="kw">impl</span> <span class="ident">fmt::Debug</span> <span class="kw">for</span> <span class="ident">KafkaError</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">KafkaError</span>::<span class="ident">AdminOp</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Admin operation error: {})&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Admin operation creation error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::AdminOp</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Admin operation error: {})&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::AdminOpCreation</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Admin operation creation error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">Canceled</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Client dropped)&quot;</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">ClientConfig</span>(<span class="kw">_</span>, <span class="kw-2">ref</span> <span class="ident">desc</span>, <span class="kw-2">ref</span> <span class="ident">key</span>, <span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(
+            <span class="ident">KafkaError::Canceled</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Client dropped)&quot;</span>),
+            <span class="ident">KafkaError::ClientConfig</span>(<span class="kw">_</span>, <span class="kw-2">ref</span> <span class="ident">desc</span>, <span class="kw-2">ref</span> <span class="ident">key</span>, <span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(
                 <span class="ident">f</span>,
                 <span class="string">&quot;KafkaError (Client config error: {} {} {})&quot;</span>,
                 <span class="ident">desc</span>, <span class="ident">key</span>, <span class="ident">value</span>
             ),
-            <span class="ident">KafkaError</span>::<span class="ident">ClientCreation</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Client creation error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::ClientCreation</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Client creation error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">ConsumerCommit</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Consumer commit error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::ConsumerCommit</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Consumer commit error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">Global</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Global error: {})&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">GroupListFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Group list fetch error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::Global</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Global error: {})&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::GroupListFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Group list fetch error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">MessageConsumption</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Message consumption error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::MessageConsumption</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Message consumption error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">MessageProduction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Message production error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::MessageProduction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Message production error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">MetadataFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Metadata fetch error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::MetadataFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Metadata fetch error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">NoMessageReceived</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;No message received within the given poll interval&quot;</span>)
+            <span class="ident">KafkaError::NoMessageReceived</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;No message received within the given poll interval&quot;</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">Nul</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;FFI null error&quot;</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">OffsetFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Offset fetch error: {})&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">PartitionEOF</span>(<span class="ident">part_n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Partition EOF: {})&quot;</span>, <span class="ident">part_n</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">PauseResume</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Pause/resume error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::Nul</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;FFI null error&quot;</span>),
+            <span class="ident">KafkaError::OffsetFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Offset fetch error: {})&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::PartitionEOF</span>(<span class="ident">part_n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Partition EOF: {})&quot;</span>, <span class="ident">part_n</span>),
+            <span class="ident">KafkaError::PauseResume</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Pause/resume error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">Seek</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Seek error: {})&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">SetPartitionOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Set partition offset error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::Seek</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Seek error: {})&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::SetPartitionOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Set partition offset error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">StoreOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Store offset error: {})&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">Subscription</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Subscription error: {})&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::StoreOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Store offset error: {})&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::Subscription</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Subscription error: {})&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">Transaction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Transaction error: {})&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::Transaction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Transaction error: {})&quot;</span>, <span class="ident">err</span>),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">KafkaError</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">KafkaError</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">KafkaError</span>::<span class="ident">AdminOp</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Admin operation error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Admin operation creation error: {}&quot;</span>, <span class="ident">err</span>)
+            <span class="ident">KafkaError::AdminOp</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Admin operation error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::AdminOpCreation</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Admin operation creation error: {}&quot;</span>, <span class="ident">err</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">Canceled</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Client dropped)&quot;</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">ClientConfig</span>(<span class="kw">_</span>, <span class="kw-2">ref</span> <span class="ident">desc</span>, <span class="kw-2">ref</span> <span class="ident">key</span>, <span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Client config error: {} {} {}&quot;</span>, <span class="ident">desc</span>, <span class="ident">key</span>, <span class="ident">value</span>)
+            <span class="ident">KafkaError::Canceled</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;KafkaError (Client dropped)&quot;</span>),
+            <span class="ident">KafkaError::ClientConfig</span>(<span class="kw">_</span>, <span class="kw-2">ref</span> <span class="ident">desc</span>, <span class="kw-2">ref</span> <span class="ident">key</span>, <span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Client config error: {} {} {}&quot;</span>, <span class="ident">desc</span>, <span class="ident">key</span>, <span class="ident">value</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">ClientCreation</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Client creation error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">ConsumerCommit</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Consumer commit error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">Global</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Global error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">GroupListFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Group list fetch error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">MessageConsumption</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Message consumption error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">MessageProduction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Message production error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">MetadataFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Meta data fetch error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">NoMessageReceived</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;No message received within the given poll interval&quot;</span>)
+            <span class="ident">KafkaError::ClientCreation</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Client creation error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::ConsumerCommit</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Consumer commit error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::Global</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Global error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::GroupListFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Group list fetch error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::MessageConsumption</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Message consumption error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::MessageProduction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Message production error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::MetadataFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Meta data fetch error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::NoMessageReceived</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;No message received within the given poll interval&quot;</span>)
             }
-            <span class="ident">KafkaError</span>::<span class="ident">Nul</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;FFI nul error&quot;</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">OffsetFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Offset fetch error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">PartitionEOF</span>(<span class="ident">part_n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Partition EOF: {}&quot;</span>, <span class="ident">part_n</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">PauseResume</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Pause/resume error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">Seek</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Seek error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">SetPartitionOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Set partition offset error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">StoreOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Store offset error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">Subscription</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Subscription error: {}&quot;</span>, <span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">Transaction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Transaction error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::Nul</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;FFI nul error&quot;</span>),
+            <span class="ident">KafkaError::OffsetFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Offset fetch error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::PartitionEOF</span>(<span class="ident">part_n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Partition EOF: {}&quot;</span>, <span class="ident">part_n</span>),
+            <span class="ident">KafkaError::PauseResume</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Pause/resume error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::Seek</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Seek error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::SetPartitionOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Set partition offset error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::StoreOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Store offset error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::Subscription</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Subscription error: {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">KafkaError::Transaction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Transaction error: {}&quot;</span>, <span class="ident">err</span>),
         }
     }
 }
@@ -604,66 +602,67 @@
 <span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">KafkaError</span> {
     <span class="kw">fn</span> <span class="ident">source</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>(<span class="kw">dyn</span> <span class="ident">Error</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>)<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">KafkaError</span>::<span class="ident">AdminOp</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">Canceled</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">ClientConfig</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">ClientCreation</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">ConsumerCommit</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">Global</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">GroupListFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">MessageConsumption</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">MessageProduction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">MetadataFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">NoMessageReceived</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">Nul</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">OffsetFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">PartitionEOF</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">PauseResume</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">Seek</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">SetPartitionOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">StoreOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">Subscription</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">Transaction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::AdminOp</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::AdminOpCreation</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::Canceled</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::ClientConfig</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::ClientCreation</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::ConsumerCommit</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::Global</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::GroupListFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::MessageConsumption</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::MessageProduction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::MetadataFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::NoMessageReceived</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::Nul</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::OffsetFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::PartitionEOF</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::PauseResume</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::Seek</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::SetPartitionOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::StoreOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            <span class="ident">KafkaError::Subscription</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::Transaction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ffi</span>::<span class="ident">NulError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">KafkaError</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">err</span>: <span class="ident">ffi</span>::<span class="ident">NulError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaError</span> {
-        <span class="ident">KafkaError</span>::<span class="ident">Nul</span>(<span class="ident">err</span>)
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ffi::NulError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">KafkaError</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">err</span>: <span class="ident">ffi::NulError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaError</span> {
+        <span class="ident">KafkaError::Nul</span>(<span class="ident">err</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">KafkaError</span> {
     <span class="doccomment">/// Returns the [`RDKafkaErrorCode`] underlying this error, if any.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">match_same_arms</span>)]</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::match_same_arms</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rdkafka_error_code</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RDKafkaErrorCode</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">KafkaError</span>::<span class="ident">AdminOp</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">Canceled</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">ClientConfig</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">ClientCreation</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">ConsumerCommit</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">Global</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">GroupListFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">MessageConsumption</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">MessageProduction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">MetadataFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">NoMessageReceived</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">Nul</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">OffsetFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">PartitionEOF</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">PauseResume</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">Seek</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">SetPartitionOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">StoreOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
-            <span class="ident">KafkaError</span>::<span class="ident">Subscription</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-            <span class="ident">KafkaError</span>::<span class="ident">Transaction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>.<span class="ident">code</span>()),
+            <span class="ident">KafkaError::AdminOp</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::AdminOpCreation</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::Canceled</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::ClientConfig</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::ClientCreation</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::ConsumerCommit</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
+            <span class="ident">KafkaError::Global</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
+            <span class="ident">KafkaError::GroupListFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
+            <span class="ident">KafkaError::MessageConsumption</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
+            <span class="ident">KafkaError::MessageProduction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
+            <span class="ident">KafkaError::MetadataFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
+            <span class="ident">KafkaError::NoMessageReceived</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::Nul</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::OffsetFetch</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
+            <span class="ident">KafkaError::PartitionEOF</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::PauseResume</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::Seek</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::SetPartitionOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
+            <span class="ident">KafkaError::StoreOffset</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">err</span>),
+            <span class="ident">KafkaError::Subscription</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">KafkaError::Transaction</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>.<span class="ident">code</span>()),
         }
     }
 }
-</pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rdkafka"></div>
-    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</code></pre></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rdkafka" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
+</body></html>

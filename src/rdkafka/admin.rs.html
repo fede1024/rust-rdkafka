@@ -1,7 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/admin.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>admin.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
-<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
-                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">   1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;admin.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>admin.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">   1</span>
 <span id="2">   2</span>
 <span id="3">   3</span>
 <span id="4">   4</span>
@@ -1162,35 +1159,34 @@
 <span id="1159">1159</span>
 <span id="1160">1160</span>
 <span id="1161">1161</span>
-</pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! Admin client.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Admin client.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! The main object is the [`AdminClient`] struct.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! [`AdminClient`]: struct.AdminClient.html</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::{<span class="ident">c_void</span>, <span class="ident">CStr</span>, <span class="ident">CString</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">future</span>::<span class="ident">Future</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">pin</span>::<span class="ident">Pin</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>::{<span class="self">self</span>, <span class="ident">JoinHandle</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
+<span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
+<span class="kw">use</span> <span class="ident">std::ffi</span>::{<span class="ident">c_void</span>, <span class="ident">CStr</span>, <span class="ident">CString</span>};
+<span class="kw">use</span> <span class="ident">std::future::Future</span>;
+<span class="kw">use</span> <span class="ident">std::pin::Pin</span>;
+<span class="kw">use</span> <span class="ident">std::sync::atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering</span>};
+<span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
+<span class="kw">use</span> <span class="ident">std::task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>};
+<span class="kw">use</span> <span class="ident">std::thread</span>::{<span class="self">self</span>, <span class="ident">JoinHandle</span>};
+<span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 
-<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">channel</span>::<span class="ident">oneshot</span>;
-<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">future</span>::{<span class="self">self</span>, <span class="ident">Either</span>, <span class="ident">FutureExt</span>};
-<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">ready</span>;
+<span class="kw">use</span> <span class="ident">futures::channel::oneshot</span>;
+<span class="kw">use</span> <span class="ident">futures::future</span>::{<span class="self">self</span>, <span class="ident">Either</span>, <span class="ident">FutureExt</span>};
+<span class="kw">use</span> <span class="ident">futures::ready</span>;
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">trace</span>, <span class="ident">warn</span>};
 
 <span class="kw">use</span> <span class="ident">rdkafka_sys</span> <span class="kw">as</span> <span class="ident">rdsys</span>;
-<span class="kw">use</span> <span class="ident">rdkafka_sys</span>::<span class="ident">types</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">rdkafka_sys::types</span>::<span class="kw-2">*</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">client</span>::{<span class="ident">Client</span>, <span class="ident">ClientContext</span>, <span class="ident">DefaultClientContext</span>, <span class="ident">NativeQueue</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::{<span class="ident">ClientConfig</span>, <span class="ident">FromClientConfig</span>, <span class="ident">FromClientConfigAndContext</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::{<span class="ident">IsError</span>, <span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::{<span class="ident">cstr_to_owned</span>, <span class="ident">AsCArray</span>, <span class="ident">ErrBuf</span>, <span class="ident">IntoOpaque</span>, <span class="ident">KafkaDrop</span>, <span class="ident">NativePtr</span>, <span class="ident">Timeout</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::client</span>::{<span class="ident">Client</span>, <span class="ident">ClientContext</span>, <span class="ident">DefaultClientContext</span>, <span class="ident">NativeQueue</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config</span>::{<span class="ident">ClientConfig</span>, <span class="ident">FromClientConfig</span>, <span class="ident">FromClientConfigAndContext</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::error</span>::{<span class="ident">IsError</span>, <span class="ident">KafkaError</span>, <span class="ident">KafkaResult</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::util</span>::{<span class="ident">cstr_to_owned</span>, <span class="ident">AsCArray</span>, <span class="ident">ErrBuf</span>, <span class="ident">IntoOpaque</span>, <span class="ident">KafkaDrop</span>, <span class="ident">NativePtr</span>, <span class="ident">Timeout</span>};
 
 <span class="comment">//</span>
 <span class="comment">// ********** ADMIN CLIENT **********</span>
@@ -1222,8 +1218,8 @@
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">NewTopic</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">create_topics_inner</span>(<span class="ident">topics</span>, <span class="ident">opts</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Left</span>(<span class="ident">CreateTopicsFuture</span> { <span class="ident">rx</span> }),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Right</span>(<span class="ident">future</span>::<span class="ident">err</span>(<span class="ident">err</span>)),
+            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Left</span>(<span class="ident">CreateTopicsFuture</span> { <span class="ident">rx</span> }),
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Right</span>(<span class="ident">future::err</span>(<span class="ident">err</span>)),
         }
     }
 
@@ -1231,18 +1227,18 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">topics</span>: <span class="ident">I</span>,
         <span class="ident">opts</span>: <span class="kw-2">&amp;</span><span class="ident">AdminOptions</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">NewTopic</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_topics</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_topics</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf::new</span>();
         <span class="kw">for</span> <span class="ident">t</span> <span class="kw">in</span> <span class="ident">topics</span> {
             <span class="ident">native_topics</span>.<span class="ident">push</span>(<span class="ident">t</span>.<span class="ident">to_native</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">err_buf</span>)<span class="question-mark">?</span>);
         }
         <span class="kw">let</span> (<span class="ident">native_opts</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">opts</span>.<span class="ident">to_native</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
         <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_CreateTopics</span>(
+            <span class="ident">rdsys::rd_kafka_CreateTopics</span>(
                 <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(),
                 <span class="ident">native_topics</span>.<span class="ident">as_c_array</span>(),
                 <span class="ident">native_topics</span>.<span class="ident">len</span>(),
@@ -1264,8 +1260,8 @@
         <span class="ident">opts</span>: <span class="kw-2">&amp;</span><span class="ident">AdminOptions</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TopicResult</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">delete_topics_inner</span>(<span class="ident">topic_names</span>, <span class="ident">opts</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Left</span>(<span class="ident">DeleteTopicsFuture</span> { <span class="ident">rx</span> }),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Right</span>(<span class="ident">future</span>::<span class="ident">err</span>(<span class="ident">err</span>)),
+            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Left</span>(<span class="ident">DeleteTopicsFuture</span> { <span class="ident">rx</span> }),
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Right</span>(<span class="ident">future::err</span>(<span class="ident">err</span>)),
         }
     }
 
@@ -1273,19 +1269,19 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">topic_names</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>],
         <span class="ident">opts</span>: <span class="kw-2">&amp;</span><span class="ident">AdminOptions</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_topics</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf</span>::<span class="ident">new</span>();
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_topics</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf::new</span>();
         <span class="kw">for</span> <span class="ident">tn</span> <span class="kw">in</span> <span class="ident">topic_names</span> {
-            <span class="kw">let</span> <span class="ident">tn_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">tn</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">tn_c</span> <span class="op">=</span> <span class="ident">CString::new</span>(<span class="kw-2">*</span><span class="ident">tn</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">native_topic</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                <span class="ident">NativeDeleteTopic</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_DeleteTopic_new</span>(<span class="ident">tn_c</span>.<span class="ident">as_ptr</span>())).<span class="ident">unwrap</span>()
+                <span class="ident">NativeDeleteTopic::from_ptr</span>(<span class="ident">rdsys::rd_kafka_DeleteTopic_new</span>(<span class="ident">tn_c</span>.<span class="ident">as_ptr</span>())).<span class="ident">unwrap</span>()
             };
             <span class="ident">native_topics</span>.<span class="ident">push</span>(<span class="ident">native_topic</span>);
         }
         <span class="kw">let</span> (<span class="ident">native_opts</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">opts</span>.<span class="ident">to_native</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
         <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_DeleteTopics</span>(
+            <span class="ident">rdsys::rd_kafka_DeleteTopics</span>(
                 <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(),
                 <span class="ident">native_topics</span>.<span class="ident">as_c_array</span>(),
                 <span class="ident">native_topics</span>.<span class="ident">len</span>(),
@@ -1312,8 +1308,8 @@
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">NewPartitions</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">create_partitions_inner</span>(<span class="ident">partitions</span>, <span class="ident">opts</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Left</span>(<span class="ident">CreatePartitionsFuture</span> { <span class="ident">rx</span> }),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Right</span>(<span class="ident">future</span>::<span class="ident">err</span>(<span class="ident">err</span>)),
+            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Left</span>(<span class="ident">CreatePartitionsFuture</span> { <span class="ident">rx</span> }),
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Right</span>(<span class="ident">future::err</span>(<span class="ident">err</span>)),
         }
     }
 
@@ -1321,18 +1317,18 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">partitions</span>: <span class="ident">I</span>,
         <span class="ident">opts</span>: <span class="kw-2">&amp;</span><span class="ident">AdminOptions</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">NewPartitions</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_partitions</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_partitions</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf::new</span>();
         <span class="kw">for</span> <span class="ident">p</span> <span class="kw">in</span> <span class="ident">partitions</span> {
             <span class="ident">native_partitions</span>.<span class="ident">push</span>(<span class="ident">p</span>.<span class="ident">to_native</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">err_buf</span>)<span class="question-mark">?</span>);
         }
         <span class="kw">let</span> (<span class="ident">native_opts</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">opts</span>.<span class="ident">to_native</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
         <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_CreatePartitions</span>(
+            <span class="ident">rdsys::rd_kafka_CreatePartitions</span>(
                 <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(),
                 <span class="ident">native_partitions</span>.<span class="ident">as_c_array</span>(),
                 <span class="ident">native_partitions</span>.<span class="ident">len</span>(),
@@ -1357,8 +1353,8 @@
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">ResourceSpecifier</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">describe_configs_inner</span>(<span class="ident">configs</span>, <span class="ident">opts</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Left</span>(<span class="ident">DescribeConfigsFuture</span> { <span class="ident">rx</span> }),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Right</span>(<span class="ident">future</span>::<span class="ident">err</span>(<span class="ident">err</span>)),
+            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Left</span>(<span class="ident">DescribeConfigsFuture</span> { <span class="ident">rx</span> }),
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Right</span>(<span class="ident">future::err</span>(<span class="ident">err</span>)),
         }
     }
 
@@ -1366,29 +1362,29 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">configs</span>: <span class="ident">I</span>,
         <span class="ident">opts</span>: <span class="kw-2">&amp;</span><span class="ident">AdminOptions</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">ResourceSpecifier</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_configs</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_configs</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf::new</span>();
         <span class="kw">for</span> <span class="ident">c</span> <span class="kw">in</span> <span class="ident">configs</span> {
             <span class="kw">let</span> (<span class="ident">name</span>, <span class="ident">typ</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">c</span> {
-                <span class="ident">ResourceSpecifier</span>::<span class="ident">Topic</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> (
-                    <span class="ident">CString</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">name</span>)<span class="question-mark">?</span>,
-                    <span class="ident">RDKafkaResourceType</span>::<span class="ident">RD_KAFKA_RESOURCE_TOPIC</span>,
+                <span class="ident">ResourceSpecifier::Topic</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> (
+                    <span class="ident">CString::new</span>(<span class="kw-2">*</span><span class="ident">name</span>)<span class="question-mark">?</span>,
+                    <span class="ident">RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC</span>,
                 ),
-                <span class="ident">ResourceSpecifier</span>::<span class="ident">Group</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> (
-                    <span class="ident">CString</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">name</span>)<span class="question-mark">?</span>,
-                    <span class="ident">RDKafkaResourceType</span>::<span class="ident">RD_KAFKA_RESOURCE_GROUP</span>,
+                <span class="ident">ResourceSpecifier::Group</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> (
+                    <span class="ident">CString::new</span>(<span class="kw-2">*</span><span class="ident">name</span>)<span class="question-mark">?</span>,
+                    <span class="ident">RDKafkaResourceType::RD_KAFKA_RESOURCE_GROUP</span>,
                 ),
-                <span class="ident">ResourceSpecifier</span>::<span class="ident">Broker</span>(<span class="ident">id</span>) <span class="op">=</span><span class="op">&gt;</span> (
-                    <span class="ident">CString</span>::<span class="ident">new</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">id</span>))<span class="question-mark">?</span>,
-                    <span class="ident">RDKafkaResourceType</span>::<span class="ident">RD_KAFKA_RESOURCE_BROKER</span>,
+                <span class="ident">ResourceSpecifier::Broker</span>(<span class="ident">id</span>) <span class="op">=</span><span class="op">&gt;</span> (
+                    <span class="ident">CString::new</span>(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">id</span>))<span class="question-mark">?</span>,
+                    <span class="ident">RDKafkaResourceType::RD_KAFKA_RESOURCE_BROKER</span>,
                 ),
             };
             <span class="ident">native_configs</span>.<span class="ident">push</span>(<span class="kw">unsafe</span> {
-                <span class="ident">NativeConfigResource</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigResource_new</span>(
+                <span class="ident">NativeConfigResource::from_ptr</span>(<span class="ident">rdsys::rd_kafka_ConfigResource_new</span>(
                     <span class="ident">typ</span>,
                     <span class="ident">name</span>.<span class="ident">as_ptr</span>(),
                 ))
@@ -1397,7 +1393,7 @@
         }
         <span class="kw">let</span> (<span class="ident">native_opts</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">opts</span>.<span class="ident">to_native</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
         <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_DescribeConfigs</span>(
+            <span class="ident">rdsys::rd_kafka_DescribeConfigs</span>(
                 <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(),
                 <span class="ident">native_configs</span>.<span class="ident">as_c_array</span>(),
                 <span class="ident">native_configs</span>.<span class="ident">len</span>(),
@@ -1422,8 +1418,8 @@
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">AlterConfig</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">alter_configs_inner</span>(<span class="ident">configs</span>, <span class="ident">opts</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Left</span>(<span class="ident">AlterConfigsFuture</span> { <span class="ident">rx</span> }),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either</span>::<span class="ident">Right</span>(<span class="ident">future</span>::<span class="ident">err</span>(<span class="ident">err</span>)),
+            <span class="prelude-val">Ok</span>(<span class="ident">rx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Left</span>(<span class="ident">AlterConfigsFuture</span> { <span class="ident">rx</span> }),
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Either::Right</span>(<span class="ident">future::err</span>(<span class="ident">err</span>)),
         }
     }
 
@@ -1431,18 +1427,18 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">configs</span>: <span class="ident">I</span>,
         <span class="ident">opts</span>: <span class="kw-2">&amp;</span><span class="ident">AdminOptions</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">AlterConfig</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_configs</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">native_configs</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">err_buf</span> <span class="op">=</span> <span class="ident">ErrBuf::new</span>();
         <span class="kw">for</span> <span class="ident">c</span> <span class="kw">in</span> <span class="ident">configs</span> {
             <span class="ident">native_configs</span>.<span class="ident">push</span>(<span class="ident">c</span>.<span class="ident">to_native</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">err_buf</span>)<span class="question-mark">?</span>);
         }
         <span class="kw">let</span> (<span class="ident">native_opts</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">opts</span>.<span class="ident">to_native</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
         <span class="kw">unsafe</span> {
-            <span class="ident">rdsys</span>::<span class="ident">rd_kafka_AlterConfigs</span>(
+            <span class="ident">rdsys::rd_kafka_AlterConfigs</span>(
                 <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">native_ptr</span>(),
                 <span class="ident">native_configs</span>.<span class="ident">as_c_array</span>(),
                 <span class="ident">native_configs</span>.<span class="ident">len</span>(),
@@ -1461,7 +1457,7 @@
 
 <span class="kw">impl</span> <span class="ident">FromClientConfig</span> <span class="kw">for</span> <span class="ident">AdminClient</span><span class="op">&lt;</span><span class="ident">DefaultClientContext</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">from_config</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ClientConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">AdminClient</span><span class="op">&lt;</span><span class="ident">DefaultClientContext</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">AdminClient</span>::<span class="ident">from_config_and_context</span>(<span class="ident">config</span>, <span class="ident">DefaultClientContext</span>)
+        <span class="ident">AdminClient::from_config_and_context</span>(<span class="ident">config</span>, <span class="ident">DefaultClientContext</span>)
     }
 }
 
@@ -1473,14 +1469,14 @@
         <span class="comment">// producer, as producer clients are allegedly more lightweight. [0]</span>
         <span class="comment">//</span>
         <span class="comment">// [0]: https://github.com/confluentinc/confluent-kafka-python/blob/bfb07dfbca47c256c840aaace83d3fe26c587360/confluent_kafka/src/Admin.c#L1492-L1493</span>
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(
+        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new</span>(
             <span class="ident">config</span>,
             <span class="ident">native_config</span>,
-            <span class="ident">RDKafkaType</span>::<span class="ident">RD_KAFKA_PRODUCER</span>,
+            <span class="ident">RDKafkaType::RD_KAFKA_PRODUCER</span>,
             <span class="ident">context</span>,
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">queue</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">client</span>.<span class="ident">new_native_queue</span>());
-        <span class="kw">let</span> <span class="ident">should_stop</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>));
+        <span class="kw">let</span> <span class="ident">queue</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">client</span>.<span class="ident">new_native_queue</span>());
+        <span class="kw">let</span> <span class="ident">should_stop</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">AtomicBool::new</span>(<span class="bool-val">false</span>));
         <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">start_poll_thread</span>(<span class="ident">queue</span>.<span class="ident">clone</span>(), <span class="ident">should_stop</span>.<span class="ident">clone</span>());
         <span class="prelude-val">Ok</span>(<span class="ident">AdminClient</span> {
             <span class="ident">client</span>,
@@ -1493,37 +1489,37 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">ClientContext</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">AdminClient</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Stopping polling&quot;</span>);
-        <span class="self">self</span>.<span class="ident">should_stop</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>);
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Waiting for polling thread termination&quot;</span>);
+        <span class="macro">trace!</span>(<span class="string">&quot;Stopping polling&quot;</span>);
+        <span class="self">self</span>.<span class="ident">should_stop</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">Ordering::Relaxed</span>);
+        <span class="macro">trace!</span>(<span class="string">&quot;Waiting for polling thread termination&quot;</span>);
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">take</span>().<span class="ident">unwrap</span>().<span class="ident">join</span>() {
-            <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Polling stopped&quot;</span>),
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failure while terminating thread: {:?}&quot;</span>, <span class="ident">e</span>),
+            <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">trace!</span>(<span class="string">&quot;Polling stopped&quot;</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn!</span>(<span class="string">&quot;Failure while terminating thread: {:?}&quot;</span>, <span class="ident">e</span>),
         };
     }
 }
 
 <span class="kw">fn</span> <span class="ident">start_poll_thread</span>(<span class="ident">queue</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NativeQueue</span><span class="op">&gt;</span>, <span class="ident">should_stop</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicBool</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">thread</span>::<span class="ident">Builder</span>::<span class="ident">new</span>()
+    <span class="ident">thread::Builder::new</span>()
         .<span class="ident">name</span>(<span class="string">&quot;admin client polling thread&quot;</span>.<span class="ident">into</span>())
         .<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Admin polling thread loop started&quot;</span>);
+            <span class="macro">trace!</span>(<span class="string">&quot;Admin polling thread loop started&quot;</span>);
             <span class="kw">loop</span> {
-                <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="ident">queue</span>.<span class="ident">poll</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>));
+                <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="ident">queue</span>.<span class="ident">poll</span>(<span class="ident">Duration::from_millis</span>(<span class="number">100</span>));
                 <span class="kw">if</span> <span class="ident">event</span>.<span class="ident">is_null</span>() {
-                    <span class="kw">if</span> <span class="ident">should_stop</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Relaxed</span>) {
+                    <span class="kw">if</span> <span class="ident">should_stop</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>) {
                         <span class="comment">// We received nothing and the thread should stop, so</span>
                         <span class="comment">// break the loop.</span>
                         <span class="kw">break</span>;
                     }
                     <span class="kw">continue</span>;
                 }
-                <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">NativeEvent</span>::<span class="ident">from_ptr</span>(<span class="ident">event</span>).<span class="ident">unwrap</span>() };
-                <span class="kw">let</span> <span class="ident">tx</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
-                    <span class="kw">unsafe</span> { <span class="ident">IntoOpaque</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_opaque</span>(<span class="ident">event</span>.<span class="ident">ptr</span>())) };
+                <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">NativeEvent::from_ptr</span>(<span class="ident">event</span>).<span class="ident">unwrap</span>() };
+                <span class="kw">let</span> <span class="ident">tx</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">oneshot::Sender</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
+                    <span class="kw">unsafe</span> { <span class="ident">IntoOpaque::from_ptr</span>(<span class="ident">rdsys::rd_kafka_event_opaque</span>(<span class="ident">event</span>.<span class="ident">ptr</span>())) };
                 <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">event</span>);
             }
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Admin polling thread loop terminated&quot;</span>);
+            <span class="macro">trace!</span>(<span class="string">&quot;Admin polling thread loop terminated&quot;</span>);
         })
         .<span class="ident">expect</span>(<span class="string">&quot;Failed to start polling thread&quot;</span>)
 }
@@ -1532,7 +1528,7 @@
 
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">KafkaDrop</span> <span class="kw">for</span> <span class="ident">RDKafkaEvent</span> {
     <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;event&quot;</span>;
-    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_destroy</span>;
+    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys::rd_kafka_event_destroy</span>;
 }
 
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Send</span> <span class="kw">for</span> <span class="ident">NativeEvent</span> {}
@@ -1540,9 +1536,9 @@
 
 <span class="kw">impl</span> <span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">RDKafkaEvent</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">check_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">err</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_error</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) };
+        <span class="kw">let</span> <span class="ident">err</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_error</span>(<span class="self">self</span>.<span class="ident">ptr</span>()) };
         <span class="kw">if</span> <span class="ident">err</span>.<span class="ident">is_error</span>() {
-            <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOp</span>(<span class="ident">err</span>.<span class="ident">into</span>()))
+            <span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOp</span>(<span class="ident">err</span>.<span class="ident">into</span>()))
         } <span class="kw">else</span> {
             <span class="prelude-val">Ok</span>(())
         }
@@ -1565,7 +1561,7 @@
 <span class="kw">impl</span> <span class="ident">AdminOptions</span> {
     <span class="doccomment">/// Creates a new `AdminOptions`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AdminOptions</span> {
-        <span class="ident">AdminOptions</span>::<span class="ident">default</span>()
+        <span class="ident">AdminOptions::default</span>()
     }
 
     <span class="doccomment">/// Sets the overall request timeout, including broker lookup, request</span>
@@ -1573,7 +1569,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Defaults to the `socket.timeout.ms` configuration parameter.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">request_timeout</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">request_timeout</span> <span class="op">=</span> <span class="ident">timeout</span>.<span class="ident">map</span>(<span class="ident">Into</span>::<span class="ident">into</span>);
+        <span class="self">self</span>.<span class="ident">request_timeout</span> <span class="op">=</span> <span class="ident">timeout</span>.<span class="ident">map</span>(<span class="ident">Into::into</span>);
         <span class="self">self</span>
     }
 
@@ -1587,7 +1583,7 @@
     <span class="doccomment">/// Only the CreateTopics, DeleteTopics, and CreatePartitions API calls</span>
     <span class="doccomment">/// respect this option.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">operation_timeout</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Timeout</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">timeout</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">operation_timeout</span> <span class="op">=</span> <span class="ident">timeout</span>.<span class="ident">map</span>(<span class="ident">Into</span>::<span class="ident">into</span>);
+        <span class="self">self</span>.<span class="ident">operation_timeout</span> <span class="op">=</span> <span class="ident">timeout</span>.<span class="ident">map</span>(<span class="ident">Into::into</span>);
         <span class="self">self</span>
     }
 
@@ -1613,18 +1609,18 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">client</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">RDKafka</span>,
         <span class="ident">err_buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ErrBuf</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>(<span class="ident">NativeAdminOptions</span>, <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>(<span class="ident">NativeAdminOptions</span>, <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">native_opts</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-            <span class="ident">NativeAdminOptions</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_AdminOptions_new</span>(
+            <span class="ident">NativeAdminOptions::from_ptr</span>(<span class="ident">rdsys::rd_kafka_AdminOptions_new</span>(
                 <span class="ident">client</span>,
-                <span class="ident">RDKafkaAdminOp</span>::<span class="ident">RD_KAFKA_ADMIN_OP_ANY</span>,
+                <span class="ident">RDKafkaAdminOp::RD_KAFKA_ADMIN_OP_ANY</span>,
             ))
             .<span class="ident">unwrap</span>()
         };
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">timeout</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_timeout</span> {
             <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                <span class="ident">rdsys</span>::<span class="ident">rd_kafka_AdminOptions_set_request_timeout</span>(
+                <span class="ident">rdsys::rd_kafka_AdminOptions_set_request_timeout</span>(
                     <span class="ident">native_opts</span>.<span class="ident">ptr</span>(),
                     <span class="ident">timeout</span>.<span class="ident">as_millis</span>(),
                     <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
@@ -1636,7 +1632,7 @@
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">timeout</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">operation_timeout</span> {
             <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                <span class="ident">rdsys</span>::<span class="ident">rd_kafka_AdminOptions_set_operation_timeout</span>(
+                <span class="ident">rdsys::rd_kafka_AdminOptions_set_operation_timeout</span>(
                     <span class="ident">native_opts</span>.<span class="ident">ptr</span>(),
                     <span class="ident">timeout</span>.<span class="ident">as_millis</span>(),
                     <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
@@ -1648,7 +1644,7 @@
 
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">validate_only</span> {
             <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                <span class="ident">rdsys</span>::<span class="ident">rd_kafka_AdminOptions_set_validate_only</span>(
+                <span class="ident">rdsys::rd_kafka_AdminOptions_set_validate_only</span>(
                     <span class="ident">native_opts</span>.<span class="ident">ptr</span>(),
                     <span class="number">1</span>, <span class="comment">// true</span>
                     <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
@@ -1660,7 +1656,7 @@
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">broker_id</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">broker_id</span> {
             <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                <span class="ident">rdsys</span>::<span class="ident">rd_kafka_AdminOptions_set_broker</span>(
+                <span class="ident">rdsys::rd_kafka_AdminOptions_set_broker</span>(
                     <span class="ident">native_opts</span>.<span class="ident">ptr</span>(),
                     <span class="ident">broker_id</span>,
                     <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
@@ -1670,9 +1666,9 @@
             <span class="ident">check_rdkafka_invalid_arg</span>(<span class="ident">res</span>, <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
         }
 
-        <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">oneshot</span>::<span class="ident">channel</span>();
-        <span class="kw">let</span> <span class="ident">tx</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">into_raw</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tx</span>)) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>;
-        <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_AdminOptions_set_opaque</span>(<span class="ident">native_opts</span>.<span class="ident">ptr</span>(), <span class="ident">tx</span>) };
+        <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>();
+        <span class="kw">let</span> <span class="ident">tx</span> <span class="op">=</span> <span class="ident">Box::into_raw</span>(<span class="ident">Box::new</span>(<span class="ident">tx</span>)) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>;
+        <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_AdminOptions_set_opaque</span>(<span class="ident">native_opts</span>.<span class="ident">ptr</span>(), <span class="ident">tx</span>) };
 
         <span class="prelude-val">Ok</span>((<span class="ident">native_opts</span>, <span class="ident">rx</span>))
     }
@@ -1680,23 +1676,23 @@
 
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">KafkaDrop</span> <span class="kw">for</span> <span class="ident">RDKafkaAdminOptions</span> {
     <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;admin options&quot;</span>;
-    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_AdminOptions_destroy</span>;
+    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys::rd_kafka_AdminOptions_destroy</span>;
 }
 
 <span class="kw">type</span> <span class="ident">NativeAdminOptions</span> <span class="op">=</span> <span class="ident">NativePtr</span><span class="op">&lt;</span><span class="ident">RDKafkaAdminOptions</span><span class="op">&gt;</span>;
 
 <span class="kw">fn</span> <span class="ident">check_rdkafka_invalid_arg</span>(<span class="ident">res</span>: <span class="ident">RDKafkaRespErr</span>, <span class="ident">err_buf</span>: <span class="kw-2">&amp;</span><span class="ident">ErrBuf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">res</span>.<span class="ident">into</span>() {
-        <span class="ident">RDKafkaErrorCode</span>::<span class="ident">NoError</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
-        <span class="ident">RDKafkaErrorCode</span>::<span class="ident">InvalidArgument</span> <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">RDKafkaErrorCode::NoError</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
+        <span class="ident">RDKafkaErrorCode::InvalidArgument</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">err_buf</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
                 <span class="string">&quot;invalid argument&quot;</span>.<span class="ident">into</span>()
             } <span class="kw">else</span> {
                 <span class="ident">err_buf</span>.<span class="ident">to_string</span>()
             };
-            <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="ident">msg</span>))
+            <span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="ident">msg</span>))
         }
-        <span class="ident">res</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+        <span class="ident">res</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
             <span class="string">&quot;setting admin options returned unexpected error code {}&quot;</span>,
             <span class="ident">res</span>
         ))),
@@ -1712,11 +1708,11 @@
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">TopicResult</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span>, (<span class="ident">String</span>, <span class="ident">RDKafkaErrorCode</span>)<span class="op">&gt;</span>;
 
 <span class="kw">fn</span> <span class="ident">build_topic_results</span>(<span class="ident">topics</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafkaTopicResult</span>, <span class="ident">n</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TopicResult</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">out</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">n</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">out</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">n</span>);
     <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n</span> {
         <span class="kw">let</span> <span class="ident">topic</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">*</span><span class="ident">topics</span>.<span class="ident">add</span>(<span class="ident">i</span>) };
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_result_name</span>(<span class="ident">topic</span>)) };
-        <span class="kw">let</span> <span class="ident">err</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_topic_result_error</span>(<span class="ident">topic</span>) };
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys::rd_kafka_topic_result_name</span>(<span class="ident">topic</span>)) };
+        <span class="kw">let</span> <span class="ident">err</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_topic_result_error</span>(<span class="ident">topic</span>) };
         <span class="kw">if</span> <span class="ident">err</span>.<span class="ident">is_error</span>() {
             <span class="ident">out</span>.<span class="ident">push</span>(<span class="prelude-val">Err</span>((<span class="ident">name</span>, <span class="ident">err</span>.<span class="ident">into</span>())));
         } <span class="kw">else</span> {
@@ -1754,7 +1750,7 @@
             <span class="ident">name</span>,
             <span class="ident">num_partitions</span>,
             <span class="ident">replication</span>,
-            <span class="ident">config</span>: <span class="ident">Vec</span>::<span class="ident">new</span>(),
+            <span class="ident">config</span>: <span class="ident">Vec::new</span>(),
         }
     }
 
@@ -1765,12 +1761,12 @@
     }
 
     <span class="kw">fn</span> <span class="ident">to_native</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">err_buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ErrBuf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">NativeNewTopic</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">name</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">CString::new</span>(<span class="self">self</span>.<span class="ident">name</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">repl</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">replication</span> {
-            <span class="ident">TopicReplication</span>::<span class="ident">Fixed</span>(<span class="ident">n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">n</span>,
-            <span class="ident">TopicReplication</span>::<span class="ident">Variable</span>(<span class="ident">partitions</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">TopicReplication::Fixed</span>(<span class="ident">n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">n</span>,
+            <span class="ident">TopicReplication::Variable</span>(<span class="ident">partitions</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="ident">partitions</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i32</span> <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">num_partitions</span> {
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
                         <span class="string">&quot;replication configuration for topic &#39;{}&#39; assigns {} partition(s), \
                          which does not match the specified number of partitions ({})&quot;</span>,
                         <span class="self">self</span>.<span class="ident">name</span>,
@@ -1785,7 +1781,7 @@
         <span class="comment">// NativeNewTopic&#39;s Drop implementation if replica assignment or config</span>
         <span class="comment">// installation fails.</span>
         <span class="kw">let</span> <span class="ident">topic</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-            <span class="ident">NativeNewTopic</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_NewTopic_new</span>(
+            <span class="ident">NativeNewTopic::from_ptr</span>(<span class="ident">rdsys::rd_kafka_NewTopic_new</span>(
                 <span class="ident">name</span>.<span class="ident">as_ptr</span>(),
                 <span class="self">self</span>.<span class="ident">num_partitions</span>,
                 <span class="ident">repl</span>,
@@ -1793,12 +1789,12 @@
                 <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
             ))
         }
-        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="ident">err_buf</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">KafkaError::AdminOpCreation</span>(<span class="ident">err_buf</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TopicReplication</span>::<span class="ident">Variable</span>(<span class="ident">assignment</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">replication</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TopicReplication::Variable</span>(<span class="ident">assignment</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">replication</span> {
             <span class="kw">for</span> (<span class="ident">partition_id</span>, <span class="ident">broker_ids</span>) <span class="kw">in</span> <span class="ident">assignment</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
                 <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                    <span class="ident">rdsys</span>::<span class="ident">rd_kafka_NewTopic_set_replica_assignment</span>(
+                    <span class="ident">rdsys::rd_kafka_NewTopic_set_replica_assignment</span>(
                         <span class="ident">topic</span>.<span class="ident">ptr</span>(),
                         <span class="ident">partition_id</span> <span class="kw">as</span> <span class="ident">i32</span>,
                         <span class="ident">broker_ids</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i32</span>,
@@ -1811,10 +1807,10 @@
             }
         }
         <span class="kw">for</span> (<span class="ident">key</span>, <span class="ident">val</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span> {
-            <span class="kw">let</span> <span class="ident">key_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">key</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">val_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">val</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">key_c</span> <span class="op">=</span> <span class="ident">CString::new</span>(<span class="kw-2">*</span><span class="ident">key</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">val_c</span> <span class="op">=</span> <span class="ident">CString::new</span>(<span class="kw-2">*</span><span class="ident">val</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                <span class="ident">rdsys</span>::<span class="ident">rd_kafka_NewTopic_set_config</span>(<span class="ident">topic</span>.<span class="ident">ptr</span>(), <span class="ident">key_c</span>.<span class="ident">as_ptr</span>(), <span class="ident">val_c</span>.<span class="ident">as_ptr</span>())
+                <span class="ident">rdsys::rd_kafka_NewTopic_set_config</span>(<span class="ident">topic</span>.<span class="ident">ptr</span>(), <span class="ident">key_c</span>.<span class="ident">as_ptr</span>(), <span class="ident">val_c</span>.<span class="ident">as_ptr</span>())
             };
             <span class="ident">check_rdkafka_invalid_arg</span>(<span class="ident">res</span>, <span class="ident">err_buf</span>)<span class="question-mark">?</span>;
         }
@@ -1843,30 +1839,30 @@
 
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">KafkaDrop</span> <span class="kw">for</span> <span class="ident">RDKafkaNewTopic</span> {
     <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;new topic&quot;</span>;
-    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_NewTopic_destroy</span>;
+    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys::rd_kafka_NewTopic_destroy</span>;
 }
 
 <span class="kw">struct</span> <span class="ident">CreateTopicsFuture</span> {
-    <span class="ident">rx</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
+    <span class="ident">rx</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Future</span> <span class="kw">for</span> <span class="ident">CreateTopicsFuture</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TopicResult</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Output</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError</span>::<span class="ident">Canceled</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError::Canceled</span>)<span class="question-mark">?</span>;
         <span class="ident">event</span>.<span class="ident">check_error</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_CreateTopics_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_CreateTopics_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
         <span class="kw">if</span> <span class="ident">res</span>.<span class="ident">is_null</span>() {
-            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
-            <span class="kw">return</span> <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+            <span class="kw">return</span> <span class="ident">Poll::Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;create topics request received response of incorrect type ({})&quot;</span>,
                 <span class="ident">typ</span>
             ))));
         }
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">topics</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_CreateTopics_result_topics</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
-        <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">build_topic_results</span>(<span class="ident">topics</span>, <span class="ident">n</span>)))
+        <span class="kw">let</span> <span class="ident">topics</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_CreateTopics_result_topics</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
+        <span class="ident">Poll::Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">build_topic_results</span>(<span class="ident">topics</span>, <span class="ident">n</span>)))
     }
 }
 
@@ -1878,30 +1874,30 @@
 
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">KafkaDrop</span> <span class="kw">for</span> <span class="ident">RDKafkaDeleteTopic</span> {
     <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;delete topic&quot;</span>;
-    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_DeleteTopic_destroy</span>;
+    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys::rd_kafka_DeleteTopic_destroy</span>;
 }
 
 <span class="kw">struct</span> <span class="ident">DeleteTopicsFuture</span> {
-    <span class="ident">rx</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
+    <span class="ident">rx</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Future</span> <span class="kw">for</span> <span class="ident">DeleteTopicsFuture</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TopicResult</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Output</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError</span>::<span class="ident">Canceled</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError::Canceled</span>)<span class="question-mark">?</span>;
         <span class="ident">event</span>.<span class="ident">check_error</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_DeleteTopics_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_DeleteTopics_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
         <span class="kw">if</span> <span class="ident">res</span>.<span class="ident">is_null</span>() {
-            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
-            <span class="kw">return</span> <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+            <span class="kw">return</span> <span class="ident">Poll::Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;delete topics request received response of incorrect type ({})&quot;</span>,
                 <span class="ident">typ</span>
             ))));
         }
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">topics</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_DeleteTopics_result_topics</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
-        <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">build_topic_results</span>(<span class="ident">topics</span>, <span class="ident">n</span>)))
+        <span class="kw">let</span> <span class="ident">topics</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_DeleteTopics_result_topics</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
+        <span class="ident">Poll::Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">build_topic_results</span>(<span class="ident">topics</span>, <span class="ident">n</span>)))
     }
 }
 
@@ -1937,7 +1933,7 @@
     }
 
     <span class="kw">fn</span> <span class="ident">to_native</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">err_buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ErrBuf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">NativeNewPartitions</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">topic_name</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">CString::new</span>(<span class="self">self</span>.<span class="ident">topic_name</span>)<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">assignment</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assignment</span> {
             <span class="comment">// If assignment contains more than self.new_partition_count</span>
             <span class="comment">// entries, we&#39;ll trip an assertion in librdkafka that crashes the</span>
@@ -1947,7 +1943,7 @@
             <span class="comment">// existing partitions, but we can let the server handle that</span>
             <span class="comment">// validation--we just need to make sure not to crash librdkafka.</span>
             <span class="kw">if</span> <span class="ident">assignment</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">new_partition_count</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
                     <span class="string">&quot;partition assignment for topic &#39;{}&#39; assigns {} partition(s), \
                      which is more than the requested total number of partitions ({})&quot;</span>,
                     <span class="self">self</span>.<span class="ident">topic_name</span>,
@@ -1960,19 +1956,19 @@
         <span class="comment">// NativeNewPartitions&#39;s Drop implementation if replica assignment or</span>
         <span class="comment">// config installation fails.</span>
         <span class="kw">let</span> <span class="ident">partitions</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-            <span class="ident">NativeNewPartitions</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_NewPartitions_new</span>(
+            <span class="ident">NativeNewPartitions::from_ptr</span>(<span class="ident">rdsys::rd_kafka_NewPartitions_new</span>(
                 <span class="ident">name</span>.<span class="ident">as_ptr</span>(),
                 <span class="self">self</span>.<span class="ident">new_partition_count</span>,
                 <span class="ident">err_buf</span>.<span class="ident">as_mut_ptr</span>(),
                 <span class="ident">err_buf</span>.<span class="ident">capacity</span>(),
             ))
         }
-        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="ident">err_buf</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
+        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">KafkaError::AdminOpCreation</span>(<span class="ident">err_buf</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">assignment</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assignment</span> {
             <span class="kw">for</span> (<span class="ident">partition_id</span>, <span class="ident">broker_ids</span>) <span class="kw">in</span> <span class="ident">assignment</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
                 <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                    <span class="ident">rdsys</span>::<span class="ident">rd_kafka_NewPartitions_set_replica_assignment</span>(
+                    <span class="ident">rdsys::rd_kafka_NewPartitions_set_replica_assignment</span>(
                         <span class="ident">partitions</span>.<span class="ident">ptr</span>(),
                         <span class="ident">partition_id</span> <span class="kw">as</span> <span class="ident">i32</span>,
                         <span class="ident">broker_ids</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">i32</span>,
@@ -1992,30 +1988,30 @@
 
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">KafkaDrop</span> <span class="kw">for</span> <span class="ident">RDKafkaNewPartitions</span> {
     <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;new partitions&quot;</span>;
-    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_NewPartitions_destroy</span>;
+    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys::rd_kafka_NewPartitions_destroy</span>;
 }
 
 <span class="kw">struct</span> <span class="ident">CreatePartitionsFuture</span> {
-    <span class="ident">rx</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
+    <span class="ident">rx</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Future</span> <span class="kw">for</span> <span class="ident">CreatePartitionsFuture</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TopicResult</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Output</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError</span>::<span class="ident">Canceled</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError::Canceled</span>)<span class="question-mark">?</span>;
         <span class="ident">event</span>.<span class="ident">check_error</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_CreatePartitions_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_CreatePartitions_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
         <span class="kw">if</span> <span class="ident">res</span>.<span class="ident">is_null</span>() {
-            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
-            <span class="kw">return</span> <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+            <span class="kw">return</span> <span class="ident">Poll::Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;create partitions request received response of incorrect type ({})&quot;</span>,
                 <span class="ident">typ</span>
             ))));
         }
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">topics</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_CreatePartitions_result_topics</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
-        <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">build_topic_results</span>(<span class="ident">topics</span>, <span class="ident">n</span>)))
+        <span class="kw">let</span> <span class="ident">topics</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_CreatePartitions_result_topics</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
+        <span class="ident">Poll::Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">build_topic_results</span>(<span class="ident">topics</span>, <span class="ident">n</span>)))
     }
 }
 
@@ -2112,34 +2108,34 @@
 
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">KafkaDrop</span> <span class="kw">for</span> <span class="ident">RDKafkaConfigResource</span> {
     <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;config resource&quot;</span>;
-    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigResource_destroy</span>;
+    <span class="kw">const</span> <span class="ident">DROP</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="self">Self</span>) <span class="op">=</span> <span class="ident">rdsys::rd_kafka_ConfigResource_destroy</span>;
 }
 
 <span class="kw">fn</span> <span class="ident">extract_config_specifier</span>(
     <span class="ident">resource</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">RDKafkaConfigResource</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">OwnedResourceSpecifier</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigResource_type</span>(<span class="ident">resource</span>) };
+    <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_ConfigResource_type</span>(<span class="ident">resource</span>) };
     <span class="kw">match</span> <span class="ident">typ</span> {
-        <span class="ident">RDKafkaResourceType</span>::<span class="ident">RD_KAFKA_RESOURCE_TOPIC</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigResource_name</span>(<span class="ident">resource</span>)) };
-            <span class="prelude-val">Ok</span>(<span class="ident">OwnedResourceSpecifier</span>::<span class="ident">Topic</span>(<span class="ident">name</span>))
+        <span class="ident">RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys::rd_kafka_ConfigResource_name</span>(<span class="ident">resource</span>)) };
+            <span class="prelude-val">Ok</span>(<span class="ident">OwnedResourceSpecifier::Topic</span>(<span class="ident">name</span>))
         }
-        <span class="ident">RDKafkaResourceType</span>::<span class="ident">RD_KAFKA_RESOURCE_GROUP</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigResource_name</span>(<span class="ident">resource</span>)) };
-            <span class="prelude-val">Ok</span>(<span class="ident">OwnedResourceSpecifier</span>::<span class="ident">Group</span>(<span class="ident">name</span>))
+        <span class="ident">RDKafkaResourceType::RD_KAFKA_RESOURCE_GROUP</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys::rd_kafka_ConfigResource_name</span>(<span class="ident">resource</span>)) };
+            <span class="prelude-val">Ok</span>(<span class="ident">OwnedResourceSpecifier::Group</span>(<span class="ident">name</span>))
         }
-        <span class="ident">RDKafkaResourceType</span>::<span class="ident">RD_KAFKA_RESOURCE_BROKER</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigResource_name</span>(<span class="ident">resource</span>)) }
+        <span class="ident">RDKafkaResourceType::RD_KAFKA_RESOURCE_BROKER</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">CStr::from_ptr</span>(<span class="ident">rdsys::rd_kafka_ConfigResource_name</span>(<span class="ident">resource</span>)) }
                 .<span class="ident">to_string_lossy</span>();
             <span class="kw">match</span> <span class="ident">name</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Ok</span>(<span class="ident">id</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">OwnedResourceSpecifier</span>::<span class="ident">Broker</span>(<span class="ident">id</span>)),
-                <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+                <span class="prelude-val">Ok</span>(<span class="ident">id</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">OwnedResourceSpecifier::Broker</span>(<span class="ident">id</span>)),
+                <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
                     <span class="string">&quot;bogus broker ID in kafka response: {}&quot;</span>,
                     <span class="ident">name</span>
                 ))),
             }
         }
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
             <span class="string">&quot;bogus resource type in kafka response: {:?}&quot;</span>,
             <span class="ident">typ</span>
         ))),
@@ -2148,21 +2144,21 @@
 
 <span class="kw">fn</span> <span class="ident">extract_config_source</span>(<span class="ident">config_source</span>: <span class="ident">RDKafkaConfigSource</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">ConfigSource</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">config_source</span> {
-        <span class="ident">RDKafkaConfigSource</span>::<span class="ident">RD_KAFKA_CONFIG_SOURCE_UNKNOWN_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource</span>::<span class="ident">Unknown</span>),
-        <span class="ident">RDKafkaConfigSource</span>::<span class="ident">RD_KAFKA_CONFIG_SOURCE_DYNAMIC_TOPIC_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource</span>::<span class="ident">DynamicTopic</span>)
+        <span class="ident">RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_UNKNOWN_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource::Unknown</span>),
+        <span class="ident">RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DYNAMIC_TOPIC_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource::DynamicTopic</span>)
         }
-        <span class="ident">RDKafkaConfigSource</span>::<span class="ident">RD_KAFKA_CONFIG_SOURCE_DYNAMIC_BROKER_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource</span>::<span class="ident">DynamicBroker</span>)
+        <span class="ident">RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DYNAMIC_BROKER_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource::DynamicBroker</span>)
         }
-        <span class="ident">RDKafkaConfigSource</span>::<span class="ident">RD_KAFKA_CONFIG_SOURCE_DYNAMIC_DEFAULT_BROKER_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource</span>::<span class="ident">DynamicDefaultBroker</span>)
+        <span class="ident">RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DYNAMIC_DEFAULT_BROKER_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource::DynamicDefaultBroker</span>)
         }
-        <span class="ident">RDKafkaConfigSource</span>::<span class="ident">RD_KAFKA_CONFIG_SOURCE_STATIC_BROKER_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource</span>::<span class="ident">StaticBroker</span>)
+        <span class="ident">RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_STATIC_BROKER_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource::StaticBroker</span>)
         }
-        <span class="ident">RDKafkaConfigSource</span>::<span class="ident">RD_KAFKA_CONFIG_SOURCE_DEFAULT_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource</span>::<span class="ident">Default</span>),
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+        <span class="ident">RDKafkaConfigSource::RD_KAFKA_CONFIG_SOURCE_DEFAULT_CONFIG</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ConfigSource::Default</span>),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
             <span class="string">&quot;bogus config source type in kafka response: {:?}&quot;</span>,
             <span class="ident">config_source</span>,
         ))),
@@ -2170,37 +2166,37 @@
 }
 
 <span class="kw">struct</span> <span class="ident">DescribeConfigsFuture</span> {
-    <span class="ident">rx</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
+    <span class="ident">rx</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Future</span> <span class="kw">for</span> <span class="ident">DescribeConfigsFuture</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ConfigResourceResult</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Output</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError</span>::<span class="ident">Canceled</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError::Canceled</span>)<span class="question-mark">?</span>;
         <span class="ident">event</span>.<span class="ident">check_error</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_DescribeConfigs_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_DescribeConfigs_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
         <span class="kw">if</span> <span class="ident">res</span>.<span class="ident">is_null</span>() {
-            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
-            <span class="kw">return</span> <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+            <span class="kw">return</span> <span class="ident">Poll::Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;describe configs request received response of incorrect type ({})&quot;</span>,
                 <span class="ident">typ</span>
             ))));
         }
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">resources</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_DescribeConfigs_result_resources</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">out</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">n</span>);
+        <span class="kw">let</span> <span class="ident">resources</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_DescribeConfigs_result_resources</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">out</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">n</span>);
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n</span> {
             <span class="kw">let</span> <span class="ident">resource</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">*</span><span class="ident">resources</span>.<span class="ident">add</span>(<span class="ident">i</span>) };
             <span class="kw">let</span> <span class="ident">specifier</span> <span class="op">=</span> <span class="ident">extract_config_specifier</span>(<span class="ident">resource</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">entries_out</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">entries_out</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">0</span>;
-            <span class="kw">let</span> <span class="ident">entries</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigResource_configs</span>(<span class="ident">resource</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
+            <span class="kw">let</span> <span class="ident">entries</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_ConfigResource_configs</span>(<span class="ident">resource</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
             <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n</span> {
                 <span class="kw">let</span> <span class="ident">entry</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">*</span><span class="ident">entries</span>.<span class="ident">add</span>(<span class="ident">j</span>) };
-                <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigEntry_name</span>(<span class="ident">entry</span>)) };
+                <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">cstr_to_owned</span>(<span class="ident">rdsys::rd_kafka_ConfigEntry_name</span>(<span class="ident">entry</span>)) };
                 <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                    <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigEntry_value</span>(<span class="ident">entry</span>);
+                    <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">rdsys::rd_kafka_ConfigEntry_value</span>(<span class="ident">entry</span>);
                     <span class="kw">if</span> <span class="ident">value</span>.<span class="ident">is_null</span>() {
                         <span class="prelude-val">None</span>
                     } <span class="kw">else</span> {
@@ -2211,11 +2207,11 @@
                     <span class="ident">name</span>,
                     <span class="ident">value</span>,
                     <span class="ident">source</span>: <span class="ident">extract_config_source</span>(<span class="kw">unsafe</span> {
-                        <span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigEntry_source</span>(<span class="ident">entry</span>)
+                        <span class="ident">rdsys::rd_kafka_ConfigEntry_source</span>(<span class="ident">entry</span>)
                     })<span class="question-mark">?</span>,
-                    <span class="ident">is_read_only</span>: <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigEntry_is_read_only</span>(<span class="ident">entry</span>) } <span class="op">!</span><span class="op">=</span> <span class="number">0</span>,
-                    <span class="ident">is_default</span>: <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigEntry_is_default</span>(<span class="ident">entry</span>) } <span class="op">!</span><span class="op">=</span> <span class="number">0</span>,
-                    <span class="ident">is_sensitive</span>: <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigEntry_is_sensitive</span>(<span class="ident">entry</span>) } <span class="op">!</span><span class="op">=</span> <span class="number">0</span>,
+                    <span class="ident">is_read_only</span>: <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_ConfigEntry_is_read_only</span>(<span class="ident">entry</span>) } <span class="op">!</span><span class="op">=</span> <span class="number">0</span>,
+                    <span class="ident">is_default</span>: <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_ConfigEntry_is_default</span>(<span class="ident">entry</span>) } <span class="op">!</span><span class="op">=</span> <span class="number">0</span>,
+                    <span class="ident">is_sensitive</span>: <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_ConfigEntry_is_sensitive</span>(<span class="ident">entry</span>) } <span class="op">!</span><span class="op">=</span> <span class="number">0</span>,
                 });
             }
             <span class="ident">out</span>.<span class="ident">push</span>(<span class="prelude-val">Ok</span>(<span class="ident">ConfigResource</span> {
@@ -2223,7 +2219,7 @@
                 <span class="ident">entries</span>: <span class="ident">entries_out</span>,
             }))
         }
-        <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">out</span>))
+        <span class="ident">Poll::Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">out</span>))
     }
 }
 
@@ -2248,7 +2244,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">specifier</span>: <span class="ident">ResourceSpecifier</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AlterConfig</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
         <span class="ident">AlterConfig</span> {
             <span class="ident">specifier</span>,
-            <span class="ident">entries</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
+            <span class="ident">entries</span>: <span class="ident">HashMap::new</span>(),
         }
     }
 
@@ -2260,30 +2256,30 @@
 
     <span class="kw">fn</span> <span class="ident">to_native</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">err_buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ErrBuf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">NativeConfigResource</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">name</span>, <span class="ident">typ</span>) <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">specifier</span> {
-            <span class="ident">ResourceSpecifier</span>::<span class="ident">Topic</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">name</span>)<span class="question-mark">?</span>,
-                <span class="ident">RDKafkaResourceType</span>::<span class="ident">RD_KAFKA_RESOURCE_TOPIC</span>,
+            <span class="ident">ResourceSpecifier::Topic</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> (
+                <span class="ident">CString::new</span>(<span class="ident">name</span>)<span class="question-mark">?</span>,
+                <span class="ident">RDKafkaResourceType::RD_KAFKA_RESOURCE_TOPIC</span>,
             ),
-            <span class="ident">ResourceSpecifier</span>::<span class="ident">Group</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">name</span>)<span class="question-mark">?</span>,
-                <span class="ident">RDKafkaResourceType</span>::<span class="ident">RD_KAFKA_RESOURCE_GROUP</span>,
+            <span class="ident">ResourceSpecifier::Group</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> (
+                <span class="ident">CString::new</span>(<span class="ident">name</span>)<span class="question-mark">?</span>,
+                <span class="ident">RDKafkaResourceType::RD_KAFKA_RESOURCE_GROUP</span>,
             ),
-            <span class="ident">ResourceSpecifier</span>::<span class="ident">Broker</span>(<span class="ident">id</span>) <span class="op">=</span><span class="op">&gt;</span> (
-                <span class="ident">CString</span>::<span class="ident">new</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">id</span>))<span class="question-mark">?</span>,
-                <span class="ident">RDKafkaResourceType</span>::<span class="ident">RD_KAFKA_RESOURCE_BROKER</span>,
+            <span class="ident">ResourceSpecifier::Broker</span>(<span class="ident">id</span>) <span class="op">=</span><span class="op">&gt;</span> (
+                <span class="ident">CString::new</span>(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">id</span>))<span class="question-mark">?</span>,
+                <span class="ident">RDKafkaResourceType::RD_KAFKA_RESOURCE_BROKER</span>,
             ),
         };
         <span class="comment">// N.B.: we wrap config immediately, so that it is destroyed via the</span>
         <span class="comment">// NativeNewTopic&#39;s Drop implementation if config installation fails.</span>
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-            <span class="ident">NativeConfigResource</span>::<span class="ident">from_ptr</span>(<span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigResource_new</span>(<span class="ident">typ</span>, <span class="ident">name</span>.<span class="ident">as_ptr</span>()))
+            <span class="ident">NativeConfigResource::from_ptr</span>(<span class="ident">rdsys::rd_kafka_ConfigResource_new</span>(<span class="ident">typ</span>, <span class="ident">name</span>.<span class="ident">as_ptr</span>()))
                 .<span class="ident">unwrap</span>()
         };
         <span class="kw">for</span> (<span class="ident">key</span>, <span class="ident">val</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">entries</span> {
-            <span class="kw">let</span> <span class="ident">key_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">key</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">val_c</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">val</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">key_c</span> <span class="op">=</span> <span class="ident">CString::new</span>(<span class="kw-2">*</span><span class="ident">key</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">val_c</span> <span class="op">=</span> <span class="ident">CString::new</span>(<span class="kw-2">*</span><span class="ident">val</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> {
-                <span class="ident">rdsys</span>::<span class="ident">rd_kafka_ConfigResource_set_config</span>(
+                <span class="ident">rdsys::rd_kafka_ConfigResource_set_config</span>(
                     <span class="ident">config</span>.<span class="ident">ptr</span>(),
                     <span class="ident">key_c</span>.<span class="ident">as_ptr</span>(),
                     <span class="ident">val_c</span>.<span class="ident">as_ptr</span>(),
@@ -2296,34 +2292,35 @@
 }
 
 <span class="kw">struct</span> <span class="ident">AlterConfigsFuture</span> {
-    <span class="ident">rx</span>: <span class="ident">oneshot</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
+    <span class="ident">rx</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">NativeEvent</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Future</span> <span class="kw">for</span> <span class="ident">AlterConfigsFuture</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">KafkaResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AlterConfigsResult</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Output</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError</span>::<span class="ident">Canceled</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="macro">ready!</span>(<span class="self">self</span>.<span class="ident">rx</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">KafkaError::Canceled</span>)<span class="question-mark">?</span>;
         <span class="ident">event</span>.<span class="ident">check_error</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_AlterConfigs_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_AlterConfigs_result</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
         <span class="kw">if</span> <span class="ident">res</span>.<span class="ident">is_null</span>() {
-            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
-            <span class="kw">return</span> <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError</span>::<span class="ident">AdminOpCreation</span>(<span class="macro">format</span><span class="macro">!</span>(
+            <span class="kw">let</span> <span class="ident">typ</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_event_type</span>(<span class="ident">event</span>.<span class="ident">ptr</span>()) };
+            <span class="kw">return</span> <span class="ident">Poll::Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">KafkaError::AdminOpCreation</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;alter configs request received response of incorrect type ({})&quot;</span>,
                 <span class="ident">typ</span>
             ))));
         }
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">resources</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys</span>::<span class="ident">rd_kafka_AlterConfigs_result_resources</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">out</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">n</span>);
+        <span class="kw">let</span> <span class="ident">resources</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">rdsys::rd_kafka_AlterConfigs_result_resources</span>(<span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">n</span>) };
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">out</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">n</span>);
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n</span> {
             <span class="kw">let</span> <span class="ident">resource</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">*</span><span class="ident">resources</span>.<span class="ident">add</span>(<span class="ident">i</span>) };
             <span class="kw">let</span> <span class="ident">specifier</span> <span class="op">=</span> <span class="ident">extract_config_specifier</span>(<span class="ident">resource</span>)<span class="question-mark">?</span>;
             <span class="ident">out</span>.<span class="ident">push</span>(<span class="prelude-val">Ok</span>(<span class="ident">specifier</span>));
         }
-        <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">out</span>))
+        <span class="ident">Poll::Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">out</span>))
     }
 }
-</pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rdkafka"></div>
-    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</code></pre></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rdkafka" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
+</body></html>

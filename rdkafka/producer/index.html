@@ -1,7 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `producer` mod in crate `rdkafka`."><meta name="keywords" content="rust, rustlang, rust-lang, producer"><title>rdkafka::producer - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
-<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a><p class="location">Module producer</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class="location"><a href="../index.html">rdkafka</a></p><div id="sidebar-vars" data-name="producer" data-ty="mod" data-relpath="../"></div><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
-                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../src/rdkafka/producer/mod.rs.html#1-370" title="goto source code">[src]</a></span><span class="in-band">Module <a href="../index.html">rdkafka</a>::<wbr><a class="mod" href="">producer</a></span></h1><div class="docblock"><p>Kafka producers.</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Kafka producers."><meta name="keywords" content="rust, rustlang, rust-lang, producer"><title>rdkafka::producer - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a><h2 class="location">Module producer</h2><div class="sidebar-elems"><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></div><div id="sidebar-vars" data-name="producer" data-ty="mod" data-relpath="./"></div><script defer src="./sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Module <a href="../index.html">rdkafka</a>::<wbr><a class="mod" href="#">producer</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../src/rdkafka/producer/mod.rs.html#1-370" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Kafka producers.</p>
 <h2 id="the-c-librdkafka-producer" class="section-header"><a href="#the-c-librdkafka-producer">The C librdkafka producer</a></h2>
 <p>Rust-rdkafka relies on the C librdkafka producer to communicate with Kafka,
 so in order to understand how the Rust producers work it is important to
@@ -16,14 +13,14 @@ the appropriate delivery result into an internal event queue.</p>
 regular intervals to process those events; the thread calling <code>poll</code> will be
 the one executing the user-specified delivery callback for every delivery
 event. If <code>poll</code> is not called, or not frequently enough, the producer will
-return a <a href="../../rdkafka/types/enum.RDKafkaErrorCode.html#variant.QueueFull"><code>RDKafkaErrorCode::QueueFull</code></a> error and it won't be able to send
-any other message until more delivery event are processed via <code>poll</code>. The
+return a <a href="../types/enum.RDKafkaErrorCode.html#variant.QueueFull"><code>RDKafkaErrorCode::QueueFull</code></a> error and it won’t be able to send
+any other message until more delivery events are processed via <code>poll</code>. The
 <code>QueueFull</code> error can also be returned if Kafka is not able to receive the
 messages quickly enough.</p>
 <h3 id="error-reporting" class="section-header"><a href="#error-reporting">Error reporting</a></h3>
 <p>The C library will try deal with all the transient errors such as broker
 disconnection, timeouts etc. These errors, called global errors, are
-automatically logged in rust-rdkafka, but they normally don't require any
+automatically logged in rust-rdkafka, but they normally don’t require any
 handling as they are automatically handled internally. To see the logs, make
 sure you initialize the logger.</p>
 <p>As mentioned earlier, errors specific to message production will be reported
@@ -38,18 +35,18 @@ batch. You can control the behavior of the buffer by configuring the the
 <p><code>rust-rdkafka</code> (rdkafka for brevity) provides two sets of producers: low
 level and high level.</p>
 <h3 id="low-level-producers" class="section-header"><a href="#low-level-producers">Low-level producers</a></h3>
-<p>The lowest level producer provided by rdkafka is called <a href="../../rdkafka/producer/struct.BaseProducer.html" title="BaseProducer"><code>BaseProducer</code></a>.
+<p>The lowest level producer provided by rdkafka is called <a href="struct.BaseProducer.html" title="BaseProducer"><code>BaseProducer</code></a>.
 The goal of the <code>BaseProducer</code> is to be as close as possible to the C one
 while maintaining a safe Rust interface. In particular, the <code>BaseProducer</code>
 needs to be polled at regular intervals to execute any delivery callback
-that might be waiting and to make sure the queue doesn't fill up.</p>
-<p>Another low lever producer is the <a href="../../rdkafka/producer/struct.ThreadedProducer.html" title="ThreadedProducer"><code>ThreadedProducer</code></a>, which is a
+that might be waiting and to make sure the queue doesn’t fill up.</p>
+<p>Another low lever producer is the <a href="struct.ThreadedProducer.html" title="ThreadedProducer"><code>ThreadedProducer</code></a>, which is a
 <code>BaseProducer</code> with a dedicated thread for polling.</p>
 <p>The delivery callback can be defined using a <code>ProducerContext</code>. See the
-<a href="../../rdkafka/producer/base_producer/index.html" title="base_producer"><code>base_producer</code></a> module for more information.</p>
+<a href="base_producer/index.html" title="base_producer"><code>base_producer</code></a> module for more information.</p>
 <h3 id="high-level-producer" class="section-header"><a href="#high-level-producer">High-level producer</a></h3>
 <p>At the moment the only high level producer implemented is the
-<a href="../../rdkafka/producer/struct.FutureProducer.html" title="FutureProducer"><code>FutureProducer</code></a>. The <code>FutureProducer</code> doesn't rely on user-defined
+<a href="struct.FutureProducer.html" title="FutureProducer"><code>FutureProducer</code></a>. The <code>FutureProducer</code> doesn’t rely on user-defined
 callbacks to notify the delivery or failure of a message; instead, this
 information will be returned in a Future. The <code>FutureProducer</code> also uses an
 internal thread that is used for polling, which makes calling poll
@@ -66,8 +63,8 @@ work together with transaction-aware consumers configured with the default
 <p>To configure a producer for transactions set <code>transactional.id</code> to an
 identifier unique to the application when creating the producer. After
 creating the producer, you must initialize it with
-<a href="../../rdkafka/producer/trait.Producer.html#tymethod.init_transactions" title="Producer::init_transactions"><code>Producer::init_transactions</code></a>.</p>
-<p>To start a new transaction use <a href="../../rdkafka/producer/trait.Producer.html#tymethod.begin_transaction" title="Producer::begin_transaction"><code>Producer::begin_transaction</code></a>. There can be
+<a href="trait.Producer.html#tymethod.init_transactions" title="Producer::init_transactions"><code>Producer::init_transactions</code></a>.</p>
+<p>To start a new transaction use <a href="trait.Producer.html#tymethod.begin_transaction" title="Producer::begin_transaction"><code>Producer::begin_transaction</code></a>. There can be
 <strong>only one ongoing transaction</strong> at a time per producer. All records sent
 after starting a transaction and before committing or aborting it will
 automatically be associated with that transaction.</p>
@@ -77,16 +74,16 @@ to produce messages outside of a transaction.</p>
 <code>send_offsets_to_transaction</code> and will be committed atomically with the
 other records sent in the transaction.</p>
 <p>The current transaction can be committed with
-<a href="../../rdkafka/producer/trait.Producer.html#tymethod.commit_transaction" title="Producer::commit_transaction"><code>Producer::commit_transaction</code></a> or aborted using
-<a href="../../rdkafka/producer/trait.Producer.html#tymethod.abort_transaction" title="Producer::abort_transaction"><code>Producer::abort_transaction</code></a>. Afterwards, a new transaction can begin.</p>
+<a href="trait.Producer.html#tymethod.commit_transaction" title="Producer::commit_transaction"><code>Producer::commit_transaction</code></a> or aborted using
+<a href="trait.Producer.html#tymethod.abort_transaction" title="Producer::abort_transaction"><code>Producer::abort_transaction</code></a>. Afterwards, a new transaction can begin.</p>
 <h3 id="errors" class="section-header"><a href="#errors">Errors</a></h3>
 <p>Errors returned by transaction methods may:</p>
 <ul>
-<li>be retriable (<a href="../../rdkafka/error/struct.RDKafkaError.html#method.is_retriable"><code>RDKafkaError::is_retriable</code></a>), in which case the operation
+<li>be retriable (<a href="../error/struct.RDKafkaError.html#method.is_retriable"><code>RDKafkaError::is_retriable</code></a>), in which case the operation
 that encountered the error may be retried.</li>
-<li>require abort (<a href="../../rdkafka/error/struct.RDKafkaError.html#method.txn_requires_abort"><code>RDKafkaError::txn_requires_abort</code></a>, in which case the
+<li>require abort (<a href="../error/struct.RDKafkaError.html#method.txn_requires_abort"><code>RDKafkaError::txn_requires_abort</code></a>, in which case the
 current transaction must be aborted and a new transaction begun.</li>
-<li>be fatal (<a href="../../rdkafka/error/struct.RDKafkaError.html#method.is_fatal"><code>RDKafkaError::is_fatal</code></a>), in which case the producer must be
+<li>be fatal (<a href="../error/struct.RDKafkaError.html#method.is_fatal"><code>RDKafkaError::is_fatal</code></a>), in which case the producer must be
 stopped and the application terminated.</li>
 </ul>
 <p>For more details about transactions, see the <a href="https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#transactional-producer">Transactional Producer</a>
@@ -116,7 +113,7 @@ sets. Default: none.</li>
 the leader broker must receive from ISR brokers before responding to the
 request: 0=Broker does not send any response/ack to client, 1=Only the
 leader broker will need to ack the message, -1 or all=broker will block
-until message is committed by all in sync replicas (ISRs) or broker's
+until message is committed by all in sync replicas (ISRs) or broker’s
 in.sync.replicas setting before sending response. Default: 1.</li>
 <li><code>request.timeout.ms</code>: The ack timeout of the producer request in
 milliseconds. This value is only enforced by the broker and relies on
@@ -125,22 +122,23 @@ request.required.acks being != 0. Default: 5000.</li>
 locally and limits the time a produced message waits for successful
 delivery. A time of 0 is infinite. Default: 300000.</li>
 </ul>
-</div><h2 id="modules" class="section-header"><a href="#modules">Modules</a></h2>
-<table><tr class="module-item"><td><a class="mod" href="base_producer/index.html" title="rdkafka::producer::base_producer mod">base_producer</a></td><td class="docblock-short"><p>Low-level Kafka producers.</p>
-</td></tr><tr class="module-item"><td><a class="mod" href="future_producer/index.html" title="rdkafka::producer::future_producer mod">future_producer</a></td><td class="docblock-short"><p>High-level, futures-enabled Kafka producer.</p>
-</td></tr></table><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
-<table><tr class="module-item"><td><a class="struct" href="struct.BaseProducer.html" title="rdkafka::producer::BaseProducer struct">BaseProducer</a></td><td class="docblock-short"><p>Lowest level Kafka producer.</p>
-</td></tr><tr class="module-item"><td><a class="struct" href="struct.BaseRecord.html" title="rdkafka::producer::BaseRecord struct">BaseRecord</a></td><td class="docblock-short"><p>A record for the <a href="../../rdkafka/producer/struct.BaseProducer.html" title="BaseProducer"><code>BaseProducer</code></a> and <a href="../../rdkafka/producer/struct.ThreadedProducer.html" title="ThreadedProducer"><code>ThreadedProducer</code></a>.</p>
-</td></tr><tr class="module-item"><td><a class="struct" href="struct.DefaultProducerContext.html" title="rdkafka::producer::DefaultProducerContext struct">DefaultProducerContext</a></td><td class="docblock-short"><p>An inert producer context that can be used when customizations are not
+</div></details><h2 id="modules" class="section-header"><a href="#modules">Modules</a></h2>
+<div class="item-table"><div class="item-left module-item"><a class="mod" href="base_producer/index.html" title="rdkafka::producer::base_producer mod">base_producer</a></div><div class="item-right docblock-short"><p>Low-level Kafka producers.</p>
+</div><div class="item-left module-item"><a class="mod" href="future_producer/index.html" title="rdkafka::producer::future_producer mod">future_producer</a></div><div class="item-right docblock-short"><p>High-level, futures-enabled Kafka producer.</p>
+</div></div><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-left module-item"><a class="struct" href="struct.BaseProducer.html" title="rdkafka::producer::BaseProducer struct">BaseProducer</a></div><div class="item-right docblock-short"><p>Lowest level Kafka producer.</p>
+</div><div class="item-left module-item"><a class="struct" href="struct.BaseRecord.html" title="rdkafka::producer::BaseRecord struct">BaseRecord</a></div><div class="item-right docblock-short"><p>A record for the <a href="struct.BaseProducer.html" title="BaseProducer"><code>BaseProducer</code></a> and <a href="struct.ThreadedProducer.html" title="ThreadedProducer"><code>ThreadedProducer</code></a>.</p>
+</div><div class="item-left module-item"><a class="struct" href="struct.DefaultProducerContext.html" title="rdkafka::producer::DefaultProducerContext struct">DefaultProducerContext</a></div><div class="item-right docblock-short"><p>An inert producer context that can be used when customizations are not
 required.</p>
-</td></tr><tr class="module-item"><td><a class="struct" href="struct.DeliveryFuture.html" title="rdkafka::producer::DeliveryFuture struct">DeliveryFuture</a></td><td class="docblock-short"><p>A <a href="https://doc.rust-lang.org/nightly/core/future/future/trait.Future.html" title="Future"><code>Future</code></a> wrapping the result of the message production.</p>
-</td></tr><tr class="module-item"><td><a class="struct" href="struct.FutureProducer.html" title="rdkafka::producer::FutureProducer struct">FutureProducer</a></td><td class="docblock-short"><p>A producer that returns a <a href="https://doc.rust-lang.org/nightly/core/future/future/trait.Future.html" title="Future"><code>Future</code></a> for every message being produced.</p>
-</td></tr><tr class="module-item"><td><a class="struct" href="struct.FutureRecord.html" title="rdkafka::producer::FutureRecord struct">FutureRecord</a></td><td class="docblock-short"><p>A record for the future producer.</p>
-</td></tr><tr class="module-item"><td><a class="struct" href="struct.ThreadedProducer.html" title="rdkafka::producer::ThreadedProducer struct">ThreadedProducer</a></td><td class="docblock-short"><p>A low-level Kafka producer with a separate thread for event handling.</p>
-</td></tr></table><h2 id="traits" class="section-header"><a href="#traits">Traits</a></h2>
-<table><tr class="module-item"><td><a class="trait" href="trait.Producer.html" title="rdkafka::producer::Producer trait">Producer</a></td><td class="docblock-short"><p>Common trait for all producers.</p>
-</td></tr><tr class="module-item"><td><a class="trait" href="trait.ProducerContext.html" title="rdkafka::producer::ProducerContext trait">ProducerContext</a></td><td class="docblock-short"><p>Producer-specific context.</p>
-</td></tr></table><h2 id="types" class="section-header"><a href="#types">Type Definitions</a></h2>
-<table><tr class="module-item"><td><a class="type" href="type.DeliveryResult.html" title="rdkafka::producer::DeliveryResult type">DeliveryResult</a></td><td class="docblock-short"><p>The result of a message production.</p>
-</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rdkafka"></div>
-    <script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>
+</div><div class="item-left module-item"><a class="struct" href="struct.DeliveryFuture.html" title="rdkafka::producer::DeliveryFuture struct">DeliveryFuture</a></div><div class="item-right docblock-short"><p>A <a href="https://doc.rust-lang.org/nightly/core/future/future/trait.Future.html" title="Future"><code>Future</code></a> wrapping the result of the message production.</p>
+</div><div class="item-left module-item"><a class="struct" href="struct.FutureProducer.html" title="rdkafka::producer::FutureProducer struct">FutureProducer</a></div><div class="item-right docblock-short"><p>A producer that returns a <a href="https://doc.rust-lang.org/nightly/core/future/future/trait.Future.html" title="Future"><code>Future</code></a> for every message being produced.</p>
+</div><div class="item-left module-item"><a class="struct" href="struct.FutureRecord.html" title="rdkafka::producer::FutureRecord struct">FutureRecord</a></div><div class="item-right docblock-short"><p>A record for the future producer.</p>
+</div><div class="item-left module-item"><a class="struct" href="struct.ThreadedProducer.html" title="rdkafka::producer::ThreadedProducer struct">ThreadedProducer</a></div><div class="item-right docblock-short"><p>A low-level Kafka producer with a separate thread for event handling.</p>
+</div></div><h2 id="traits" class="section-header"><a href="#traits">Traits</a></h2>
+<div class="item-table"><div class="item-left module-item"><a class="trait" href="trait.Producer.html" title="rdkafka::producer::Producer trait">Producer</a></div><div class="item-right docblock-short"><p>Common trait for all producers.</p>
+</div><div class="item-left module-item"><a class="trait" href="trait.ProducerContext.html" title="rdkafka::producer::ProducerContext trait">ProducerContext</a></div><div class="item-right docblock-short"><p>Producer-specific context.</p>
+</div></div><h2 id="types" class="section-header"><a href="#types">Type Definitions</a></h2>
+<div class="item-table"><div class="item-left module-item"><a class="type" href="type.DeliveryResult.html" title="rdkafka::producer::DeliveryResult type">DeliveryResult</a></div><div class="item-right docblock-short"><p>The result of a message production.</p>
+</div></div></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rdkafka" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+    <script src="../../main.js"></script>
+</body></html>
