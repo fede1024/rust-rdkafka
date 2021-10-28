@@ -141,7 +141,7 @@ pub trait ConsumerContext: ClientContext {
 
 /// An inert [`ConsumerContext`] that can be used when no customizations are
 /// needed.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct DefaultConsumerContext;
 
 impl ClientContext for DefaultConsumerContext {}
