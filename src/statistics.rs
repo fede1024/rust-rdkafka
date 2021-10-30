@@ -29,6 +29,8 @@ pub struct Statistics {
     pub ts: i64,
     /// Wall clock time, in seconds since the Unix epoch.
     pub time: i64,
+    /// Time since this client instance was created, in microseconds.
+    pub age: i64,
     /// The number of operations (callbacks, events, etc.) waiting in queue.
     pub replyq: i64,
     /// The current number of messages in producer queues.
@@ -104,6 +106,9 @@ pub struct Broker {
     pub txerrs: i64,
     /// The total number of request retries.
     pub txretries: i64,
+    /// Microseconds since last socket send, or -1 if no sends yet for the
+    /// current connection.
+    pub txidle: i64,
     /// The total number of requests that timed out.
     pub req_timeouts: i64,
     /// The total number of responses received from the broker.
@@ -119,6 +124,9 @@ pub struct Broker {
     /// partial responses if the full message set could not fit in the remaining
     /// fetch response size.
     pub rxpartial: i64,
+    /// Microseconds since last socket receive, or -1 if no receives yet for the
+    /// current connection.
+    pub rxidle: i64,
     /// Request type counters. The object key is the name of the request type
     /// and the value is the number of requests of that type that have been
     /// sent.
@@ -263,9 +271,10 @@ pub struct Partition {
     pub hi_offset: i64,
     /// The last stable offset on the broker.
     pub ls_offset: i64,
-    /// The difference between `hi_offset` and `max(app_offset,
-    /// committed_offset)`.
+    /// The difference between `hi_offset` and `committed_offset`.
     pub consumer_lag: i64,
+    /// The difference between `hi_offset` and `stored_offset`.
+    pub consumer_lag_stored: i64,
     /// The total number of messages transmitted (produced).
     pub txmsgs: i64,
     /// The total number of bytes transmitted (produced).
@@ -389,6 +398,7 @@ mod tests {
         "type": "producer",
         "ts": 1163982743268,
         "time": 1589652530,
+        "age": 5,
         "replyq": 0,
         "msg_cnt": 320,
         "msg_size": 9920,
@@ -412,12 +422,14 @@ mod tests {
             "txbytes": 463869957,
             "txerrs": 0,
             "txretries": 0,
+            "txidle": 5,
             "req_timeouts": 0,
             "rx": 31310,
             "rxbytes": 1753668,
             "rxerrs": 0,
             "rxcorriderrs": 0,
             "rxpartial": 0,
+            "rxidle": 5,
             "zbuf_grow": 0,
             "buf_grow": 0,
             "wakeups": 131568,
@@ -578,6 +590,7 @@ mod tests {
                 "hi_offset": -1001,
                 "ls_offset": -1001,
                 "consumer_lag": -1,
+                "consumer_lag_stored": 0,
                 "txmsgs": 3950967,
                 "txbytes": 122479977,
                 "rxmsgs": 0,
@@ -613,6 +626,7 @@ mod tests {
                 "hi_offset": -1001,
                 "ls_offset": -1001,
                 "consumer_lag": -1,
+                "consumer_lag_stored": 0,
                 "txmsgs": 3950656,
                 "txbytes": 122470336,
                 "rxmsgs": 0,
@@ -648,6 +662,7 @@ mod tests {
                 "hi_offset": -1001,
                 "ls_offset": -1001,
                 "consumer_lag": -1,
+                "consumer_lag_stored": 0,
                 "txmsgs": 3952027,
                 "txbytes": 122512837,
                 "rxmsgs": 0,
@@ -683,6 +698,7 @@ mod tests {
                 "hi_offset": -1001,
                 "ls_offset": -1001,
                 "consumer_lag": -1,
+                "consumer_lag_stored": 0,
                 "txmsgs": 0,
                 "txbytes": 0,
                 "rxmsgs": 0,

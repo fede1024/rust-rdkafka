@@ -2,6 +2,16 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
+## Unreleased
+
+* Add the new statistics fields in librdkafka v1.7.0 to the various statistics
+  types. The new fields are:
+
+    * `Partition::consumer_lag_stored`
+    * `Broker::txidle`
+    * `Broker::rxidle`
+    * `Statistics::age`
+
 <a name="0.27.0"></a>
 ## 0.27.0 (2021-10-17)
 
