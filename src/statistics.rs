@@ -34,13 +34,13 @@ pub struct Statistics {
     /// The number of operations (callbacks, events, etc.) waiting in queue.
     pub replyq: i64,
     /// The current number of messages in producer queues.
-    pub msg_cnt: i64,
+    pub msg_cnt: u64,
     /// The current total size of messages in producer queues.
-    pub msg_size: i64,
+    pub msg_size: u64,
     /// The maximum number of messages allowed in the producer queues.
-    pub msg_max: i64,
+    pub msg_max: u64,
     /// The maximum total size of messages allowed in the producer queues.
-    pub msg_size_max: i64,
+    pub msg_size_max: u64,
     /// The total number of requests sent to brokers.
     pub tx: i64,
     /// The total number of bytes transmitted to brokers.
@@ -99,44 +99,44 @@ pub struct Broker {
     /// response.
     pub waitresp_msg_cnt: i64,
     /// The total number of requests sent to the broker.
-    pub tx: i64,
+    pub tx: u64,
     /// The total number of bytes sent to the broker.
-    pub txbytes: i64,
+    pub txbytes: u64,
     /// The total number of transmission errors.
-    pub txerrs: i64,
+    pub txerrs: u64,
     /// The total number of request retries.
-    pub txretries: i64,
+    pub txretries: u64,
     /// Microseconds since last socket send, or -1 if no sends yet for the
     /// current connection.
-    pub txidle: i64,
+    pub txidle: u64,
     /// The total number of requests that timed out.
-    pub req_timeouts: i64,
+    pub req_timeouts: u64,
     /// The total number of responses received from the broker.
-    pub rx: i64,
+    pub rx: u64,
     /// The total number of bytes received from the broker.
-    pub rxbytes: i64,
+    pub rxbytes: u64,
     /// The total number of receive errors.
-    pub rxerrs: i64,
+    pub rxerrs: u64,
     /// The number of unmatched correlation IDs in response, typically for
     /// timed out requests.
-    pub rxcorriderrs: i64,
+    pub rxcorriderrs: u64,
     /// The total number of partial message sets received. The broker may return
     /// partial responses if the full message set could not fit in the remaining
     /// fetch response size.
-    pub rxpartial: i64,
+    pub rxpartial: u64,
     /// Microseconds since last socket receive, or -1 if no receives yet for the
     /// current connection.
-    pub rxidle: i64,
+    pub rxidle: u64,
     /// Request type counters. The object key is the name of the request type
     /// and the value is the number of requests of that type that have been
     /// sent.
     pub req: HashMap<String, i64>,
     /// The total number of decompression buffer size increases.
-    pub zbuf_grow: i64,
+    pub zbuf_grow: u64,
     /// The total number of buffer size increases (deprecated and unused).
-    pub buf_grow: i64,
+    pub buf_grow: u64,
     /// The number of broker thread poll wakeups.
-    pub wakeups: Option<i64>,
+    pub wakeups: Option<u64>,
     /// The number of connection attempts, including successful and failed
     /// attempts, and name resolution failures.
     pub connects: Option<i64>,
@@ -241,15 +241,15 @@ pub struct Partition {
     /// The number of messages waiting to be produced in the first-level queue.
     pub msgq_cnt: i64,
     /// The number of bytes waiting to be produced in the first-level queue.
-    pub msgq_bytes: i64,
+    pub msgq_bytes: u64,
     /// The number of messages ready to be produced in the transmit queue.
     pub xmit_msgq_cnt: i64,
     /// The number of bytes ready to be produced in the transmit queue.
-    pub xmit_msgq_bytes: i64,
+    pub xmit_msgq_bytes: u64,
     /// The number of prefetched messages in the fetch queue.
     pub fetchq_cnt: i64,
     /// The number of bytes in the fetch queue.
-    pub fetchq_size: i64,
+    pub fetchq_size: u64,
     /// The consumer fetch state for this partition (none, stopping, stopped,
     /// offset-query, offset-wait, active).
     pub fetch_state: String,
@@ -276,18 +276,18 @@ pub struct Partition {
     /// The difference between `hi_offset` and `stored_offset`.
     pub consumer_lag_stored: i64,
     /// The total number of messages transmitted (produced).
-    pub txmsgs: i64,
+    pub txmsgs: u64,
     /// The total number of bytes transmitted (produced).
-    pub txbytes: i64,
+    pub txbytes: u64,
     /// The total number of messages consumed, not included ignored messages.
-    pub rxmsgs: i64,
+    pub rxmsgs: u64,
     /// The total bytes consumed.
-    pub rxbytes: i64,
+    pub rxbytes: u64,
     /// The total number of messages received, for consumers, or the total
     /// number of messages produced, for producers.
-    pub msgs: i64,
+    pub msgs: u64,
     /// The number of dropped outdated messages.
-    pub rx_ver_drops: i64,
+    pub rx_ver_drops: u64,
     /// The current number of messages in flight to or from the broker.
     pub msgs_inflight: i64,
     /// The next expected acked sequence number, for idempotent producers.
@@ -295,7 +295,7 @@ pub struct Partition {
     /// The next expected errored sequence number, for idempotent producers.
     pub next_err_seq: i64,
     /// The last acked internal message ID, for idempotent producers.
-    pub acked_msgid: i64,
+    pub acked_msgid: u64,
 }
 
 /// Consumer group manager statistics.

@@ -12,6 +12,38 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
     * `Broker::rxidle`
     * `Statistics::age`
 
+* **Breaking change.** Change the type of the following statistics fields from
+  `i64` to `u64` to reflect the signedness of the upstream types:
+
+    * `Statistics::msg_cnt`
+    * `Statistics::msg_size`
+    * `Statistics::msg_max`
+    * `Statistics::msg_size_max`
+    * `Broker::tx`
+    * `Broker::txbytes`
+    * `Broker::txidle`
+    * `Broker::txretries`
+    * `Broker::req_timeouts`
+    * `Broker::rx`
+    * `Broker::rxbytes`
+    * `Broker::rxerrs`
+    * `Broker::rxcorriderrs`
+    * `Broker::rxidle`
+    * `Broker::rxpartial`
+    * `Broker::zbuf_grow`
+    * `Broker::buf_grow`
+    * `Broker::wakeups`
+    * `Broker::msgq_bytes`
+    * `Broker::xmit_msgq_bytes`
+    * `Broker::fetchq_size`
+    * `Partition::txmsgs`
+    * `Partition::txbytes`
+    * `Partition::rxmsgs`
+    * `Partition::rxbytes`
+    * `Partition::msgs`
+    * `Partition::rx_ver_drops`
+    * `Partition::acked_msgid`
+
 <a name="0.27.0"></a>
 ## 0.27.0 (2021-10-17)
 
