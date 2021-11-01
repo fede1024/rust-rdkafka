@@ -77,12 +77,25 @@ pub trait ClientContext: Send + Sync {
         }
     }
 
-    /// Receives the statistics of the librdkafka client. To enable, the
+    /// Receives the decoded statistics of the librdkafka client. To enable, the
     /// `statistics.interval.ms` configuration parameter must be specified.
     ///
     /// The default implementation logs the statistics at the `info` log level.
     fn stats(&self, statistics: Statistics) {
         info!("Client stats: {:?}", statistics);
+    }
+
+    /// Receives the JSON-encoded statistics of the librdkafka client. To
+    /// enable, the `statistics.interval.ms` configuration parameter must be
+    /// specified.
+    ///
+    /// The default implementation calls [`Context::stats`] with the decoded
+    /// statistics, logging an error if the decoding fails.
+    fn stats_raw(&self, statistics: &[u8]) {
+        match serde_json::from_slice(&statistics) {
+            Ok(stats) => self.stats(stats),
+            Err(e) => error!("Could not parse statistics JSON: {}", e),
+        }
     }
 
     /// Receives global errors from the librdkafka client.
@@ -409,18 +422,7 @@ pub(crate) unsafe extern "C" fn native_stats_cb<C: ClientContext>(
     opaque: *mut c_void,
 ) -> i32 {
     let context = &mut *(opaque as *mut C);
-
-    let mut bytes_vec = Vec::new();
-    bytes_vec.extend_from_slice(slice::from_raw_parts(json as *mut u8, json_len));
-    let json_string = CString::from_vec_unchecked(bytes_vec).into_string();
-    match json_string {
-        Ok(json) => match serde_json::from_str(&json) {
-            Ok(stats) => context.stats(stats),
-            Err(e) => error!("Could not parse statistics JSON: {}", e),
-        },
-        Err(e) => error!("Statistics JSON string is not UTF-8: {:?}", e),
-    }
-
+    context.stats_raw(slice::from_raw_parts(json as *mut u8, json_len));
     0 // librdkafka will free the json buffer
 }
 

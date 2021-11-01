@@ -44,6 +44,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
     * `Partition::rx_ver_drops`
     * `Partition::acked_msgid`
 
+* Add the `ClientContext::stats_raw` method to consume the JSON-encoded
+  statistics from librdkafka. The default implementation calls
+  `ClientContext::stats` with the decoded statistics.
+
 <a name="0.27.0"></a>
 ## 0.27.0 (2021-10-17)
 

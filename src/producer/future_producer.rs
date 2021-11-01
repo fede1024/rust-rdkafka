@@ -145,6 +145,10 @@ impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
         self.wrapped_context.stats(statistics);
     }
 
+    fn stats_raw(&self, statistics: &[u8]) {
+        self.wrapped_context.stats_raw(statistics)
+    }
+
     fn error(&self, error: KafkaError, reason: &str) {
         self.wrapped_context.error(error, reason);
     }

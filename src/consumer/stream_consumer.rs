@@ -85,6 +85,10 @@ where
         self.inner.stats(statistics)
     }
 
+    fn stats_raw(&self, statistics: &[u8]) {
+        self.inner.stats_raw(statistics)
+    }
+
     fn error(&self, error: KafkaError, reason: &str) {
         self.inner.error(error, reason)
     }
