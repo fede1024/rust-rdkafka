@@ -21,14 +21,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
     * `Statistics::msg_size_max`
     * `Broker::tx`
     * `Broker::txbytes`
-    * `Broker::txidle`
     * `Broker::txretries`
     * `Broker::req_timeouts`
     * `Broker::rx`
     * `Broker::rxbytes`
     * `Broker::rxerrs`
     * `Broker::rxcorriderrs`
-    * `Broker::rxidle`
     * `Broker::rxpartial`
     * `Broker::zbuf_grow`
     * `Broker::buf_grow`
@@ -43,6 +41,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
     * `Partition::msgs`
     * `Partition::rx_ver_drops`
     * `Partition::acked_msgid`
+
+* Add the `ClientContext::stats_raw` method to consume the JSON-encoded
+  statistics from librdkafka. The default implementation calls
+  `ClientContext::stats` with the decoded statistics.
 
 <a name="0.27.0"></a>
 ## 0.27.0 (2021-10-17)

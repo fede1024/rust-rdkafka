@@ -46,7 +46,7 @@ impl<T> ::std::cmp::PartialEq for __BindgenUnionField<T> {
     }
 }
 impl<T> ::std::cmp::Eq for __BindgenUnionField<T> {}
-pub const RD_KAFKA_VERSION: u32 = 17236223;
+pub const RD_KAFKA_VERSION: u32 = 17302271;
 pub const RD_KAFKA_DEBUG_CONTEXTS : & 'static [u8 ; 138usize] = b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer,admin,eos,mock,assignor,conf\0" ;
 pub const RD_KAFKA_DESTROY_F_NO_CONSUMER_CLOSE: u32 = 8;
 pub const RD_KAFKA_OFFSET_BEGINNING: i32 = -2;
