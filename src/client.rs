@@ -114,7 +114,7 @@ pub trait ClientContext: Send + Sync {
 /// needed.
 ///
 /// Uses the default callback implementations provided by `ClientContext`.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct DefaultClientContext;
 
 impl ClientContext for DefaultClientContext {}
