@@ -21,14 +21,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
     * `Statistics::msg_size_max`
     * `Broker::tx`
     * `Broker::txbytes`
-    * `Broker::txidle`
     * `Broker::txretries`
     * `Broker::req_timeouts`
     * `Broker::rx`
     * `Broker::rxbytes`
     * `Broker::rxerrs`
     * `Broker::rxcorriderrs`
-    * `Broker::rxidle`
     * `Broker::rxpartial`
     * `Broker::zbuf_grow`
     * `Broker::buf_grow`

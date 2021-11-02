@@ -108,7 +108,7 @@ pub struct Broker {
     pub txretries: u64,
     /// Microseconds since last socket send, or -1 if no sends yet for the
     /// current connection.
-    pub txidle: u64,
+    pub txidle: i64,
     /// The total number of requests that timed out.
     pub req_timeouts: u64,
     /// The total number of responses received from the broker.
@@ -126,7 +126,7 @@ pub struct Broker {
     pub rxpartial: u64,
     /// Microseconds since last socket receive, or -1 if no receives yet for the
     /// current connection.
-    pub rxidle: u64,
+    pub rxidle: i64,
     /// Request type counters. The object key is the name of the request type
     /// and the value is the number of requests of that type that have been
     /// sent.
