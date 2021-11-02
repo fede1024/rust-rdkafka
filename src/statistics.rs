@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 
 /// Overall statistics.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct Statistics {
     /// The name of the librdkafka handle.
     pub name: String,
