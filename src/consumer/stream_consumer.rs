@@ -460,6 +460,12 @@ where
             None => None
         }
     }
+
+    /// Returns an Arc of the [`BaseConsumer`] used to drive
+    /// this [`StreamConsumer`].
+    pub fn base(&self) -> Arc<BaseConsumer<StreamConsumerContext<C>>> {
+        self.base.clone()
+    }
 }
 
 impl<C, R> Consumer<StreamConsumerContext<C>> for StreamConsumer<C, R>
