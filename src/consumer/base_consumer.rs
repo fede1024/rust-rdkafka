@@ -39,10 +39,16 @@ pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     } else {
         Ok(())
     };
-    let tpl = TopicPartitionList::from_ptr(offsets);
+    let (forget_tpl, tpl) = if offsets.is_null() {
+        (false, TopicPartitionList::new())
+    } else {
+        (true, TopicPartitionList::from_ptr(offsets))
+    };
     context.commit_callback(commit_error, &tpl);
 
-    mem::forget(tpl); // Do not free offsets
+    if forget_tpl {
+        mem::forget(tpl); // Do not free offsets
+    }
 }
 
 /// Native rebalance callback. This callback will run on every rebalance, and it will call the
