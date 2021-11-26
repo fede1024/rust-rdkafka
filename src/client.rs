@@ -13,6 +13,7 @@
 
 use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
+use std::mem::ManuallyDrop;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
@@ -204,9 +205,10 @@ impl<C: ClientContext> Client<C> {
         };
 
         let client_ptr = unsafe {
+            let native_config = ManuallyDrop::new(native_config);
             rdsys::rd_kafka_new(
                 rd_kafka_type,
-                native_config.ptr_move(),
+                native_config.ptr(),
                 err_buf.as_mut_ptr(),
                 err_buf.capacity(),
             )

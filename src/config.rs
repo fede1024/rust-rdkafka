@@ -25,7 +25,6 @@
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::iter::FromIterator;
-use std::mem;
 use std::os::raw::c_char;
 use std::ptr;
 
@@ -103,15 +102,6 @@ impl NativeClientConfig {
     /// Returns the pointer to the librdkafka RDKafkaConf structure.
     pub fn ptr(&self) -> *mut RDKafkaConf {
         self.ptr.ptr()
-    }
-
-    /// Returns the pointer to the librdkafka RDKafkaConf structure. This method should be used when
-    /// the native pointer is intended to be moved. The destructor won't be executed automatically;
-    /// the caller should take care of deallocating the resource when no longer needed.
-    pub fn ptr_move(self) -> *mut RDKafkaConf {
-        let ptr = self.ptr();
-        mem::forget(self);
-        ptr
     }
 
     /// Gets the value of a parameter in the configuration.
