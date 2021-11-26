@@ -2,7 +2,7 @@
 
 use std::cmp;
 use std::ffi::CString;
-use std::mem;
+use std::mem::ManuallyDrop;
 use std::os::raw::c_void;
 use std::ptr;
 use std::sync::Arc;
@@ -39,15 +39,12 @@ pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     } else {
         Ok(())
     };
-    let (forget_tpl, tpl) = if offsets.is_null() {
-        (false, TopicPartitionList::new())
+    if offsets.is_null() {
+        let tpl = TopicPartitionList::new();
+        context.commit_callback(commit_error, &tpl);
     } else {
-        (true, TopicPartitionList::from_ptr(offsets))
-    };
-    context.commit_callback(commit_error, &tpl);
-
-    if forget_tpl {
-        mem::forget(tpl); // Do not free offsets
+        let tpl = ManuallyDrop::new(TopicPartitionList::from_ptr(offsets));
+        context.commit_callback(commit_error, &tpl);
     }
 }
 
@@ -60,13 +57,9 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     opaque_ptr: *mut c_void,
 ) {
     let context = &mut *(opaque_ptr as *mut C);
-    let native_client = NativeClient::from_ptr(rk);
-    let mut tpl = TopicPartitionList::from_ptr(native_tpl);
-
+    let native_client = ManuallyDrop::new(NativeClient::from_ptr(rk));
+    let mut tpl = ManuallyDrop::new(TopicPartitionList::from_ptr(native_tpl));
     context.rebalance(&native_client, err, &mut tpl);
-
-    mem::forget(native_client); // Do not free native client
-    mem::forget(tpl); // Do not free native topic partition list
 }
 
 /// Native message queue nonempty callback. This callback will run whenever the
