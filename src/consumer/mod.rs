@@ -31,8 +31,8 @@ pub use self::stream_consumer::{MessageStream, StreamConsumer};
 pub enum Rebalance<'a> {
     /// A new partition assignment is received.
     Assign(&'a TopicPartitionList),
-    /// All partitions are revoked.
-    Revoke,
+    /// A new partition revocation is received.
+    Revoke(&'a TopicPartitionList),
     /// Unexpected error from Kafka.
     Error(String),
 }
@@ -58,7 +58,7 @@ pub trait ConsumerContext: ClientContext {
     ) {
         let rebalance = match err {
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => Rebalance::Assign(tpl),
-            RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke,
+            RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke(tpl),
             _ => {
                 let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(err)) };
                 error!("Error rebalancing: {}", error);
