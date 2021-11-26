@@ -46,6 +46,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   statistics from librdkafka. The default implementation calls
   `ClientContext::stats` with the decoded statistics.
 
+* **Breaking change.** Add the received `TopicPartitionList` to the
+  `Rebalance::Revoke` variant, which is useful when using incremental
+  cooperative rebalancing ([#398]).
+
+[#398]: https://github.com/fede1024/rust-rdkafka/issues/398
+
 <a name="0.27.0"></a>
 ## 0.27.0 (2021-10-17)
 
