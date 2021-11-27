@@ -1,6 +1,7 @@
 //! High-level consumers with a [`Stream`](futures::Stream) interface.
 
 use std::marker::PhantomData;
+use std::os::raw::c_void;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
@@ -16,44 +17,41 @@ use slab::Slab;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, ClientContext, NativeClient};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
+use crate::client::{Client, NativeQueue};
+use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::consumer::base_consumer::BaseConsumer;
 use crate::consumer::{
     CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext,
-    Rebalance, RebalanceProtocol,
+    RebalanceProtocol,
 };
 use crate::error::{KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
-use crate::statistics::Statistics;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
 use crate::util::{AsyncRuntime, DefaultRuntime, NativePtr, Timeout};
 
-/// A consumer context wrapper for a stream consumer.
-///
-/// This context will automatically wake up the message stream when new data is
-/// available.
-///
-/// This type is not intended to be used directly. The construction of a
-/// `StreamConsumer` automatically wraps the underlying context in this type.
-pub struct StreamConsumerContext<C>
-where
-    C: ConsumerContext,
-{
-    inner: C,
-    wakers: Arc<Mutex<Slab<Option<Waker>>>>,
+unsafe extern "C" fn native_message_queue_nonempty_cb(_: *mut RDKafka, opaque_ptr: *mut c_void) {
+    let wakers = &*(opaque_ptr as *const WakerSlab);
+    wakers.wake_all();
 }
 
-impl<C> StreamConsumerContext<C>
-where
-    C: ConsumerContext,
-{
-    fn new(inner: C) -> StreamConsumerContext<C> {
-        StreamConsumerContext {
-            inner,
-            wakers: Arc::new(Mutex::new(Slab::new())),
+unsafe fn enable_nonempty_callback(queue: &NativeQueue, wakers: &Arc<WakerSlab>) {
+    rdsys::rd_kafka_queue_cb_event_enable(
+        queue.ptr(),
+        Some(native_message_queue_nonempty_cb),
+        Arc::as_ptr(wakers) as *mut c_void,
+    )
+}
+
+struct WakerSlab {
+    wakers: Mutex<Slab<Option<Waker>>>,
+}
+
+impl WakerSlab {
+    fn new() -> WakerSlab {
+        WakerSlab {
+            wakers: Mutex::new(Slab::new()),
         }
     }
 
@@ -66,66 +64,19 @@ where
         }
     }
 
-    /// Returns a reference to the inner [`ConsumerContext`] used to create
-    /// this context.
-    pub fn inner(&self) -> &C {
-        &self.inner
-    }
-}
-
-impl<C> ClientContext for StreamConsumerContext<C>
-where
-    C: ConsumerContext,
-{
-    fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
-        self.inner.log(level, fac, log_message)
+    fn register(&self) -> usize {
+        let mut wakers = self.wakers.lock().expect("lock poisoned");
+        wakers.insert(None)
     }
 
-    fn stats(&self, statistics: Statistics) {
-        self.inner.stats(statistics)
+    fn unregister(&self, slot: usize) {
+        let mut wakers = self.wakers.lock().expect("lock poisoned");
+        wakers.remove(slot);
     }
 
-    fn stats_raw(&self, statistics: &[u8]) {
-        self.inner.stats_raw(statistics)
-    }
-
-    fn error(&self, error: KafkaError, reason: &str) {
-        self.inner.error(error, reason)
-    }
-}
-
-impl<C> ConsumerContext for StreamConsumerContext<C>
-where
-    C: ConsumerContext,
-{
-    fn rebalance(
-        &self,
-        native_client: &NativeClient,
-        err: RDKafkaRespErr,
-        tpl: &mut TopicPartitionList,
-    ) {
-        self.inner.rebalance(native_client, err, tpl)
-    }
-
-    fn pre_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {
-        self.inner.pre_rebalance(rebalance)
-    }
-
-    fn post_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {
-        self.inner.post_rebalance(rebalance)
-    }
-
-    fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {
-        self.inner.commit_callback(result, offsets)
-    }
-
-    fn main_queue_min_poll_interval(&self) -> Timeout {
-        self.inner.main_queue_min_poll_interval()
-    }
-
-    fn message_queue_nonempty_callback(&self) {
-        self.wake_all();
-        self.inner.message_queue_nonempty_callback()
+    fn set_waker(&self, slot: usize, waker: Waker) {
+        let mut wakers = self.wakers.lock().expect("lock poisoned");
+        wakers[slot] = Some(waker);
     }
 }
 
@@ -145,30 +96,14 @@ where
     C: ConsumerContext + 'static,
 {
     fn new(consumer: &'a StreamConsumer<C, R>) -> MessageStream<'a, C, R> {
-        let slot = {
-            let context = consumer.base.context();
-            let mut wakers = context.wakers.lock().expect("lock poisoned");
-            wakers.insert(None)
-        };
+        let slot = consumer.wakers.register();
         MessageStream { consumer, slot }
     }
 
-    fn context(&self) -> &StreamConsumerContext<C> {
-        self.consumer.base.context()
-    }
-
-    fn client_ptr(&self) -> *mut RDKafka {
-        self.consumer.client().native_ptr()
-    }
-
-    fn set_waker(&self, waker: Waker) {
-        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
-        wakers[self.slot].replace(waker);
-    }
-
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
+        let client_ptr = self.consumer.client().native_ptr();
         unsafe {
-            NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(self.client_ptr(), 0))
+            NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(client_ptr, 0))
                 .map(|p| BorrowedMessage::from_consumer(p, self.consumer))
         }
     }
@@ -191,7 +126,9 @@ where
         // the waker so that we are woken up if the queue flips from non-empty
         // to empty. We have to store the waker repatedly in case this future
         // migrates between tasks.
-        self.set_waker(cx.waker().clone());
+        self.consumer
+            .wakers
+            .set_waker(self.slot, cx.waker().clone());
 
         // Check whether a new message became available after we installed the
         // waker. This avoids a race where `poll` returns None to indicate that
@@ -209,8 +146,7 @@ where
     C: ConsumerContext + 'static,
 {
     fn drop(&mut self) {
-        let mut wakers = self.context().wakers.lock().expect("lock poisoned");
-        wakers.remove(self.slot);
+        self.consumer.wakers.unregister(self.slot);
     }
 }
 
@@ -233,7 +169,9 @@ pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
 {
-    base: BaseConsumer<StreamConsumerContext<C>>,
+    base: BaseConsumer<C>,
+    wakers: Arc<WakerSlab>,
+    _queue: NativeQueue,
     _shutdown_trigger: oneshot::Sender<()>,
     _runtime: PhantomData<R>,
 }
@@ -263,7 +201,6 @@ where
             Duration::from_millis(millis)
         };
 
-        let context = StreamConsumerContext::new(context);
         let base = BaseConsumer::new(config, native_config, context)?;
         let native_ptr = base.client().native_ptr() as usize;
 
@@ -271,6 +208,15 @@ where
         // need to listen to the consumer queue to observe events like
         // rebalancings and stats.
         unsafe { rdsys::rd_kafka_poll_set_consumer(base.client().native_ptr()) };
+
+        let queue = base
+            .client()
+            .consumer_queue()
+            .ok_or_else(|| KafkaError::ClientCreation(
+                "librdkafka failed to create consumer queue".into(),
+            ))?;
+        let wakers = Arc::new(WakerSlab::new());
+        unsafe { enable_nonempty_callback(&queue, &wakers) }
 
         // We need to make sure we poll the consumer at least once every max
         // poll interval, *unless* the processing task has wedged. To accomplish
@@ -283,20 +229,24 @@ where
         // performance impact to these spurious wakeups.
         let (shutdown_trigger, shutdown_tripwire) = oneshot::channel();
         let mut shutdown_tripwire = shutdown_tripwire.fuse();
-        let context = base.context().clone();
-        R::spawn(async move {
-            trace!("Starting stream consumer wake loop: 0x{:x}", native_ptr);
-            loop {
-                select! {
-                    _ = R::delay_for(poll_interval / 2).fuse() => context.wake_all(),
-                    _ = shutdown_tripwire => break,
+        R::spawn({
+            let wakers = wakers.clone();
+            async move {
+                trace!("Starting stream consumer wake loop: 0x{:x}", native_ptr);
+                loop {
+                    select! {
+                        _ = R::delay_for(poll_interval / 2).fuse() => wakers.wake_all(),
+                        _ = shutdown_tripwire => break,
+                    }
                 }
+                trace!("Shut down stream consumer wake loop: 0x{:x}", native_ptr);
             }
-            trace!("Shut down stream consumer wake loop: 0x{:x}", native_ptr);
         });
 
         Ok(StreamConsumer {
             base,
+            wakers,
+            _queue: queue,
             _shutdown_trigger: shutdown_trigger,
             _runtime: PhantomData,
         })
@@ -353,11 +303,11 @@ where
     }
 }
 
-impl<C, R> Consumer<StreamConsumerContext<C>> for StreamConsumer<C, R>
+impl<C, R> Consumer<C> for StreamConsumer<C, R>
 where
     C: ConsumerContext,
 {
-    fn client(&self) -> &Client<StreamConsumerContext<C>> {
+    fn client(&self) -> &Client<C> {
         self.base.client()
     }
 

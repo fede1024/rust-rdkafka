@@ -62,25 +62,6 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     context.rebalance(&native_client, err, &mut tpl);
 }
 
-/// Native message queue nonempty callback. This callback will run whenever the
-/// consumer's message queue switches from empty to nonempty.
-unsafe extern "C" fn native_message_queue_nonempty_cb<C: ConsumerContext>(
-    _: *mut RDKafka,
-    opaque_ptr: *mut c_void,
-) {
-    let context = &mut *(opaque_ptr as *mut C);
-
-    (*context).message_queue_nonempty_callback();
-}
-
-unsafe fn enable_nonempty_callback<C: ConsumerContext>(queue: &NativeQueue, context: &Arc<C>) {
-    rdsys::rd_kafka_queue_cb_event_enable(
-        queue.ptr(),
-        Some(native_message_queue_nonempty_cb::<C>),
-        Arc::as_ptr(context) as *mut c_void,
-    )
-}
-
 /// A low-level consumer that requires manual polling.
 ///
 /// This consumer must be periodically polled to make progress on rebalancing,
@@ -91,7 +72,6 @@ where
 {
     client: Client<C>,
     main_queue_min_poll_interval: Timeout,
-    _queue: Option<NativeQueue>,
 }
 
 impl FromClientConfig for BaseConsumer {
@@ -133,16 +113,9 @@ where
             RDKafkaType::RD_KAFKA_CONSUMER,
             context,
         )?;
-        let queue = client.consumer_queue();
-        if let Some(queue) = &queue {
-            unsafe {
-                enable_nonempty_callback(queue, client.context());
-            }
-        }
         Ok(BaseConsumer {
             client,
             main_queue_min_poll_interval,
-            _queue: queue,
         })
     }
 
@@ -269,10 +242,7 @@ where
             ))
         };
         queue.map(|queue| {
-            unsafe {
-                enable_nonempty_callback(&queue, self.client.context());
-                rdsys::rd_kafka_queue_forward(queue.ptr(), ptr::null_mut());
-            }
+            unsafe { rdsys::rd_kafka_queue_forward(queue.ptr(), ptr::null_mut()) }
             PartitionQueue::new(self.clone(), queue)
         })
     }

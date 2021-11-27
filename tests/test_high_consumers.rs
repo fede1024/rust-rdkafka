@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::error::Error;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -26,10 +25,7 @@ fn create_stream_consumer(
     group_id: &str,
     config_overrides: Option<HashMap<&str, &str>>,
 ) -> StreamConsumer<ConsumerTestContext> {
-    let cons_context = ConsumerTestContext {
-        _n: 64,
-        wakeups: Arc::new(AtomicUsize::new(0)),
-    };
+    let cons_context = ConsumerTestContext { _n: 64 };
     create_stream_consumer_with_context(group_id, config_overrides, cons_context)
 }
 

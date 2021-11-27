@@ -50,6 +50,11 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   `Rebalance::Revoke` variant, which is useful when using incremental
   cooperative rebalancing ([#398]).
 
+* **Breaking change.** Remove the `StreamConsumerContext` type and the
+  `ConsumerContext::message_queue_nonempty_callback` method. These were
+  essentially implementation details of `StreamConsumer` that had leaked into
+  the public API. The vast majority of users should be unaffected.
+
 [#398]: https://github.com/fede1024/rust-rdkafka/issues/398
 
 <a name="0.27.0"></a>
