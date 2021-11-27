@@ -1,15 +1,15 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A fully asynchronous, futures-enabled Apache Kafka client library for Rust based on librdkafka."><meta name="keywords" content="rust, rustlang, rust-lang, rdkafka"><title>rdkafka - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../ayu.css" disabled ><script id="default-settings" ></script><script src="../storage.js"></script><script src="../crates.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../favicon.svg"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../rust-logo.png' alt='logo'></div></a><h2 class="location">Crate rdkafka</h2><div class="block version"><div class="narrow-helper"></div><p>Version 0.26.0</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all rdkafka's items</p></a><div class="block items"><ul><li><a href="#modules">Modules</a></li></ul></div><div id="sidebar-vars" data-name="rdkafka" data-ty="mod" data-relpath=""></div><script defer src="sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../wheel.svg"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">rdkafka</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/rdkafka/lib.rs.html#1-286" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A fully asynchronous, <a href="https://github.com/rust-lang/futures-rs">futures</a>-enabled <a href="https://kafka.apache.org">Apache Kafka</a> client
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A fully asynchronous, futures-enabled Apache Kafka client library for Rust based on librdkafka."><meta name="keywords" content="rust, rustlang, rust-lang, rdkafka"><title>rdkafka - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../ayu.css" disabled ><script id="default-settings" ></script><script src="../storage.js"></script><script src="../crates.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../favicon.svg"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../rust-logo.png' alt='logo'></div></a><h2 class="location">Crate rdkafka</h2><div class="block version"><div class="narrow-helper"></div><p>Version 0.27.0</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all rdkafka's items</p></a><div class="block items"><ul><li><a href="#modules">Modules</a></li></ul></div><div id="sidebar-vars" data-name="rdkafka" data-ty="mod" data-relpath=""></div><script defer src="sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../wheel.svg"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">rdkafka</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/rdkafka/lib.rs.html#1-286" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A fully asynchronous, <a href="https://github.com/rust-lang/futures-rs">futures</a>-enabled <a href="https://kafka.apache.org">Apache Kafka</a> client
 library for Rust based on <a href="https://github.com/edenhill/librdkafka">librdkafka</a>.</p>
-<h2 id="the-library" class="section-header"><a href="#the-library">The library</a></h2>
+<h3 id="the-library" class="section-header"><a href="#the-library">The library</a></h3>
 <p><code>rust-rdkafka</code> provides a safe Rust interface to librdkafka. The master
-branch is currently based on librdkafka 1.7.0.</p>
-<h3 id="documentation" class="section-header"><a href="#documentation">Documentation</a></h3>
+branch is currently based on librdkafka 1.8.0.</p>
+<h4 id="documentation" class="section-header"><a href="#documentation">Documentation</a></h4>
 <ul>
 <li><a href="https://fede1024.github.io/rust-rdkafka/">Current master branch</a></li>
 <li><a href="https://docs.rs/rdkafka/">Latest release</a></li>
 <li><a href="https://github.com/fede1024/rust-rdkafka/blob/master/changelog.md">Changelog</a></li>
 </ul>
-<h3 id="features" class="section-header"><a href="#features">Features</a></h3>
+<h4 id="features" class="section-header"><a href="#features">Features</a></h4>
 <p>The main features provided at the moment are:</p>
 <ul>
 <li>Support for all Kafka versions since 0.8.x. For more information about
@@ -30,7 +30,7 @@ etc.).</li>
 <li>Exactly-once semantics (EOS) via idempotent and transactional producers
 and read-committed consumers.</li>
 </ul>
-<h3 id="one-million-messages-per-second" class="section-header"><a href="#one-million-messages-per-second">One million messages per second</a></h3>
+<h4 id="one-million-messages-per-second" class="section-header"><a href="#one-million-messages-per-second">One million messages per second</a></h4>
 <p><code>rust-rdkafka</code> is designed to be easy and safe to use thanks to the
 abstraction layer written in Rust, while at the same time being extremely
 fast thanks to the librdkafka C library.</p>
@@ -53,7 +53,7 @@ i7-4712HQ @ 2.30GHz.</p>
 </li>
 </ul>
 <p>For more numbers, check out the <a href="https://github.com/fede1024/kafka-benchmark">kafka-benchmark</a> project.</p>
-<h3 id="client-types" class="section-header"><a href="#client-types">Client types</a></h3>
+<h4 id="client-types" class="section-header"><a href="#client-types">Client types</a></h4>
 <p><code>rust-rdkafka</code> provides low level and high level consumers and producers.</p>
 <p>Low level:</p>
 <ul>
@@ -77,7 +77,7 @@ the message is delivered to Kafka (or failed).</li>
 module-level documentation.</p>
 <p><em>Warning</em>: the library is under active development and the APIs are likely
 to change.</p>
-<h3 id="asynchronous-data-processing-with-tokio" class="section-header"><a href="#asynchronous-data-processing-with-tokio">Asynchronous data processing with Tokio</a></h3>
+<h4 id="asynchronous-data-processing-with-tokio" class="section-header"><a href="#asynchronous-data-processing-with-tokio">Asynchronous data processing with Tokio</a></h4>
 <p><a href="https://tokio.rs/">Tokio</a> is a platform for fast processing of asynchronous events in Rust.
 The interfaces exposed by the <a href="https://docs.rs/rdkafka/*/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html"><code>StreamConsumer</code></a> and the <a href="https://docs.rs/rdkafka/*/rdkafka/producer/future_producer/struct.FutureProducer.html"><code>FutureProducer</code></a>
 allow rust-rdkafka users to easily integrate Kafka consumers and producers
@@ -85,7 +85,7 @@ within the Tokio platform, and write asynchronous message processing code.
 Note that rust-rdkafka can be used without Tokio.</p>
 <p>To see rust-rdkafka in action with Tokio, check out the
 <a href="https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs">asynchronous processing example</a> in the examples folder.</p>
-<h3 id="at-least-once-delivery" class="section-header"><a href="#at-least-once-delivery">At-least-once delivery</a></h3>
+<h4 id="at-least-once-delivery" class="section-header"><a href="#at-least-once-delivery">At-least-once delivery</a></h4>
 <p>At-least-once delivery semantics are common in many streaming applications:
 every message is guaranteed to be processed at least once; in case of
 temporary failure, the message can be re-processed and/or re-delivered,
@@ -99,7 +99,7 @@ message, skipping the one where the failure occurred.</p>
 <a href="https://github.com/fede1024/rust-rdkafka/blob/master/examples/at_least_once.rs">at-least-once delivery example</a> in the examples folder. To know more about
 delivery semantics, check the <a href="https://kafka.apache.org/0101/documentation.html#semantics">message delivery semantics</a> chapter in the
 Kafka documentation.</p>
-<h3 id="exactly-once-semantics" class="section-header"><a href="#exactly-once-semantics">Exactly-once semantics</a></h3>
+<h4 id="exactly-once-semantics" class="section-header"><a href="#exactly-once-semantics">Exactly-once semantics</a></h4>
 <p>Exactly-once semantics (EOS) can be achieved using transactional producers,
 which allow produced records and consumer offsets to be committed or aborted
 atomically. Consumers that set their <code>isolation.level</code> to <code>read_committed</code>
@@ -108,7 +108,7 @@ will only observe committed messages.</p>
 processed exactly once.</p>
 <p>To learn more about using transactions in rust-rdkafka, see the
 <a href="producer-transactions">Transactions</a> section of the producer documentation.</p>
-<h3 id="users" class="section-header"><a href="#users">Users</a></h3>
+<h4 id="users" class="section-header"><a href="#users">Users</a></h4>
 <p>Here are some of the projects using rust-rdkafka:</p>
 <ul>
 <li><a href="https://github.com/frankmcsherry/timely-dataflow">timely-dataflow</a>: a distributed data-parallel compute engine. See also
@@ -117,7 +117,7 @@ the <a href="https://github.com/frankmcsherry/blog/blob/master/posts/2017-11-08.
 <li><a href="https://github.com/fede1024/kafka-benchmark">kafka-benchmark</a>: a high performance benchmarking tool for Kafka.</li>
 </ul>
 <p><em>If you are using rust-rdkafka, please let us know!</em></p>
-<h2 id="installation" class="section-header"><a href="#installation">Installation</a></h2>
+<h3 id="installation" class="section-header"><a href="#installation">Installation</a></h3>
 <p>Add this to your <code>Cargo.toml</code>:</p>
 <div class="example-wrap"><pre class="language-toml"><code>[dependencies]
 rdkafka = { version = &quot;0.25&quot;, features = [&quot;cmake-build&quot;] }</code></pre></div>
@@ -144,11 +144,11 @@ rdkafka = { version = &quot;0.25&quot;, features = [&quot;dynamic-linking&quot;]
 <p>For a full listing of features, consult the <a href="https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#features">rdkafka-sys crate’s
 documentation</a>. All of rdkafka-sys features are
 re-exported as rdkafka features.</p>
-<h3 id="minimum-supported-rust-version-msrv" class="section-header"><a href="#minimum-supported-rust-version-msrv">Minimum supported Rust version (MSRV)</a></h3>
+<h4 id="minimum-supported-rust-version-msrv" class="section-header"><a href="#minimum-supported-rust-version-msrv">Minimum supported Rust version (MSRV)</a></h4>
 <p>The current minimum supported Rust version (MSRV) is 1.45.0. Note that
 bumping the MSRV is not considered a breaking change. Any release of
 rust-rdkafka may bump the MSRV.</p>
-<h3 id="asynchronous-runtimes" class="section-header"><a href="#asynchronous-runtimes">Asynchronous runtimes</a></h3>
+<h4 id="asynchronous-runtimes" class="section-header"><a href="#asynchronous-runtimes">Asynchronous runtimes</a></h4>
 <p>Some features of the <a href="https://docs.rs/rdkafka/*/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html"><code>StreamConsumer</code></a> and <a href="https://docs.rs/rdkafka/*/rdkafka/producer/future_producer/struct.FutureProducer.html"><code>FutureProducer</code></a> depend on
 Tokio, which can be a heavyweight dependency for users who only intend to
 use the low-level consumers and producers. The Tokio integration is
@@ -162,9 +162,9 @@ integrate it with rust-rdkafka by providing a shim that implements the
 <li><a href="https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_smol.rs">smol</a></li>
 <li><a href="https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_async_std.rs">async-std</a></li>
 </ul>
-<h2 id="examples" class="section-header"><a href="#examples">Examples</a></h2>
+<h3 id="examples" class="section-header"><a href="#examples">Examples</a></h3>
 <p>You can find examples in the <a href="https://github.com/fede1024/rust-rdkafka/blob/master/examples/"><code>examples</code></a> folder. To run them:</p>
-<div class="example-wrap"><pre class="language-bash"><code>cargo run --example &lt;example_name&gt; -- &lt;example_args&gt;</code></pre></div><h2 id="debugging" class="section-header"><a href="#debugging">Debugging</a></h2>
+<div class="example-wrap"><pre class="language-bash"><code>cargo run --example &lt;example_name&gt; -- &lt;example_args&gt;</code></pre></div><h3 id="debugging" class="section-header"><a href="#debugging">Debugging</a></h3>
 <p>rust-rdkafka uses the <a href="https://docs.rs/log"><code>log</code></a> and <a href="https://docs.rs/env_logger"><code>env_logger</code></a> crates to handle logging.
 Logging can be enabled using the <code>RUST_LOG</code> environment variable, for
 example:</p>
@@ -178,20 +178,20 @@ consumer configuration (see librdkafka
 with <code>env_logger::init()</code>, or the equivalent for any <code>log</code>-compatible
 logging framework.</p>
 </div></details><h2 id="reexports" class="section-header"><a href="#reexports">Re-exports</a></h2>
-<div class="item-table"><div class="item-left import-item"><code>pub use crate::client::<a class="trait" href="client/trait.ClientContext.html" title="trait rdkafka::client::ClientContext">ClientContext</a>;</code></div><div class="item-right docblock-short"></div><div class="item-left import-item"><code>pub use crate::config::<a class="struct" href="config/struct.ClientConfig.html" title="struct rdkafka::config::ClientConfig">ClientConfig</a>;</code></div><div class="item-right docblock-short"></div><div class="item-left import-item"><code>pub use crate::message::<a class="trait" href="message/trait.Message.html" title="trait rdkafka::message::Message">Message</a>;</code></div><div class="item-right docblock-short"></div><div class="item-left import-item"><code>pub use crate::message::<a class="enum" href="message/enum.Timestamp.html" title="enum rdkafka::message::Timestamp">Timestamp</a>;</code></div><div class="item-right docblock-short"></div><div class="item-left import-item"><code>pub use crate::statistics::<a class="struct" href="statistics/struct.Statistics.html" title="struct rdkafka::statistics::Statistics">Statistics</a>;</code></div><div class="item-right docblock-short"></div><div class="item-left import-item"><code>pub use crate::topic_partition_list::<a class="enum" href="topic_partition_list/enum.Offset.html" title="enum rdkafka::topic_partition_list::Offset">Offset</a>;</code></div><div class="item-right docblock-short"></div><div class="item-left import-item"><code>pub use crate::topic_partition_list::<a class="struct" href="topic_partition_list/struct.TopicPartitionList.html" title="struct rdkafka::topic_partition_list::TopicPartitionList">TopicPartitionList</a>;</code></div><div class="item-right docblock-short"></div><div class="item-left import-item"><code>pub use crate::util::<a class="trait" href="util/trait.IntoOpaque.html" title="trait rdkafka::util::IntoOpaque">IntoOpaque</a>;</code></div><div class="item-right docblock-short"></div></div><h2 id="modules" class="section-header"><a href="#modules">Modules</a></h2>
-<div class="item-table"><div class="item-left module-item"><a class="mod" href="admin/index.html" title="rdkafka::admin mod">admin</a></div><div class="item-right docblock-short"><p>Admin client.</p>
-</div><div class="item-left module-item"><a class="mod" href="client/index.html" title="rdkafka::client mod">client</a></div><div class="item-right docblock-short"><p>Common client functionality.</p>
-</div><div class="item-left module-item"><a class="mod" href="config/index.html" title="rdkafka::config mod">config</a></div><div class="item-right docblock-short"><p>Producer and consumer configuration.</p>
-</div><div class="item-left module-item"><a class="mod" href="consumer/index.html" title="rdkafka::consumer mod">consumer</a></div><div class="item-right docblock-short"><p>Kafka consumers.</p>
-</div><div class="item-left module-item"><a class="mod" href="error/index.html" title="rdkafka::error mod">error</a></div><div class="item-right docblock-short"><p>Error manipulations.</p>
-</div><div class="item-left module-item"><a class="mod" href="groups/index.html" title="rdkafka::groups mod">groups</a></div><div class="item-right docblock-short"><p>Group membership API.</p>
-</div><div class="item-left module-item"><a class="mod" href="message/index.html" title="rdkafka::message mod">message</a></div><div class="item-right docblock-short"><p>Store and manipulate Kafka messages.</p>
-</div><div class="item-left module-item"><a class="mod" href="metadata/index.html" title="rdkafka::metadata mod">metadata</a></div><div class="item-right docblock-short"><p>Cluster metadata.</p>
-</div><div class="item-left module-item"><a class="mod" href="producer/index.html" title="rdkafka::producer mod">producer</a></div><div class="item-right docblock-short"><p>Kafka producers.</p>
-</div><div class="item-left module-item"><a class="mod" href="statistics/index.html" title="rdkafka::statistics mod">statistics</a></div><div class="item-right docblock-short"><p>Client and broker statistics.</p>
-</div><div class="item-left module-item"><a class="mod" href="topic_partition_list/index.html" title="rdkafka::topic_partition_list mod">topic_partition_list</a></div><div class="item-right docblock-short"><p>Data structures representing topic, partitions and offsets.</p>
-</div><div class="item-left module-item"><a class="mod" href="types/index.html" title="rdkafka::types mod">types</a></div><div class="item-right docblock-short"><p>Aliases for types defined in the auto-generated bindings.</p>
-</div><div class="item-left module-item"><a class="mod" href="util/index.html" title="rdkafka::util mod">util</a></div><div class="item-right docblock-short"><p>Utility functions and types.</p>
-</div></div></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../" data-current-crate="rdkafka" data-search-index-js="../search-index.js" data-search-js="../search.js"></div>
+<div class="item-table"><div class="item-row"><div class="item-left import-item"><code>pub use crate::client::<a class="trait" href="client/trait.ClientContext.html" title="trait rdkafka::client::ClientContext">ClientContext</a>;</code></div><div class="item-right docblock-short"></div></div><div class="item-row"><div class="item-left import-item"><code>pub use crate::config::<a class="struct" href="config/struct.ClientConfig.html" title="struct rdkafka::config::ClientConfig">ClientConfig</a>;</code></div><div class="item-right docblock-short"></div></div><div class="item-row"><div class="item-left import-item"><code>pub use crate::message::<a class="trait" href="message/trait.Message.html" title="trait rdkafka::message::Message">Message</a>;</code></div><div class="item-right docblock-short"></div></div><div class="item-row"><div class="item-left import-item"><code>pub use crate::message::<a class="enum" href="message/enum.Timestamp.html" title="enum rdkafka::message::Timestamp">Timestamp</a>;</code></div><div class="item-right docblock-short"></div></div><div class="item-row"><div class="item-left import-item"><code>pub use crate::statistics::<a class="struct" href="statistics/struct.Statistics.html" title="struct rdkafka::statistics::Statistics">Statistics</a>;</code></div><div class="item-right docblock-short"></div></div><div class="item-row"><div class="item-left import-item"><code>pub use crate::topic_partition_list::<a class="enum" href="topic_partition_list/enum.Offset.html" title="enum rdkafka::topic_partition_list::Offset">Offset</a>;</code></div><div class="item-right docblock-short"></div></div><div class="item-row"><div class="item-left import-item"><code>pub use crate::topic_partition_list::<a class="struct" href="topic_partition_list/struct.TopicPartitionList.html" title="struct rdkafka::topic_partition_list::TopicPartitionList">TopicPartitionList</a>;</code></div><div class="item-right docblock-short"></div></div><div class="item-row"><div class="item-left import-item"><code>pub use crate::util::<a class="trait" href="util/trait.IntoOpaque.html" title="trait rdkafka::util::IntoOpaque">IntoOpaque</a>;</code></div><div class="item-right docblock-short"></div></div></div><h2 id="modules" class="section-header"><a href="#modules">Modules</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="mod" href="admin/index.html" title="rdkafka::admin mod">admin</a></div><div class="item-right docblock-short"><p>Admin client.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="client/index.html" title="rdkafka::client mod">client</a></div><div class="item-right docblock-short"><p>Common client functionality.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="config/index.html" title="rdkafka::config mod">config</a></div><div class="item-right docblock-short"><p>Producer and consumer configuration.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="consumer/index.html" title="rdkafka::consumer mod">consumer</a></div><div class="item-right docblock-short"><p>Kafka consumers.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="error/index.html" title="rdkafka::error mod">error</a></div><div class="item-right docblock-short"><p>Error manipulations.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="groups/index.html" title="rdkafka::groups mod">groups</a></div><div class="item-right docblock-short"><p>Group membership API.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="message/index.html" title="rdkafka::message mod">message</a></div><div class="item-right docblock-short"><p>Store and manipulate Kafka messages.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="metadata/index.html" title="rdkafka::metadata mod">metadata</a></div><div class="item-right docblock-short"><p>Cluster metadata.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="producer/index.html" title="rdkafka::producer mod">producer</a></div><div class="item-right docblock-short"><p>Kafka producers.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="statistics/index.html" title="rdkafka::statistics mod">statistics</a></div><div class="item-right docblock-short"><p>Client and broker statistics.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="topic_partition_list/index.html" title="rdkafka::topic_partition_list mod">topic_partition_list</a></div><div class="item-right docblock-short"><p>Data structures representing topic, partitions and offsets.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="types/index.html" title="rdkafka::types mod">types</a></div><div class="item-right docblock-short"><p>Aliases for types defined in the auto-generated bindings.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="util/index.html" title="rdkafka::util mod">util</a></div><div class="item-right docblock-short"><p>Utility functions and types.</p>
+</div></div></div></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../" data-current-crate="rdkafka" data-search-index-js="../search-index.js" data-search-js="../search.js"></div>
     <script src="../main.js"></script>
 </body></html>

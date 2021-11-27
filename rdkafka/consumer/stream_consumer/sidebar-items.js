@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["MessageStream","A stream of messages from a [`StreamConsumer`]."],["StreamConsumer","A high-level consumer with a `Stream` interface."],["StreamConsumerContext","A consumer context wrapper for a stream consumer."]]});
+initSidebarItems({"struct":[["MessageStream","A stream of messages from a [`StreamConsumer`]."],["StreamConsumer","A high-level consumer with a `Stream` interface."],["StreamPartitionQueue","A message queue for a single partition of a [`StreamConsumer`]."]]});

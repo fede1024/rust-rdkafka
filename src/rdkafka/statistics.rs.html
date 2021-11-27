@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;statistics.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>statistics.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;statistics.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>statistics.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../rdkafka/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -707,6 +707,22 @@
 <span id="707">707</span>
 <span id="708">708</span>
 <span id="709">709</span>
+<span id="710">710</span>
+<span id="711">711</span>
+<span id="712">712</span>
+<span id="713">713</span>
+<span id="714">714</span>
+<span id="715">715</span>
+<span id="716">716</span>
+<span id="717">717</span>
+<span id="718">718</span>
+<span id="719">719</span>
+<span id="720">720</span>
+<span id="721">721</span>
+<span id="722">722</span>
+<span id="723">723</span>
+<span id="724">724</span>
+<span id="725">725</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Client and broker statistics.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! These statistics are collected automatically by librdkafka when the client</span>
@@ -724,7 +740,7 @@
 <span class="kw">use</span> <span class="ident">serde::Deserialize</span>;
 
 <span class="doccomment">/// Overall statistics.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Statistics</span> {
     <span class="doccomment">/// The name of the librdkafka handle.</span>
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
@@ -738,16 +754,18 @@
     <span class="kw">pub</span> <span class="ident">ts</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// Wall clock time, in seconds since the Unix epoch.</span>
     <span class="kw">pub</span> <span class="ident">time</span>: <span class="ident">i64</span>,
+    <span class="doccomment">/// Time since this client instance was created, in microseconds.</span>
+    <span class="kw">pub</span> <span class="ident">age</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The number of operations (callbacks, events, etc.) waiting in queue.</span>
     <span class="kw">pub</span> <span class="ident">replyq</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The current number of messages in producer queues.</span>
-    <span class="kw">pub</span> <span class="ident">msg_cnt</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">msg_cnt</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The current total size of messages in producer queues.</span>
-    <span class="kw">pub</span> <span class="ident">msg_size</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">msg_size</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The maximum number of messages allowed in the producer queues.</span>
-    <span class="kw">pub</span> <span class="ident">msg_max</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">msg_max</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The maximum total size of messages allowed in the producer queues.</span>
-    <span class="kw">pub</span> <span class="ident">msg_size_max</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">msg_size_max</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of requests sent to brokers.</span>
     <span class="kw">pub</span> <span class="ident">tx</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The total number of bytes transmitted to brokers.</span>
@@ -780,7 +798,7 @@
 }
 
 <span class="doccomment">/// Per-broker statistics.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Broker</span> {
     <span class="doccomment">/// The broker hostname, port, and ID, in the form `HOSTNAME:PORT/ID`.</span>
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
@@ -806,38 +824,44 @@
     <span class="doccomment">/// response.</span>
     <span class="kw">pub</span> <span class="ident">waitresp_msg_cnt</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The total number of requests sent to the broker.</span>
-    <span class="kw">pub</span> <span class="ident">tx</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">tx</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of bytes sent to the broker.</span>
-    <span class="kw">pub</span> <span class="ident">txbytes</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">txbytes</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of transmission errors.</span>
-    <span class="kw">pub</span> <span class="ident">txerrs</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">txerrs</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of request retries.</span>
-    <span class="kw">pub</span> <span class="ident">txretries</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">txretries</span>: <span class="ident">u64</span>,
+    <span class="doccomment">/// Microseconds since last socket send, or -1 if no sends yet for the</span>
+    <span class="doccomment">/// current connection.</span>
+    <span class="kw">pub</span> <span class="ident">txidle</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The total number of requests that timed out.</span>
-    <span class="kw">pub</span> <span class="ident">req_timeouts</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">req_timeouts</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of responses received from the broker.</span>
-    <span class="kw">pub</span> <span class="ident">rx</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">rx</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of bytes received from the broker.</span>
-    <span class="kw">pub</span> <span class="ident">rxbytes</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">rxbytes</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of receive errors.</span>
-    <span class="kw">pub</span> <span class="ident">rxerrs</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">rxerrs</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The number of unmatched correlation IDs in response, typically for</span>
     <span class="doccomment">/// timed out requests.</span>
-    <span class="kw">pub</span> <span class="ident">rxcorriderrs</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">rxcorriderrs</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of partial message sets received. The broker may return</span>
     <span class="doccomment">/// partial responses if the full message set could not fit in the remaining</span>
     <span class="doccomment">/// fetch response size.</span>
-    <span class="kw">pub</span> <span class="ident">rxpartial</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">rxpartial</span>: <span class="ident">u64</span>,
+    <span class="doccomment">/// Microseconds since last socket receive, or -1 if no receives yet for the</span>
+    <span class="doccomment">/// current connection.</span>
+    <span class="kw">pub</span> <span class="ident">rxidle</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// Request type counters. The object key is the name of the request type</span>
     <span class="doccomment">/// and the value is the number of requests of that type that have been</span>
     <span class="doccomment">/// sent.</span>
     <span class="kw">pub</span> <span class="ident">req</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">i64</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The total number of decompression buffer size increases.</span>
-    <span class="kw">pub</span> <span class="ident">zbuf_grow</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">zbuf_grow</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of buffer size increases (deprecated and unused).</span>
-    <span class="kw">pub</span> <span class="ident">buf_grow</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">buf_grow</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The number of broker thread poll wakeups.</span>
-    <span class="kw">pub</span> <span class="ident">wakeups</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">wakeups</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The number of connection attempts, including successful and failed</span>
     <span class="doccomment">/// attempts, and name resolution failures.</span>
     <span class="kw">pub</span> <span class="ident">connects</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
@@ -869,7 +893,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// These values are not exact; they are sampled estimates maintained by an</span>
 <span class="doccomment">/// HDR histogram in librdkafka.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Window</span> {
     <span class="doccomment">/// The smallest value.</span>
     <span class="kw">pub</span> <span class="ident">min</span>: <span class="ident">i64</span>,
@@ -903,7 +927,7 @@
 }
 
 <span class="doccomment">/// A topic and partition specifier.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TopicPartition</span> {
     <span class="doccomment">/// The name of the topic.</span>
     <span class="kw">pub</span> <span class="ident">topic</span>: <span class="ident">String</span>,
@@ -912,7 +936,7 @@
 }
 
 <span class="doccomment">/// Per-topic statistics.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Topic</span> {
     <span class="doccomment">/// The name of the topic.</span>
     <span class="kw">pub</span> <span class="ident">topic</span>: <span class="ident">String</span>,
@@ -927,7 +951,7 @@
 }
 
 <span class="doccomment">/// Per-partition statistics.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Partition</span> {
     <span class="doccomment">/// The partition ID.</span>
     <span class="kw">pub</span> <span class="ident">partition</span>: <span class="ident">i32</span>,
@@ -942,15 +966,15 @@
     <span class="doccomment">/// The number of messages waiting to be produced in the first-level queue.</span>
     <span class="kw">pub</span> <span class="ident">msgq_cnt</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The number of bytes waiting to be produced in the first-level queue.</span>
-    <span class="kw">pub</span> <span class="ident">msgq_bytes</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">msgq_bytes</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The number of messages ready to be produced in the transmit queue.</span>
     <span class="kw">pub</span> <span class="ident">xmit_msgq_cnt</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The number of bytes ready to be produced in the transmit queue.</span>
-    <span class="kw">pub</span> <span class="ident">xmit_msgq_bytes</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">xmit_msgq_bytes</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The number of prefetched messages in the fetch queue.</span>
     <span class="kw">pub</span> <span class="ident">fetchq_cnt</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The number of bytes in the fetch queue.</span>
-    <span class="kw">pub</span> <span class="ident">fetchq_size</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">fetchq_size</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The consumer fetch state for this partition (none, stopping, stopped,</span>
     <span class="doccomment">/// offset-query, offset-wait, active).</span>
     <span class="kw">pub</span> <span class="ident">fetch_state</span>: <span class="ident">String</span>,
@@ -972,22 +996,23 @@
     <span class="kw">pub</span> <span class="ident">hi_offset</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The last stable offset on the broker.</span>
     <span class="kw">pub</span> <span class="ident">ls_offset</span>: <span class="ident">i64</span>,
-    <span class="doccomment">/// The difference between `hi_offset` and `max(app_offset,</span>
-    <span class="doccomment">/// committed_offset)`.</span>
+    <span class="doccomment">/// The difference between `hi_offset` and `committed_offset`.</span>
     <span class="kw">pub</span> <span class="ident">consumer_lag</span>: <span class="ident">i64</span>,
+    <span class="doccomment">/// The difference between `hi_offset` and `stored_offset`.</span>
+    <span class="kw">pub</span> <span class="ident">consumer_lag_stored</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The total number of messages transmitted (produced).</span>
-    <span class="kw">pub</span> <span class="ident">txmsgs</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">txmsgs</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of bytes transmitted (produced).</span>
-    <span class="kw">pub</span> <span class="ident">txbytes</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">txbytes</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of messages consumed, not included ignored messages.</span>
-    <span class="kw">pub</span> <span class="ident">rxmsgs</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">rxmsgs</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total bytes consumed.</span>
-    <span class="kw">pub</span> <span class="ident">rxbytes</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">rxbytes</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The total number of messages received, for consumers, or the total</span>
     <span class="doccomment">/// number of messages produced, for producers.</span>
-    <span class="kw">pub</span> <span class="ident">msgs</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">msgs</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The number of dropped outdated messages.</span>
-    <span class="kw">pub</span> <span class="ident">rx_ver_drops</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">rx_ver_drops</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The current number of messages in flight to or from the broker.</span>
     <span class="kw">pub</span> <span class="ident">msgs_inflight</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The next expected acked sequence number, for idempotent producers.</span>
@@ -995,11 +1020,11 @@
     <span class="doccomment">/// The next expected errored sequence number, for idempotent producers.</span>
     <span class="kw">pub</span> <span class="ident">next_err_seq</span>: <span class="ident">i64</span>,
     <span class="doccomment">/// The last acked internal message ID, for idempotent producers.</span>
-    <span class="kw">pub</span> <span class="ident">acked_msgid</span>: <span class="ident">i64</span>,
+    <span class="kw">pub</span> <span class="ident">acked_msgid</span>: <span class="ident">u64</span>,
 }
 
 <span class="doccomment">/// Consumer group manager statistics.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConsumerGroup</span> {
     <span class="doccomment">/// The local consumer group handler&#39;s state.</span>
     <span class="kw">pub</span> <span class="ident">state</span>: <span class="ident">String</span>,
@@ -1021,7 +1046,7 @@
 }
 
 <span class="doccomment">/// Exactly-once semantics statistics.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExactlyOnceSemantics</span> {
     <span class="doccomment">/// The current idempotent producer state.</span>
     <span class="kw">pub</span> <span class="ident">idemp_state</span>: <span class="ident">String</span>,
@@ -1072,18 +1097,18 @@
         <span class="macro">assert_eq!</span>(
             <span class="ident">broker</span>.<span class="ident">req</span>,
             <span class="macro">hashmap!</span> {
-                <span class="string">&quot;Produce&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">31307</span>,
-                <span class="string">&quot;Offset&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
-                <span class="string">&quot;Metadata&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">2</span>,
-                <span class="string">&quot;FindCoordinator&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
-                <span class="string">&quot;SaslHandshake&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
-                <span class="string">&quot;ApiVersion&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">2</span>,
-                <span class="string">&quot;InitProducerId&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
-                <span class="string">&quot;AddPartitionsToTxn&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
-                <span class="string">&quot;AddOffsetsToTxn&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
-                <span class="string">&quot;EndTxn&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
-                <span class="string">&quot;TxnOffsetCommit&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
-                <span class="string">&quot;SaslAuthenticate&quot;</span>.<span class="ident">to_string</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="number">0</span>,
+                <span class="string">&quot;Produce&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">31307</span>,
+                <span class="string">&quot;Offset&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">0</span>,
+                <span class="string">&quot;Metadata&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">2</span>,
+                <span class="string">&quot;FindCoordinator&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">0</span>,
+                <span class="string">&quot;SaslHandshake&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">0</span>,
+                <span class="string">&quot;ApiVersion&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">2</span>,
+                <span class="string">&quot;InitProducerId&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">0</span>,
+                <span class="string">&quot;AddPartitionsToTxn&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">0</span>,
+                <span class="string">&quot;AddOffsetsToTxn&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">0</span>,
+                <span class="string">&quot;EndTxn&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">0</span>,
+                <span class="string">&quot;TxnOffsetCommit&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">0</span>,
+                <span class="string">&quot;SaslAuthenticate&quot;</span>.<span class="ident">to_string</span>() =&gt; <span class="number">0</span>,
             }
         );
 
@@ -1098,6 +1123,7 @@
         &quot;type&quot;: &quot;producer&quot;,
         &quot;ts&quot;: 1163982743268,
         &quot;time&quot;: 1589652530,
+        &quot;age&quot;: 5,
         &quot;replyq&quot;: 0,
         &quot;msg_cnt&quot;: 320,
         &quot;msg_size&quot;: 9920,
@@ -1121,12 +1147,14 @@
             &quot;txbytes&quot;: 463869957,
             &quot;txerrs&quot;: 0,
             &quot;txretries&quot;: 0,
+            &quot;txidle&quot;: 5,
             &quot;req_timeouts&quot;: 0,
             &quot;rx&quot;: 31310,
             &quot;rxbytes&quot;: 1753668,
             &quot;rxerrs&quot;: 0,
             &quot;rxcorriderrs&quot;: 0,
             &quot;rxpartial&quot;: 0,
+            &quot;rxidle&quot;: 5,
             &quot;zbuf_grow&quot;: 0,
             &quot;buf_grow&quot;: 0,
             &quot;wakeups&quot;: 131568,
@@ -1287,6 +1315,7 @@
                 &quot;hi_offset&quot;: -1001,
                 &quot;ls_offset&quot;: -1001,
                 &quot;consumer_lag&quot;: -1,
+                &quot;consumer_lag_stored&quot;: 0,
                 &quot;txmsgs&quot;: 3950967,
                 &quot;txbytes&quot;: 122479977,
                 &quot;rxmsgs&quot;: 0,
@@ -1322,6 +1351,7 @@
                 &quot;hi_offset&quot;: -1001,
                 &quot;ls_offset&quot;: -1001,
                 &quot;consumer_lag&quot;: -1,
+                &quot;consumer_lag_stored&quot;: 0,
                 &quot;txmsgs&quot;: 3950656,
                 &quot;txbytes&quot;: 122470336,
                 &quot;rxmsgs&quot;: 0,
@@ -1357,6 +1387,7 @@
                 &quot;hi_offset&quot;: -1001,
                 &quot;ls_offset&quot;: -1001,
                 &quot;consumer_lag&quot;: -1,
+                &quot;consumer_lag_stored&quot;: 0,
                 &quot;txmsgs&quot;: 3952027,
                 &quot;txbytes&quot;: 122512837,
                 &quot;rxmsgs&quot;: 0,
@@ -1392,6 +1423,7 @@
                 &quot;hi_offset&quot;: -1001,
                 &quot;ls_offset&quot;: -1001,
                 &quot;consumer_lag&quot;: -1,
+                &quot;consumer_lag_stored&quot;: 0,
                 &quot;txmsgs&quot;: 0,
                 &quot;txbytes&quot;: 0,
                 &quot;rxmsgs&quot;: 0,
