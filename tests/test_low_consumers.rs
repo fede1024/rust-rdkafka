@@ -1,7 +1,6 @@
 //! Test data consumption using low level consumers.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};

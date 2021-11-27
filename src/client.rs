@@ -90,8 +90,8 @@ pub trait ClientContext: Send + Sync {
     /// enable, the `statistics.interval.ms` configuration parameter must be
     /// specified.
     ///
-    /// The default implementation calls [`Context::stats`] with the decoded
-    /// statistics, logging an error if the decoding fails.
+    /// The default implementation calls [`ClientContext::stats`] with the
+    /// decoded statistics, logging an error if the decoding fails.
     fn stats_raw(&self, statistics: &[u8]) {
         match serde_json::from_slice(&statistics) {
             Ok(stats) => self.stats(stats),
