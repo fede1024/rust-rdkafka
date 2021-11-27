@@ -107,8 +107,9 @@ pub trait ClientContext: Send + Sync {
     }
 
     // NOTE: when adding a new method, remember to add it to the
-    // StreamConsumerContext and FutureProducerContext as well.
-    // https://github.com/rust-lang/rfcs/pull/1406 will maybe help in the future.
+    // FutureProducerContext as well.
+    // https://github.com/rust-lang/rfcs/pull/1406 will maybe help in the
+    // future.
 }
 
 /// An empty [`ClientContext`] that can be used when no customizations are

@@ -2,8 +2,6 @@
 
 use std::collections::HashMap;
 use std::env::{self, VarError};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 use std::time::Duration;
 
 use rand::Rng;
@@ -189,7 +187,6 @@ mod tests {
 
 pub struct ConsumerTestContext {
     pub _n: i64, // Add data for memory access validation
-    pub wakeups: Arc<AtomicUsize>,
 }
 
 impl ClientContext for ConsumerTestContext {
@@ -203,10 +200,6 @@ impl ClientContext for ConsumerTestContext {
 impl ConsumerContext for ConsumerTestContext {
     fn commit_callback(&self, result: KafkaResult<()>, _offsets: &TopicPartitionList) {
         println!("Committing offsets: {:?}", result);
-    }
-
-    fn message_queue_nonempty_callback(&self) {
-        self.wakeups.fetch_add(1, Ordering::SeqCst);
     }
 }
 
