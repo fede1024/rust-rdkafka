@@ -4,6 +4,28 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* Add the `StreamConsumer::split_partition_queue` method to mirror
+  `BaseConsumer::split_partition_queue` ([#411]).
+
+  Thanks to [@davidblewett], [@duarten], and [@nemosupremo] for contributing to
+  the implementation.
+
+* **Breaking change.** Remove the `StreamConsumerContext` type and the
+  `ConsumerContext::message_queue_nonempty_callback` method. These were
+  essentially implementation details of `StreamConsumer` that had leaked into
+  the public API. The vast majority of users should be unaffected.
+
+* **Breaking change.** Remove the type parameters from the `MessageStream` type.
+
+* **Breaking change.** Add the received `TopicPartitionList` to the
+  `Rebalance::Revoke` variant, which is useful when using incremental
+  cooperative rebalancing ([#398]).
+
+* Avoid crashing if librdkafka invokes the commit callback with a null
+  topic partition list ([#406]).
+
+  Thanks, [@thijsc].
+
 * Add the new statistics fields in librdkafka v1.7.0 to the various statistics
   types. The new fields are:
 
@@ -46,21 +68,28 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   statistics from librdkafka. The default implementation calls
   `ClientContext::stats` with the decoded statistics.
 
-* **Breaking change.** Add the received `TopicPartitionList` to the
-  `Rebalance::Revoke` variant, which is useful when using incremental
-  cooperative rebalancing ([#398]).
+* Add the `Default` trait to the statistics types: `Statistics`, `Broker`,
+  `Window`, `TopicPartition`, `Topic`, `Partition`, `ConsumerGroup`, and
+  `ExactlyOnceSemantics` ([#410]).
 
-* **Breaking change.** Remove the `StreamConsumerContext` type and the
-  `ConsumerContext::message_queue_nonempty_callback` method. These were
-  essentially implementation details of `StreamConsumer` that had leaked into
-  the public API. The vast majority of users should be unaffected.
+  Thanks, [@scanterog].
 
-* **Breaking change.** The `MessageStream` type is no longer generic.
+* Add the `Debug` trait to `DefaultClientContext` and `DefaultConsumerContext`
+  ([#401]).
 
-* Add the `StreamConsumer::split_partition_queue` method to mirror
-  `BaseConsumer::split_partition_queue`.
+  Thanks, [@DXist].
 
 [#398]: https://github.com/fede1024/rust-rdkafka/issues/398
+[#401]: https://github.com/fede1024/rust-rdkafka/issues/401
+[#406]: https://github.com/fede1024/rust-rdkafka/issues/406
+[#410]: https://github.com/fede1024/rust-rdkafka/issues/410
+[#411]: https://github.com/fede1024/rust-rdkafka/issues/411
+[@davidblewett]: https://github.com/davidblewett
+[@duarten]: https://github.com/duarten
+[@DXist]: https://github.com/DXist
+[@nemosupremo]: https://github.com/nemosupremo
+[@scanterog]: https://github.com/scanterog
+[@thijsc]: https://github.com/thijsc
 
 <a name="0.27.0"></a>
 ## 0.27.0 (2021-10-17)
