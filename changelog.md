@@ -2,7 +2,7 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
-## Unreleased
+## 0.28.0 (2021-11-27)
 
 * Add the `StreamConsumer::split_partition_queue` method to mirror
   `BaseConsumer::split_partition_queue` ([#411]).
