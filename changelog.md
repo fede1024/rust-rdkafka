@@ -2,6 +2,14 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
+## Unreleased
+
+* Add the `PartitionQueue::set_nonempty_callback` method to register a callback
+  for a specific partition queue that will run when that queue becomes
+  nonempty. This is a more flexible replacement for the
+  `ConsumerContext::message_queue_nonempty_callback` method that was removed
+  in the last release.
+
 ## 0.28.0 (2021-11-27)
 
 * Add the `StreamConsumer::split_partition_queue` method to mirror

@@ -1,6 +1,7 @@
 //! Test data consumption using low level consumers.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -260,6 +261,99 @@ async fn test_consume_partition_order() {
         drop(consumer);
         worker.join().unwrap();
     }
+}
+
+#[tokio::test]
+async fn test_produce_consume_message_queue_nonempty_callback() {
+    let _r = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+
+    create_topic(&topic_name, 1).await;
+
+    let consumer: BaseConsumer<_> = consumer_config(&rand_test_group(), None)
+        .create_with_context(ConsumerTestContext { _n: 64 })
+        .expect("Consumer creation failed");
+    let consumer = Arc::new(consumer);
+
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning).unwrap();
+    consumer.assign(&tpl).unwrap();
+
+    let wakeups = Arc::new(AtomicUsize::new(0));
+    let mut queue = consumer.split_partition_queue(&topic_name, 0).unwrap();
+    queue.set_nonempty_callback({
+        let wakeups = wakeups.clone();
+        move || {
+            wakeups.fetch_add(1, Ordering::SeqCst);
+        }
+    });
+
+    let wait_for_wakeups = |target| {
+        let start = Instant::now();
+        let timeout = Duration::from_secs(15);
+        loop {
+            let w = wakeups.load(Ordering::SeqCst);
+            if w == target {
+                break;
+            } else if w > target {
+                panic!("wakeups {} exceeds target {}", w, target);
+            }
+            thread::sleep(Duration::from_millis(100));
+            if start.elapsed() > timeout {
+                panic!("timeout exceeded while waiting for wakeup");
+            }
+        }
+    };
+
+    // Initiate connection.
+    assert!(consumer.poll(Duration::from_secs(0)).is_none());
+
+    // Expect no wakeups for 1s.
+    thread::sleep(Duration::from_secs(1));
+    assert_eq!(wakeups.load(Ordering::SeqCst), 0);
+
+    // Verify there are no messages waiting.
+    assert!(consumer.poll(Duration::from_secs(0)).is_none());
+    assert!(queue.poll(Duration::from_secs(0)).is_none());
+
+    // Populate the topic, and expect a wakeup notifying us of the new messages.
+    populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None).await;
+    wait_for_wakeups(1);
+
+    // Read one of the messages.
+    assert!(queue.poll(Duration::from_secs(0)).is_some());
+
+    // Add more messages to the topic. Expect no additional wakeups, as the
+    // queue is not fully drained, for 1s.
+    populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None).await;
+    thread::sleep(Duration::from_secs(1));
+    assert_eq!(wakeups.load(Ordering::SeqCst), 1);
+
+    // Drain the queue.
+    assert!(queue.poll(None).is_some());
+    assert!(queue.poll(None).is_some());
+    assert!(queue.poll(None).is_some());
+
+    // Expect no additional wakeups for 1s.
+    thread::sleep(Duration::from_secs(1));
+    assert_eq!(wakeups.load(Ordering::SeqCst), 1);
+
+    // Add another message, and expect a wakeup.
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None).await;
+    wait_for_wakeups(2);
+
+    // Expect no additional wakeups for 1s.
+    thread::sleep(Duration::from_secs(1));
+    assert_eq!(wakeups.load(Ordering::SeqCst), 2);
+
+    // Disable the queue and add another message.
+    queue.set_nonempty_callback(|| ());
+    populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None).await;
+
+    // Expect no additional wakeups for 1s.
+    thread::sleep(Duration::from_secs(1));
+    assert_eq!(wakeups.load(Ordering::SeqCst), 2);
 }
 
 #[tokio::test]
