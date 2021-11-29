@@ -277,7 +277,8 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     let consumer = Arc::new(consumer);
 
     let mut tpl = TopicPartitionList::new();
-    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning).unwrap();
+    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+        .unwrap();
     consumer.assign(&tpl).unwrap();
 
     let wakeups = Arc::new(AtomicUsize::new(0));
