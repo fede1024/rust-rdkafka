@@ -155,12 +155,17 @@ impl NativeClient {
     }
 
     pub(crate) fn rebalance_protocol(&self) -> RebalanceProtocol {
-        let protocol = unsafe { CStr::from_ptr(rdsys::rd_kafka_rebalance_protocol(self.ptr())) };
-        match protocol.to_bytes() {
-            b"NONE" => RebalanceProtocol::None,
-            b"EAGER" => RebalanceProtocol::Eager,
-            b"COOPERATIVE" => RebalanceProtocol::Cooperative,
-            _ => unreachable!(),
+        let protocol = unsafe { rdsys::rd_kafka_rebalance_protocol(self.ptr()) };
+        if protocol.is_null() {
+            RebalanceProtocol::None
+        } else {
+            let protocol = unsafe { CStr::from_ptr(protocol) };
+            match protocol.to_bytes() {
+                b"NONE" => RebalanceProtocol::None,
+                b"EAGER" => RebalanceProtocol::Eager,
+                b"COOPERATIVE" => RebalanceProtocol::Cooperative,
+                _ => unreachable!(),
+            }
         }
     }
 }
