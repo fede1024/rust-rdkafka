@@ -18,7 +18,7 @@ openssl-sys = { version = "0.9.48", optional = true }
 libz-sys = { version = "1.0.0", optional = true }
 zstd-sys = { version = "1.4.19", optional = true }
 lz4-sys = { version = "1.8.3", optional = true }
-sasl2-sys = { version = "0.1.6", optional = true }
+sasl2-sys = { version = "0.1.18", optional = true }
 
 [build-dependencies]
 pkg-config = "0.3.9"
