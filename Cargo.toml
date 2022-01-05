@@ -29,7 +29,7 @@ tokio = { version = "1.0", features = ["rt", "time"], optional = true }
 async-std = { version = "1.9.0", features = ["attributes"] }
 backoff = "0.1.5"
 chrono = "0.4.0"
-clap = "2.18.0"
+clap = "2.34.0"
 env_logger = "0.7.1"
 hdrhistogram = "7.0.0"
 maplit = "1.0.2"
