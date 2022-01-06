@@ -40,6 +40,26 @@ jobs:
     - run: cargo build --all-targets --verbose --features "${{ matrix.features }}"
     - run: cd rdkafka-sys && cargo test --features "${{ matrix.features }}"
 
+  # Use the `minimal-versions` resolver to ensure we're not claiming to support
+  # an older version of a dependency than we actually do.
+  check-minimal-versions:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        # The version of this toolchain doesn't matter much. It's only used to
+        # generate the minimal-versions lockfile, not to actually run `cargo
+        # check`.
+        toolchain: nightly-2021-01-05
+        components: rustfmt, clippy
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ env.rust_version }}
+        default: true
+    - run: cargo +nightly-2021-01-05 -Z minimal-versions generate-lockfile
+    - run: cargo check
+
   test:
     strategy:
       matrix:
