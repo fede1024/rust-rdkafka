@@ -3,8 +3,7 @@ use std::process;
 use std::time::{Duration, Instant};
 
 use clap::{App, Arg};
-use futures::future::{self, FutureExt};
-use futures::stream::StreamExt;
+use futures_util::{future, FutureExt, StreamExt};
 
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};

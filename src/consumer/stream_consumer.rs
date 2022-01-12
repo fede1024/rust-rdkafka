@@ -9,10 +9,10 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
-use futures::channel::oneshot;
-use futures::future::FutureExt;
-use futures::select;
-use futures::stream::{Stream, StreamExt};
+use futures_channel::oneshot;
+use futures_util::future::FutureExt;
+use futures_util::select;
+use futures_util::stream::{Stream, StreamExt};
 use log::trace;
 use slab::Slab;
 
@@ -281,7 +281,7 @@ where
     /// single-use message stream and extracting one message from it:
     ///
     /// ```
-    /// use futures::stream::StreamExt;
+    /// use futures_util::stream::StreamExt;
     /// # use rdkafka::consumer::StreamConsumer;
     ///
     /// # async fn example(consumer: StreamConsumer) {
@@ -561,7 +561,7 @@ where
     /// single-use message stream and extracting one message from it:
     ///
     /// ```
-    /// use futures::stream::StreamExt;
+    /// use futures_util::stream::StreamExt;
     /// # use rdkafka::consumer::ConsumerContext;
     /// # use rdkafka::consumer::stream_consumer::StreamPartitionQueue;
     //

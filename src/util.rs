@@ -13,8 +13,8 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use futures::channel::oneshot;
-use futures::future::{FutureExt, Map};
+use futures_channel::oneshot;
+use futures_util::future::{FutureExt, Map};
 use log::trace;
 
 use rdkafka_sys as rdsys;
@@ -379,7 +379,7 @@ pub type DefaultRuntime = TokioRuntime;
 /// [futures](futures) crate.
 ///
 /// This runtime should not be used when performance is a concern, as it makes
-/// heavy use of threads to compenstate for the lack of a timer in the futures
+/// heavy use of threads to compensate for the lack of a timer in the futures
 /// executor.
 pub struct NaiveRuntime;
 
@@ -390,7 +390,7 @@ impl AsyncRuntime for NaiveRuntime {
     where
         T: Future<Output = ()> + Send + 'static,
     {
-        thread::spawn(|| futures::executor::block_on(task));
+        thread::spawn(|| futures_executor::block_on(task));
     }
 
     fn delay_for(duration: Duration) -> Self::Delay {

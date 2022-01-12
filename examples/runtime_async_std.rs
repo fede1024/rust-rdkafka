@@ -4,7 +4,7 @@ use std::process;
 use std::time::Duration;
 
 use clap::{App, Arg};
-use futures::stream::StreamExt;
+use futures_util::StreamExt;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};

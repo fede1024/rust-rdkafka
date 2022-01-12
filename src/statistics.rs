@@ -391,7 +391,7 @@ mod tests {
     }
 
     // Example from https://github.com/edenhill/librdkafka/wiki/Statistics
-    const EXAMPLE: &'static str = r#"
+    const EXAMPLE: &str = r#"
       {
         "name": "rdkafka#producer-1",
         "client_id": "rdkafka",

@@ -10,8 +10,8 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
 
-use futures::channel::oneshot;
-use futures::FutureExt;
+use futures_channel::oneshot;
+use futures_util::FutureExt;
 
 use crate::client::{Client, ClientContext, DefaultClientContext};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};

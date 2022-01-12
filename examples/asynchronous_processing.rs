@@ -2,8 +2,8 @@ use std::thread;
 use std::time::Duration;
 
 use clap::{value_t, App, Arg};
-use futures::stream::FuturesUnordered;
-use futures::{StreamExt, TryStreamExt};
+use futures_util::stream::FuturesUnordered;
+use futures_util::{StreamExt, TryStreamExt};
 use log::info;
 
 use rdkafka::config::ClientConfig;

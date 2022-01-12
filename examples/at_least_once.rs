@@ -14,7 +14,7 @@
 use std::time::Duration;
 
 use clap::{App, Arg};
-use futures::future;
+use futures_util::future;
 use log::{info, warn};
 
 use rdkafka::client::ClientContext;

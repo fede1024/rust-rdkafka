@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 
-use futures::future::{self, FutureExt};
-use futures::stream::StreamExt;
+use futures_util::future::{self, FutureExt};
+use futures_util::stream::StreamExt;
 use maplit::hashmap;
 use tokio::time::{self, Duration};
 

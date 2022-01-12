@@ -16,7 +16,9 @@ members = ["rdkafka-sys"]
 
 [dependencies]
 rdkafka-sys = { path = "rdkafka-sys", version = "4.2.0", default-features = false }
-futures = "0.3.0"
+futures-channel = "0.3.0"
+futures-executor = "0.3.0"
+futures-util = "0.3.0"
 libc = "0.2.0"
 log = "0.4.8"
 serde = { version = "1.0.0", features = ["derive"] }

@@ -14,9 +14,9 @@ use std::task::{Context, Poll};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use futures::channel::oneshot;
-use futures::future::{self, Either, FutureExt};
-use futures::ready;
+use futures_channel::oneshot;
+use futures_util::future::{self, Either, FutureExt};
+use futures_util::ready;
 use log::{trace, warn};
 
 use rdkafka_sys as rdsys;

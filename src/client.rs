@@ -93,7 +93,7 @@ pub trait ClientContext: Send + Sync {
     /// The default implementation calls [`ClientContext::stats`] with the
     /// decoded statistics, logging an error if the decoding fails.
     fn stats_raw(&self, statistics: &[u8]) {
-        match serde_json::from_slice(&statistics) {
+        match serde_json::from_slice(statistics) {
             Ok(stats) => self.stats(stats),
             Err(e) => error!("Could not parse statistics JSON: {}", e),
         }
