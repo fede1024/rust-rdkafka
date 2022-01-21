@@ -235,7 +235,7 @@ where
     ///
     /// This method should be called before termination to ensure delivery of
     /// all enqueued messages. It will call `poll()` internally.
-    fn flush<T: Into<Timeout>>(&self, timeout: T);
+    fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
 
     /// Enable sending transactions with this producer.
     ///
