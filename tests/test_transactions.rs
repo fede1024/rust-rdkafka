@@ -103,7 +103,7 @@ async fn test_transaction_abort() -> Result<(), Box<dyn Error>> {
     }
 
     // Abort the transaction, but only after producing all messages.
-    producer.flush(Timeout::Never);
+    producer.flush(Timeout::Never)?;
     producer.abort_transaction(Timeout::Never)?;
 
     // Check that no records were produced in read committed mode, but that

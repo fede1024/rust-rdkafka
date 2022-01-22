@@ -90,7 +90,7 @@ async fn test_future_producer_send_full() {
     assert!(elapsed > Duration::from_millis(800));
     assert!(elapsed < Duration::from_millis(1200));
 
-    producer.flush(Timeout::Never);
+    producer.flush(Timeout::Never).unwrap();
 }
 
 #[tokio::test]

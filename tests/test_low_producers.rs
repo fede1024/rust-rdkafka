@@ -183,7 +183,7 @@ fn test_base_producer_timeout() {
         .filter(|r| r.is_ok())
         .count();
 
-    producer.flush(Duration::from_secs(10));
+    producer.flush(Duration::from_secs(10)).unwrap();
 
     assert_eq!(results_count, 10);
 
@@ -252,7 +252,7 @@ fn test_base_producer_headers() {
         .filter(|r| r.is_ok())
         .count();
 
-    producer.flush(Duration::from_secs(10));
+    producer.flush(Duration::from_secs(10)).unwrap();
 
     assert_eq!(results_count, 10);
     assert_eq!((*ids_set.lock().unwrap()).len(), 10);
@@ -276,7 +276,7 @@ fn test_threaded_producer_send() {
         .count();
 
     assert_eq!(results_count, 10);
-    producer.flush(Duration::from_secs(10));
+    producer.flush(Duration::from_secs(10)).unwrap();
 
     let delivery_results = context.results.lock().unwrap();
     let mut ids = HashSet::new();
@@ -316,7 +316,7 @@ fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
         .filter(|r| r.is_ok())
         .count();
 
-    producer.flush(Duration::from_secs(10));
+    producer.flush(Duration::from_secs(10)).unwrap();
 
     let shared_count = Arc::try_unwrap(shared_count).unwrap().into_inner()?;
     assert_eq!(results_count, shared_count);

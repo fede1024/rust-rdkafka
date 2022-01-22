@@ -385,8 +385,13 @@ where
         &*self.client_arc
     }
 
-    fn flush<T: Into<Timeout>>(&self, timeout: T) {
-        unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout.into().as_millis()) };
+    fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        let ret = unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout.into().as_millis()) };
+        if ret.is_error() {
+            Err(KafkaError::Flush(ret.into()))
+        } else {
+            Ok(())
+        }
     }
 
     fn in_flight_count(&self) -> i32 {
@@ -582,8 +587,8 @@ where
         self.producer.client()
     }
 
-    fn flush<T: Into<Timeout>>(&self, timeout: T) {
-        self.producer.flush(timeout);
+    fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.flush(timeout)
     }
 
     fn in_flight_count(&self) -> i32 {

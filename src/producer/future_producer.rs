@@ -356,8 +356,8 @@ where
         self.producer.client()
     }
 
-    fn flush<T: Into<Timeout>>(&self, timeout: T) {
-        self.producer.flush(timeout);
+    fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
+        self.producer.flush(timeout)
     }
 
     fn in_flight_count(&self) -> i32 {
