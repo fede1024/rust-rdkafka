@@ -66,7 +66,7 @@ async fn main() {
     let brokers = matches.value_of("brokers").unwrap();
     let topic = matches.value_of("topic").unwrap().to_owned();
 
-    let producer: FutureProducer = ClientConfig::new()
+    let producer: FutureProducer<_, AsyncStdRuntime> = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .set("message.timeout.ms", "5000")
         .create()
