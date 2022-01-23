@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["rdkafka"] = [{"text":"impl&lt;'a&gt; <a class=\"trait\" href=\"https://docs.rs/futures-core/0.3.5/futures_core/stream/trait.Stream.html\" title=\"trait futures_core::stream::Stream\">Stream</a> for <a class=\"struct\" href=\"rdkafka/consumer/struct.MessageStream.html\" title=\"struct rdkafka::consumer::MessageStream\">MessageStream</a>&lt;'a&gt;","synthetic":false,"types":["rdkafka::consumer::stream_consumer::MessageStream"]}];
+implementors["rdkafka"] = [{"text":"impl&lt;'a&gt; Stream for <a class=\"struct\" href=\"rdkafka/consumer/struct.MessageStream.html\" title=\"struct rdkafka::consumer::MessageStream\">MessageStream</a>&lt;'a&gt;","synthetic":false,"types":["rdkafka::consumer::stream_consumer::MessageStream"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
