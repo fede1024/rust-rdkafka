@@ -13,6 +13,9 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   feature is enabled. This elides a dependency on `futures-executor` when the
   `niave-runtime` feature is disabled.
 
+* **Breaking change.** Remove the deprecated `StreamConsumer::start` method.
+  Use the more clearly-named `StreamConsumer::stream` method instead.
+
 * Add the `PartitionQueue::set_nonempty_callback` method to register a callback
   for a specific partition queue that will run when that queue becomes
   nonempty. This is a more flexible replacement for the

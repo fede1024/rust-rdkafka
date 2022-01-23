@@ -268,12 +268,6 @@ where
         MessageStream::new(&self.wakers, &self.queue)
     }
 
-    /// Constructs a stream that yields messages from this consumer.
-    #[deprecated = "use the more clearly named \"StreamConsumer::stream\" method instead"]
-    pub fn start(&self) -> MessageStream<'_> {
-        self.stream()
-    }
-
     /// Receives the next message from the stream.
     ///
     /// This method will block until the next message is available or an error
