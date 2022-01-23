@@ -16,7 +16,9 @@ members = ["rdkafka-sys"]
 
 [dependencies]
 rdkafka-sys = { path = "rdkafka-sys", version = "4.2.0", default-features = false }
-futures = "0.3.0"
+futures-channel = "0.3.0"
+futures-executor = { version = "0.3.0", optional = true }
+futures-util = { version = "0.3.0", default-features = false }
 libc = "0.2.0"
 log = "0.4.8"
 serde = { version = "1.0.0", features = ["derive"] }
@@ -31,6 +33,7 @@ backoff = "0.1.5"
 chrono = "0.4.0"
 clap = "2.18.0"
 env_logger = "0.9.0"
+futures = "0.3.0"
 hdrhistogram = "7.0.0"
 maplit = "1.0.2"
 rand = "0.3.15"
@@ -42,6 +45,7 @@ tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "time"] }
 # provides. See the rdkafka-sys documentation for details.
 [features]
 default = ["libz", "tokio"]
+naive-runtime = ["futures-executor"]
 cmake-build = ["rdkafka-sys/cmake-build"]
 cmake_build = ["rdkafka-sys/cmake_build"]
 dynamic-linking = ["rdkafka-sys/dynamic-linking"]

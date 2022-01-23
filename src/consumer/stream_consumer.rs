@@ -1,4 +1,4 @@
-//! High-level consumers with a [`Stream`](futures::Stream) interface.
+//! High-level consumers with a [`Stream`](futures_util::Stream) interface.
 
 use std::ffi::CString;
 use std::marker::PhantomData;
@@ -9,10 +9,10 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
-use futures::channel::oneshot;
-use futures::future::FutureExt;
-use futures::select;
-use futures::stream::{Stream, StreamExt};
+use futures_channel::oneshot;
+use futures_util::future::{self, Either, FutureExt};
+use futures_util::pin_mut;
+use futures_util::stream::{Stream, StreamExt};
 use log::trace;
 use slab::Slab;
 
@@ -146,7 +146,7 @@ impl<'a> Drop for MessageStream<'a> {
     }
 }
 
-/// A high-level consumer with a [`Stream`](futures::Stream) interface.
+/// A high-level consumer with a [`Stream`](futures_util::Stream) interface.
 ///
 /// This consumer doesn't need to be polled explicitly. Extracting an item from
 /// the stream returned by the [`stream`](StreamConsumer::stream) will
@@ -227,9 +227,11 @@ where
             async move {
                 trace!("Starting stream consumer wake loop: 0x{:x}", native_ptr);
                 loop {
-                    select! {
-                        _ = R::delay_for(poll_interval / 2).fuse() => wakers.wake_all(),
-                        _ = shutdown_tripwire => break,
+                    let delay = R::delay_for(poll_interval / 2).fuse();
+                    pin_mut!(delay);
+                    match future::select(&mut delay, &mut shutdown_tripwire).await {
+                        Either::Left(_) => wakers.wake_all(),
+                        Either::Right(_) => break,
                     }
                 }
                 trace!("Shut down stream consumer wake loop: 0x{:x}", native_ptr);
@@ -264,12 +266,6 @@ where
     /// consumers, not multiple message streams.
     pub fn stream(&self) -> MessageStream<'_> {
         MessageStream::new(&self.wakers, &self.queue)
-    }
-
-    /// Constructs a stream that yields messages from this consumer.
-    #[deprecated = "use the more clearly named \"StreamConsumer::stream\" method instead"]
-    pub fn start(&self) -> MessageStream<'_> {
-        self.stream()
     }
 
     /// Receives the next message from the stream.

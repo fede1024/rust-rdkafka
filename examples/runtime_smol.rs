@@ -66,7 +66,7 @@ fn main() {
     let topic = matches.value_of("topic").unwrap().to_owned();
 
     smol::block_on(async {
-        let producer: FutureProducer = ClientConfig::new()
+        let producer: FutureProducer<_, SmolRuntime> = ClientConfig::new()
             .set("bootstrap.servers", brokers)
             .set("message.timeout.ms", "5000")
             .create()

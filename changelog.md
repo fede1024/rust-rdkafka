@@ -4,11 +4,33 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* **Breaking change.** Pass through errors from librdkafka in
+  `BaseProducer::flush`, `StreamProducer::flush`, and `FutureProducer::flush`.
+
+  Thanks, [@cjubb39].
+
+* **Breaking change.** Only provide `NaiveRuntime` if the `naive-runtime`
+  feature is enabled. This elides a dependency on `futures-executor` when the
+  `niave-runtime` feature is disabled.
+
+* **Breaking change.** Remove the deprecated `StreamConsumer::start` method.
+  Use the more clearly-named `StreamConsumer::stream` method instead.
+
 * Add the `PartitionQueue::set_nonempty_callback` method to register a callback
   for a specific partition queue that will run when that queue becomes
   nonempty. This is a more flexible replacement for the
   `ConsumerContext::message_queue_nonempty_callback` method that was removed
   in the last release.
+
+* In `BaseConsumer::rebalance_protocol` and `StreamConsumer::rebalance_protocol`,
+  handle null return values from the underlying librdkakfa API ([#417]). This
+  avoids an occasional segfault in the rebalance callback.
+
+  Thanks, [@bruceg].
+
+[#417]: https://github.com/fede1024/rust-rdkafka/issues/417
+[@bruceg]: https://github.com/bruceg
+[@cjubb39]: https://github.com/cjubb39
 
 ## 0.28.0 (2021-11-27)
 
