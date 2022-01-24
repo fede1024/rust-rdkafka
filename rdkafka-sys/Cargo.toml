@@ -16,7 +16,7 @@ num_enum = "0.5.0"
 libc = "0.2.65"
 openssl-sys = { version = "0.9.48", optional = true }
 libz-sys = { version = "1.0.0", optional = true }
-zstd-sys = { version = "1.6.2", optional = true }
+zstd-sys = { version = "1.6.3", optional = true }
 lz4-sys = { version = "1.8.3", optional = true }
 sasl2-sys = { version = "0.1.6", optional = true }
 
