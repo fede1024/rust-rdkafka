@@ -207,9 +207,13 @@
 //!
 //! ## Debugging
 //!
-//! rust-rdkafka uses the [`log`] and [`env_logger`] crates to handle logging.
-//! Logging can be enabled using the `RUST_LOG` environment variable, for
-//! example:
+//! rust-rdkafka uses the [`log`] crate to handle logging.
+//! Optionally, enable the `tracing` feature to emit [`tracing`]
+//! events as opposed to [`log`] records.
+//!
+//! In test and examples, rust-rdkafka uses the  [`env_logger`] crate
+//! to format logs. In those contexts, logging can be enabled
+//! using the `RUST_LOG` environment variable, for example:
 //!
 //! ```bash
 //! RUST_LOG="librdkafka=trace,rdkafka::client=debug" cargo test
@@ -234,6 +238,7 @@
 //! [`StreamConsumer`]: https://docs.rs/rdkafka/*/rdkafka/consumer/stream_consumer/struct.StreamConsumer.html
 //! [`ThreadedProducer`]: https://docs.rs/rdkafka/*/rdkafka/producer/base_producer/struct.ThreadedProducer.html
 //! [`log`]: https://docs.rs/log
+//! [`tracing`]: https://docs.rs/tracing
 //! [`env_logger`]: https://docs.rs/env_logger
 //! [Apache Kafka]: https://kafka.apache.org
 //! [asynchronous processing example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/asynchronous_processing.rs
@@ -261,6 +266,8 @@
 #![deny(rust_2018_idioms)]
 #![allow(clippy::type_complexity)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+
+mod log;
 
 pub use rdkafka_sys::types;
 

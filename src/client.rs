@@ -21,8 +21,6 @@ use std::slice;
 use std::string::ToString;
 use std::sync::Arc;
 
-use log::{debug, error, info, trace, warn};
-
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
@@ -30,6 +28,7 @@ use crate::config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 use crate::consumer::RebalanceProtocol;
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
+use crate::log::{debug, error, info, trace, warn};
 use crate::metadata::Metadata;
 use crate::statistics::Statistics;
 use crate::util::{ErrBuf, KafkaDrop, NativePtr, Timeout};

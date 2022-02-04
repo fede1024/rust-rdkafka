@@ -28,13 +28,12 @@ use std::iter::FromIterator;
 use std::os::raw::c_char;
 use std::ptr;
 
-use log::{log_enabled, Level};
-
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::client::ClientContext;
 use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::log::{log_enabled, DEBUG, INFO, WARN};
 use crate::util::{ErrBuf, KafkaDrop, NativePtr};
 
 /// The log levels supported by librdkafka.
@@ -286,11 +285,11 @@ impl Extend<(String, String)> for ClientConfig {
 
 /// Return the log level
 fn log_level_from_global_config() -> RDKafkaLogLevel {
-    if log_enabled!(target: "librdkafka", Level::Debug) {
+    if log_enabled!(target: "librdkafka", DEBUG) {
         RDKafkaLogLevel::Debug
-    } else if log_enabled!(target: "librdkafka", Level::Info) {
+    } else if log_enabled!(target: "librdkafka", INFO) {
         RDKafkaLogLevel::Info
-    } else if log_enabled!(target: "librdkafka", Level::Warn) {
+    } else if log_enabled!(target: "librdkafka", WARN) {
         RDKafkaLogLevel::Warning
     } else {
         RDKafkaLogLevel::Error
