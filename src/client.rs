@@ -105,6 +105,15 @@ pub trait ClientContext: Send + Sync {
         error!("librdkafka: {}: {}", error, reason);
     }
 
+    /// Refreshes the OAuth token.
+    ///
+    /// The default implementation just logs an error message at the `error`
+    /// log level. This function is called if/when the token refresh callback
+    /// is called.
+    fn refresh_oauth_token(&self, _client: *mut RDKafka, _oauthbearer_config: *const i8) {
+        error!("Default token refresh only prints an error");
+    }
+
     // NOTE: when adding a new method, remember to add it to the
     // FutureProducerContext as well.
     // https://github.com/rust-lang/rfcs/pull/1406 will maybe help in the
@@ -208,6 +217,14 @@ impl<C: ClientContext> Client<C> {
         unsafe {
             rdsys::rd_kafka_conf_set_error_cb(native_config.ptr(), Some(native_error_cb::<C>))
         };
+        if config.use_token_refresh_cb {
+            unsafe {
+                rdsys::rd_kafka_conf_set_oauthbearer_token_refresh_cb(
+                    native_config.ptr(),
+                    Some(native_oauth_refresh_cb::<C>),
+                )
+            };
+        }
 
         let client_ptr = unsafe {
             let native_config = ManuallyDrop::new(native_config);
@@ -445,6 +462,15 @@ pub(crate) unsafe extern "C" fn native_error_cb<C: ClientContext>(
 
     let context = &mut *(opaque as *mut C);
     context.error(error, reason.trim());
+}
+
+pub(crate) unsafe extern "C" fn native_oauth_refresh_cb<C: ClientContext>(
+    client: *mut RDKafka,
+    oauthbearer_config: *const i8,
+    opaque: *mut c_void,
+) {
+    let context = &mut *(opaque as *mut C);
+    context.refresh_oauth_token(client, oauthbearer_config);
 }
 
 #[cfg(test)]
