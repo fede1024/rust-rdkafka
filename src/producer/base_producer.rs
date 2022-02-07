@@ -50,8 +50,6 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use log::{trace, warn};
-
 use rdkafka_sys as rdsys;
 use rdkafka_sys::rd_kafka_vtype_t::*;
 use rdkafka_sys::types::*;
@@ -60,6 +58,7 @@ use crate::client::Client;
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
+use crate::log::{trace, warn};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use crate::producer::{DefaultProducerContext, Producer, ProducerContext};
 use crate::topic_partition_list::TopicPartitionList;
