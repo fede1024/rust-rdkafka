@@ -4,14 +4,13 @@ use std::ptr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use log::{error, trace};
-
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::client::{Client, ClientContext, NativeClient};
 use crate::error::KafkaResult;
 use crate::groups::GroupList;
+use crate::log::{error, trace};
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};

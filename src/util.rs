@@ -18,7 +18,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use futures_channel::oneshot;
 #[cfg(feature = "naive-runtime")]
 use futures_util::future::{FutureExt, Map};
-use log::trace;
+
+use crate::log::trace;
 
 use rdkafka_sys as rdsys;
 

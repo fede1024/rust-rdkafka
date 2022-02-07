@@ -7,8 +7,6 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::sync::Arc;
 
-use log::trace;
-
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
@@ -22,6 +20,7 @@ use crate::consumer::{
 };
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
+use crate::log::trace;
 use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};

@@ -9,11 +9,11 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
+use crate::log::trace;
 use futures_channel::oneshot;
 use futures_util::future::{self, Either, FutureExt};
 use futures_util::pin_mut;
 use futures_util::stream::{Stream, StreamExt};
-use log::trace;
 use slab::Slab;
 
 use rdkafka_sys as rdsys;

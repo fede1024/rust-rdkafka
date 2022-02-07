@@ -26,6 +26,7 @@ serde_derive = "1.0.0"
 serde_json = "1.0.0"
 slab = "0.4"
 tokio = { version = "1.0", features = ["rt", "time"], optional = true }
+tracing = { version = "0.1.30", optional = true }
 
 [dev-dependencies]
 async-std = { version = "1.9.0", features = ["attributes"] }
@@ -65,5 +66,5 @@ external_lz4 = ["rdkafka-sys/external_lz4"]
 [package.metadata.docs.rs]
 # docs.rs doesn't allow writing to ~/.cargo/registry (reasonably), so we have to
 # use the CMake build for a proper out-of-tree build.
-features = ["cmake_build", "naive-runtime", "tokio"]
+features = ["cmake-build", "naive-runtime", "tracing", "tokio"]
 rustdoc-args = ["--cfg", "docsrs"]

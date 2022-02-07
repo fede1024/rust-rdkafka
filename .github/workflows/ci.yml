@@ -30,6 +30,9 @@ jobs:
         - os: macos-11.0
         - os: windows-2019
           features: cmake-build,libz-static
+          rdkafka-sys-features: cmake-build,libz-static
+        - os: ubuntu-20.04
+          features: tracing
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
@@ -38,7 +41,7 @@ jobs:
         toolchain: ${{ env.rust_version }}
         default: true
     - run: cargo build --all-targets --verbose --features "${{ matrix.features }}"
-    - run: cd rdkafka-sys && cargo test --features "${{ matrix.features }}"
+    - run: cd rdkafka-sys && cargo test --features "${{ matrix.rdkafka-sys-features }}"
 
   # Use the `minimal-versions` resolver to ensure we're not claiming to support
   # an older version of a dependency than we actually do.
