@@ -139,13 +139,30 @@ pub struct DefaultConsumerContext;
 impl ClientContext for DefaultConsumerContext {}
 impl ConsumerContext for DefaultConsumerContext {}
 
-/// Specifies whether a commit should be performed synchronously or
-/// asynchronously.
+/// Specifies whether a commit should be performed synchronously or asynchronously.
+///
+/// Regardless of the `CommitMode`, the commit APIs enqueue the commit request in
+/// a local work queue. A separate worker thread picks up this commit request and forwards
+/// it to the Kafka broker over the network. [1]
+///
+/// The difference between CommitMode::Sync and CommitMode::Async is in whether the caller
+/// waits for the Kafka broker to signal that it finished handling the commit request. [2]
+///
+/// Note that the commit APIs are not async in the Rust sense due to the lack of a
+/// callback-based interface exposed by librdkafka. [3]
+///
+/// [1]: https://github.com/edenhill/librdkafka/blob/e3d9515e396615b57674a93b39be2ca60355f4f4/src/rdkafka_cgrp.c#L3161
+/// [2]: https://github.com/edenhill/librdkafka/blob/f092c290995ca81b3afb4015fcc3350ba02caa96/src/rdkafka_offset.c#L387
+/// [3]: https://github.com/edenhill/librdkafka/issues/3212
+/// [4]: https://github.com/edenhill/librdkafka/blob/e3d9515e396615b57674a93b39be2ca60355f4f4/src/rdkafka_cgrp.c#L2846
 #[derive(Clone, Copy, Debug)]
 pub enum CommitMode {
-    /// Synchronous commit.
+    /// In `Sync` mode, the caller blocks until the Kafka broker finishes processing
+    /// the commit request. [4]
     Sync = 0,
-    /// Asynchronous commit.
+
+    /// In `Async` mode, the caller enqueues the commit request in a local
+    /// work queue and returns immediately. [2]
     Async = 1,
 }
 
