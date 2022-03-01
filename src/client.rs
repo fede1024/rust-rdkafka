@@ -11,6 +11,7 @@
 //! [`consumer`]: crate::consumer
 //! [`producer`]: crate::producer
 
+use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 use std::mem::ManuallyDrop;
@@ -65,7 +66,7 @@ impl OAuthTokenData {
     }
 }
 /// Reporting mechanism for errors in generating OAuth tokens.
-pub struct OAuthTokenError(String);
+pub struct OAuthTokenError(pub String);
 
 /// Result type specifically used for generating OAuth tokens
 pub type OAuthResult = Result<OAuthTokenData, OAuthTokenError>;
@@ -515,7 +516,11 @@ pub(crate) unsafe extern "C" fn native_oauth_refresh_cb<C: ClientContext>(
 ) {
     // generate the token using generate_oauth_token
     let context = &mut *(opaque as *mut C);
-    let oauthbearer_config = CStr::from_ptr(oauthbearer_config).to_string_lossy();
+    let oauthbearer_config = match oauthbearer_config.is_null() {
+        true => Cow::from(""),
+        false => CStr::from_ptr(oauthbearer_config).to_string_lossy(),
+    };
+
     let token_info = match context.generate_oauth_token(oauthbearer_config.trim()) {
         Ok(token_info) => token_info,
         Err(OAuthTokenError(errmsg)) => {
@@ -542,7 +547,7 @@ pub(crate) unsafe extern "C" fn native_oauth_refresh_cb<C: ClientContext>(
         }
     };
 
-    let errstr = match CString::new(vec![0_u8; token_info.errstr_size]) {
+    let errstr = match CString::new(vec![u8::MAX; token_info.errstr_size]) {
         Ok(errstr) => errstr,
         Err(_) => {
             let errmsg = "Could not create error string";
