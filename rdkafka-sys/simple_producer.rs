@@ -4,7 +4,7 @@ use clap::{App, Arg};
 use log::info;
 
 use rdkafka::config::ClientConfig;
-use rdkafka::message::{Header, OwnedHeaders};
+use rdkafka::message::OwnedHeaders;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::get_rdkafka_version;
 
@@ -30,10 +30,7 @@ async fn produce(brokers: &str, topic_name: &str) {
                     FutureRecord::to(topic_name)
                         .payload(&format!("Message {}", i))
                         .key(&format!("Key {}", i))
-                        .headers(OwnedHeaders::new().insert(Header {
-                            key: "header_key",
-                            value: Some("header_value"),
-                        })),
+                        .headers(OwnedHeaders::new().add("header_key", "header_value")),
                     Duration::from_secs(0),
                 )
                 .await;

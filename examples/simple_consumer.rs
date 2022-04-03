@@ -72,9 +72,8 @@ async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
                 info!("key: '{:?}', payload: '{}', topic: {}, partition: {}, offset: {}, timestamp: {:?}",
                       m.key(), payload, m.topic(), m.partition(), m.offset(), m.timestamp());
                 if let Some(headers) = m.headers() {
-                    for i in 0..headers.count() {
-                        let header = headers.get(i).unwrap();
-                        info!("  Header {:#?}: {:?}", header.0, header.1);
+                    for header in headers.iter() {
+                        info!("  Header {:#?}: {:?}", header.key, header.value);
                     }
                 }
                 consumer.commit_message(&m, CommitMode::Async).unwrap();
