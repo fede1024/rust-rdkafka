@@ -65,6 +65,7 @@ jobs:
 
   test:
     strategy:
+      fail-fast: false
       matrix:
         include:
         - confluent-version: 5.3.1
@@ -80,6 +81,7 @@ jobs:
       with:
         toolchain: ${{ env.rust_version }}
         default: true
+    - run: sudo apt-get update
     - run: sudo apt-get install -qy valgrind
     - run: ./test_suite.sh
       env:
