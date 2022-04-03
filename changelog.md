@@ -16,6 +16,33 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * **Breaking change.** Remove the deprecated `StreamConsumer::start` method.
   Use the more clearly-named `StreamConsumer::stream` method instead.
 
+* **Breaking change.** Rework the `Headers` trait to distinguish between
+  headers with null values and headers with empty values. The `Headers::get`
+  and `Headers::get_as` methods now return a `Header` struct with the following
+  definition:
+
+  ```rust
+  pub struct Header<'a, V> {
+      pub key: &'a str,
+      pub value: Option<V>,
+  }
+  ```
+
+  Previously, these methods operated in terms of key–value pair `(&str, &[u8])`.
+
+  These methods now panic if presented with an out-of-bounds index. This
+  simplifies their usage in the common case where the index is known to be
+  valid. Use the new `Headers::try_get` and `Headers::try_get_as` methods if you
+  need the old behavior of returning `None` if the index is invalid.
+
+* Rename the `OwnedHeader::add` method to `OwnedHeader::insert`, for parity with
+  the equivalent method for the map types in `std::collection` and to avoid
+  confusion with the `add` method of the `std::ops::Add` trait. The method now
+  takes the `Header` type mentioned above as an argument, rather than the key
+  and value as separate arguments.
+
+* Add the `Headers::iter` method to iterate over all message headers in order.
+
 * Add the `PartitionQueue::set_nonempty_callback` method to register a callback
   for a specific partition queue that will run when that queue becomes
   nonempty. This is a more flexible replacement for the

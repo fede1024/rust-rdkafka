@@ -8,7 +8,7 @@ use futures::stream::{FuturesUnordered, StreamExt};
 use rdkafka::client::DefaultClientContext;
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
-use rdkafka::message::{Headers, Message, OwnedHeaders};
+use rdkafka::message::{Header, Headers, Message, OwnedHeaders};
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::util::Timeout;
 
@@ -104,9 +104,18 @@ async fn test_future_producer_send_fail() {
             .partition(100) // Fail
             .headers(
                 OwnedHeaders::new()
-                    .add("0", "A")
-                    .add("1", "B")
-                    .add("2", "C"),
+                    .insert(Header {
+                        key: "0",
+                        value: Some("A"),
+                    })
+                    .insert(Header {
+                        key: "1",
+                        value: Some("B"),
+                    })
+                    .insert(Header {
+                        key: "2",
+                        value: Some("C"),
+                    }),
             ),
         Duration::from_secs(10),
     );
@@ -120,9 +129,27 @@ async fn test_future_producer_send_fail() {
             assert_eq!(owned_message.topic(), "topic");
             let headers = owned_message.headers().unwrap();
             assert_eq!(headers.count(), 3);
-            assert_eq!(headers.get_as::<str>(0).unwrap(), ("0", Ok("A")));
-            assert_eq!(headers.get_as::<str>(1).unwrap(), ("1", Ok("B")));
-            assert_eq!(headers.get_as::<str>(2).unwrap(), ("2", Ok("C")));
+            assert_eq!(
+                headers.get_as::<str>(0),
+                Ok(Header {
+                    key: "0",
+                    value: Some("A")
+                })
+            );
+            assert_eq!(
+                headers.get_as::<str>(1),
+                Ok(Header {
+                    key: "1",
+                    value: Some("B")
+                })
+            );
+            assert_eq!(
+                headers.get_as::<str>(2),
+                Ok(Header {
+                    key: "2",
+                    value: Some("C")
+                })
+            );
         }
         e => {
             panic!("Unexpected return value: {:?}", e);

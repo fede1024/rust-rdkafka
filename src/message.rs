@@ -71,15 +71,103 @@ pub trait Headers {
     /// Returns the number of contained headers.
     fn count(&self) -> usize;
 
-    /// Gets the specified header, where the first header corresponds to index
-    /// 0. If the index is out of bounds, returns `None`.
-    fn get(&self, idx: usize) -> Option<(&str, &[u8])>;
+    /// Gets the specified header, where the first header corresponds to
+    /// index 0.
+    ///
+    /// Panics if the index is out of bounds.
+    fn get(&self, idx: usize) -> Header<'_, &[u8]> {
+        self.try_get(idx).unwrap_or_else(|| {
+            panic!(
+                "headers index out of bounds: the count is {} but the index is {}",
+                self.count(),
+                idx,
+            )
+        })
+    }
 
-    /// Like [`Headers::get`], but the value of the header will be converted to
-    /// the specified type. If the conversion fails, returns an error.
-    fn get_as<V: FromBytes + ?Sized>(&self, idx: usize) -> Option<(&str, Result<&V, V::Error>)> {
-        self.get(idx)
-            .map(|(name, value)| (name, V::from_bytes(value)))
+    /// Like [`Headers::get`], but the value of the header will be converted
+    /// to the specified type.
+    ///
+    /// Panics if the index is out of bounds.
+    fn get_as<V>(&self, idx: usize) -> Result<Header<'_, &V>, V::Error>
+    where
+        V: FromBytes + ?Sized,
+    {
+        self.try_get_as(idx).unwrap_or_else(|| {
+            panic!(
+                "headers index out of bounds: the count is {} but the index is {}",
+                self.count(),
+                idx,
+            )
+        })
+    }
+
+    /// Like [`Headers::get`], but returns an option if the header is out of
+    /// bounds rather than panicking.
+    fn try_get(&self, idx: usize) -> Option<Header<'_, &[u8]>>;
+
+    /// Like [`Headers::get`], but returns an option if the header is out of
+    /// bounds rather than panicking.
+    fn try_get_as<V>(&self, idx: usize) -> Option<Result<Header<'_, &V>, V::Error>>
+    where
+        V: FromBytes + ?Sized,
+    {
+        self.try_get(idx).map(|header| header.parse())
+    }
+
+    /// Iterates over all headers in order.
+    fn iter(&self) -> HeadersIter<'_, Self>
+    where
+        Self: Sized,
+    {
+        HeadersIter {
+            headers: self,
+            index: 0,
+        }
+    }
+}
+
+/// A Kafka message header.
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Header<'a, V> {
+    /// The header's key.
+    pub key: &'a str,
+    /// The header's value.
+    pub value: Option<V>,
+}
+
+impl<'a> Header<'a, &'a [u8]> {
+    fn parse<V>(&self) -> Result<Header<'a, &'a V>, V::Error>
+    where
+        V: FromBytes + ?Sized,
+    {
+        Ok(Header {
+            key: self.key,
+            value: self.value.map(V::from_bytes).transpose()?,
+        })
+    }
+}
+
+/// An iterator over [`Headers`].
+pub struct HeadersIter<'a, H> {
+    headers: &'a H,
+    index: usize,
+}
+
+impl<'a, H> Iterator for HeadersIter<'a, H>
+where
+    H: Headers,
+{
+    type Item = Header<'a, &'a [u8]>;
+
+    fn next(&mut self) -> Option<Header<'a, &'a [u8]>> {
+        if self.index < self.headers.count() {
+            let item = self.headers.get(self.index);
+            self.index += 1;
+            Some(item)
+        } else {
+            None
+        }
     }
 }
 
@@ -173,7 +261,7 @@ impl Headers for BorrowedHeaders {
         unsafe { rdsys::rd_kafka_header_cnt(self.as_native_ptr()) }
     }
 
-    fn get(&self, idx: usize) -> Option<(&str, &[u8])> {
+    fn try_get(&self, idx: usize) -> Option<Header<'_, &[u8]>> {
         let mut value_ptr = ptr::null();
         let mut name_ptr = ptr::null();
         let mut value_size = 0;
@@ -190,10 +278,11 @@ impl Headers for BorrowedHeaders {
             None
         } else {
             unsafe {
-                Some((
-                    CStr::from_ptr(name_ptr).to_str().unwrap(),
-                    util::ptr_to_slice(value_ptr, value_size),
-                ))
+                Some(Header {
+                    key: CStr::from_ptr(name_ptr).to_str().unwrap(),
+                    value: (!value_ptr.is_null())
+                        .then(|| util::ptr_to_slice(value_ptr, value_size)),
+                })
             }
         }
     }
@@ -426,17 +515,29 @@ impl OwnedHeaders {
         }
     }
 
-    /// Adds a new header.
-    pub fn add<V: ToBytes + ?Sized>(self, name: &str, value: &V) -> OwnedHeaders {
-        let name_cstring = CString::new(name.to_owned()).unwrap();
-        let value_bytes = value.to_bytes();
+    /// Inserts a new header.
+    pub fn insert<V>(self, header: Header<'_, &V>) -> OwnedHeaders
+    where
+        V: ToBytes + ?Sized,
+    {
+        let name_cstring = CString::new(header.key.to_owned()).unwrap();
+        let (value_ptr, value_len) = match header.value {
+            None => (ptr::null_mut(), 0),
+            Some(value) => {
+                let value_bytes = value.to_bytes();
+                (
+                    value_bytes.as_ptr() as *mut c_void,
+                    value_bytes.len() as isize,
+                )
+            }
+        };
         let err = unsafe {
             rdsys::rd_kafka_header_add(
                 self.ptr(),
                 name_cstring.as_ptr(),
                 name_cstring.as_bytes().len() as isize,
-                value_bytes.as_ptr() as *mut c_void,
-                value_bytes.len() as isize,
+                value_ptr,
+                value_len,
             )
         };
         // OwnedHeaders should always represent writable instances of RDKafkaHeaders
@@ -465,8 +566,8 @@ impl Headers for OwnedHeaders {
         unsafe { rdsys::rd_kafka_header_cnt(self.ptr()) }
     }
 
-    fn get(&self, idx: usize) -> Option<(&str, &[u8])> {
-        self.as_borrowed().get(idx)
+    fn try_get(&self, idx: usize) -> Option<Header<'_, &[u8]>> {
+        self.as_borrowed().try_get(idx)
     }
 }
 
@@ -696,12 +797,27 @@ mod test {
     #[test]
     fn test_headers() {
         let owned = OwnedHeaders::new()
-            .add("key1", "value1")
-            .add("key2", "value2");
+            .insert(Header {
+                key: "key1",
+                value: Some("value1"),
+            })
+            .insert(Header {
+                key: "key2",
+                value: Some("value2"),
+            });
         assert_eq!(
             owned.get(0),
-            Some(("key1", &[118, 97, 108, 117, 101, 49][..]))
+            Header {
+                key: "key1",
+                value: Some(&[118, 97, 108, 117, 101, 49][..])
+            }
         );
-        assert_eq!(owned.get_as::<str>(1), Some(("key2", Ok("value2"))));
+        assert_eq!(
+            owned.get_as::<str>(1),
+            Ok(Header {
+                key: "key2",
+                value: Some("value2")
+            })
+        );
     }
 }

@@ -11,7 +11,7 @@ use maplit::hashmap;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
-use rdkafka::message::{Headers, Message, OwnedHeaders, OwnedMessage};
+use rdkafka::message::{Header, Headers, Message, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::{
     BaseProducer, BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer,
 };
@@ -216,10 +216,57 @@ impl ProducerContext for HeaderCheckContext {
         let message = delivery_result.as_ref().unwrap();
         if message_id % 2 == 0 {
             let headers = message.headers().unwrap();
-            assert_eq!(headers.count(), 3);
-            assert_eq!(headers.get(0), Some(("header1", &[1, 2, 3, 4][..])));
-            assert_eq!(headers.get_as::<str>(1), Some(("header2", Ok("value2"))));
-            assert_eq!(headers.get_as::<[u8]>(2), Some(("header3", Ok(&[][..]))));
+            assert_eq!(headers.count(), 4);
+            assert_eq!(
+                headers.get(0),
+                Header {
+                    key: "header1",
+                    value: Some(&[1, 2, 3, 4][..])
+                }
+            );
+            assert_eq!(
+                headers.get_as::<str>(1),
+                Ok(Header {
+                    key: "header2",
+                    value: Some("value2")
+                })
+            );
+            assert_eq!(
+                headers.get_as::<[u8]>(2),
+                Ok(Header {
+                    key: "header3",
+                    value: Some(&[][..])
+                })
+            );
+            assert_eq!(
+                headers.get_as::<[u8]>(3),
+                Ok(Header {
+                    key: "header4",
+                    value: None
+                })
+            );
+            let headers: Vec<_> = headers.iter().collect();
+            assert_eq!(
+                headers,
+                &[
+                    Header {
+                        key: "header1",
+                        value: Some(&[1, 2, 3, 4][..]),
+                    },
+                    Header {
+                        key: "header2",
+                        value: Some(b"value2"),
+                    },
+                    Header {
+                        key: "header3",
+                        value: Some(&[][..]),
+                    },
+                    Header {
+                        key: "header4",
+                        value: None,
+                    },
+                ],
+            )
         } else {
             assert!(message.headers().is_none());
         }
@@ -242,9 +289,22 @@ fn test_base_producer_headers() {
             if id % 2 == 0 {
                 record = record.headers(
                     OwnedHeaders::new()
-                        .add("header1", &[1, 2, 3, 4])
-                        .add("header2", "value2")
-                        .add("header3", &[]),
+                        .insert(Header {
+                            key: "header1",
+                            value: Some(&[1, 2, 3, 4]),
+                        })
+                        .insert(Header {
+                            key: "header2",
+                            value: Some("value2"),
+                        })
+                        .insert(Header {
+                            key: "header3",
+                            value: Some(&[]),
+                        })
+                        .insert::<Vec<u8>>(Header {
+                            key: "header4",
+                            value: None,
+                        }),
                 );
             }
             producer.send::<str, str>(record)
