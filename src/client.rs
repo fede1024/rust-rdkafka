@@ -15,8 +15,7 @@ use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 use std::mem::ManuallyDrop;
-use std::os::raw::c_char;
-use std::os::raw::c_void;
+use std::os::raw::{c_char, c_void};
 use std::ptr;
 use std::slice;
 use std::string::ToString;
@@ -511,7 +510,7 @@ unsafe fn handle_refresh_error_msg(client: *mut RDKafka, error_msg: &str) {
 
 pub(crate) unsafe extern "C" fn native_oauth_refresh_cb<C: ClientContext>(
     client: *mut RDKafka,
-    oauthbearer_config: *const i8,
+    oauthbearer_config: *const c_char,
     opaque: *mut c_void,
 ) {
     // generate the token using generate_oauth_token
