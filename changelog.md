@@ -11,10 +11,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 * **Breaking change.** Only provide `NaiveRuntime` if the `naive-runtime`
   feature is enabled. This elides a dependency on `futures-executor` when the
-  `niave-runtime` feature is disabled.
+  `naive-runtime` feature is disabled.
 
 * **Breaking change.** Remove the deprecated `StreamConsumer::start` method.
-  Use the more clearly-named `StreamConsumer::stream` method instead.
+  Use the more clearly named `StreamConsumer::stream` method instead.
 
 * **Breaking change.** Rework the `Headers` trait to distinguish between
   headers with null values and headers with empty values. The `Headers::get`
@@ -54,6 +54,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   avoids an occasional segfault in the rebalance callback.
 
   Thanks, [@bruceg].
+
+* Add a `tracing` feature which, when enabled, emits log messages using the
+  `tracing` crate rather than the `log` crate.
+
+* Add support for the `OAUTHBEARER` authentication type via the new
+  `ClientContext::generate_oauth_token` method.
 
 [#417]: https://github.com/fede1024/rust-rdkafka/issues/417
 [@bruceg]: https://github.com/bruceg
