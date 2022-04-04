@@ -58,12 +58,16 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Add a `tracing` feature which, when enabled, emits log messages using the
   `tracing` crate rather than the `log` crate.
 
-* Add support for the `OAUTHBEARER` authentication type via the new
+* Add support for the `OAUTHBEARER` SASL authentication mechanism via the new
+  `ClientContext::ENABLE_REFRESH_OAUTH_TOKEN` constant and the new
   `ClientContext::generate_oauth_token` method.
+
+  Thanks, [@jsurany-bloomberg].
 
 [#417]: https://github.com/fede1024/rust-rdkafka/issues/417
 [@bruceg]: https://github.com/bruceg
 [@cjubb39]: https://github.com/cjubb39
+[@jsurany-bloomberg]: https://github.com/jsurany-bloomberg
 
 ## 0.28.0 (2021-11-27)
 

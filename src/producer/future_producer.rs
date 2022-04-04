@@ -3,6 +3,7 @@
 //! See the [`FutureProducer`] for details.
 // TODO: extend docs
 
+use std::error::Error;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
@@ -13,7 +14,7 @@ use std::time::{Duration, Instant};
 use futures_channel::oneshot;
 use futures_util::FutureExt;
 
-use crate::client::{Client, ClientContext, DefaultClientContext, OAuthResult};
+use crate::client::{Client, ClientContext, DefaultClientContext, OAuthToken};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
@@ -137,6 +138,8 @@ pub type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
 
 // Delegates all the methods calls to the wrapped context.
 impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
+    const ENABLE_REFRESH_OAUTH_TOKEN: bool = C::ENABLE_REFRESH_OAUTH_TOKEN;
+
     fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
         self.wrapped_context.log(level, fac, log_message);
     }
@@ -153,7 +156,10 @@ impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
         self.wrapped_context.error(error, reason);
     }
 
-    fn generate_oauth_token(&self, oauthbearer_config: &str) -> OAuthResult {
+    fn generate_oauth_token(
+        &self,
+        oauthbearer_config: Option<&str>,
+    ) -> Result<OAuthToken, Box<dyn Error>> {
         self.wrapped_context
             .generate_oauth_token(oauthbearer_config)
     }

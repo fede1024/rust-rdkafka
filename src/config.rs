@@ -161,7 +161,6 @@ impl NativeClientConfig {
 #[derive(Clone, Debug)]
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
-    pub(crate) use_token_refresh_cb: bool,
     /// The librdkafka logging level. Refer to [`RDKafkaLogLevel`] for the list
     /// of available levels.
     pub log_level: RDKafkaLogLevel,
@@ -178,7 +177,6 @@ impl ClientConfig {
     pub fn new() -> ClientConfig {
         ClientConfig {
             conf_map: HashMap::new(),
-            use_token_refresh_cb: false,
             log_level: log_level_from_global_config(),
         }
     }
@@ -219,13 +217,6 @@ impl ClientConfig {
     /// on the global log level of the log crate.
     pub fn set_log_level(&mut self, log_level: RDKafkaLogLevel) -> &mut ClientConfig {
         self.log_level = log_level;
-        self
-    }
-
-    /// Tells the client to use the `generate_oauth_token` function defined by the context to
-    /// refresh the OAuth token.
-    pub fn use_oauth_token_refresh_cb(&mut self) -> &mut ClientConfig {
-        self.use_token_refresh_cb = true;
         self
     }
 
