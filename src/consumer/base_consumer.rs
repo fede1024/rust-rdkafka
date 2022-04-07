@@ -2,6 +2,7 @@
 
 use std::cmp;
 use std::ffi::CString;
+use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 use std::os::raw::c_void;
 use std::ptr;
@@ -24,7 +25,7 @@ use crate::log::trace;
 use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{cstr_to_owned, NativePtr, Timeout};
+use crate::util::{cstr_to_owned, AsyncRuntime, DefaultRuntime, NativePtr, Timeout};
 
 pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     _conf: *mut RDKafka,
@@ -65,12 +66,14 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
 ///
 /// This consumer must be periodically polled to make progress on rebalancing,
 /// callbacks and to receive messages.
-pub struct BaseConsumer<C = DefaultConsumerContext>
+pub struct BaseConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     client: Client<C>,
     main_queue_min_poll_interval: Timeout,
+    _runtime: PhantomData<R>,
 }
 
 impl FromClientConfig for BaseConsumer {
@@ -86,15 +89,16 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     }
 }
 
-impl<C> BaseConsumer<C>
+impl<C, R> BaseConsumer<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     pub(crate) fn new(
         config: &ClientConfig,
         native_config: NativeClientConfig,
         context: C,
-    ) -> KafkaResult<BaseConsumer<C>> {
+    ) -> KafkaResult<Self> {
         unsafe {
             rdsys::rd_kafka_conf_set_rebalance_cb(
                 native_config.ptr(),
@@ -115,6 +119,7 @@ where
         Ok(BaseConsumer {
             client,
             main_queue_min_poll_interval,
+            _runtime: PhantomData,
         })
     }
 
@@ -198,7 +203,7 @@ where
     ///   // Handle the message
     /// }
     /// ```
-    pub fn iter(&self) -> Iter<'_, C> {
+    pub fn iter(&self) -> Iter<'_, C, R> {
         Iter(self)
     }
 
@@ -228,7 +233,7 @@ where
         self: &Arc<Self>,
         topic: &str,
         partition: i32,
-    ) -> Option<PartitionQueue<C>> {
+    ) -> Option<PartitionQueue<C, R>> {
         let topic = match CString::new(topic) {
             Ok(topic) => topic,
             Err(_) => return None,
@@ -247,9 +252,10 @@ where
     }
 }
 
-impl<C> Consumer<C> for BaseConsumer<C>
+impl<C, R> Consumer<C> for BaseConsumer<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     fn client(&self) -> &Client<C> {
         &self.client
@@ -541,9 +547,10 @@ where
     }
 }
 
-impl<C> Drop for BaseConsumer<C>
+impl<C, R> Drop for BaseConsumer<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     fn drop(&mut self) {
         trace!("Destroying consumer: {:?}", self.client.native_ptr()); // TODO: fix me (multiple executions ?)
@@ -556,13 +563,15 @@ where
 ///
 /// Each call to [`Iter::next`] simply calls [`BaseConsumer::poll`] with an
 /// infinite timeout.
-pub struct Iter<'a, C>(&'a BaseConsumer<C>)
-where
-    C: ConsumerContext;
-
-impl<'a, C> Iterator for Iter<'a, C>
+pub struct Iter<'a, C, R>(&'a BaseConsumer<C, R>)
 where
     C: ConsumerContext,
+    R: AsyncRuntime;
+
+impl<'a, C, R> Iterator for Iter<'a, C, R>
+where
+    C: ConsumerContext,
+    R: AsyncRuntime,
 {
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
@@ -575,12 +584,13 @@ where
     }
 }
 
-impl<'a, C> IntoIterator for &'a BaseConsumer<C>
+impl<'a, C, R> IntoIterator for &'a BaseConsumer<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     type Item = KafkaResult<BorrowedMessage<'a>>;
-    type IntoIter = Iter<'a, C>;
+    type IntoIter = Iter<'a, C, R>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -588,20 +598,22 @@ where
 }
 
 /// A message queue for a single partition.
-pub struct PartitionQueue<C>
+pub struct PartitionQueue<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
-    consumer: Arc<BaseConsumer<C>>,
+    consumer: Arc<BaseConsumer<C, R>>,
     queue: NativeQueue,
     nonempty_callback: Option<Box<Box<dyn Fn() + Send + Sync>>>,
 }
 
-impl<C> PartitionQueue<C>
+impl<C, R> PartitionQueue<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
-    pub(crate) fn new(consumer: Arc<BaseConsumer<C>>, queue: NativeQueue) -> Self {
+    pub(crate) fn new(consumer: Arc<BaseConsumer<C, R>>, queue: NativeQueue) -> Self {
         PartitionQueue {
             consumer,
             queue,
@@ -658,9 +670,10 @@ where
     }
 }
 
-impl<C> Drop for PartitionQueue<C>
+impl<C, R> Drop for PartitionQueue<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     fn drop(&mut self) {
         unsafe { rdsys::rd_kafka_queue_cb_event_enable(self.queue.ptr(), None, ptr::null_mut()) }

@@ -1,7 +1,6 @@
 //! High-level consumers with a [`Stream`](futures_util::Stream) interface.
 
 use std::ffi::CString;
-use std::marker::PhantomData;
 use std::os::raw::c_void;
 use std::pin::Pin;
 use std::ptr;
@@ -164,12 +163,12 @@ impl<'a> Drop for MessageStream<'a> {
 pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
-    base: BaseConsumer<C>,
+    base: BaseConsumer<C, R>,
     wakers: Arc<WakerSlab>,
     queue: NativeQueue,
     _shutdown_trigger: oneshot::Sender<()>,
-    _runtime: PhantomData<R>,
 }
 
 impl<R> FromClientConfig for StreamConsumer<DefaultConsumerContext, R>
@@ -243,7 +242,6 @@ where
             wakers,
             queue,
             _shutdown_trigger: shutdown_trigger,
-            _runtime: PhantomData,
         })
     }
 }
@@ -251,6 +249,7 @@ where
 impl<C, R> StreamConsumer<C, R>
 where
     C: ConsumerContext + 'static,
+    R: AsyncRuntime,
 {
     /// Constructs a stream that yields messages from this consumer.
     ///
@@ -359,6 +358,7 @@ where
 impl<C, R> Consumer<C> for StreamConsumer<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     fn client(&self) -> &Client<C> {
         self.base.client()
@@ -522,6 +522,7 @@ where
 pub struct StreamPartitionQueue<C, R = DefaultRuntime>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     queue: NativeQueue,
     wakers: Arc<WakerSlab>,
@@ -531,6 +532,7 @@ where
 impl<C, R> StreamPartitionQueue<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     /// Constructs a stream that yields messages from this partition.
     ///
@@ -578,6 +580,7 @@ where
 impl<C, R> Drop for StreamPartitionQueue<C, R>
 where
     C: ConsumerContext,
+    R: AsyncRuntime,
 {
     fn drop(&mut self) {
         unsafe { disable_nonempty_callback(&self.queue) }
