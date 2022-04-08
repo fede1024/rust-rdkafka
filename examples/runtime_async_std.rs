@@ -3,11 +3,13 @@ use std::pin::Pin;
 use std::process;
 use std::time::Duration;
 
+use async_trait::async_trait;
 use clap::{App, Arg};
 use futures::stream::StreamExt;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};
+use rdkafka::error::KafkaResult;
 use rdkafka::message::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::AsyncRuntime;
@@ -18,6 +20,7 @@ mod example_utils;
 
 pub struct AsyncStdRuntime;
 
+#[async_trait]
 impl AsyncRuntime for AsyncStdRuntime {
     type Delay = Pin<Box<dyn Future<Output = ()> + Send>>;
 
@@ -26,6 +29,14 @@ impl AsyncRuntime for AsyncStdRuntime {
         T: Future<Output = ()> + Send + 'static,
     {
         async_std::task::spawn(task);
+    }
+
+    async fn spawn_blocking<F, R>(f: F) -> KafkaResult<R>
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        Ok(async_std::task::spawn_blocking(f).await)
     }
 
     fn delay_for(duration: Duration) -> Self::Delay {

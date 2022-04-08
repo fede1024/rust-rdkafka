@@ -1,16 +1,21 @@
 use std::future::Future;
 use std::process;
+use std::thread;
 use std::time::{Duration, Instant};
 
+use async_trait::async_trait;
 use clap::{App, Arg};
 use futures::future::{self, FutureExt};
 use futures::stream::StreamExt;
+use futures_channel::oneshot;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};
+use rdkafka::error::{KafkaError, KafkaResult};
 use rdkafka::message::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::util::AsyncRuntime;
+use rdkafka_sys::types::RDKafkaErrorCode;
 
 use crate::example_utils::setup_logger;
 
@@ -18,6 +23,7 @@ mod example_utils;
 
 pub struct SmolRuntime;
 
+#[async_trait]
 impl AsyncRuntime for SmolRuntime {
     type Delay = future::Map<smol::Timer, fn(Instant)>;
 
@@ -26,6 +32,27 @@ impl AsyncRuntime for SmolRuntime {
         T: Future<Output = ()> + Send + 'static,
     {
         smol::spawn(task).detach()
+    }
+
+    async fn spawn_blocking<F, R>(f: F) -> KafkaResult<R>
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        let (tx, rx) = oneshot::channel();
+        let handle = thread::spawn(move || {
+            let task = smol::spawn(async {
+                f()
+            });
+            smol::block_on(async {
+                tx.send(task.await).map_err(|_| KafkaError::Global(RDKafkaErrorCode::Fail)).unwrap()
+            });
+        });
+        let res = rx.await?;
+        match handle.join() {
+            Ok(_) => Ok(res),
+            Err(_) => Err(KafkaError::Global(RDKafkaErrorCode::Fail))
+        }
     }
 
     fn delay_for(duration: Duration) -> Self::Delay {

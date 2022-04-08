@@ -6,8 +6,12 @@ use std::fmt;
 use std::ptr;
 use std::sync::Arc;
 
+#[cfg(feature = "naive-runtime")]
+use futures_channel::oneshot;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
+#[cfg(feature = "naive-runtime")]
+use std::thread;
 
 use crate::util::{KafkaDrop, NativePtr};
 
@@ -153,6 +157,8 @@ pub enum KafkaError {
     Global(RDKafkaErrorCode),
     /// Group list fetch failed.
     GroupListFetch(RDKafkaErrorCode),
+    /// Blocking sub task paniced
+    Panic,
     /// Message consumption failed.
     MessageConsumption(RDKafkaErrorCode),
     /// Message production error.
@@ -219,6 +225,7 @@ impl fmt::Debug for KafkaError {
             }
             KafkaError::Nul(_) => write!(f, "FFI null error"),
             KafkaError::OffsetFetch(err) => write!(f, "KafkaError (Offset fetch error: {})", err),
+            KafkaError::Panic => write!(f, "Async sub task paniced"),
             KafkaError::PartitionEOF(part_n) => write!(f, "KafkaError (Partition EOF: {})", part_n),
             KafkaError::PauseResume(ref err) => {
                 write!(f, "KafkaError (Pause/resume error: {})", err)
@@ -260,6 +267,7 @@ impl fmt::Display for KafkaError {
             }
             KafkaError::Nul(_) => write!(f, "FFI nul error"),
             KafkaError::OffsetFetch(err) => write!(f, "Offset fetch error: {}", err),
+            KafkaError::Panic => write!(f, "Async sub task paniced"),
             KafkaError::PartitionEOF(part_n) => write!(f, "Partition EOF: {}", part_n),
             KafkaError::PauseResume(ref err) => write!(f, "Pause/resume error: {}", err),
             KafkaError::Seek(ref err) => write!(f, "Seek error: {}", err),
@@ -289,6 +297,7 @@ impl Error for KafkaError {
             KafkaError::NoMessageReceived => None,
             KafkaError::Nul(_) => None,
             KafkaError::OffsetFetch(err) => Some(err),
+            KafkaError::Panic => None,
             KafkaError::PartitionEOF(_) => None,
             KafkaError::PauseResume(_) => None,
             KafkaError::Seek(_) => None,
@@ -303,6 +312,30 @@ impl Error for KafkaError {
 impl From<ffi::NulError> for KafkaError {
     fn from(err: ffi::NulError) -> KafkaError {
         KafkaError::Nul(err)
+    }
+}
+
+#[cfg(feature = "naive-runtime")]
+impl From<oneshot::Canceled> for KafkaError {
+    fn from(_: oneshot::Canceled) -> KafkaError {
+        if thread::panicking() {
+            KafkaError::Panic
+        } else {
+            KafkaError::Canceled
+        }
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl From<tokio::task::JoinError> for KafkaError {
+    fn from(err: tokio::task::JoinError) -> KafkaError {
+        if err.is_cancelled() {
+            KafkaError::Canceled
+        } else if err.is_panic() {
+            KafkaError::Panic
+        } else {
+            KafkaError::Global(RDKafkaErrorCode::Fail)
+        }
     }
 }
 
@@ -326,6 +359,7 @@ impl KafkaError {
             KafkaError::NoMessageReceived => None,
             KafkaError::Nul(_) => None,
             KafkaError::OffsetFetch(err) => Some(*err),
+            KafkaError::Panic => None,
             KafkaError::PartitionEOF(_) => None,
             KafkaError::PauseResume(_) => None,
             KafkaError::Seek(_) => None,

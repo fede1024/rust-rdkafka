@@ -14,11 +14,17 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+#[cfg(any(feature = "naive-runtime", feature = "tokio"))]
+use async_trait::async_trait;
 #[cfg(feature = "naive-runtime")]
 use futures_channel::oneshot;
 #[cfg(feature = "naive-runtime")]
 use futures_util::future::{FutureExt, Map};
 
+#[cfg(feature = "naive-runtime")]
+use rdsys::types::RDKafkaErrorCode;
+#[cfg(any(feature = "naive-runtime", feature = "tokio"))]
+use crate::error::{KafkaError, KafkaResult};
 use crate::log::trace;
 
 use rdkafka_sys as rdsys;
@@ -351,6 +357,7 @@ where
 /// [async-std]: https://docs.rs/async-std
 /// [runtime_smol]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/runtime_smol.rs
 /// [runtime_async_std]: https://github.com/fede1024/rust-rdkafka/tree/master/examples/runtime_async_std.rs
+#[async_trait]
 pub trait AsyncRuntime: Send + Sync + 'static {
     /// The type of the future returned by
     /// [`delay_for`](AsyncRuntime::delay_for).
@@ -363,6 +370,15 @@ pub trait AsyncRuntime: Send + Sync + 'static {
     fn spawn<T>(task: T)
     where
         T: Future<Output = ()> + Send + 'static;
+
+    /// Spawns a blocking task to run a dedicated threadpool.
+    ///
+    /// The task should be be polled to completion, unless the runtime exits
+    /// first. With some runtimes this requires an explicit "detach" step.
+    async fn spawn_blocking<F, R>(f: F) -> KafkaResult<R>
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static;
 
     /// Constructs a future that will resolve after `duration` has elapsed.
     fn delay_for(duration: Duration) -> Self::Delay;
@@ -416,6 +432,7 @@ pub struct NaiveRuntime;
 
 #[cfg(feature = "naive-runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "naive-runtime")))]
+#[async_trait]
 impl AsyncRuntime for NaiveRuntime {
     type Delay = Map<oneshot::Receiver<()>, fn(Result<(), oneshot::Canceled>)>;
 
@@ -424,6 +441,22 @@ impl AsyncRuntime for NaiveRuntime {
         T: Future<Output = ()> + Send + 'static,
     {
         thread::spawn(|| futures_executor::block_on(task));
+    }
+
+    async fn spawn_blocking<F, R>(f: F) -> KafkaResult<R>
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        let (tx, rx) = oneshot::channel();
+        let handle = thread::spawn(move || {
+            tx.send(f())
+        });
+        let res = rx.await?;
+        match handle.join() {
+            Ok(_) => Ok(res),
+            Err(_) => Err(KafkaError::Global(RDKafkaErrorCode::Fail))
+        }
     }
 
     fn delay_for(duration: Duration) -> Self::Delay {
@@ -446,6 +479,7 @@ pub struct TokioRuntime;
 
 #[cfg(feature = "tokio")]
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
+#[async_trait]
 impl AsyncRuntime for TokioRuntime {
     type Delay = tokio::time::Sleep;
 
@@ -454,6 +488,14 @@ impl AsyncRuntime for TokioRuntime {
         T: Future<Output = ()> + Send + 'static,
     {
         tokio::spawn(task);
+    }
+
+    async fn spawn_blocking<F, R>(f: F) -> KafkaResult<R>
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        Ok(tokio::task::spawn_blocking(f).await?)
     }
 
     fn delay_for(duration: Duration) -> Self::Delay {
