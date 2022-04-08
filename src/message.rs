@@ -618,6 +618,11 @@ impl OwnedMessage {
             headers,
         }
     }
+
+    /// Detaches the [`OwnedHeaders`] from this `OwnedMessage`.
+    pub fn detach_headers(&mut self) -> Option<OwnedHeaders> {
+        self.headers.take()
+    }
 }
 
 impl Message for OwnedMessage {
