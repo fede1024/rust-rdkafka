@@ -72,6 +72,10 @@ fn main() {
             }
         }
     } else {
+        let rdkafkasys_root = Path::new("rdkafka-sys");
+        if rdkafkasys_root.exists() {
+            assert!(env::set_current_dir(&rdkafkasys_root).is_ok());
+        }
         if !Path::new("librdkafka/LICENSE").exists() {
             eprintln!("Setting up submodules");
             run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
@@ -167,7 +171,7 @@ fn build_librdkafka() {
     println!("Compiling librdkafka");
     env::set_var(
         "MAKEFLAGS",
-        env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"),
+        env::var_os("CARGO_MAKEFLAGS").unwrap_or_default(),
     );
     run_command_or_fail(
         &out_dir,
