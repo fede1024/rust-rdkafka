@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use rdkafka::config::ClientConfig;
-use rdkafka::consumer::{Consumer, StreamConsumer};
+use rdkafka::consumer::{AsyncConsumer, Consumer, StreamConsumer};
 use rdkafka::error::KafkaError;
 use rdkafka::topic_partition_list::TopicPartitionList;
 
@@ -95,6 +95,23 @@ async fn test_subscription() {
     populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None).await;
     let consumer = create_consumer(&rand_test_group());
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
+
+    // Make sure the consumer joins the group.
+    let _consumer_future = consumer.recv().await;
+
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_topic_unassigned(&topic_name);
+    assert_eq!(tpl, consumer.subscription().unwrap());
+}
+
+#[tokio::test]
+async fn test_subscription_async() {
+    let _r = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None).await;
+    let consumer = create_consumer(&rand_test_group());
+    AsyncConsumer(consumer.base).subscribe(&[topic_name.as_str()]).unwrap();
 
     // Make sure the consumer joins the group.
     let _consumer_future = consumer.recv().await;

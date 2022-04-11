@@ -8,6 +8,8 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::sync::Arc;
 
+#[cfg(feature = "tokio")]
+use async_trait::async_trait;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
@@ -16,7 +18,7 @@ use crate::config::{
     ClientConfig, FromClientConfig, FromClientConfigAndContext, NativeClientConfig,
 };
 use crate::consumer::{
-    CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext,
+    AsyncConsumer, CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext,
     RebalanceProtocol,
 };
 use crate::error::{IsError, KafkaError, KafkaResult};
@@ -250,17 +252,10 @@ where
             PartitionQueue::new(self.clone(), queue)
         })
     }
-}
 
-impl<C, R> Consumer<C> for BaseConsumer<C, R>
-where
-    C: ConsumerContext,
-    R: AsyncRuntime,
-{
-    fn client(&self) -> &Client<C> {
-        &self.client
-    }
-
+    // Implementation of synchronous librdkafka,
+    // so that it can be called from the Consumer and AsyncConsumer implementation,
+    // and delegated to AsyncRuntime.spawn_blocking in AsyncConsumer
     fn group_metadata(&self) -> Option<ConsumerGroupMetadata> {
         let ptr = unsafe {
             NativePtr::from_ptr(rdsys::rd_kafka_consumer_group_metadata(
@@ -546,6 +541,295 @@ where
         self.client.native_client().rebalance_protocol()
     }
 }
+
+impl<C, R> Consumer<C> for BaseConsumer<C, R>
+where
+    C: ConsumerContext,
+    R: AsyncRuntime,
+{
+    fn client(&self) -> &Client<C> {
+        &self.client
+    }
+
+    fn group_metadata(&self) -> Option<ConsumerGroupMetadata> {
+        self.group_metadata()
+    }
+
+    fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
+        self.subscribe(topics)
+    }
+
+    fn unsubscribe(&self) {
+        self.unsubscribe()
+    }
+
+    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+        self.assign(assignment)
+    }
+
+    fn seek<T: Into<Timeout>>(
+        &self,
+        topic: &str,
+        partition: i32,
+        offset: Offset,
+        timeout: T,
+    ) -> KafkaResult<()> {
+        self.seek(topic, partition, offset, timeout)
+    }
+
+    fn commit(
+        &self,
+        topic_partition_list: &TopicPartitionList,
+        mode: CommitMode,
+    ) -> KafkaResult<()> {
+        self.commit(topic_partition_list, mode)
+    }
+
+    fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()> {
+        self.commit_consumer_state(mode)
+    }
+
+    fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()> {
+        self.commit_message(message, mode)
+    }
+
+    fn store_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()> {
+        self.store_offset(topic, partition, offset)
+    }
+
+    fn store_offset_from_message(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
+        self.store_offset_from_message(message)
+    }
+
+    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
+        self.store_offsets(tpl)
+    }
+
+    fn subscription(&self) -> KafkaResult<TopicPartitionList> {
+        self.subscription()
+    }
+
+    fn assignment(&self) -> KafkaResult<TopicPartitionList> {
+        self.assignment()
+    }
+
+    fn committed<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<TopicPartitionList> {
+        self.committed(timeout)
+    }
+
+    fn committed_offsets<T: Into<Timeout>>(
+        &self,
+        tpl: TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList> {
+        self.committed_offsets(tpl, timeout)
+    }
+
+    fn offsets_for_timestamp<T: Into<Timeout>>(
+        &self,
+        timestamp: i64,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList> {
+        self.offsets_for_timestamp(timestamp, timeout)
+    }
+
+    // `timestamps` is a `TopicPartitionList` with timestamps instead of
+    // offsets.
+    fn offsets_for_times<T: Into<Timeout>>(
+        &self,
+        timestamps: TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<TopicPartitionList> {
+        self.offsets_for_times(timestamps, timeout)
+    }
+
+    fn position(&self) -> KafkaResult<TopicPartitionList> {
+        self.position()
+    }
+
+    fn fetch_metadata<T: Into<Timeout>>(
+        &self,
+        topic: Option<&str>,
+        timeout: T,
+    ) -> KafkaResult<Metadata> {
+        self.fetch_metadata(topic, timeout)
+    }
+
+    fn fetch_watermarks<T: Into<Timeout>>(
+        &self,
+        topic: &str,
+        partition: i32,
+        timeout: T,
+    ) -> KafkaResult<(i64, i64)> {
+        self.fetch_watermarks(topic, partition, timeout)
+    }
+
+    fn fetch_group_list<T: Into<Timeout>>(
+        &self,
+        group: Option<&str>,
+        timeout: T,
+    ) -> KafkaResult<GroupList> {
+        self.fetch_group_list(group, timeout)
+    }
+
+    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+        self.pause(partitions)
+    }
+
+    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+        self.resume(partitions)
+    }
+
+    fn rebalance_protocol(&self) -> RebalanceProtocol {
+        self.rebalance_protocol()
+    }
+}
+
+#[async_trait]
+impl<C, R> AsyncConsumer<C> for BaseConsumer<C, R>
+where
+    C: ConsumerContext,
+    R: AsyncRuntime,
+{
+    fn client(&self) -> &Client<C> {
+        &self.client
+    }
+
+    /// Returns a reference to the [`ConsumerContext`] used to create this
+    /// consumer.
+    fn context(&self) -> &Arc<C> {
+        AsyncConsumer::client(self).context()
+    }
+
+    fn group_metadata(&self) -> Option<ConsumerGroupMetadata> {
+        self.group_metadata()
+    }
+
+    async fn subscribe(&'static self, topics: &'static [&'static str]) -> KafkaResult<()> {
+        R::spawn_blocking(move || self.subscribe(topics)).await?
+    }
+//
+//    async fn unsubscribe(&self) {
+//    }
+//
+//    async fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+//
+//    }
+//
+//    async fn seek<T: Into<Timeout>>(
+//        &self,
+//        topic: &str,
+//        partition: i32,
+//        offset: Offset,
+//        timeout: T,
+//    ) -> KafkaResult<()> {
+//
+//    }
+//
+//    async fn commit(
+//        &self,
+//        topic_partition_list: &TopicPartitionList,
+//        mode: CommitMode,
+//    ) -> KafkaResult<()> {
+//
+//    }
+//
+//    async fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()> {
+//
+//    }
+//
+//    async fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()> {
+//
+//    }
+//
+//    async fn store_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()> {
+//
+//    }
+//
+//    async fn store_offset_from_message(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
+//
+//    }
+//
+//    async fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
+//
+//    }
+//
+//    async fn subscription(&self) -> KafkaResult<TopicPartitionList> {
+//
+//    }
+//
+//    async fn assignment(&self) -> KafkaResult<TopicPartitionList> {
+//
+//    }
+//
+//    async fn committed<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<TopicPartitionList> {
+//
+//    }
+//
+//    async fn committed_offsets<T: Into<Timeout>>(
+//        &self,
+//        tpl: TopicPartitionList,
+//        timeout: T,
+//    ) -> KafkaResult<TopicPartitionList> {
+//
+//    }
+//
+//    async fn offsets_for_timestamp<T: Into<Timeout>>(
+//        &self,
+//        timestamp: i64,
+//        timeout: T,
+//    ) -> KafkaResult<TopicPartitionList> {
+//
+//    }
+//
+//    // `timestamps` is a `TopicPartitionList` with timestamps instead of
+//    // offsets.
+//    async fn offsets_for_times<T: Into<Timeout>>(
+//        &self,
+//        timestamps: TopicPartitionList,
+//        timeout: T,
+//    ) -> KafkaResult<TopicPartitionList> {
+//
+//    }
+//
+//    async fn position(&self) -> KafkaResult<TopicPartitionList> {
+//
+//    }
+//
+//    async fn fetch_metadata<T: Into<Timeout>>(
+//        &self,
+//        topic: Option<&str>,
+//        timeout: T,
+//    ) -> KafkaResult<Metadata> {
+//    }
+//
+//    async fn fetch_watermarks<T: Into<Timeout>>(
+//        &self,
+//        topic: &str,
+//        partition: i32,
+//        timeout: T,
+//    ) -> KafkaResult<(i64, i64)> {
+//    }
+//
+//    async fn fetch_group_list<T: Into<Timeout>>(
+//        &self,
+//        group: Option<&str>,
+//        timeout: T,
+//    ) -> KafkaResult<GroupList> {
+//    }
+//
+//    async fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+//
+//    }
+//
+//    async fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+//
+//    }
+//
+//    fn rebalance_protocol(&self) -> RebalanceProtocol {
+//    }
+}
+
 
 impl<C, R> Drop for BaseConsumer<C, R>
 where

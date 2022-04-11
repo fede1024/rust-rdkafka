@@ -6,6 +6,8 @@ use std::time::Duration;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
+#[cfg(feature = "tokio")]
+use async_trait::async_trait;
 
 use crate::client::{Client, ClientContext, NativeClient};
 use crate::error::KafkaResult;
@@ -14,7 +16,7 @@ use crate::log::{error, trace};
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{cstr_to_owned, KafkaDrop, NativePtr, Timeout};
+use crate::util::{cstr_to_owned, AsyncRuntime, DefaultRuntime, KafkaDrop, NativePtr, Timeout};
 
 pub mod base_consumer;
 pub mod stream_consumer;
@@ -358,4 +360,170 @@ where
 
     /// Reports the rebalance protocol in use.
     fn rebalance_protocol(&self) -> RebalanceProtocol;
+}
+
+/// Common trait for all async consumers. Any methods that call blocking
+/// functions inside librdkafka will return a Future that must be waited on.
+///
+/// # Note about object safety
+///
+/// Doing type erasure on consumers is expected to be rare (eg. `Box<dyn
+/// AsyncConsumer>`). Therefore, the API is optimised for the case where a concrete
+/// type is available. As a result, some methods are not available on trait
+/// objects, since they are generic.
+#[async_trait]
+pub trait AsyncConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
+where
+    C: ConsumerContext,
+    R: AsyncRuntime,
+{
+    /// Returns the [`Client`] underlying this consumer.
+    fn client(&self) -> &Client<C>;
+
+    /// Returns a reference to the [`ConsumerContext`] used to create this
+    /// consumer.
+    fn context(&self) -> &Arc<C> {
+        self.client().context()
+    }
+
+    /// Returns the current consumer group metadata associated with the
+    /// consumer.
+    ///
+    /// If the consumer was not configured with a `group.id`, returns `None`.
+    /// For use with [`Producer::send_offsets_to_transaction`].
+    ///
+    /// [`Producer::send_offsets_to_transaction`]: crate::producer::Producer::send_offsets_to_transaction
+    fn group_metadata(&self) -> Option<ConsumerGroupMetadata>;
+
+    /// Subscribes the consumer to a list of topics.
+    async fn subscribe(&'static self, topics: &'static [&'static str]) -> KafkaResult<()>;
+
+//    /// Unsubscribes the current subscription list.
+//    async fn unsubscribe(&self);
+//
+//    /// Manually assigns topics and partitions to the consumer. If used,
+//    /// automatic consumer rebalance won't be activated.
+//    async fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()>;
+//
+//    /// Seeks to `offset` for the specified `topic` and `partition`. After a
+//    /// successful call to `seek`, the next poll of the consumer will return the
+//    /// message with `offset`.
+//    async fn seek<T: Into<Timeout>>(
+//        &self,
+//        topic: &str,
+//        partition: i32,
+//        offset: Offset,
+//        timeout: T,
+//    ) -> KafkaResult<()>;
+//
+//    /// Commits the offset of the specified message. The commit can be sync
+//    /// (blocking), or async. Notice that when a specific offset is committed,
+//    /// all the previous offsets are considered committed as well. Use this
+//    /// method only if you are processing messages in order.
+//    async fn commit(
+//        &self,
+//        topic_partition_list: &TopicPartitionList,
+//        mode: CommitMode,
+//    ) -> KafkaResult<()>;
+//
+//    /// Commits the current consumer state. Notice that if the consumer fails
+//    /// after a message has been received, but before the message has been
+//    /// processed by the user code, this might lead to data loss. Check the
+//    /// "at-least-once delivery" section in the readme for more information.
+//    async fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()>;
+//
+//    /// Commit the provided message. Note that this will also automatically
+//    /// commit every message with lower offset within the same partition.
+//    async fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()>;
+//
+//    /// Stores offset to be used on the next (auto)commit. When
+//    /// using this `enable.auto.offset.store` should be set to `false` in the
+//    /// config.
+//    async fn store_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()>;
+//
+//    /// Like [`Consumer::store_offset`], but the offset to store is derived from
+//    /// the provided message.
+//    async fn store_offset_from_message(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()>;
+//
+//    /// Store offsets to be used on the next (auto)commit. When using this
+//    /// `enable.auto.offset.store` should be set to `false` in the config.
+//    async fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()>;
+//
+//    /// Returns the current topic subscription.
+//    async fn subscription(&self) -> KafkaResult<TopicPartitionList>;
+//
+//    /// Returns the current partition assignment.
+//    async fn assignment(&self) -> KafkaResult<TopicPartitionList>;
+//
+//    /// Retrieves the committed offsets for topics and partitions.
+//    async fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
+//    where
+//        T: Into<Timeout>,
+//        Self: Sized;
+//
+//    /// Retrieves the committed offsets for specified topics and partitions.
+//    async fn committed_offsets<T>(
+//        &self,
+//        tpl: TopicPartitionList,
+//        timeout: T,
+//    ) -> KafkaResult<TopicPartitionList>
+//    where
+//        T: Into<Timeout>;
+//
+//    /// Looks up the offsets for this consumer's partitions by timestamp.
+//    async fn offsets_for_timestamp<T>(
+//        &self,
+//        timestamp: i64,
+//        timeout: T,
+//    ) -> KafkaResult<TopicPartitionList>
+//    where
+//        T: Into<Timeout>,
+//        Self: Sized;
+//
+//    /// Looks up the offsets for the specified partitions by timestamp.
+//    async fn offsets_for_times<T>(
+//        &self,
+//        timestamps: TopicPartitionList,
+//        timeout: T,
+//    ) -> KafkaResult<TopicPartitionList>
+//    where
+//        T: Into<Timeout>,
+//        Self: Sized;
+//
+//    /// Retrieve current positions (offsets) for topics and partitions.
+//    async fn position(&self) -> KafkaResult<TopicPartitionList>;
+//
+//    /// Returns the metadata information for the specified topic, or for all
+//    /// topics in the cluster if no topic is specified.
+//    async fn fetch_metadata<T>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata>
+//    where
+//        T: Into<Timeout>,
+//        Self: Sized;
+//
+//    /// Returns the low and high watermarks for a specific topic and partition.
+//    async fn fetch_watermarks<T>(
+//        &self,
+//        topic: &str,
+//        partition: i32,
+//        timeout: T,
+//    ) -> KafkaResult<(i64, i64)>
+//    where
+//        T: Into<Timeout>,
+//        Self: Sized;
+//
+//    /// Returns the group membership information for the given group. If no group is
+//    /// specified, all groups will be returned.
+//    async fn fetch_group_list<T>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList>
+//    where
+//        T: Into<Timeout>,
+//        Self: Sized;
+//
+//    /// Pauses consumption for the provided list of partitions.
+//    async fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()>;
+//
+//    /// Resumes consumption for the provided list of partitions.
+//    async fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()>;
+//
+//    /// Reports the rebalance protocol in use.
+//    fn rebalance_protocol(&self) -> RebalanceProtocol;
 }
