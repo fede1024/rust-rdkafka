@@ -139,6 +139,7 @@ Here are some of the projects using rust-rdkafka:
   the [blog post][timely-blog] announcing its Kafka integration.
 - [kafka-view]: a web interface for Kafka clusters.
 - [kafka-benchmark]: a high performance benchmarking tool for Kafka.
+- [callysto]: Stream processing framework in Rust.
 
 *If you are using rust-rdkafka, please let us know!*
 
@@ -263,6 +264,7 @@ logging framework.
 [smol]: https://docs.rs/smol
 [timely-blog]: https://github.com/frankmcsherry/blog/blob/master/posts/2017-11-08.md
 [timely-dataflow]: https://github.com/frankmcsherry/timely-dataflow
+[callysto]: https://github.com/vertexclique/callysto
 [Tokio]: https://tokio.rs/
 
 ## rdkafka-sys
