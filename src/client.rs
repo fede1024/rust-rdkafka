@@ -357,6 +357,17 @@ impl<C: ClientContext> Client<C> {
         Ok((low, high))
     }
 
+    /// Returns the cluster identifier option or None if the cluster identifier is null
+    pub fn fetch_cluster_id<T: Into<Timeout>>(&self, timeout: T) -> Option<String> {
+        let cluster_id =
+            unsafe { rdsys::rd_kafka_clusterid(self.native_ptr(), timeout.into().as_millis()) };
+        if cluster_id.is_null() {
+            return None;
+        }
+        let buf = unsafe { CStr::from_ptr(cluster_id).to_bytes() };
+        String::from_utf8(buf.to_vec()).ok()
+    }
+
     /// Returns the group membership information for the given group. If no group is
     /// specified, all groups will be returned.
     pub fn fetch_group_list<T: Into<Timeout>>(
