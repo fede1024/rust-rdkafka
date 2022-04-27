@@ -1,0 +1,44 @@
+name: Mark stale issues and pull requests
+
+on:
+    schedule:
+        # run at 00:00 UTC daily
+        - cron: "00 0 * * *"
+
+jobs:
+    stale:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/stale@v5
+              with:
+                  days-before-stale: 180
+                  days-before-close: 30
+
+                  exempt-all-assignees: true
+                  exempt-issue-labels: "enhancement,bug,docs"
+
+                  stale-issue-label: "Can Close?"
+                  stale-pr-label: "Can Close?"
+
+                  stale-issue-message: >
+                      This issue has been automatically marked as stale because it has not had
+                      any activity for 6 months.
+                      It will be closed if no further activity occurs in 30 days.
+                      Maintainers can label the issue (`enhancement`, `bug` or `docs`) to keep it open indefinitely.
+                      Thanks for your contributions to rdkafka!
+
+                  stale-pr-message: >
+                      This PR has been automatically marked as stale because it has not had
+                      any activity for 6 months.
+                      It will be closed if no further activity occurs in 30 days.
+                      Maintainers can label the PR (`enhancement`, `bug`, or `docs`) to keep it open indefinitely.
+                      Thanks for your contributions to rdkafka!
+
+                  close-issue-message: >
+                      This issue was automatically closed because it went 30 days without any activity
+                      since it was labeled `Can Close?`
+
+                  close-pr-message: >
+                      This PR was automatically closed because it went 30 days without any activity
+                      since it was labeled `Can Close?`
