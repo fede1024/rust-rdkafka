@@ -16,7 +16,8 @@ bindgen \
     --blacklist-function "rd_kafka_conf_set_open_cb" \
     --raw-line "use libc::{FILE, sockaddr, size_t, ssize_t, c_int, c_void, c_char};" \
     --raw-line "use num_enum::TryFromPrimitive;" \
-    librdkafka/src/rdkafka.h -o src/bindings.rs
+    "bindings.h" -o "src/bindings.rs" \
+    -- -Ilibrdkafka/src
 
 # Derive TryFromPrimitive for rd_kafka_resp_err_t.
 perl -i -p0e 's/#\[derive\((.*)\)\]\npub enum rd_kafka_resp_err_t/#\[derive($1, TryFromPrimitive)\]\npub enum rd_kafka_resp_err_t/s' src/bindings.rs
