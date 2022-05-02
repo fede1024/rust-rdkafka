@@ -85,6 +85,9 @@ pub type RDKafkaAdminOptions = bindings::rd_kafka_AdminOptions_t;
 /// Native rdkafka topic result.
 pub type RDKafkaTopicResult = bindings::rd_kafka_topic_result_t;
 
+/// Native rdkafka mock cluster
+pub type RDKafkaMockCluster = bindings::rd_kafka_mock_cluster_t;
+
 // ENUMS
 
 /// Client types.

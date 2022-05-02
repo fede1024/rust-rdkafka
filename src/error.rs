@@ -179,6 +179,8 @@ pub enum KafkaError {
     Subscription(String),
     /// Transaction error.
     Transaction(RDKafkaError),
+    /// Mock Cluster error
+    MockCluster(RDKafkaErrorCode),
 }
 
 impl fmt::Debug for KafkaError {
@@ -232,6 +234,7 @@ impl fmt::Debug for KafkaError {
                 write!(f, "KafkaError (Subscription error: {})", err)
             }
             KafkaError::Transaction(err) => write!(f, "KafkaError (Transaction error: {})", err),
+            KafkaError::MockCluster(err) => write!(f, "KafkaError (Mock cluster error: {})", err),
         }
     }
 }
@@ -267,6 +270,7 @@ impl fmt::Display for KafkaError {
             KafkaError::StoreOffset(err) => write!(f, "Store offset error: {}", err),
             KafkaError::Subscription(ref err) => write!(f, "Subscription error: {}", err),
             KafkaError::Transaction(err) => write!(f, "Transaction error: {}", err),
+            KafkaError::MockCluster(err) => write!(f, "Mock cluster error: {}", err),
         }
     }
 }
@@ -296,6 +300,7 @@ impl Error for KafkaError {
             KafkaError::StoreOffset(err) => Some(err),
             KafkaError::Subscription(_) => None,
             KafkaError::Transaction(err) => Some(err),
+            KafkaError::MockCluster(err) => Some(err),
         }
     }
 }
@@ -333,6 +338,7 @@ impl KafkaError {
             KafkaError::StoreOffset(err) => Some(*err),
             KafkaError::Subscription(_) => None,
             KafkaError::Transaction(err) => Some(err.code()),
+            KafkaError::MockCluster(err) => Some(*err),
         }
     }
 }
