@@ -252,6 +252,12 @@ where
     /// (blocking), or async. Notice that when a specific offset is committed,
     /// all the previous offsets are considered committed as well. Use this
     /// method only if you are processing messages in order.
+    ///
+    /// The highest committed offset is interpreted as the next message to be
+    /// consumed in the event that a consumer rehydrates its local state from
+    /// the Kafka broker (i.e. consumer server restart). This means that,
+    /// in general, the offset of your [`TopicPartitionList`] should equal
+    /// 1 plus the offset from your last consumed message.
     fn commit(
         &self,
         topic_partition_list: &TopicPartitionList,
@@ -266,6 +272,10 @@ where
 
     /// Commit the provided message. Note that this will also automatically
     /// commit every message with lower offset within the same partition.
+    ///
+    /// This method is exactly equivalent to invoking [`Consumer::commit`]
+    /// with a [`TopicPartitionList`] which copies the topic and partition
+    /// from the message and adds 1 to the offset of the message.
     fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()>;
 
     /// Stores offset to be used on the next (auto)commit. When
