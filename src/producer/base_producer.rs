@@ -338,7 +338,7 @@ where
         let (payload_ptr, payload_len) = as_bytes(record.payload);
         let (key_ptr, key_len) = as_bytes(record.key);
         let topic_cstring = CString::new(record.topic.to_owned()).unwrap();
-        let ptr = record.delivery_opaque.into_ptr();
+        let opaque_ptr = record.delivery_opaque.into_ptr();
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
                 self.native_ptr(),
@@ -355,7 +355,7 @@ where
                 key_ptr,
                 key_len,
                 RD_KAFKA_VTYPE_OPAQUE,
-                ptr,
+                opaque_ptr,
                 RD_KAFKA_VTYPE_TIMESTAMP,
                 record.timestamp.unwrap_or(0),
                 RD_KAFKA_VTYPE_HEADERS,
@@ -367,7 +367,7 @@ where
             )
         };
         if produce_error.is_error() {
-            record.delivery_opaque = unsafe { C::DeliveryOpaque::from_ptr(ptr) };
+            record.delivery_opaque = unsafe { C::DeliveryOpaque::from_ptr(opaque_ptr) };
             Err((KafkaError::MessageProduction(produce_error.into()), record))
         } else {
             // The kafka producer now owns the headers
