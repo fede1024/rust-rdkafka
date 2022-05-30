@@ -30,6 +30,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::log::{debug, error, info, trace, warn};
 use crate::metadata::Metadata;
+use crate::mocking::MockCluster;
 use crate::statistics::Statistics;
 use crate::util::{ErrBuf, KafkaDrop, NativePtr, Timeout};
 
@@ -414,6 +415,20 @@ impl<C: ClientContext> Client<C> {
             None
         } else {
             Some((code.into(), err_buf.to_string()))
+        }
+    }
+
+    /// If this client was configured with `test.mock.num.brokers`,
+    /// this will return a [`MockCluster`] instance associated with this client,
+    /// otherwise `None` is returned.
+    ///
+    /// [`MockCluster`]: crate::mocking::MockCluster
+    pub fn mock_cluster(&self) -> Option<MockCluster<'_, C>> {
+        let mc = unsafe { rdsys::rd_kafka_handle_mock_cluster(self.native.ptr()) };
+        if !mc.is_null() {
+            Some(MockCluster::new_ref(mc, self))
+        } else {
+            None
         }
     }
 
