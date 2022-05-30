@@ -93,7 +93,7 @@ impl MockCluster {
         let raw =
             unsafe { CStr::from_ptr(rdsys::rd_kafka_mock_cluster_bootstraps(self.mock_cluster)) };
         raw.to_str()
-            .expect("Unexpected none unicode chars in bootstrap servers")
+            .expect("Unexpected non-Unicode characters in bootstrap servers")
             .to_string()
     }
 
