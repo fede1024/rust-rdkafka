@@ -23,6 +23,25 @@ use crate::client::Client;
 use crate::config::ClientConfig;
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::producer::DefaultProducerContext;
+use crate::ClientContext;
+
+/// Used internally by `MockCluster` to distinguish whether the mock cluster is owned or referenced.
+///
+/// The mock cluster can be created in two ways:
+///
+/// - With `rd_kafka_mock_cluster_new()`. In this case the caller of the c-tor is responsible
+///   for destroying the returned mock cluster instance.
+///
+/// - By setting `test.mock.num.brokers` in a configuration of a producer/consumer client.
+///   In this case, the client creates the mock cluster internally and destroys it in its d-tor,
+///   and we only hold a reference to the mock cluster obtained with `rd_kafka_handle_mock_cluster()` (cf. `Client::mock_cluser()`).
+///
+///   In this case, we **must neither** destroy the mock clsuter in `MockCluster`'s `drop()`,
+///   **nor** outlive the `Client` from which the reference is obtained, hence the lifetime.
+enum MockClusterClient<'c, C: ClientContext> {
+    Owned(Client<C>),
+    Ref(&'c Client<C>),
+}
 
 /// Mock Kafka cluster with a configurable number of brokers that support a reasonable subset of
 /// Kafka protocol operations, error injection, etc.
@@ -38,10 +57,18 @@ use crate::producer::DefaultProducerContext;
 /// - High-level balanced consumer groups with offset commits
 /// - Topic Metadata and auto creation
 ///
+/// The mock cluster can be either created with [`MockCluster::new()`]
+/// or by configuring the `test.mock.num.brokers` property when creating a producer/consumer.
+/// This will override that producer/consumer's bootstrap servers setting and internally
+/// create a mock cluster. You can then obtain this mock cluster using [`Client::mock_cluster()`].
+///
 /// Warning THIS IS AN EXPERIMENTAL API, SUBJECT TO CHANGE OR REMOVAL.
-pub struct MockCluster {
+///
+/// [`MockCluster::new()`]: MockCluster::new()
+/// [`Client::mock_cluster()`]: crate::client::Client::mock_cluster()
+pub struct MockCluster<'c, C: ClientContext> {
     mock_cluster: *mut RDKafkaMockCluster,
-    _client: Client<DefaultProducerContext>,
+    client: MockClusterClient<'c, C>,
 }
 
 /// Utility macro to simplify returns for operations done on the mock API
@@ -62,7 +89,7 @@ pub enum MockCoordinator {
     Group(String),
 }
 
-impl MockCluster {
+impl MockCluster<'static, DefaultProducerContext> {
     /// Create new mock cluster with a given number of brokers
     pub fn new(broker_count: i32) -> KafkaResult<Self> {
         let config = ClientConfig::new();
@@ -84,8 +111,20 @@ impl MockCluster {
 
         Ok(MockCluster {
             mock_cluster,
-            _client: client,
+            client: MockClusterClient::Owned(client),
         })
+    }
+}
+
+impl<'c, C> MockCluster<'c, C>
+where
+    C: ClientContext,
+{
+    pub(crate) fn new_ref(mock_cluster: *mut RDKafkaMockCluster, client: &'c Client<C>) -> Self {
+        Self {
+            mock_cluster,
+            client: MockClusterClient::Ref(client),
+        }
     }
 
     /// Obtain the bootstrap address for the mock cluster
@@ -275,21 +314,26 @@ impl MockCluster {
     }
 }
 
-impl Drop for MockCluster {
+impl<'c, C> Drop for MockCluster<'c, C>
+where
+    C: ClientContext,
+{
     fn drop(&mut self) {
-        unsafe {
-            rdsys::rd_kafka_mock_cluster_destroy(self.mock_cluster);
+        if let MockClusterClient::Owned(..) = self.client {
+            unsafe {
+                rdsys::rd_kafka_mock_cluster_destroy(self.mock_cluster);
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use tokio;
-    use crate::Message;
+    use crate::consumer::{Consumer, StreamConsumer};
     use crate::message::ToBytes;
     use crate::producer::{FutureProducer, FutureRecord};
-    use crate::consumer::{Consumer, StreamConsumer};
+    use crate::Message;
+    use tokio;
 
     use super::*;
 
