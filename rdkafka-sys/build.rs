@@ -210,6 +210,8 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         config.define("WITH_SSL", "1");
+        config.define("WITH_SASL_SCRAM", "1");
+        config.define("WITH_SASL_OAUTHBEARER", "1");
         config.register_dep("openssl");
     } else {
         config.define("WITH_SSL", "0");
