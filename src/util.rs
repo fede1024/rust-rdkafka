@@ -122,20 +122,23 @@ pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> &'a
 ///
 /// This conversion is used to pass opaque objects to the C library and vice
 /// versa.
-pub trait IntoOpaque: Send + Sync {
+pub trait IntoOpaque: Send + Sync + Sized {
     /// Converts the object into a raw pointer.
-    fn as_ptr(&self) -> *mut c_void;
+    fn into_ptr(self) -> *mut c_void;
 
     /// Converts the raw pointer back to the original Rust object.
     ///
     /// # Safety
     ///
-    /// The pointer must be a valid pointer to the original Rust object.
+    /// The pointer must be created with [into_ptr](IntoOpaque::into_ptr).
+    ///
+    /// Care must be taken to not call more than once if it would result
+    /// in an aliasing violation (e.g. [Box]).
     unsafe fn from_ptr(_: *mut c_void) -> Self;
 }
 
 impl IntoOpaque for () {
-    fn as_ptr(&self) -> *mut c_void {
+    fn into_ptr(self) -> *mut c_void {
         ptr::null_mut()
     }
 
@@ -143,8 +146,8 @@ impl IntoOpaque for () {
 }
 
 impl IntoOpaque for usize {
-    fn as_ptr(&self) -> *mut c_void {
-        *self as *mut usize as *mut c_void
+    fn into_ptr(self) -> *mut c_void {
+        self as *mut c_void
     }
 
     unsafe fn from_ptr(ptr: *mut c_void) -> Self {
@@ -153,8 +156,8 @@ impl IntoOpaque for usize {
 }
 
 impl<T: Send + Sync> IntoOpaque for Box<T> {
-    fn as_ptr(&self) -> *mut c_void {
-        self.as_ref() as *const T as *mut c_void
+    fn into_ptr(self) -> *mut c_void {
+        Box::into_raw(self) as *mut c_void
     }
 
     unsafe fn from_ptr(ptr: *mut c_void) -> Self {
@@ -163,12 +166,12 @@ impl<T: Send + Sync> IntoOpaque for Box<T> {
 }
 
 impl<T: Send + Sync> IntoOpaque for Arc<T> {
-    fn as_ptr(&self) -> *mut c_void {
-        self.as_ref() as *const T as *mut c_void
+    fn into_ptr(self) -> *mut c_void {
+        Arc::into_raw(self) as *mut c_void
     }
 
     unsafe fn from_ptr(ptr: *mut c_void) -> Self {
-        Arc::from_raw(ptr as *mut T)
+        Arc::from_raw(ptr as *const T)
     }
 }
 
