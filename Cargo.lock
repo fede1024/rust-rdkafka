@@ -396,6 +396,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "curl-sys"
+version = "0.4.55+curl-7.83.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23734ec77368ec583c2e61dd3f0b0e5c98b93abe6d2a004ca06b91dd7e3e2762"
+dependencies = [
+ "cc",
+ "libc",
+ "libz-sys",
+ "openssl-sys",
+ "pkg-config",
+ "vcpkg",
+ "winapi",
+]
+
+[[package]]
 name = "derivative"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1084,9 +1099,10 @@ dependencies = [
 
 [[package]]
 name = "rdkafka-sys"
-version = "4.2.0+1.8.2"
+version = "4.3.0+1.9.2"
 dependencies = [
  "cmake",
+ "curl-sys",
  "libc",
  "libz-sys",
  "lz4-sys",

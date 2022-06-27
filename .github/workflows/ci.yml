@@ -29,10 +29,13 @@ jobs:
         include:
         - os: macos-11.0
         - os: windows-2019
-          features: cmake-build,libz-static
-          rdkafka-sys-features: cmake-build,libz-static
+          features: cmake-build,libz-static,curl-static
+          rdkafka-sys-features: cmake-build,libz-static,curl-static
         - os: ubuntu-20.04
           features: tracing
+        - os: ubuntu-20.04
+          features: cmake-build,ssl-vendored,gssapi-vendored,libz-static,curl-static,zstd
+          rdkafka-sys-features: cmake-build,ssl-vendored,gssapi-vendored,libz-static,curl-static,zstd
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
