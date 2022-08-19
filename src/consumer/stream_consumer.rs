@@ -376,7 +376,7 @@ where
         self.base.unsubscribe();
     }
 
-    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+    fn assign(&self, assignment: &TopicPartitionList<'_>) -> KafkaResult<()> {
         self.base.assign(assignment)
     }
 
@@ -392,7 +392,7 @@ where
 
     fn commit(
         &self,
-        topic_partition_list: &TopicPartitionList,
+        topic_partition_list: &TopicPartitionList<'_>,
         mode: CommitMode,
     ) -> KafkaResult<()> {
         self.base.commit(topic_partition_list, mode)
@@ -414,19 +414,19 @@ where
         self.base.store_offset_from_message(message)
     }
 
-    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
+    fn store_offsets<'a>(&'a self, tpl: &mut TopicPartitionList<'a>) -> KafkaResult<()> {
         self.base.store_offsets(tpl)
     }
 
-    fn subscription(&self) -> KafkaResult<TopicPartitionList> {
+    fn subscription<'a>(&'a self) -> KafkaResult<TopicPartitionList<'a>> {
         self.base.subscription()
     }
 
-    fn assignment(&self) -> KafkaResult<TopicPartitionList> {
+    fn assignment<'a>(&'a self) -> KafkaResult<TopicPartitionList<'a>> {
         self.base.assignment()
     }
 
-    fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
+    fn committed<'a, T>(&'a self, timeout: T) -> KafkaResult<TopicPartitionList<'a>>
     where
         T: Into<Timeout>,
         Self: Sized,
@@ -434,22 +434,22 @@ where
         self.base.committed(timeout)
     }
 
-    fn committed_offsets<T>(
-        &self,
-        tpl: TopicPartitionList,
+    fn committed_offsets<'a, T>(
+        &'a self,
+        tpl: TopicPartitionList<'a>,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList>
+    ) -> KafkaResult<TopicPartitionList<'a>>
     where
         T: Into<Timeout>,
     {
         self.base.committed_offsets(tpl, timeout)
     }
 
-    fn offsets_for_timestamp<T>(
-        &self,
+    fn offsets_for_timestamp<'a, T>(
+        &'a self,
         timestamp: i64,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList>
+    ) -> KafkaResult<TopicPartitionList<'a>>
     where
         T: Into<Timeout>,
         Self: Sized,
@@ -457,11 +457,11 @@ where
         self.base.offsets_for_timestamp(timestamp, timeout)
     }
 
-    fn offsets_for_times<T>(
-        &self,
-        timestamps: TopicPartitionList,
+    fn offsets_for_times<'a, T>(
+        &'a self,
+        timestamps: TopicPartitionList<'a>,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList>
+    ) -> KafkaResult<TopicPartitionList<'a>>
     where
         T: Into<Timeout>,
         Self: Sized,
@@ -469,7 +469,7 @@ where
         self.base.offsets_for_times(timestamps, timeout)
     }
 
-    fn position(&self) -> KafkaResult<TopicPartitionList> {
+    fn position<'a>(&'a self) -> KafkaResult<TopicPartitionList<'a>> {
         self.base.position()
     }
 
@@ -502,11 +502,11 @@ where
         self.base.fetch_group_list(group, timeout)
     }
 
-    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+    fn pause<'a>(&'a self, partitions: &TopicPartitionList<'a>) -> KafkaResult<()> {
         self.base.pause(partitions)
     }
 
-    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+    fn resume<'a>(&'a self, partitions: &TopicPartitionList<'a>) -> KafkaResult<()> {
         self.base.resume(partitions)
     }
 

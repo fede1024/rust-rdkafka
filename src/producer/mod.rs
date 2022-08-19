@@ -319,9 +319,9 @@ where
     /// The consumer must not have automatic commits enabled.
     ///
     /// [`Consumer::group_metadata`]: crate::consumer::Consumer::group_metadata
-    fn send_offsets_to_transaction<T: Into<Timeout>>(
-        &self,
-        offsets: &TopicPartitionList,
+    fn send_offsets_to_transaction<'a, T: Into<Timeout>>(
+        &'a self,
+        offsets: &TopicPartitionList<'a>,
         cgm: &ConsumerGroupMetadata,
         timeout: T,
     ) -> KafkaResult<()>;

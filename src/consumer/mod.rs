@@ -29,9 +29,9 @@ pub use self::stream_consumer::{MessageStream, StreamConsumer};
 #[derive(Clone, Debug)]
 pub enum Rebalance<'a> {
     /// A new partition assignment is received.
-    Assign(&'a TopicPartitionList),
+    Assign(&'a TopicPartitionList<'a>),
     /// A new partition revocation is received.
-    Revoke(&'a TopicPartitionList),
+    Revoke(&'a TopicPartitionList<'a>),
     /// Unexpected error from Kafka.
     Error(String),
 }
@@ -49,11 +49,11 @@ pub trait ConsumerContext: ClientContext {
     /// [`post_rebalance`](ConsumerContext::post_rebalance) methods. If this
     /// method is overridden, it will be responsibility of the user to call them
     /// if needed.
-    fn rebalance(
-        &self,
+    fn rebalance<'a>(
+        &'a self,
         native_client: &NativeClient,
         err: RDKafkaRespErr,
-        tpl: &mut TopicPartitionList,
+        tpl: &mut TopicPartitionList<'a>,
     ) {
         let rebalance = match err {
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => Rebalance::Assign(tpl),
@@ -110,7 +110,7 @@ pub trait ConsumerContext: ClientContext {
     /// Post commit callback. This method will run after a group of offsets was
     /// committed to the offset store.
     #[allow(unused_variables)]
-    fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {}
+    fn commit_callback<'a>(&'a self, result: KafkaResult<()>, offsets: &TopicPartitionList<'a>) {}
 
     /// Returns the minimum interval at which to poll the main queue, which
     /// services the logging, stats, and error callbacks.
@@ -235,7 +235,7 @@ where
 
     /// Manually assigns topics and partitions to the consumer. If used,
     /// automatic consumer rebalance won't be activated.
-    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()>;
+    fn assign(&self, assignment: &TopicPartitionList<'_>) -> KafkaResult<()>;
 
     /// Seeks to `offset` for the specified `topic` and `partition`. After a
     /// successful call to `seek`, the next poll of the consumer will return the
@@ -254,7 +254,7 @@ where
     /// method only if you are processing messages in order.
     fn commit(
         &self,
-        topic_partition_list: &TopicPartitionList,
+        topic_partition_list: &TopicPartitionList<'_>,
         mode: CommitMode,
     ) -> KafkaResult<()>;
 
@@ -279,51 +279,51 @@ where
 
     /// Store offsets to be used on the next (auto)commit. When using this
     /// `enable.auto.offset.store` should be set to `false` in the config.
-    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()>;
+    fn store_offsets<'a>(&'a self, tpl: &mut TopicPartitionList<'a>) -> KafkaResult<()>;
 
     /// Returns the current topic subscription.
-    fn subscription(&self) -> KafkaResult<TopicPartitionList>;
+    fn subscription<'a>(&'a self) -> KafkaResult<TopicPartitionList<'a>>;
 
     /// Returns the current partition assignment.
-    fn assignment(&self) -> KafkaResult<TopicPartitionList>;
+    fn assignment<'a>(&'a self) -> KafkaResult<TopicPartitionList<'a>>;
 
     /// Retrieves the committed offsets for topics and partitions.
-    fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
+    fn committed<'a, T>(&'a self, timeout: T) -> KafkaResult<TopicPartitionList<'a>>
     where
         T: Into<Timeout>,
         Self: Sized;
 
     /// Retrieves the committed offsets for specified topics and partitions.
-    fn committed_offsets<T>(
-        &self,
-        tpl: TopicPartitionList,
+    fn committed_offsets<'a, T>(
+        &'a self,
+        tpl: TopicPartitionList<'a>,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList>
+    ) -> KafkaResult<TopicPartitionList<'a>>
     where
         T: Into<Timeout>;
 
     /// Looks up the offsets for this consumer's partitions by timestamp.
-    fn offsets_for_timestamp<T>(
-        &self,
+    fn offsets_for_timestamp<'a, T>(
+        &'a self,
         timestamp: i64,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList>
+    ) -> KafkaResult<TopicPartitionList<'a>>
     where
         T: Into<Timeout>,
         Self: Sized;
 
     /// Looks up the offsets for the specified partitions by timestamp.
-    fn offsets_for_times<T>(
-        &self,
-        timestamps: TopicPartitionList,
+    fn offsets_for_times<'a, T>(
+        &'a self,
+        timestamps: TopicPartitionList<'a>,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList>
+    ) -> KafkaResult<TopicPartitionList<'a>>
     where
         T: Into<Timeout>,
         Self: Sized;
 
     /// Retrieve current positions (offsets) for topics and partitions.
-    fn position(&self) -> KafkaResult<TopicPartitionList>;
+    fn position<'a>(&'a self) -> KafkaResult<TopicPartitionList<'a>>;
 
     /// Returns the metadata information for the specified topic, or for all
     /// topics in the cluster if no topic is specified.
@@ -351,10 +351,10 @@ where
         Self: Sized;
 
     /// Pauses consumption for the provided list of partitions.
-    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()>;
+    fn pause<'a>(&'a self, partitions: &TopicPartitionList<'a>) -> KafkaResult<()>;
 
     /// Resumes consumption for the provided list of partitions.
-    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()>;
+    fn resume<'a>(&'a self, partitions: &TopicPartitionList<'a>) -> KafkaResult<()>;
 
     /// Reports the rebalance protocol in use.
     fn rebalance_protocol(&self) -> RebalanceProtocol;
