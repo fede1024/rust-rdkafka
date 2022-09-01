@@ -131,6 +131,8 @@
 //!   the [blog post][timely-blog] announcing its Kafka integration.
 //! - [kafka-view]: a web interface for Kafka clusters.
 //! - [kafka-benchmark]: a high performance benchmarking tool for Kafka.
+//! - [callysto]: Stream processing framework in Rust.
+//! - [bytewax]: Python stream processing framework using Timely Dataflow.
 //!
 //! *If you are using rust-rdkafka, please let us know!*
 //!
@@ -246,9 +248,10 @@
 //! [runtime-smol]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_smol.rs
 //! [runtime-async-std]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_async_std.rs
 //! [broker-compat]: https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility
+//! [bytewax]: https://github.com/bytewax/bytewax
+//! [callysto]: https://github.com/vertexclique/callysto
 //! [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
 //! [futures]: https://github.com/rust-lang/futures-rs
-//! [kafka-benchmark]: https://github.com/fede1024/kafka-benchmark
 //! [kafka-benchmark]: https://github.com/fede1024/kafka-benchmark
 //! [kafka-view]: https://github.com/fede1024/kafka-view
 //! [librdkafka]: https://github.com/edenhill/librdkafka
