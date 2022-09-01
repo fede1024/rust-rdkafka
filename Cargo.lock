@@ -708,9 +708,9 @@ dependencies = [
 
 [[package]]
 name = "lz4-sys"
-version = "1.8.3"
+version = "1.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20ab022822e9331c58d373acdd6b98085bace058ac6837b8266f213a2fccdafe"
+checksum = "57d27b317e207b10f69f5e75494119e391a96f48861ae870d1da6edac98ca900"
 dependencies = [
  "cc",
  "libc",
