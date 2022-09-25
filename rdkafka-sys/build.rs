@@ -167,7 +167,7 @@ fn build_librdkafka() {
     println!("Compiling librdkafka");
     env::set_var(
         "MAKEFLAGS",
-        env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"),
+        env::var_os("CARGO_MAKEFLAGS").unwrap_or_default(),
     );
     run_command_or_fail(
         &out_dir,
