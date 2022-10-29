@@ -11,8 +11,8 @@
 //! [`consumer`]: crate::consumer
 //! [`producer`]: crate::producer
 
-use std::borrow::Cow;
 use std::convert::TryFrom;
+use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::mem::ManuallyDrop;
 use std::os::raw::{c_char, c_void};
@@ -31,44 +31,7 @@ use crate::groups::GroupList;
 use crate::log::{debug, error, info, trace, warn};
 use crate::metadata::Metadata;
 use crate::statistics::Statistics;
-use crate::util::{ErrBuf, KafkaDrop, NativePtr, Timeout};
-
-/// OAuthToken Data
-///
-/// When using token refresh, this data structure provides the fields used in
-/// the OAuth token refresh callback function.
-///
-/// NOTE: SASL extensions are not currently supported
-pub struct OAuthTokenData {
-    token: String,
-    lifetime_ms: i64,
-    principal_name: String,
-    errstr_size: usize,
-}
-
-impl OAuthTokenData {
-    /// Creates a new token data structure, with given value, lifetime, and
-    /// principal name. Error string size is set to 512 bytes.
-    pub fn new(token: String, lifetime_ms: i64, principal_name: String) -> Self {
-        Self {
-            token,
-            lifetime_ms,
-            principal_name,
-            errstr_size: 512,
-        }
-    }
-
-    /// Modifies the error string size to the specified value.
-    pub fn with_errorstring_size(&mut self, errstr_size: usize) -> &mut OAuthTokenData {
-        self.errstr_size = errstr_size;
-        self
-    }
-}
-/// Reporting mechanism for errors in generating OAuth tokens.
-pub struct OAuthTokenError(pub String);
-
-/// Result type specifically used for generating OAuth tokens
-pub type OAuthResult = Result<OAuthTokenData, OAuthTokenError>;
+use crate::util::{self, ErrBuf, KafkaDrop, NativePtr, Timeout};
 
 /// Client-level context.
 ///
@@ -84,6 +47,16 @@ pub type OAuthResult = Result<OAuthTokenData, OAuthTokenError>;
 /// [`ConsumerContext`]: crate::consumer::ConsumerContext
 /// [`ProducerContext`]: crate::producer::ProducerContext
 pub trait ClientContext: Send + Sync {
+    /// Whether to periodically refresh the SASL `OAUTHBEARER` token
+    /// by calling [`ClientContext::generate_oauth_token`].
+    ///
+    /// If disabled, librdkafka's default token refresh callback is used
+    /// instead.
+    ///
+    /// This parameter is only relevant when using the `OAUTHBEARER` SASL
+    /// mechanism.
+    const ENABLE_REFRESH_OAUTH_TOKEN: bool = false;
+
     /// Receives log lines from librdkafka.
     ///
     /// The default implementation forwards the log lines to the appropriate
@@ -142,12 +115,22 @@ pub trait ClientContext: Send + Sync {
         error!("librdkafka: {}: {}", error, reason);
     }
 
-    /// Generates the OAuth token.
+    /// Generates an OAuth token from the provided configuration.
     ///
-    /// The default implementation generates an error.
-    fn generate_oauth_token(&self, _oauthbearer_config: &str) -> OAuthResult {
-        let error_string = "Default token generation only produces an error".into();
-        Err(OAuthTokenError(error_string))
+    /// Override with an appropriate implementation when using the `OAUTHBEARER`
+    /// SASL authentication mechanism. For this method to be called, you must
+    /// also set [`ClientContext::ENABLE_REFRESH_OAUTH_TOKEN`] to true.
+    ///
+    /// The `fmt::Display` implementation of the returned error must not
+    /// generate a message with an embedded null character.
+    ///
+    /// The default implementation always returns an error and is meant to
+    /// be overridden.
+    fn generate_oauth_token(
+        &self,
+        _oauthbearer_config: Option<&str>,
+    ) -> Result<OAuthToken, Box<dyn Error>> {
+        Err("Default implementation of generate_oauth_token must be overridden".into())
     }
 
     // NOTE: when adding a new method, remember to add it to the
@@ -253,7 +236,7 @@ impl<C: ClientContext> Client<C> {
         unsafe {
             rdsys::rd_kafka_conf_set_error_cb(native_config.ptr(), Some(native_error_cb::<C>))
         };
-        if config.use_token_refresh_cb {
+        if C::ENABLE_REFRESH_OAUTH_TOKEN {
             unsafe {
                 rdsys::rd_kafka_conf_set_oauthbearer_token_refresh_cb(
                     native_config.ptr(),
@@ -511,12 +494,20 @@ pub(crate) unsafe extern "C" fn native_error_cb<C: ClientContext>(
     context.error(error, reason.trim());
 }
 
-unsafe fn handle_refresh_error_msg(client: *mut RDKafka, error_msg: &str) {
-    error!("{}", error_msg);
-    rdkafka_sys::rd_kafka_oauthbearer_set_token_failure(
-        client,
-        error_msg.as_ptr() as *const c_char,
-    );
+/// A generated OAuth token and its associated metadata.
+///
+/// When using the `OAUTHBEARER` SASL authentication method, this type is
+/// returned from [`ClientContext::generate_oauth_token`]. The token and
+/// principal name must not contain embedded null characters.
+///
+/// Specifying SASL extensions is not currently supported.
+pub struct OAuthToken {
+    /// The token value to set.
+    pub token: String,
+    /// The Kafka principal name associated with the token.
+    pub principal_name: String,
+    /// When the token expires, in number of milliseconds since the Unix epoch.
+    pub lifetime_ms: i64,
 }
 
 pub(crate) unsafe extern "C" fn native_oauth_refresh_cb<C: ClientContext>(
@@ -524,64 +515,52 @@ pub(crate) unsafe extern "C" fn native_oauth_refresh_cb<C: ClientContext>(
     oauthbearer_config: *const c_char,
     opaque: *mut c_void,
 ) {
-    // generate the token using generate_oauth_token
-    let context = &mut *(opaque as *mut C);
-    let oauthbearer_config = match oauthbearer_config.is_null() {
-        true => Cow::from(""),
-        false => CStr::from_ptr(oauthbearer_config).to_string_lossy(),
-    };
-
-    let token_info = match context.generate_oauth_token(oauthbearer_config.trim()) {
-        Ok(token_info) => token_info,
-        Err(OAuthTokenError(errmsg)) => {
-            handle_refresh_error_msg(client, &errmsg);
-            return;
+    let res: Result<_, Box<dyn Error>> = (|| {
+        let context = &mut *(opaque as *mut C);
+        let oauthbearer_config = match oauthbearer_config.is_null() {
+            true => None,
+            false => Some(util::cstr_to_owned(oauthbearer_config)),
+        };
+        let token_info = context.generate_oauth_token(oauthbearer_config.as_deref())?;
+        let token = CString::new(token_info.token)?;
+        let principal_name = CString::new(token_info.principal_name)?;
+        Ok((token, principal_name, token_info.lifetime_ms))
+    })();
+    match res {
+        Ok((token, principal_name, lifetime_ms)) => {
+            let mut err_buf = ErrBuf::new();
+            let code = rdkafka_sys::rd_kafka_oauthbearer_set_token(
+                client,
+                token.as_ptr(),
+                lifetime_ms,
+                principal_name.as_ptr(),
+                ptr::null_mut(),
+                0,
+                err_buf.as_mut_ptr(),
+                err_buf.capacity(),
+            );
+            if code == RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR {
+                debug!("successfully set refreshed OAuth token");
+            } else {
+                debug!(
+                    "failed to set refreshed OAuth token (code {:?}): {}",
+                    code, err_buf
+                );
+                rdkafka_sys::rd_kafka_oauthbearer_set_token_failure(client, err_buf.as_mut_ptr());
+            }
         }
-    };
-
-    let token_cstring = match CString::new(token_info.token) {
-        Ok(token_cstring) => token_cstring,
-        Err(_) => {
-            let errmsg = "Could not convert token String to CString";
-            handle_refresh_error_msg(client, errmsg);
-            return;
+        Err(e) => {
+            debug!("failed to refresh OAuth token: {}", e);
+            let message = match CString::new(e.to_string()) {
+                Ok(message) => message,
+                Err(e) => {
+                    error!("error message generated while refreshing OAuth token has embedded null character: {}", e);
+                    CString::new("error while refreshing OAuth token has embedded null character")
+                        .expect("known to be a valid CString")
+                }
+            };
+            rdkafka_sys::rd_kafka_oauthbearer_set_token_failure(client, message.as_ptr());
         }
-    };
-
-    let principal_name = match CString::new(token_info.principal_name) {
-        Ok(principal_name) => principal_name,
-        Err(_) => {
-            let errmsg = "Could not convert principal_name String to CString";
-            handle_refresh_error_msg(client, errmsg);
-            return;
-        }
-    };
-
-    let errstr = match CString::new(vec![u8::MAX; token_info.errstr_size]) {
-        Ok(errstr) => errstr,
-        Err(_) => {
-            let errmsg = "Could not create error string";
-            handle_refresh_error_msg(client, errmsg);
-            return;
-        }
-    };
-
-    let rcode = rdkafka_sys::rd_kafka_oauthbearer_set_token(
-        client,
-        token_cstring.as_ptr(),
-        token_info.lifetime_ms,
-        principal_name.as_ptr(),
-        ptr::null_mut(),
-        0,
-        errstr.as_ptr() as *mut c_char,
-        token_info.errstr_size,
-    );
-
-    if rcode == rdkafka_sys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR_NO_ERROR {
-        info!("Successfully set token");
-    } else {
-        let errmsg = errstr.to_string_lossy();
-        handle_refresh_error_msg(client, errmsg.trim());
     }
 }
 
