@@ -125,6 +125,16 @@ fn build_librdkafka() {
         configure_flags.push("--disable-zlib".into());
     }
 
+    if env::var("CARGO_FEATURE_CURL").is_ok() {
+        // There is no --enable-curl option, but it is enabled by default.
+        if let Ok(curl_root) = env::var("DEP_CURL_ROOT") {
+            cflags.push("-DCURLSTATIC_LIB".to_string());
+            cflags.push(format!("-I{}/include", curl_root));
+        }
+    } else {
+        configure_flags.push("--disable-curl".into());
+    }
+
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
         configure_flags.push("--enable-zstd".into());
         if let Ok(zstd_root) = env::var("DEP_ZSTD_ROOT") {
@@ -165,10 +175,9 @@ fn build_librdkafka() {
     run_command_or_fail(&out_dir, "./configure", configure_flags.as_slice());
 
     println!("Compiling librdkafka");
-    env::set_var(
-        "MAKEFLAGS",
-        env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"),
-    );
+    if let Some(makeflags) = env::var_os("CARGO_MAKEFLAGS") {
+        env::set_var("MAKEFLAGS", makeflags);
+    }
     run_command_or_fail(
         &out_dir,
         if cfg!(target_os = "freebsd") {
@@ -187,6 +196,7 @@ fn build_librdkafka() {
 #[cfg(feature = "cmake-build")]
 fn build_librdkafka() {
     let mut config = cmake::Config::new("librdkafka");
+    let mut cmake_library_paths = vec![];
 
     config
         .define("RDKAFKA_BUILD_STATIC", "1")
@@ -202,10 +212,26 @@ fn build_librdkafka() {
         config.define("WITH_ZLIB", "1");
         config.register_dep("z");
         if let Ok(z_root) = env::var("DEP_Z_ROOT") {
-            env::set_var("CMAKE_LIBRARY_PATH", format!("{}/build", z_root));
+            cmake_library_paths.push(format!("{}/build", z_root));
         }
     } else {
         config.define("WITH_ZLIB", "0");
+    }
+
+    if env::var("CARGO_FEATURE_CURL").is_ok() {
+        config.define("WITH_CURL", "1");
+        config.register_dep("curl");
+        if let Ok(curl_root) = env::var("DEP_CURL_ROOT") {
+            config.define("CURL_STATICLIB", "1");
+            cmake_library_paths.push(format!("{}/lib", curl_root));
+
+            config.cflag("-DCURL_STATICLIB");
+            config.cxxflag("-DCURL_STATICLIB");
+            config.cflag(format!("-I{}/include", curl_root));
+            config.cxxflag(format!("-I{}/include", curl_root));
+        }
+    } else {
+        config.define("WITH_CURL", "0");
     }
 
     if env::var("CARGO_FEATURE_SSL").is_ok() {
@@ -244,6 +270,10 @@ fn build_librdkafka() {
 
     if let Ok(system_name) = env::var("CMAKE_SYSTEM_NAME") {
         config.define("CMAKE_SYSTEM_NAME", system_name);
+    }
+
+    if !cmake_library_paths.is_empty() {
+        env::set_var("CMAKE_LIBRARY_PATH", cmake_library_paths.join(";"));
     }
 
     println!("Configuring and compiling librdkafka");

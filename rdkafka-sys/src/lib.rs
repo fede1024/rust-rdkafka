@@ -28,6 +28,9 @@
 //!   dependency is present. The current design of Cargo unfortunately makes
 //!   this nearly impossible to fix.
 //!
+//! * Windows is only supported when using the CMake build system via the
+//!   `cmake-build` Cargo feature.
+//!
 //! ### Features
 //!
 //! By default a submodule with the librdkafka sources will be used to compile
@@ -59,6 +62,10 @@
 //!     feature is enabled by default. By default, the system's libz is
 //!     dynamically linked, but static linking of the version bundled with the
 //!     [libz-sys] crate can be requested with the `libz-static` feature.
+//!   * The **`curl`** feature enables the HTTP client via curl. By default, the
+//!     system's curl is dynamically linked, but static linking of the version
+//!     bundled with the [curl-sys] create can be requested with the
+//!     `curl-static` feature.
 //!   * The **`zstd`** feature enables support for ZSTD compression. By default,
 //!     this builds and statically links the version bundled with the [zstd-sys]
 //!     crate, but dynamic linking of the system's version can be requested with
@@ -76,6 +83,7 @@
 //! [Apache Kafka]: https://kafka.apache.org
 //! [CMake]: https://cmake.org
 //! [libz-sys]: https://crates.io/crates/libz-sys
+//! [curl-sys]: https://crates.io/crates/curl-sys
 //! [lz4-sys]: https://crates.io/crates/lz4-sys
 //! [mklove]: https://github.com/edenhill/mklove
 //! [openssl-sys]: https://crates.io/crates/openssl-sys
@@ -91,6 +99,9 @@ extern crate sasl2_sys;
 
 #[cfg(feature = "libz-sys")]
 extern crate libz_sys;
+
+#[cfg(feature = "curl-sys")]
+extern crate curl_sys;
 
 #[cfg(feature = "zstd-sys")]
 extern crate zstd_sys;

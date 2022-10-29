@@ -15,7 +15,7 @@ exclude = ["Cargo.lock"]
 members = ["rdkafka-sys"]
 
 [dependencies]
-rdkafka-sys = { path = "rdkafka-sys", version = "4.2.0", default-features = false }
+rdkafka-sys = { path = "rdkafka-sys", version = "4.3.0", default-features = false }
 futures-channel = "0.3.0"
 futures-executor = { version = "0.3.0", optional = true }
 futures-util = { version = "0.3.0", default-features = false }
@@ -58,6 +58,8 @@ gssapi-vendored = ["rdkafka-sys/gssapi-vendored"]
 sasl = ["rdkafka-sys/sasl"]
 libz = ["rdkafka-sys/libz"]
 libz-static = ["rdkafka-sys/libz-static"]
+curl = ["rdkafka-sys/curl"]
+curl-static = ["rdkafka-sys/curl-static"]
 zstd = ["rdkafka-sys/zstd"]
 zstd-pkg-config = ["rdkafka-sys/zstd-pkg-config"]
 external-lz4 = ["rdkafka-sys/external-lz4"]

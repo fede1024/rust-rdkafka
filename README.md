@@ -12,7 +12,7 @@ library for Rust based on [librdkafka].
 ## The library
 
 `rust-rdkafka` provides a safe Rust interface to librdkafka. The master
-branch is currently based on librdkafka 1.8.2.
+branch is currently based on librdkafka 1.9.0.
 
 ### Documentation
 
@@ -160,6 +160,7 @@ your executable. To compile librdkafka you'll need:
 * GNU `make`
 * `pthreads`
 * `zlib`: optional, but included by default (feature: `libz`)
+* `curl`: optional, but included by default (feature: `curl`)
 * `cmake`: optional, *not* included by default (feature: `cmake-build`)
 * `libssl-dev`: optional, *not* included by default (feature: `ssl`)
 * `libsasl2-dev`: optional, *not* included by default (feature: `gssapi`)
