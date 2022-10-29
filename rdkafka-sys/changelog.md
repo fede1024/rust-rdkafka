@@ -1,8 +1,12 @@
 # Changelog
 
-## v4.3.0+1.9.2 (2022-06-27)
+## v4.3.0+1.9.2 (2022-10-29)
 
 * Upgrade to librdkafka v1.9.2.
+
+* Support building outside of Cargo, where the `CARGO_MAKEFLAGS` environment
+  variable is unlikely to be set. The build script would previously panic if
+  `CARGO_MAKEFLAGS` was not set.
 
 ## v4.2.0+1.8.2 (2021-11-27)
 
