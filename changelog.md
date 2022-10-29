@@ -2,7 +2,7 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
-## Unreleased
+## 0.29.0 (2022-10-29)
 
 * **Breaking change.** Pass through errors from librdkafka in
   `BaseProducer::flush`, `StreamProducer::flush`, and `FutureProducer::flush`.

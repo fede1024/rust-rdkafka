@@ -21,5 +21,5 @@ Then:
 
 * Ensure the changelog is up to date.
 * Ensure Cargo.toml is up to date.
-* Run `cd rdkafka-sys && ../generate_readme.py > README.md`
+* Run `cd rdkafka-sys && ../generate_readme.py > README.md`.
 * Run `cargo publish`.

@@ -47,3 +47,12 @@ KAFKA_HOST="kafka_server:9092" cargo test
 In this case there is a broker expected to be running on `KAFKA_HOST`.
 The broker must be configured with default partition number 3 and topic
 autocreation in order for the tests to succeed.
+
+## Releasing
+
+* Ensure the changelog is up to date.
+* Ensure Cargo.toml is up to date.
+* Run `./generate_readme.py > README.md`.
+* Run `git tag -am $VERSION $VERSION`.
+* Run `git push origin $VERSION`.
+* Run `cargo publish`.

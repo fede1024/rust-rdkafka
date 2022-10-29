@@ -3,8 +3,8 @@
 //!
 //! ## The library
 //!
-//! `rust-rdkafka` provides a safe Rust interface to librdkafka. The master
-//! branch is currently based on librdkafka 1.9.0.
+//! `rust-rdkafka` provides a safe Rust interface to librdkafka. This version
+//! is compatible with librdkafka v1.9.2+.
 //!
 //! ### Documentation
 //!
