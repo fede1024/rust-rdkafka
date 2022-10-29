@@ -273,6 +273,8 @@ where
     /// This method will block until the next message is available or an error
     /// occurs. It is legal to call `recv` from multiple threads simultaneously.
     ///
+    /// This method is [cancellation safe].
+    ///
     /// Note that this method is exactly as efficient as constructing a
     /// single-use message stream and extracting one message from it:
     ///
@@ -284,6 +286,8 @@ where
     /// consumer.stream().next().await.expect("MessageStream never returns None");
     /// # }
     /// ```
+    ///
+    /// [cancellation safe]: https://docs.rs/tokio/latest/tokio/macro.select.html#cancellation-safety
     pub async fn recv(&self) -> Result<BorrowedMessage<'_>, KafkaError> {
         self.stream()
             .next()
@@ -553,6 +557,8 @@ where
     /// This method will block until the next message is available or an error
     /// occurs. It is legal to call `recv` from multiple threads simultaneously.
     ///
+    /// This method is [cancellation safe].
+    ///
     /// Note that this method is exactly as efficient as constructing a
     /// single-use message stream and extracting one message from it:
     ///
@@ -567,6 +573,8 @@ where
     /// partition_queue.stream().next().await.expect("MessageStream never returns None");
     /// # }
     /// ```
+    ///
+    /// [cancellation safe]: https://docs.rs/tokio/latest/tokio/macro.select.html#cancellation-safety
     pub async fn recv(&self) -> Result<BorrowedMessage<'_>, KafkaError> {
         self.stream()
             .next()
