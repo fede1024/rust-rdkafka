@@ -547,7 +547,17 @@ where
 {
     fn drop(&mut self) {
         trace!("Destroying consumer: {:?}", self.client.native_ptr()); // TODO: fix me (multiple executions ?)
-        unsafe { rdsys::rd_kafka_consumer_close(self.client.native_ptr()) };
+        unsafe {
+            // This prevents the rd_kafka_consumer_close() call from blocking
+            // (even indefinitely) while waiting for queue operations to
+            // complete. Most of the time the final queue operation is a final
+            // consumer reblance.
+            rdsys::rd_kafka_destroy_flags(
+                self.client.native_ptr(),
+                rdsys::RD_KAFKA_DESTROY_F_NO_CONSUMER_CLOSE as i32,
+            );
+            rdsys::rd_kafka_consumer_close(self.client.native_ptr())
+        };
         trace!("Consumer destroyed: {:?}", self.client.native_ptr());
     }
 }
