@@ -20,7 +20,6 @@ use futures_util::ready;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
-use rdsys::rd_kafka_error_t;
 
 use crate::client::{Client, ClientContext, DefaultClientContext, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};

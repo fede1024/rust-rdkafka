@@ -5,14 +5,14 @@ use std::time::Duration;
 use backoff::{ExponentialBackoff, Operation};
 
 use rdkafka::admin::{
-    AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, NewPartitions, NewTopic,
-    OwnedResourceSpecifier, ResourceSpecifier, TopicReplication,
+    AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult, NewPartitions,
+    NewTopic, OwnedResourceSpecifier, ResourceSpecifier, TopicReplication,
 };
 use rdkafka::client::DefaultClientContext;
-use rdkafka::consumer::{BaseConsumer, Consumer, DefaultConsumerContext};
+use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, DefaultConsumerContext};
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::metadata::Metadata;
-use rdkafka::ClientConfig;
+use rdkafka::{ClientConfig, TopicPartitionList};
 
 use crate::utils::*;
 
@@ -380,6 +380,98 @@ async fn test_configs() {
     assert_eq!(res, &[Ok(OwnedResourceSpecifier::Broker(0))]);
 }
 
+#[tokio::test]
+async fn test_groups() {
+    let admin_client = create_admin_client();
+
+    // Happy path: delete a consumer group returns Ok
+    {
+        let group_name = "test_group";
+        create_consumer_group(&group_name).await;
+        // act
+        let res = admin_client
+            .delete_groups(&[&group_name], &AdminOptions::default())
+            .await;
+
+        assert_eq!(res, Ok(vec![Ok(group_name.to_string())]));
+    }
+    // For each group returns the deletion result
+    {
+        let group_name = "test_group";
+        let unknown_group_name = "unknown_group";
+        create_consumer_group(&group_name).await;
+        // act
+        let res = admin_client
+            .delete_groups(
+                &[&group_name, &unknown_group_name],
+                &AdminOptions::default(),
+            )
+            .await;
+
+        assert_eq!(
+            res,
+            Ok(vec![
+                Ok(group_name.to_string()),
+                Err((
+                    unknown_group_name.to_string(),
+                    RDKafkaErrorCode::GroupIdNotFound
+                ))
+            ])
+        );
+    }
+    // Trying to delete a consumer group that doesn't exists returns GroupIdNotFound
+    {
+        let res = admin_client
+            .delete_groups(&[&"non_existing_group"], &AdminOptions::default())
+            .await;
+        let expected: GroupResult = Err((
+            "non_existing_group".to_string(),
+            RDKafkaErrorCode::GroupIdNotFound,
+        ));
+        assert_eq!(res, Ok(vec![expected]));
+    }
+
+    // helper function to create a consumer group
+    async fn create_consumer_group(consumer_group_name: &str) {
+        let admin_client = create_admin_client();
+        let topic_name = "test_topic";
+        let consumer: BaseConsumer = create_config()
+            .set("group.id", consumer_group_name.clone())
+            .create()
+            .expect("create consumer failed");
+
+        admin_client
+            .create_topics(
+                &[NewTopic {
+                    name: topic_name,
+                    num_partitions: 1,
+                    replication: TopicReplication::Fixed(1),
+                    config: vec![],
+                }],
+                &AdminOptions::default(),
+            )
+            .await
+            .expect("topic creation failed");
+        let topic_partition_list = {
+            let mut lst = TopicPartitionList::new();
+            lst.add_partition(topic_name, 0);
+            lst
+        };
+        consumer
+            .assign(&topic_partition_list)
+            .expect("assign topic partition list failed");
+        consumer
+            .fetch_metadata(None, Duration::from_secs(3))
+            .expect("unable to fetch metadata");
+        consumer
+            .store_offset(topic_name, 0, -1)
+            .expect("store offset failed");
+        consumer
+            .commit_consumer_state(CommitMode::Sync)
+            .expect("commit the consumer state failed");
+    }
+}
+
 // Tests whether each admin operation properly reports an error if the entire
 // request fails. The original implementations failed to check this, resulting
 // in confusing situations where a failed admin request would return Ok([]).
@@ -424,4 +516,10 @@ async fn test_event_errors() {
         res,
         Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
     );
+
+    let res = admin_client.delete_groups(&[], &opts).await;
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
+    )
 }
