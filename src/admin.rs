@@ -131,6 +131,46 @@ impl<C: ClientContext> AdminClient<C> {
         Ok(rx)
     }
 
+    /// Deletes the named groups.
+    pub fn delete_groups(
+        &self,
+        group_names: &[&str],
+        opts: &AdminOptions,
+    ) -> impl Future<Output = KafkaResult<Vec<GroupResult>>> {
+        match self.delete_groups_inner(group_names, opts) {
+            Ok(rx) => Either::Left(DeleteGroupsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
+        }
+    }
+
+    fn delete_groups_inner(
+        &self,
+        group_names: &[&str],
+        opts: &AdminOptions,
+    ) -> KafkaResult<oneshot::Receiver<NativeEvent>> {
+        let mut native_groups = Vec::new();
+        let mut err_buf = ErrBuf::new();
+        for gn in group_names {
+            let gn_t = CString::new(*gn)?;
+            let native_group = unsafe {
+                NativeDeleteGroup::from_ptr(rdsys::rd_kafka_DeleteGroup_new(gn_t.as_ptr())).unwrap()
+            };
+            native_groups.push(native_group);
+        }
+        let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
+
+        unsafe {
+            rdsys::rd_kafka_DeleteGroups(
+                self.client.native_ptr(),
+                native_groups.as_c_array(),
+                native_groups.len(),
+                native_opts.ptr(),
+                self.queue.ptr(),
+            )
+        }
+        Ok(rx)
+    }
+
     /// Adds additional partitions to existing topics according to the provided
     /// `NewPartitions` specifications.
     ///
@@ -561,6 +601,27 @@ fn build_topic_results(topics: *const *const RDKafkaTopicResult, n: usize) -> Ve
     out
 }
 
+/// The result of a DeleteGroup operation.
+pub type GroupResult = Result<String, (String, RDKafkaErrorCode)>;
+
+fn build_group_results(groups: *const *const RDKafkaGroupResult, n: usize) -> Vec<GroupResult> {
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        let group = unsafe { *groups.add(i) };
+        let name = unsafe { cstr_to_owned(rdsys::rd_kafka_group_result_name(group)) };
+        let err = unsafe {
+            let err = rdsys::rd_kafka_group_result_error(group);
+            rdsys::rd_kafka_error_code(err)
+        };
+        if err.is_error() {
+            out.push(Err((name, err.into())));
+        } else {
+            out.push(Ok(name));
+        }
+    }
+    out
+}
+
 //
 // Create topic handling
 //
@@ -737,6 +798,41 @@ impl Future for DeleteTopicsFuture {
         let mut n = 0;
         let topics = unsafe { rdsys::rd_kafka_DeleteTopics_result_topics(res, &mut n) };
         Poll::Ready(Ok(build_topic_results(topics, n)))
+    }
+}
+
+//
+// Delete group handling
+//
+
+type NativeDeleteGroup = NativePtr<RDKafkaDeleteGroup>;
+
+unsafe impl KafkaDrop for RDKafkaDeleteGroup {
+    const TYPE: &'static str = "delete group";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_DeleteGroup_destroy;
+}
+
+struct DeleteGroupsFuture {
+    rx: oneshot::Receiver<NativeEvent>,
+}
+
+impl Future for DeleteGroupsFuture {
+    type Output = KafkaResult<Vec<GroupResult>>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_DeleteGroups_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "delete groups request received response of incorrect type ({})",
+                typ
+            ))));
+        }
+        let mut n = 0;
+        let groups = unsafe { rdsys::rd_kafka_DeleteGroups_result_groups(res, &mut n) };
+        Poll::Ready(Ok(build_group_results(groups, n)))
     }
 }
 
