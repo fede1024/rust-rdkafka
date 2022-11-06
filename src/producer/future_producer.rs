@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use futures_channel::oneshot;
 use futures_util::FutureExt;
 
-use crate::client::{Client, ClientContext, DefaultClientContext, OAuthToken};
+use crate::client::{BrokerAddr, Client, ClientContext, DefaultClientContext, OAuthToken};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
 use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
@@ -154,6 +154,10 @@ impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
 
     fn error(&self, error: KafkaError, reason: &str) {
         self.wrapped_context.error(error, reason);
+    }
+
+    fn rewrite_broker_addr(&self, addr: BrokerAddr) -> BrokerAddr {
+        self.wrapped_context.rewrite_broker_addr(addr)
     }
 
     fn generate_oauth_token(
