@@ -516,10 +516,4 @@ async fn test_event_errors() {
         res,
         Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
     );
-
-    let res = admin_client.delete_groups(&[], &opts).await;
-    assert_eq!(
-        res,
-        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
-    )
 }
