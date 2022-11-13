@@ -70,6 +70,9 @@ pub type RDKafkaNewTopic = bindings::rd_kafka_NewTopic_t;
 /// Native rdkafka delete topic object.
 pub type RDKafkaDeleteTopic = bindings::rd_kafka_DeleteTopic_t;
 
+/// Native rdkafka delete group object.
+pub type RDKafkaDeleteGroup = bindings::rd_kafka_DeleteGroup_t;
+
 /// Native rdkafka new partitions object.
 pub type RDKafkaNewPartitions = bindings::rd_kafka_NewPartitions_t;
 
@@ -84,6 +87,9 @@ pub type RDKafkaAdminOptions = bindings::rd_kafka_AdminOptions_t;
 
 /// Native rdkafka topic result.
 pub type RDKafkaTopicResult = bindings::rd_kafka_topic_result_t;
+
+/// Native rdkafka group result.
+pub type RDKafkaGroupResult = bindings::rd_kafka_group_result_t;
 
 // ENUMS
 

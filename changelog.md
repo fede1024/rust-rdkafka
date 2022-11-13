@@ -2,6 +2,16 @@
 
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
+## Unreleased
+
+* Add the [`AdminClient::delete_groups`] method, which deletes consumer groups
+  from a Kafka cluster ([#510]).
+
+  Thanks, [@andrewinci].
+
+[@andrewinci]: https://github.com/andrewinci
+[#510]: https://github.com/fede1024/rust-rdkafka/issues/510
+
 ## 0.29.0 (2022-10-29)
 
 * **Breaking change.** Pass through errors from librdkafka in
