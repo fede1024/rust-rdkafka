@@ -165,9 +165,9 @@ pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
 {
+    queue: NativeQueue, // queue must be dropped before the base to avoid deadlock
     base: BaseConsumer<C>,
     wakers: Arc<WakerSlab>,
-    queue: NativeQueue,
     _shutdown_trigger: oneshot::Sender<()>,
     _runtime: PhantomData<R>,
 }
