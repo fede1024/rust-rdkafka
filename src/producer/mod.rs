@@ -237,6 +237,9 @@ where
     /// all enqueued messages. It will call `poll()` internally.
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
 
+    /// Purge messages currently handled by the producer instance.
+    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()>;
+
     /// Enable sending transactions with this producer.
     ///
     /// # Prerequisites

@@ -58,7 +58,7 @@ use crate::client::Client;
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
-use crate::log::{trace, warn};
+use crate::log::{error, trace, warn};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use crate::producer::{DefaultProducerContext, Producer, ProducerContext};
 use crate::topic_partition_list::TopicPartitionList;
@@ -275,7 +275,15 @@ pub struct BaseProducer<C = DefaultProducerContext>
 where
     C: ProducerContext,
 {
-    client_arc: Arc<Client<C>>,
+    inner: Arc<BaseProducerInner<C>>,
+}
+
+/// This intermediate struct allows triggering purge before dropping the client, on its `Drop` impl
+struct BaseProducerInner<C>
+where
+    C: ProducerContext,
+{
+    client: Client<C>,
 }
 
 impl<C> BaseProducer<C>
@@ -285,7 +293,7 @@ where
     /// Creates a base producer starting from a Client.
     fn from_client(client: Client<C>) -> BaseProducer<C> {
         BaseProducer {
-            client_arc: Arc::new(client),
+            inner: Arc::new(BaseProducerInner { client }),
         }
     }
 
@@ -294,12 +302,12 @@ where
     /// Regular calls to `poll` are required to process the events and execute
     /// the message delivery callbacks.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> i32 {
-        unsafe { rdsys::rd_kafka_poll(self.native_ptr(), timeout.into().as_millis()) }
+        self.inner.poll(timeout.into())
     }
 
     /// Returns a pointer to the native Kafka client.
     fn native_ptr(&self) -> *mut RDKafka {
-        self.client_arc.native_ptr()
+        self.inner.client.native_ptr()
     }
 
     /// Sends a message to Kafka.
@@ -347,7 +355,7 @@ where
                 RD_KAFKA_VTYPE_PARTITION,
                 record.partition.unwrap_or(-1),
                 RD_KAFKA_VTYPE_MSGFLAGS,
-                rdsys::RD_KAFKA_MSG_F_COPY as i32,
+                rdsys::RD_KAFKA_MSG_F_COPY,
                 RD_KAFKA_VTYPE_VALUE,
                 payload_ptr,
                 payload_len,
@@ -382,7 +390,7 @@ where
     C: ProducerContext,
 {
     fn client(&self) -> &Client<C> {
-        &*self.client_arc
+        &self.inner.client
     }
 
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
@@ -392,6 +400,10 @@ where
         } else {
             Ok(())
         }
+    }
+
+    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()> {
+        self.inner.purge(also_purge_inflight)
     }
 
     fn in_flight_count(&self) -> i32 {
@@ -472,13 +484,46 @@ where
     }
 }
 
+impl<C> BaseProducerInner<C>
+where
+    C: ProducerContext,
+{
+    fn poll(&self, timeout: Timeout) -> i32 {
+        unsafe { rdsys::rd_kafka_poll(self.client.native_ptr(), timeout.as_millis()) }
+    }
+    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()> {
+        let flags = rdsys::RD_KAFKA_PURGE_F_QUEUE
+            | (rdsys::RD_KAFKA_PURGE_F_INFLIGHT * (also_purge_inflight as i32));
+        let ret = unsafe { rdsys::rd_kafka_purge(self.client.native_ptr(), flags) };
+        if ret.is_error() {
+            Err(KafkaError::Purge(ret.into()))
+        } else {
+            Ok(())
+        }
+    }
+}
+impl<C> Drop for BaseProducerInner<C>
+where
+    C: ProducerContext,
+{
+    fn drop(&mut self) {
+        if let Err(err) = self.purge(true) {
+            // Purge should basically never fail provided you give it correct arguments
+            error!("Purge failed: {}", err);
+        }
+        // Still have to poll after purging to get the results that have been made ready by the purge
+        self.poll(Timeout::After(Duration::ZERO));
+    }
+}
+
+// This has to be implemented manually because the `Clone` derive would put a `Clone` bound on `C`
 impl<C> Clone for BaseProducer<C>
 where
     C: ProducerContext,
 {
-    fn clone(&self) -> BaseProducer<C> {
-        BaseProducer {
-            client_arc: self.client_arc.clone(),
+    fn clone(&self) -> Self {
+        Self {
+            inner: Arc::clone(&self.inner),
         }
     }
 }
@@ -589,6 +634,10 @@ where
 
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         self.producer.flush(timeout)
+    }
+
+    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()> {
+        self.producer.purge(also_purge_inflight)
     }
 
     fn in_flight_count(&self) -> i32 {

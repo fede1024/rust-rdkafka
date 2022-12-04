@@ -374,6 +374,10 @@ where
         self.producer.flush(timeout)
     }
 
+    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()> {
+        self.producer.purge(also_purge_inflight)
+    }
+
     fn in_flight_count(&self) -> i32 {
         self.producer.in_flight_count()
     }
