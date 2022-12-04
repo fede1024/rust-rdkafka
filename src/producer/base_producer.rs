@@ -58,7 +58,7 @@ use crate::client::Client;
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
-use crate::log::{error, trace, warn};
+use crate::log::{trace, warn};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
 use crate::producer::{DefaultProducerContext, Producer, ProducerContext};
 use crate::topic_partition_list::TopicPartitionList;
@@ -402,7 +402,7 @@ where
         }
     }
 
-    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()> {
+    fn purge(&self, also_purge_inflight: bool) {
         self.inner.purge(also_purge_inflight)
     }
 
@@ -491,14 +491,16 @@ where
     fn poll(&self, timeout: Timeout) -> i32 {
         unsafe { rdsys::rd_kafka_poll(self.client.native_ptr(), timeout.as_millis()) }
     }
-    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()> {
+    fn purge(&self, also_purge_inflight: bool) {
         let flags = rdsys::RD_KAFKA_PURGE_F_QUEUE
             | (rdsys::RD_KAFKA_PURGE_F_INFLIGHT * (also_purge_inflight as i32));
         let ret = unsafe { rdsys::rd_kafka_purge(self.client.native_ptr(), flags) };
         if ret.is_error() {
-            Err(KafkaError::Purge(ret.into()))
-        } else {
-            Ok(())
+            panic!(
+                "According to librdkafka's doc, calling this with valid arguments on a producer \
+                    can only result in a success, but it still failed: {}",
+                RDKafkaErrorCode::from(ret)
+            )
         }
     }
 }
@@ -507,10 +509,7 @@ where
     C: ProducerContext,
 {
     fn drop(&mut self) {
-        if let Err(err) = self.purge(true) {
-            // Purge should basically never fail provided you give it correct arguments
-            error!("Purge failed: {}", err);
-        }
+        self.purge(true);
         // Still have to poll after purging to get the results that have been made ready by the purge
         self.poll(Timeout::After(Duration::ZERO));
     }
@@ -636,7 +635,7 @@ where
         self.producer.flush(timeout)
     }
 
-    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()> {
+    fn purge(&self, also_purge_inflight: bool) {
         self.producer.purge(also_purge_inflight)
     }
 

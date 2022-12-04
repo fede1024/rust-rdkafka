@@ -238,7 +238,25 @@ where
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
 
     /// Purge messages currently handled by the producer instance.
-    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()>;
+    ///
+    /// If setting `also_purge_inflight`, this will also purge in-flight to or from the broker.
+    /// Purging these messages will void any future acknowledgements from the broker, making it
+    /// impossible for the application to know if these messages were successfully delivered or not.
+    /// Retrying these messages may lead to duplicates.
+    ///
+    /// The application will need to call ::poll() or ::flush()
+    /// afterwards to serve the delivery report callbacks of the purged messages.
+    ///
+    /// Messages purged from internal queues fail with the delivery report
+    /// error code set to
+    /// [`KafkaError::MessageProduction(RDKafkaErrorCode::PurgeQueue)`](crate::error::RDKafkaErrorCode::PurgeQueue),
+    /// while purged messages that are in-flight to or from the broker will fail
+    /// with the error code set to
+    /// [`KafkaError::MessageProduction(RDKafkaErrorCode::PurgeInflight)`](crate::error::RDKafkaErrorCode::PurgeInflight).
+    ///
+    /// This call may block for a short time while background thread
+    /// queues are purged.
+    fn purge(&self, also_purge_inflight: bool);
 
     /// Enable sending transactions with this producer.
     ///

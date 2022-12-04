@@ -374,7 +374,7 @@ where
         self.producer.flush(timeout)
     }
 
-    fn purge(&self, also_purge_inflight: bool) -> KafkaResult<()> {
+    fn purge(&self, also_purge_inflight: bool) {
         self.producer.purge(also_purge_inflight)
     }
 

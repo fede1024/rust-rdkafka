@@ -149,8 +149,6 @@ pub enum KafkaError {
     ConsumerCommit(RDKafkaErrorCode),
     /// Flushing failed
     Flush(RDKafkaErrorCode),
-    /// Purging failed
-    Purge(RDKafkaErrorCode),
     /// Global error.
     Global(RDKafkaErrorCode),
     /// Group list fetch failed.
@@ -203,7 +201,6 @@ impl fmt::Debug for KafkaError {
                 write!(f, "KafkaError (Consumer commit error: {})", err)
             }
             KafkaError::Flush(err) => write!(f, "KafkaError (Flush error: {})", err),
-            KafkaError::Purge(err) => write!(f, "KafkaError (Purge error: {})", err),
             KafkaError::Global(err) => write!(f, "KafkaError (Global error: {})", err),
             KafkaError::GroupListFetch(err) => {
                 write!(f, "KafkaError (Group list fetch error: {})", err)
@@ -253,7 +250,6 @@ impl fmt::Display for KafkaError {
             KafkaError::ClientCreation(ref err) => write!(f, "Client creation error: {}", err),
             KafkaError::ConsumerCommit(err) => write!(f, "Consumer commit error: {}", err),
             KafkaError::Flush(err) => write!(f, "Flush error: {}", err),
-            KafkaError::Purge(err) => write!(f, "Purge error: {}", err),
             KafkaError::Global(err) => write!(f, "Global error: {}", err),
             KafkaError::GroupListFetch(err) => write!(f, "Group list fetch error: {}", err),
             KafkaError::MessageConsumption(err) => write!(f, "Message consumption error: {}", err),
@@ -285,7 +281,6 @@ impl Error for KafkaError {
             KafkaError::ClientCreation(_) => None,
             KafkaError::ConsumerCommit(err) => Some(err),
             KafkaError::Flush(err) => Some(err),
-            KafkaError::Purge(err) => Some(err),
             KafkaError::Global(err) => Some(err),
             KafkaError::GroupListFetch(err) => Some(err),
             KafkaError::MessageConsumption(err) => Some(err),
@@ -323,7 +318,6 @@ impl KafkaError {
             KafkaError::ClientCreation(_) => None,
             KafkaError::ConsumerCommit(err) => Some(*err),
             KafkaError::Flush(err) => Some(*err),
-            KafkaError::Purge(err) => Some(*err),
             KafkaError::Global(err) => Some(*err),
             KafkaError::GroupListFetch(err) => Some(*err),
             KafkaError::MessageConsumption(err) => Some(*err),
