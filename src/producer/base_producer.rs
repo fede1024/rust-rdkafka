@@ -60,7 +60,7 @@ use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::log::{trace, warn};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
-use crate::producer::{DefaultProducerContext, Producer, ProducerContext};
+use crate::producer::{DefaultProducerContext, Producer, ProducerContext, PurgeFlags};
 use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{IntoOpaque, Timeout};
 
@@ -402,8 +402,8 @@ where
         }
     }
 
-    fn purge(&self, also_purge_inflight: bool) {
-        self.inner.purge(also_purge_inflight)
+    fn purge(&self, flags: PurgeFlags) {
+        self.inner.purge(flags)
     }
 
     fn in_flight_count(&self) -> i32 {
@@ -491,9 +491,8 @@ where
     fn poll(&self, timeout: Timeout) -> i32 {
         unsafe { rdsys::rd_kafka_poll(self.client.native_ptr(), timeout.as_millis()) }
     }
-    fn purge(&self, also_purge_inflight: bool) {
-        let flags = rdsys::RD_KAFKA_PURGE_F_QUEUE
-            | (rdsys::RD_KAFKA_PURGE_F_INFLIGHT * (also_purge_inflight as i32));
+    fn purge(&self, flags: PurgeFlags) {
+        let flags = flags.bits();
         let ret = unsafe { rdsys::rd_kafka_purge(self.client.native_ptr(), flags) };
         if ret.is_error() {
             panic!(
@@ -509,7 +508,7 @@ where
     C: ProducerContext,
 {
     fn drop(&mut self) {
-        self.purge(true);
+        self.purge(PurgeFlags::QUEUE | PurgeFlags::INFLIGHT);
         // Still have to poll after purging to get the results that have been made ready by the purge
         self.poll(Timeout::After(Duration::ZERO));
     }
@@ -635,8 +634,8 @@ where
         self.producer.flush(timeout)
     }
 
-    fn purge(&self, also_purge_inflight: bool) {
-        self.producer.purge(also_purge_inflight)
+    fn purge(&self, flags: PurgeFlags) {
+        self.producer.purge(flags)
     }
 
     fn in_flight_count(&self) -> i32 {

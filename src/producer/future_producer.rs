@@ -19,7 +19,9 @@ use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, 
 use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
-use crate::producer::{BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer};
+use crate::producer::{
+    BaseRecord, DeliveryResult, Producer, ProducerContext, PurgeFlags, ThreadedProducer,
+};
 use crate::statistics::Statistics;
 use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{AsyncRuntime, DefaultRuntime, IntoOpaque, Timeout};
@@ -374,8 +376,8 @@ where
         self.producer.flush(timeout)
     }
 
-    fn purge(&self, also_purge_inflight: bool) {
-        self.producer.purge(also_purge_inflight)
+    fn purge(&self, flags: PurgeFlags) {
+        self.producer.purge(flags)
     }
 
     fn in_flight_count(&self) -> i32 {

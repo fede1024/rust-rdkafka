@@ -239,10 +239,9 @@ where
 
     /// Purge messages currently handled by the producer instance.
     ///
-    /// If setting `also_purge_inflight`, this will also purge in-flight to or from the broker.
-    /// Purging these messages will void any future acknowledgements from the broker, making it
-    /// impossible for the application to know if these messages were successfully delivered or not.
-    /// Retrying these messages may lead to duplicates.
+    /// See the [`PurgeFlags`] documentation for the list of flags that may be provided.
+    ///
+    /// If providing an empty set of flags, nothing will be purged.
     ///
     /// The application will need to call ::poll() or ::flush()
     /// afterwards to serve the delivery report callbacks of the purged messages.
@@ -254,9 +253,8 @@ where
     /// with the error code set to
     /// [`KafkaError::MessageProduction(RDKafkaErrorCode::PurgeInflight)`](crate::error::RDKafkaErrorCode::PurgeInflight).
     ///
-    /// This call may block for a short time while background thread
-    /// queues are purged.
-    fn purge(&self, also_purge_inflight: bool);
+    /// This call may block for a short time while background thread queues are purged.
+    fn purge(&self, flags: PurgeFlags);
 
     /// Enable sending transactions with this producer.
     ///
@@ -388,4 +386,31 @@ where
     /// [`RDKafkaErrorCode::PurgeInflight`]: crate::error::RDKafkaErrorCode::PurgeInflight
     /// [`RDKafkaErrorCode::PurgeQueue`]: crate::error::RDKafkaErrorCode::PurgeQueue
     fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
+}
+
+bitflags::bitflags! {
+    /// Flags to provide to [`Producer::purge`] to parametrize the purge behavior
+    ///
+    /// This struct is generated via [`bitflags`], so you may find some relevant documentation there.
+    ///
+    /// # Example
+    /// To purge both queued messages and in-flight messages:
+    /// ```
+    /// # use rdkafka::producer::PurgeFlags;
+    /// let flags = PurgeFlags::QUEUE | PurgeFlags::INFLIGHT;
+    /// ```
+    pub struct PurgeFlags: i32 {
+        /// Purge messages in internal queues. This does not purge inflight messages.
+        const QUEUE = rdkafka_sys::RD_KAFKA_PURGE_F_QUEUE;
+        /// Purge messages in-flight to or from the broker.
+        /// Purging these messages will void any future acknowledgements from the
+        /// broker, making it impossible for the application to know if these
+        /// messages were successfully delivered or not.
+        /// Retrying these messages may lead to duplicates.
+        ///
+        /// This does not purge messages in internal queues.
+        const INFLIGHT = rdkafka_sys::RD_KAFKA_PURGE_F_INFLIGHT;
+        /// Don't wait for background thread queue purging to finish.
+        const NON_BLOCKING = rdkafka_sys::RD_KAFKA_PURGE_F_NON_BLOCKING;
+    }
 }
