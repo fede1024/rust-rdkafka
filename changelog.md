@@ -4,13 +4,18 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-* Add the [`AdminClient::delete_groups`] method, which deletes consumer groups
+* Add the `AdminClient::delete_groups` method, which deletes consumer groups
   from a Kafka cluster ([#510]).
 
   Thanks, [@andrewinci].
 
 [@andrewinci]: https://github.com/andrewinci
 [#510]: https://github.com/fede1024/rust-rdkafka/issues/510
+
+* Add support for the `purge` API, that allows retreiving messages that were
+  queued for production when shutting down. It is automatically called on `Drop`.
+  Fixes leaking associated data (futures...).
+
 
 ## 0.29.0 (2022-10-29)
 
