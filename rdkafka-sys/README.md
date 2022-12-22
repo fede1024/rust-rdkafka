@@ -60,6 +60,8 @@ flags you would pass to `configure` if you were compiling manually).
     libsasl2. By default the system's libsasl2 is dynamically linked, but
     static linking of the version bundled with the [sasl2-sys] crate can be
     requested with the `gssapi-vendored` feature.
+  * The **`scram-vendored`** feature enables SASL SCRAM support with Cyrus
+    libsasl2. This requires linking against OpenSSL via the [openssl-sys] crate.
   * The **`libz`** feature enables support for zlib compression. This
     feature is enabled by default. By default, the system's libz is
     dynamically linked, but static linking of the version bundled with the

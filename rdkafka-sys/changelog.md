@@ -4,6 +4,7 @@
 
 * Add the `RDKafkaDeleteGroup` and `RDKafkaGroupResult` type aliases to the
   `types` module.
+* Add `scram-vendored` feature.
 
 ## v4.3.0+1.9.2 (2022-10-29)
 
