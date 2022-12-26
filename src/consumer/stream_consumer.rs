@@ -50,6 +50,7 @@ unsafe fn disable_nonempty_callback(queue: &NativeQueue) {
     rdsys::rd_kafka_queue_cb_event_enable(queue.ptr(), None, ptr::null_mut())
 }
 
+#[derive(Debug)]
 struct WakerSlab {
     wakers: Mutex<Slab<Option<Waker>>>,
 }
@@ -161,6 +162,7 @@ impl<'a> Drop for MessageStream<'a> {
 ///
 /// [KIP-62]: https://cwiki.apache.org/confluence/display/KAFKA/KIP-62%3A+Allow+consumer+to+send+heartbeats+from+a+background+thread
 #[must_use = "Consumer polling thread will stop immediately if unused"]
+#[derive(Debug)]
 pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,

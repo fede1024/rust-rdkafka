@@ -155,6 +155,7 @@ impl ClientContext for DefaultClientContext {}
 /// A native rdkafka-sys client. This struct shouldn't be used directly. Use
 /// higher level `Client` or producers and consumers.
 // TODO(benesch): this should be `pub(crate)`.
+#[derive(Debug)]
 pub struct NativeClient {
     ptr: NativePtr<RDKafka>,
 }
@@ -208,6 +209,7 @@ impl NativeClient {
 ///
 /// [`consumer`]: crate::consumer
 /// [`producer`]: crate::producer
+#[derive(Debug)]
 pub struct Client<C: ClientContext = DefaultClientContext> {
     native: NativeClient,
     context: Arc<C>,
