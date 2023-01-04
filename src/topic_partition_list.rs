@@ -229,16 +229,16 @@ impl TopicPartitionList {
     }
 
     /// Adds a topic with unassigned partitions to the list.
-    pub fn add_topic_unassigned<'a>(&'a mut self, topic: &str) -> TopicPartitionListElem<'a> {
+    pub fn add_topic_unassigned(&mut self, topic: &str) -> TopicPartitionListElem {
         self.add_partition(topic, PARTITION_UNASSIGNED)
     }
 
     /// Adds a topic and partition to the list.
-    pub fn add_partition<'a>(
-        &'a mut self,
+    pub fn add_partition(
+        &mut self,
         topic: &str,
         partition: i32,
-    ) -> TopicPartitionListElem<'a> {
+    ) -> TopicPartitionListElem {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let tp_ptr = unsafe {
             rdsys::rd_kafka_topic_partition_list_add(self.ptr(), topic_c.as_ptr(), partition)
@@ -336,7 +336,7 @@ impl TopicPartitionList {
     }
 
     /// Returns all the elements of the list that belong to the specified topic.
-    pub fn elements_for_topic<'a>(&'a self, topic: &str) -> Vec<TopicPartitionListElem<'a>> {
+    pub fn elements_for_topic(&self, topic: &str) -> Vec<TopicPartitionListElem> {
         let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
         let mut vec = Vec::with_capacity(slice.len());
         for elem_ptr in slice {
