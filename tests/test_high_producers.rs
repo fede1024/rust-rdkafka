@@ -42,7 +42,7 @@ async fn test_future_producer_send() {
         .collect();
 
     let results: Vec<_> = results.collect().await;
-    assert!(results.len() == 10);
+    assert_eq!(results.len(), 10);
     for (i, result) in results.into_iter().enumerate() {
         let (partition, offset) = result.unwrap();
         assert_eq!(partition, 1);
