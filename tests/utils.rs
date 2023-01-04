@@ -68,7 +68,7 @@ pub fn get_broker_version() -> KafkaVersion {
         }
         // If the environment variable is unset, assume we're running the latest version.
         Err(VarError::NotPresent) => {
-            KafkaVersion(std::u32::MAX, std::u32::MAX, std::u32::MAX, std::u32::MAX)
+            KafkaVersion(u32::MAX, u32::MAX, u32::MAX, u32::MAX)
         }
     }
 }
