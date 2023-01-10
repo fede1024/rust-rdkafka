@@ -125,7 +125,7 @@ impl<'a> Stream for MessageStream<'a> {
 
         // Otherwise, we need to wait for a message to become available. Store
         // the waker so that we are woken up if the queue flips from non-empty
-        // to empty. We have to store the waker repatedly in case this future
+        // to empty. We have to store the waker repeatedly in case this future
         // migrates between tasks.
         self.wakers.set_waker(self.slot, cx.waker().clone());
 

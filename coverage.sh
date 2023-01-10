@@ -34,7 +34,7 @@ do
     fi
     kcov $KCOV_ARGS "$test_file"
     if [ "$?" != "0" ]; then
-        echo -e "${RED}*** Failure during unit test converage ***${NC}"
+        echo -e "${RED}*** Failure during unit test coverage ***${NC}"
         exit 1
     fi
 done
@@ -47,7 +47,7 @@ do
     fi
     kcov $KCOV_ARGS "$test_file"
     if [ "$?" != "0" ]; then
-        echo -e "${RED}*** Failure during rdkafka-sys unit test converage ***${NC}"
+        echo -e "${RED}*** Failure during rdkafka-sys unit test coverage ***${NC}"
         exit 1
     fi
 done
@@ -61,7 +61,7 @@ do
     echo -e "${GREEN}Executing "$test_file"${NC}"
     kcov $KCOV_ARGS "$test_file"
     if [ "$?" != "0" ]; then
-        echo -e "${RED}*** Failure during integration converage ***${NC}"
+        echo -e "${RED}*** Failure during integration coverage ***${NC}"
         exit 1
     fi
 done

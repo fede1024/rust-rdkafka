@@ -305,7 +305,7 @@ pub struct ConsumerGroup {
     pub state: String,
     /// The time elapsed since the last state change, in milliseconds.
     pub stateage: i64,
-    /// The local consumer group hander's join state.
+    /// The local consumer group handler's join state.
     pub join_state: String,
     /// The time elapsed since the last rebalance (assign or revoke), in
     /// milliseconds.
@@ -333,7 +333,7 @@ pub struct ExactlyOnceSemantics {
     /// The time elapsed since the last transactional producer state change, in
     /// milliseconds.
     pub txn_stateage: i64,
-    /// Whether the transactional state allows enqueing (producing) new
+    /// Whether the transactional state allows enqueuing (producing) new
     /// messages.
     pub txn_may_enq: bool,
     /// The currently assigned producer ID, or -1.

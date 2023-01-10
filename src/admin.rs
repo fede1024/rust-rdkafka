@@ -34,7 +34,7 @@ use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, KafkaDrop, Native
 /// A client for the Kafka admin API.
 ///
 /// `AdminClient` provides programmatic access to managing a Kafka cluster,
-/// notably manipulating topics, partitions, and configuration paramaters.
+/// notably manipulating topics, partitions, and configuration parameters.
 pub struct AdminClient<C: ClientContext> {
     client: Client<C>,
     queue: Arc<NativeQueue>,

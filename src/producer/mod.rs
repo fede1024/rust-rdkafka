@@ -306,7 +306,7 @@ where
     /// partition.
     ///
     /// Use this method at the end of a consume-transform-produce loop, prior to
-    /// comitting the transaction with [`Producer::commit_transaction`].
+    /// committing the transaction with [`Producer::commit_transaction`].
     ///
     /// This function may block for the specified `timeout`.
     ///
@@ -341,7 +341,7 @@ where
     /// If any of the outstanding messages fail permanently, the current
     /// transaction will enter an abortable error state and this function will
     /// return an abortable error. You must then call
-    /// [`Producer::abort_transaction`] before attemping to create another
+    /// [`Producer::abort_transaction`] before attempting to create another
     /// transaction.
     ///
     /// This function may block for the specified `timeout`.
@@ -356,7 +356,7 @@ where
     ///
     /// # Details
     ///
-    /// Any oustanding messages will be purged and failed with
+    /// Any outstanding messages will be purged and failed with
     /// [`RDKafkaErrorCode::PurgeInflight`] or [`RDKafkaErrorCode::PurgeQueue`].
     ///
     /// This function should also be used to recover from non-fatal abortable
