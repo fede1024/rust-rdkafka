@@ -60,7 +60,7 @@ use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::log::{trace, warn};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
-use crate::producer::{DefaultProducerContext, Producer, ProducerContext, PurgeFlags};
+use crate::producer::{DefaultProducerContext, Producer, ProducerContext, PurgeConfig};
 use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{IntoOpaque, Timeout};
 
@@ -391,9 +391,8 @@ where
         }
     }
 
-    fn purge(&self, flags: PurgeFlags) {
-        let flags = flags.bits();
-        let ret = unsafe { rdsys::rd_kafka_purge(self.native_ptr(), flags) };
+    fn purge(&self, flags: PurgeConfig) {
+        let ret = unsafe { rdsys::rd_kafka_purge(self.native_ptr(), flags.flag_bits) };
         if ret.is_error() {
             panic!(
                 "According to librdkafka's doc, calling this with valid arguments on a producer \
@@ -486,7 +485,7 @@ where
     C: ProducerContext,
 {
     fn drop(&mut self) {
-        self.purge(PurgeFlags::QUEUE | PurgeFlags::INFLIGHT);
+        self.purge(PurgeConfig::default().queue().inflight());
         // Still have to poll after purging to get the results that have been made ready by the purge
         self.poll(Timeout::After(Duration::ZERO));
     }
@@ -600,7 +599,7 @@ where
         self.producer.flush(timeout)
     }
 
-    fn purge(&self, flags: PurgeFlags) {
+    fn purge(&self, flags: PurgeConfig) {
         self.producer.purge(flags)
     }
 

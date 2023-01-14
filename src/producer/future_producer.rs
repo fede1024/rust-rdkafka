@@ -20,7 +20,7 @@ use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
 use crate::message::{Message, OwnedHeaders, OwnedMessage, Timestamp, ToBytes};
 use crate::producer::{
-    BaseRecord, DeliveryResult, Producer, ProducerContext, PurgeFlags, ThreadedProducer,
+    BaseRecord, DeliveryResult, Producer, ProducerContext, PurgeConfig, ThreadedProducer,
 };
 use crate::statistics::Statistics;
 use crate::topic_partition_list::TopicPartitionList;
@@ -376,7 +376,7 @@ where
         self.producer.flush(timeout)
     }
 
-    fn purge(&self, flags: PurgeFlags) {
+    fn purge(&self, flags: PurgeConfig) {
         self.producer.purge(flags)
     }
 
