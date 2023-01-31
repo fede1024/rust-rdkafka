@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use rand::distributions::Alphanumeric;
 use std::collections::HashMap;
 use std::env::{self, VarError};
 use std::time::Duration;
@@ -18,26 +19,29 @@ use rdkafka::statistics::Statistics;
 use rdkafka::TopicPartitionList;
 
 pub fn rand_test_topic() -> String {
-    let id = rand::thread_rng()
-        .gen_ascii_chars()
+    let id: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
         .take(10)
-        .collect::<String>();
+        .map(char::from)
+        .collect();
     format!("__test_{}", id)
 }
 
 pub fn rand_test_group() -> String {
-    let id = rand::thread_rng()
-        .gen_ascii_chars()
+    let id: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
         .take(10)
-        .collect::<String>();
+        .map(char::from)
+        .collect();
     format!("__test_{}", id)
 }
 
 pub fn rand_test_transactional_id() -> String {
-    let id = rand::thread_rng()
-        .gen_ascii_chars()
+    let id: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
         .take(10)
-        .collect::<String>();
+        .map(char::from)
+        .collect();
     format!("__test_{}", id)
 }
 

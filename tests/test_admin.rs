@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use backoff::{ExponentialBackoff, Operation};
+use backoff::ExponentialBackoff;
 
 use rdkafka::admin::{
     AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult, NewPartitions,
@@ -76,7 +76,7 @@ fn fetch_metadata(topic: &str) -> Metadata {
 
     let mut backoff = ExponentialBackoff::default();
     backoff.max_elapsed_time = Some(Duration::from_secs(5));
-    (|| {
+    backoff::retry(backoff, || {
         let metadata = consumer
             .fetch_metadata(Some(topic), timeout)
             .map_err(|e| e.to_string())?;
@@ -89,7 +89,6 @@ fn fetch_metadata(topic: &str) -> Metadata {
         }
         Ok(metadata)
     })
-    .retry(&mut backoff)
     .unwrap()
 }
 
@@ -100,7 +99,7 @@ fn verify_delete(topic: &str) {
 
     let mut backoff = ExponentialBackoff::default();
     backoff.max_elapsed_time = Some(Duration::from_secs(5));
-    (|| {
+    backoff::retry(backoff, || {
         // Asking about the topic specifically will recreate it (under the
         // default Kafka configuration, at least) so we have to ask for the list
         // of all topics and search through it.
@@ -112,7 +111,6 @@ fn verify_delete(topic: &str) {
         }
         Ok(())
     })
-    .retry(&mut backoff)
     .unwrap()
 }
 
