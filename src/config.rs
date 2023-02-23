@@ -181,6 +181,11 @@ impl ClientConfig {
         }
     }
 
+    /// Gets a reference to the underlying config map
+    pub fn config_map(&self) -> &HashMap<String, String> {
+        &self.conf_map
+    }
+
     /// Gets the value of a parameter in the configuration.
     ///
     /// Returns the current value set for `key`, or `None` if no value for `key`
