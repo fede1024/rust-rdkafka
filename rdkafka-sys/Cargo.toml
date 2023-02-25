@@ -13,8 +13,8 @@ edition = "2018"
 
 [dependencies]
 num_enum = "0.5.0"
-libc = "0.2.65"
-openssl-sys = { version = "0.9.48", optional = true }
+libc = "0.2.139"
+openssl-sys = { version = "0.9.80", optional = true }
 libz-sys = { version = "1.0.0", optional = true }
 curl-sys = { version = "0.4.55", optional = true }
 zstd-sys = { version = "2.0.0", optional = true }
