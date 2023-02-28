@@ -25,8 +25,8 @@ use rdkafka_sys as rdsys;
 
 /// Returns a tuple representing the version of `librdkafka` in hexadecimal and
 /// string format.
-pub fn get_rdkafka_version() -> (u16, String) {
-    let version_number = unsafe { rdsys::rd_kafka_version() } as u16;
+pub fn get_rdkafka_version() -> (i32, String) {
+    let version_number = unsafe { rdsys::rd_kafka_version() };
     let c_str = unsafe { CStr::from_ptr(rdsys::rd_kafka_version_str()) };
     (version_number, c_str.to_string_lossy().into_owned())
 }
@@ -458,5 +458,17 @@ impl AsyncRuntime for TokioRuntime {
 
     fn delay_for(duration: Duration) -> Self::Delay {
         tokio::time::sleep(duration)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rdkafka_version() {
+        let rdk_version = unsafe { rdsys::rd_kafka_version() };
+        let (version_int, _) = get_rdkafka_version();
+        assert_eq!(rdk_version, version_int);
     }
 }

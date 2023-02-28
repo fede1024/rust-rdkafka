@@ -4,6 +4,17 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* **Breaking change.** `util::get_rdkafka_version` now returns `(i32, String)`.
+  Previously, it returned `(u16, String)` which would silently truncate the hex
+  representation of the version:
+  > Interpreted as hex MM.mm.rr.xx:
+  > 
+  > MM = Major
+  > mm = minor
+  > rr = revision
+  > xx = pre-release id (0xff is the final release)
+  > E.g.: 0x010902ff = 1.9.2
+
 * Add the `AdminClient::delete_groups` method, which deletes consumer groups
   from a Kafka cluster ([#510]).
 
