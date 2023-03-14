@@ -326,6 +326,80 @@ async fn test_consume_partition_order() {
 }
 
 #[tokio::test]
+async fn test_partition_queue_forwarding() {
+    let _r = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(2), None).await;
+
+    create_topic(&topic_name, 1).await;
+
+    let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+        .unwrap();
+    tpl.add_partition_offset(&topic_name, 1, Offset::Beginning)
+        .unwrap();
+    tpl.add_partition_offset(&topic_name, 2, Offset::Beginning)
+        .unwrap();
+    consumer.assign(&tpl).unwrap();
+
+    let mut q0 = consumer.split_partition_queue(&topic_name, 0).unwrap();
+    let mut q1 = consumer.split_partition_queue(&topic_name, 1).unwrap();
+    let q2 = consumer.split_partition_queue(&topic_name, 2).unwrap();
+
+    // Forward q0 into q1, then drop q0 as it won't be needed anymore.
+    q0.forward(&mut q1).expect("Partition queue forward failed");
+    drop(q0);
+
+    // Worker consuming from (q0 + q1)
+    let worker_1 = thread::spawn(move || {
+        let mut seen = [0; 2];
+        for _ in 0..8 {
+            let queue_message = q1.poll(Timeout::Never).unwrap().unwrap();
+            let partition = queue_message.partition();
+            assert!([0, 1].contains(&partition));
+            seen[partition as usize] += 1;
+        }
+        // Check that we've received 4 messages from both partitions 0 and 1.
+        assert_eq!(seen, [4, 4]);
+    });
+
+    // Worker consuming from q2
+    let worker_2 = thread::spawn(move || {
+        for _ in 0..4 {
+            let queue_message = q2.poll(Timeout::Never).unwrap().unwrap();
+            assert_eq!(queue_message.partition(), 2);
+        }
+    });
+
+    consumer.poll(Duration::from_secs(0));
+    drop(consumer);
+    worker_1.join().unwrap();
+    worker_2.join().unwrap();
+}
+
+#[tokio::test]
+async fn test_partition_queue_forwarding_client_mismatch() {
+    let topic_name = rand_test_topic();
+    create_topic(&topic_name, 1).await;
+
+    let consumer_a: Arc<BaseConsumer> = Arc::new(ClientConfig::new().create().unwrap());
+    let consumer_b: Arc<BaseConsumer> = Arc::new(ClientConfig::new().create().unwrap());
+
+    let mut queue_a = consumer_a.split_partition_queue(&topic_name, 0).unwrap();
+    let mut queue_b = consumer_b.split_partition_queue(&topic_name, 1).unwrap();
+
+    // Both queues come from different underlying clients, so forwarding must fail.
+    assert_eq!(
+        queue_a.forward(&mut queue_b),
+        Err(KafkaError::ClientMismatch)
+    );
+}
+
+#[tokio::test]
 async fn test_produce_consume_message_queue_nonempty_callback() {
     let _r = env_logger::try_init();
 

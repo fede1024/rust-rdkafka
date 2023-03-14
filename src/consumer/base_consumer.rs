@@ -688,6 +688,19 @@ where
         .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, &self.consumer) })
     }
 
+    /// Forwards this queue into `dst` queue.
+    ///
+    /// Note that if both queues point to a different underlying [`Client`], calling this function
+    /// results in a [`KafkaError::ClientMismatch`] error.
+    pub fn forward(&mut self, dst: &mut Self) -> KafkaResult<()> {
+        if std::ptr::eq(self.consumer.client(), dst.consumer.client()) {
+            unsafe { rdsys::rd_kafka_queue_forward(self.queue.ptr(), dst.queue.ptr()) };
+            Ok(())
+        } else {
+            Err(KafkaError::ClientMismatch)
+        }
+    }
+
     /// Sets a callback that will be invoked whenever the queue becomes
     /// nonempty.
     pub fn set_nonempty_callback<F>(&mut self, f: F)
