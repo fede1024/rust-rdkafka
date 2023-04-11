@@ -384,6 +384,10 @@ where
         self.base.assign(assignment)
     }
 
+    fn unassign(&self) -> KafkaResult<()> {
+        self.base.unassign()
+    }
+
     fn seek<T: Into<Timeout>>(
         &self,
         topic: &str,

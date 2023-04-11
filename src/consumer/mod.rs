@@ -237,6 +237,9 @@ where
     /// automatic consumer rebalance won't be activated.
     fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()>;
 
+    /// Clears all topic and partitions currently assigned to the consumer
+    fn unassign(&self) -> KafkaResult<()>;
+
     /// Seeks to `offset` for the specified `topic` and `partition`. After a
     /// successful call to `seek`, the next poll of the consumer will return the
     /// message with `offset`.

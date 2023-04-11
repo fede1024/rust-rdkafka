@@ -291,6 +291,16 @@ where
         Ok(())
     }
 
+    fn unassign(&self) -> KafkaResult<()> {
+        // Passing null to assign clears the current static assignments list
+        let ret_code = unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), ptr::null()) };
+        if ret_code.is_error() {
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
+            return Err(KafkaError::Subscription(error));
+        };
+        Ok(())
+    }
+
     fn seek<T: Into<Timeout>>(
         &self,
         topic: &str,
