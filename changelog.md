@@ -4,6 +4,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* Support for unassigning static partitions by passing `null` to `rdsys::rd_kafka_assign` and expose the
+feature as `unassign` in `base_consumer`
+
+* Expose `rdsys::rd_kafka_incremental_assign` and `rdsys::rd_kafka_incremental_unassign` in `base_consumer` for 
+incremental changes to static assignments
+
 * **Breaking change.** `util::get_rdkafka_version` now returns `(i32, String)`.
   Previously, it returned `(u16, String)` which would silently truncate the hex
   representation of the version:
