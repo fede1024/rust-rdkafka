@@ -18,7 +18,7 @@ use crate::consumer::{
     CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext,
     RebalanceProtocol,
 };
-use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::groups::GroupList;
 use crate::log::trace;
 use crate::message::{BorrowedMessage, Message};
@@ -286,6 +286,44 @@ where
             unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), assignment.ptr()) };
         if ret_code.is_error() {
             let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
+            return Err(KafkaError::Subscription(error));
+        };
+        Ok(())
+    }
+
+    fn unassign(&self) -> KafkaResult<()> {
+        // Passing null to assign clears the current static assignments list
+        let ret_code = unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), ptr::null()) };
+        if ret_code.is_error() {
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
+            return Err(KafkaError::Subscription(error));
+        };
+        Ok(())
+    }
+
+    fn incremental_assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_incremental_assign(
+                self.client.native_ptr(),
+                assignment.ptr(),
+            ))
+        };
+        if ret.is_error() {
+            let error = ret.name();
+            return Err(KafkaError::Subscription(error));
+        };
+        Ok(())
+    }
+
+    fn incremental_unassign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_incremental_unassign(
+                self.client.native_ptr(),
+                assignment.ptr(),
+            ))
+        };
+        if ret.is_error() {
+            let error = ret.name();
             return Err(KafkaError::Subscription(error));
         };
         Ok(())
