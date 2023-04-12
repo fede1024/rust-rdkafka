@@ -165,6 +165,31 @@ async fn test_produce_consume_base_assign() {
     assert_eq!(partition_count, vec![10, 8, 1]);
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn test_produce_consume_base_unassign() {
+    let _r = env_logger::try_init();
+
+    let topic_name = rand_test_topic();
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None).await;
+    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+        .unwrap();
+    tpl.add_partition_offset(&topic_name, 1, Offset::Offset(2))
+        .unwrap();
+    tpl.add_partition_offset(&topic_name, 2, Offset::Offset(9))
+        .unwrap();
+    consumer.assign(&tpl).unwrap();
+    let mut assignments = consumer.assignment().unwrap();
+    assert_eq!(assignments.count(), 3);
+
+    consumer.unassign().unwrap();
+    assignments = consumer.assignment().unwrap();
+    assert_eq!(assignments.count(), 0);
+}
+
 // All produced messages should be consumed.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_with_timestamp() {
