@@ -27,13 +27,13 @@ pub trait IsError {
 
 impl IsError for RDKafkaRespErr {
     fn is_error(&self) -> bool {
-        *self as i32 != RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR as i32
+        *self != RDKafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR
     }
 }
 
 impl IsError for RDKafkaConfRes {
     fn is_error(&self) -> bool {
-        *self as i32 != RDKafkaConfRes::RD_KAFKA_CONF_OK as i32
+        *self != RDKafkaConfRes::RD_KAFKA_CONF_OK
     }
 }
 

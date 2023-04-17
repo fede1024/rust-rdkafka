@@ -21,13 +21,18 @@ incremental changes to static assignments
   > xx = pre-release id (0xff is the final release)
   > E.g.: 0x010902ff = 1.9.2
 
-* Add the [`AdminClient::delete_groups`] method, which deletes consumer groups
+* Add the `AdminClient::delete_groups` method, which deletes consumer groups
   from a Kafka cluster ([#510]).
 
   Thanks, [@andrewinci].
 
 [@andrewinci]: https://github.com/andrewinci
 [#510]: https://github.com/fede1024/rust-rdkafka/issues/510
+
+* Add support for the `purge` API, that allows retreiving messages that were
+  queued for production when shutting down. It is automatically called on `Drop`.
+  Fixes leaking associated data (futures...).
+
 
 ## 0.29.0 (2022-10-29)
 

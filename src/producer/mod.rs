@@ -237,6 +237,25 @@ where
     /// all enqueued messages. It will call `poll()` internally.
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
 
+    /// Purge messages currently handled by the producer instance.
+    ///
+    /// See the [`PurgeConfig`] documentation for the list of flags that may be provided.
+    ///
+    /// If providing an empty set of flags, nothing will be purged.
+    ///
+    /// The application will need to call `::poll()` or `::flush()`
+    /// afterwards to serve the delivery report callbacks of the purged messages.
+    ///
+    /// Messages purged from internal queues fail with the delivery report
+    /// error code set to
+    /// [`KafkaError::MessageProduction(RDKafkaErrorCode::PurgeQueue)`](crate::error::RDKafkaErrorCode::PurgeQueue),
+    /// while purged messages that are in-flight to or from the broker will fail
+    /// with the error code set to
+    /// [`KafkaError::MessageProduction(RDKafkaErrorCode::PurgeInflight)`](crate::error::RDKafkaErrorCode::PurgeInflight).
+    ///
+    /// This call may block for a short time while background thread queues are purged.
+    fn purge(&self, flags: PurgeConfig);
+
     /// Enable sending transactions with this producer.
     ///
     /// # Prerequisites
@@ -367,4 +386,82 @@ where
     /// [`RDKafkaErrorCode::PurgeInflight`]: crate::error::RDKafkaErrorCode::PurgeInflight
     /// [`RDKafkaErrorCode::PurgeQueue`]: crate::error::RDKafkaErrorCode::PurgeQueue
     fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
+}
+
+/// Settings to provide to [`Producer::purge`] to parametrize the purge behavior
+///
+/// `PurgeConfig::default()` corresponds to a setting where nothing is purged.
+///
+/// # Example
+/// To purge both queued messages and in-flight messages:
+/// ```
+/// # use rdkafka::producer::PurgeConfig;
+/// let settings = PurgeConfig::default().queue().inflight();
+/// ```
+#[derive(Default, Clone, Copy)]
+pub struct PurgeConfig {
+    flag_bits: i32,
+}
+impl PurgeConfig {
+    /// Purge messages in internal queues. This does not purge inflight messages.
+    #[inline]
+    pub fn queue(self) -> Self {
+        Self {
+            flag_bits: self.flag_bits | rdkafka_sys::RD_KAFKA_PURGE_F_QUEUE,
+        }
+    }
+    /// Purge messages in-flight to or from the broker.
+    /// Purging these messages will void any future acknowledgements from the
+    /// broker, making it impossible for the application to know if these
+    /// messages were successfully delivered or not.
+    /// Retrying these messages may lead to duplicates.
+    ///
+    /// This does not purge messages in internal queues.
+    #[inline]
+    pub fn inflight(self) -> Self {
+        Self {
+            flag_bits: self.flag_bits | rdkafka_sys::RD_KAFKA_PURGE_F_INFLIGHT,
+        }
+    }
+    /// Don't wait for background thread queue purging to finish.
+    #[inline]
+    pub fn non_blocking(self) -> Self {
+        Self {
+            flag_bits: self.flag_bits | rdkafka_sys::RD_KAFKA_PURGE_F_NON_BLOCKING,
+        }
+    }
+}
+
+macro_rules! negative_and_debug_impls {
+    ($($f: ident -> !$set_fn: ident,)*) => {
+        impl PurgeConfig {
+            $(
+                #[inline]
+                #[doc = concat!("Unsets the flag set by [`", stringify!($set_fn), "`](PurgeConfig::", stringify!($set_fn),")")]
+                pub fn $f(self) -> Self {
+                    Self {
+                        flag_bits: self.flag_bits & !PurgeConfig::default().$set_fn().flag_bits,
+                    }
+                }
+            )*
+        }
+        impl std::fmt::Debug for PurgeConfig {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                // Simulate a struct that holds a set of booleans
+                let mut d = f.debug_struct("PurgeConfig");
+                $(
+                    d.field(
+                        stringify!($set_fn),
+                        &((self.flag_bits & Self::default().$set_fn().flag_bits) != 0),
+                    );
+                )*
+                d.finish()
+            }
+        }
+    };
+}
+negative_and_debug_impls! {
+    no_queue -> !queue,
+    no_inflight -> !inflight,
+    blocking -> !non_blocking,
 }

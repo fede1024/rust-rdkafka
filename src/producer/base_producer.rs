@@ -60,7 +60,7 @@ use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::log::{trace, warn};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
-use crate::producer::{DefaultProducerContext, Producer, ProducerContext};
+use crate::producer::{DefaultProducerContext, Producer, ProducerContext, PurgeConfig};
 use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{IntoOpaque, Timeout};
 
@@ -236,8 +236,7 @@ where
 ///
 /// The `BaseProducer` needs to be polled at regular intervals in order to serve
 /// queued delivery report callbacks (for more information, refer to the
-/// module-level documentation). This producer can be cheaply cloned to create a
-/// new reference to the same underlying producer.
+/// module-level documentation).
 ///
 /// # Example usage
 ///
@@ -275,7 +274,7 @@ pub struct BaseProducer<C = DefaultProducerContext>
 where
     C: ProducerContext,
 {
-    client_arc: Arc<Client<C>>,
+    client: Client<C>,
 }
 
 impl<C> BaseProducer<C>
@@ -284,9 +283,7 @@ where
 {
     /// Creates a base producer starting from a Client.
     fn from_client(client: Client<C>) -> BaseProducer<C> {
-        BaseProducer {
-            client_arc: Arc::new(client),
-        }
+        BaseProducer { client }
     }
 
     /// Polls the producer, returning the number of events served.
@@ -299,7 +296,7 @@ where
 
     /// Returns a pointer to the native Kafka client.
     fn native_ptr(&self) -> *mut RDKafka {
-        self.client_arc.native_ptr()
+        self.client.native_ptr()
     }
 
     /// Sends a message to Kafka.
@@ -347,7 +344,7 @@ where
                 RD_KAFKA_VTYPE_PARTITION,
                 record.partition.unwrap_or(-1),
                 RD_KAFKA_VTYPE_MSGFLAGS,
-                rdsys::RD_KAFKA_MSG_F_COPY as i32,
+                rdsys::RD_KAFKA_MSG_F_COPY,
                 RD_KAFKA_VTYPE_VALUE,
                 payload_ptr,
                 payload_len,
@@ -382,7 +379,7 @@ where
     C: ProducerContext,
 {
     fn client(&self) -> &Client<C> {
-        &*self.client_arc
+        &self.client
     }
 
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
@@ -391,6 +388,17 @@ where
             Err(KafkaError::Flush(ret.into()))
         } else {
             Ok(())
+        }
+    }
+
+    fn purge(&self, flags: PurgeConfig) {
+        let ret = unsafe { rdsys::rd_kafka_purge(self.native_ptr(), flags.flag_bits) };
+        if ret.is_error() {
+            panic!(
+                "According to librdkafka's doc, calling this with valid arguments on a producer \
+                    can only result in a success, but it still failed: {}",
+                RDKafkaErrorCode::from(ret)
+            )
         }
     }
 
@@ -472,14 +480,14 @@ where
     }
 }
 
-impl<C> Clone for BaseProducer<C>
+impl<C> Drop for BaseProducer<C>
 where
     C: ProducerContext,
 {
-    fn clone(&self) -> BaseProducer<C> {
-        BaseProducer {
-            client_arc: self.client_arc.clone(),
-        }
+    fn drop(&mut self) {
+        self.purge(PurgeConfig::default().queue().inflight());
+        // Still have to poll after purging to get the results that have been made ready by the purge
+        self.poll(Timeout::After(Duration::ZERO));
     }
 }
 
@@ -498,7 +506,7 @@ pub struct ThreadedProducer<C>
 where
     C: ProducerContext + 'static,
 {
-    producer: BaseProducer<C>,
+    producer: Arc<BaseProducer<C>>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
@@ -517,10 +525,10 @@ where
         config: &ClientConfig,
         context: C,
     ) -> KafkaResult<ThreadedProducer<C>> {
-        let producer = BaseProducer::from_config_and_context(config, context)?;
+        let producer = Arc::new(BaseProducer::from_config_and_context(config, context)?);
         let should_stop = Arc::new(AtomicBool::new(false));
         let thread = {
-            let producer = producer.clone();
+            let producer = Arc::clone(&producer);
             let should_stop = should_stop.clone();
             thread::Builder::new()
                 .name("producer polling thread".to_string())
@@ -591,6 +599,10 @@ where
         self.producer.flush(timeout)
     }
 
+    fn purge(&self, flags: PurgeConfig) {
+        self.producer.purge(flags)
+    }
+
     fn in_flight_count(&self) -> i32 {
         self.producer.in_flight_count()
     }
@@ -638,21 +650,5 @@ where
             };
         }
         trace!("ThreadedProducer destroyed");
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    // Just test that there are no panics, and that each struct implements the
-    // expected traits (Clone, Send, Sync etc.). Behavior is tested in the
-    // integration tests.
-    use super::*;
-    use crate::config::ClientConfig;
-
-    // Verify that the producer is clone, according to documentation.
-    #[test]
-    fn test_base_producer_clone() {
-        let producer = ClientConfig::new().create::<BaseProducer<_>>().unwrap();
-        let _producer_clone = producer.clone();
     }
 }
