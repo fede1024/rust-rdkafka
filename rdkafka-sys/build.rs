@@ -192,7 +192,7 @@ fn build_librdkafka() {
         } else {
             "make"
         },
-        &["libs"],
+        &["-C", "src"],
     );
 
     println!("cargo:rustc-link-search=native={}/src", out_dir);
@@ -295,9 +295,11 @@ fn build_librdkafka() {
         env::set_var("CMAKE_LIBRARY_PATH", cmake_library_paths.join(";"));
     }
 
+    config.build_target("rdkafka");
+
     println!("Configuring and compiling librdkafka");
     let dst = config.build();
 
-    println!("cargo:rustc-link-search=native={}/lib", dst.display());
+    println!("cargo:rustc-link-search=native={}/build/src", dst.display());
     println!("cargo:rustc-link-lib=static=rdkafka");
 }
