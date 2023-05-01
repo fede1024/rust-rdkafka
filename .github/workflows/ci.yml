@@ -55,13 +55,13 @@ jobs:
           # The version of this toolchain doesn't matter much. It's only used to
           # generate the minimal-versions lockfile, not to actually run `cargo
           # check`.
-          toolchain: nightly-2021-01-05
+          toolchain: nightly
           components: rustfmt, clippy
       - uses: dtolnay/rust-toolchain@b44cb146d03e8d870c57ab64b80f04586349ca5d
         with:
           toolchain: ${{ env.rust_version }}
       - run: rustup default ${{ env.rust_version }}
-      - run: cargo +nightly-2021-01-05 -Z minimal-versions generate-lockfile
+      - run: cargo +nightly -Z minimal-versions generate-lockfile
       - run: cargo check
 
   test:
