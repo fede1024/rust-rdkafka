@@ -1107,6 +1107,7 @@ dependencies = [
  "libz-sys",
  "lz4-sys",
  "num_enum",
+ "openssl-src",
  "openssl-sys",
  "pkg-config",
  "sasl2-sys",

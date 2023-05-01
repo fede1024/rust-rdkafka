@@ -24,6 +24,8 @@ sasl2-sys = { version = "0.1.6", optional = true }
 [build-dependencies]
 pkg-config = "0.3.9"
 cmake = { version = "0.1.0", optional = true }
+# Ensure that the `engine` module is always built for musl & windows targets
+openssl-src = { version = "111", features = ["force-engine"], optional = true }
 
 [lib]
 name = "rdkafka_sys"
@@ -52,7 +54,7 @@ ssl = ["openssl-sys"]
 
 # Build and link against the version of OpenSSL bundled with the openssl-sys
 # crate.
-ssl-vendored = ["ssl", "openssl-sys/vendored"]
+ssl-vendored = ["ssl", "openssl-sys/vendored", "openssl-src"]
 
 # Enable SASL GSSAPI support with Cyrus libsasl2.
 gssapi = ["ssl", "sasl2-sys"]
