@@ -229,6 +229,7 @@ pub trait Message {
 ///
 /// Provides a read-only access to headers owned by a Kafka consumer or producer
 /// or by an [`OwnedHeaders`] struct.
+#[repr(C)]
 pub struct BorrowedHeaders;
 
 impl BorrowedHeaders {
@@ -487,6 +488,7 @@ unsafe impl<'a> Sync for BorrowedMessage<'a> {}
 /// called message headers. The `OwnedHeaders` can be used to create the desired
 /// headers and to pass them to the producer. See also [`BorrowedHeaders`].
 #[derive(Debug)]
+#[repr(C)]
 pub struct OwnedHeaders {
     ptr: NativePtr<RDKafkaHeaders>,
 }
