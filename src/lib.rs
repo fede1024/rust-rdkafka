@@ -272,7 +272,7 @@
 
 mod log;
 
-pub use rdkafka_sys::types;
+pub use rdkafka_sys::{bindings, helpers, types};
 
 pub mod admin;
 pub mod client;
