@@ -305,6 +305,7 @@ impl Headers for BorrowedHeaders {
 ///
 /// To transform a `BorrowedMessage` into a [`OwnedMessage`], use the
 /// [`detach`](BorrowedMessage::detach) method.
+#[repr(C)]
 pub struct BorrowedMessage<'a> {
     ptr: NativePtr<RDKafkaMessage>,
     _owner: PhantomData<&'a u8>,
@@ -587,6 +588,7 @@ impl Clone for OwnedHeaders {
 /// [`BorrowedMessage::detach`] method. `OwnedMessage`s don't hold any reference
 /// to the consumer and don't use any memory inside the consumer buffer.
 #[derive(Debug, Clone)]
+#[repr(C)]
 pub struct OwnedMessage {
     payload: Option<Vec<u8>>,
     key: Option<Vec<u8>>,
