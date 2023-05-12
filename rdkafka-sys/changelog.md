@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v4.4.0+1.9.2 (2023-05-12)
+
 * Add the `RDKafkaDeleteGroup` and `RDKafkaGroupResult` type aliases to the
   `types` module.
 
