@@ -4,6 +4,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+## 0.30.0 (2023-05-12)
+
 * Support for unassigning static partitions by passing `null` to `rdsys::rd_kafka_assign` and expose the
 feature as `unassign` in `base_consumer`
 
