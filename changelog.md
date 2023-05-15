@@ -4,6 +4,9 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* **Breaking change.** Pass `KafkaError` to rebalance hooks instead of human-readable string
+  representation.
+
 ## 0.30.0 (2023-05-12)
 
 * Support for unassigning static partitions by passing `null` to `rdsys::rd_kafka_assign` and expose the

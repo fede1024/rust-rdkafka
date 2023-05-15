@@ -8,13 +8,13 @@ use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::client::{Client, ClientContext, NativeClient};
-use crate::error::KafkaResult;
+use crate::error::{KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::log::{error, trace};
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{cstr_to_owned, KafkaDrop, NativePtr, Timeout};
+use crate::util::{KafkaDrop, NativePtr, Timeout};
 
 pub mod base_consumer;
 pub mod stream_consumer;
@@ -33,7 +33,7 @@ pub enum Rebalance<'a> {
     /// A new partition revocation is received.
     Revoke(&'a TopicPartitionList),
     /// Unexpected error from Kafka.
-    Error(String),
+    Error(KafkaError),
 }
 
 /// Consumer-specific context.
@@ -59,9 +59,9 @@ pub trait ConsumerContext: ClientContext {
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => Rebalance::Assign(tpl),
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke(tpl),
             _ => {
-                let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(err)) };
-                error!("Error rebalancing: {}", error);
-                Rebalance::Error(error)
+                let error_code: RDKafkaErrorCode = err.into();
+                error!("Error rebalancing: {}", error_code);
+                Rebalance::Error(KafkaError::Rebalance(error_code))
             }
         };
 

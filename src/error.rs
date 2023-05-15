@@ -169,6 +169,8 @@ pub enum KafkaError {
     PartitionEOF(i32),
     /// Pause/Resume failed.
     PauseResume(String),
+    /// Rebalance failed.
+    Rebalance(RDKafkaErrorCode),
     /// Seeking a partition failed.
     Seek(String),
     /// Setting partition offset failed.
@@ -223,6 +225,7 @@ impl fmt::Debug for KafkaError {
             KafkaError::PauseResume(ref err) => {
                 write!(f, "KafkaError (Pause/resume error: {})", err)
             }
+            KafkaError::Rebalance(ref err) => write!(f, "KafkaError (Rebalance error: {})", err),
             KafkaError::Seek(ref err) => write!(f, "KafkaError (Seek error: {})", err),
             KafkaError::SetPartitionOffset(err) => {
                 write!(f, "KafkaError (Set partition offset error: {})", err)
@@ -262,6 +265,7 @@ impl fmt::Display for KafkaError {
             KafkaError::OffsetFetch(err) => write!(f, "Offset fetch error: {}", err),
             KafkaError::PartitionEOF(part_n) => write!(f, "Partition EOF: {}", part_n),
             KafkaError::PauseResume(ref err) => write!(f, "Pause/resume error: {}", err),
+            KafkaError::Rebalance(ref err) => write!(f, "Rebalance error: {}", err),
             KafkaError::Seek(ref err) => write!(f, "Seek error: {}", err),
             KafkaError::SetPartitionOffset(err) => write!(f, "Set partition offset error: {}", err),
             KafkaError::StoreOffset(err) => write!(f, "Store offset error: {}", err),
@@ -291,6 +295,7 @@ impl Error for KafkaError {
             KafkaError::OffsetFetch(err) => Some(err),
             KafkaError::PartitionEOF(_) => None,
             KafkaError::PauseResume(_) => None,
+            KafkaError::Rebalance(err) => Some(err),
             KafkaError::Seek(_) => None,
             KafkaError::SetPartitionOffset(err) => Some(err),
             KafkaError::StoreOffset(err) => Some(err),
@@ -328,6 +333,7 @@ impl KafkaError {
             KafkaError::OffsetFetch(err) => Some(*err),
             KafkaError::PartitionEOF(_) => None,
             KafkaError::PauseResume(_) => None,
+            KafkaError::Rebalance(err) => Some(*err),
             KafkaError::Seek(_) => None,
             KafkaError::SetPartitionOffset(err) => Some(*err),
             KafkaError::StoreOffset(err) => Some(*err),
