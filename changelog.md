@@ -4,6 +4,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+## 0.31.0 (2023-05-17)
+
 * **Breaking change.** Pass `KafkaError` to rebalance hooks instead of human-readable string
   representation.
 
