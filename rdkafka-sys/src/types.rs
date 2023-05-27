@@ -239,6 +239,8 @@ pub enum RDKafkaErrorCode {
     Noop = -141,
     /// No offset to automatically reset to.
     AutoOffsetReset = -140,
+    /// Partition log truncation detected
+    LogTruncation = -139,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error.

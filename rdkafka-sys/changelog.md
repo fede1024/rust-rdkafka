@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v4.5.0+2.1.1 (2023-05-27)
+
+* Upgrade to librdkafka v2.1.1 
+
 ## v4.4.0+1.9.2 (2023-05-12)
 
 * Add the `RDKafkaDeleteGroup` and `RDKafkaGroupResult` type aliases to the
