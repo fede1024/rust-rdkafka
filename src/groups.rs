@@ -1,9 +1,3 @@
-//! Group membership API.
-use crate::rdsys;
-use crate::rdsys::types::*;
-use crate::error::{KafkaResult, KafkaError};
-use crate::util::read_str;
-
 use std::ffi::CStr;
 use std::fmt;
 use std::slice;
@@ -24,6 +18,9 @@ pub struct MemberAssignment {
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
+use crate::error::KafkaError;
+use crate::error::KafkaResult;
+use crate::util::read_str;
 use crate::util::{KafkaDrop, NativePtr};
 
 /// Group member information container.
