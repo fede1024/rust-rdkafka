@@ -1,11 +1,13 @@
 //! Cluster metadata.
+
 use std::ffi::CStr;
 use std::slice;
 
-use crate::rdsys;
-use crate::rdsys::types::*;
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
 
 use crate::error::IsError;
+use crate::util::{KafkaDrop, NativePtr};
 
 /// Broker metadata information.
 pub struct MetadataBroker(RDKafkaMetadataBroker);
@@ -46,7 +48,8 @@ impl MetadataPartition {
     }
 
     // TODO: return result?
-    /// Returns the metadata error for the partition, or None if there is no error.
+    /// Returns the metadata error for the partition, or `None` if there is no
+    /// error.
     pub fn error(&self) -> Option<RDKafkaRespErr> {
         if self.0.err.is_error() {
             Some(self.0.err)
@@ -55,12 +58,12 @@ impl MetadataPartition {
         }
     }
 
-    /// Returns the broker ids of the replicas.
+    /// Returns the broker IDs of the replicas.
     pub fn replicas(&self) -> &[i32] {
         unsafe { slice::from_raw_parts(self.0.replicas, self.0.replica_cnt as usize) }
     }
 
-    /// Returns the broker ids of the in sync replicas.
+    /// Returns the broker IDs of the in-sync replicas.
     pub fn isr(&self) -> &[i32] {
         unsafe { slice::from_raw_parts(self.0.isrs, self.0.isr_cnt as usize) }
     }
@@ -89,7 +92,8 @@ impl MetadataTopic {
         }
     }
 
-    /// Returns the metadata error, or None if there was no error.
+    /// Returns the metadata error for the topic, or `None` if there was no
+    /// error.
     pub fn error(&self) -> Option<RDKafkaRespErr> {
         if self.0.err.is_error() {
             Some(self.0.err)
@@ -99,25 +103,36 @@ impl MetadataTopic {
     }
 }
 
-/// Metadata container. This structure wraps the metadata pointer returned by rdkafka-sys,
-/// and deallocates all the native resources when dropped.
-pub struct Metadata(*const RDKafkaMetadata);
+/// Metadata container.
+///
+/// This structure wraps the metadata pointer returned by rdkafka-sys, and
+/// deallocates all the native resources when dropped.
+pub struct Metadata(NativePtr<RDKafkaMetadata>);
+
+unsafe impl KafkaDrop for RDKafkaMetadata {
+    const TYPE: &'static str = "metadata";
+    const DROP: unsafe extern "C" fn(*mut Self) = drop_metadata;
+}
+
+unsafe extern "C" fn drop_metadata(ptr: *mut RDKafkaMetadata) {
+    rdsys::rd_kafka_metadata_destroy(ptr as *const _)
+}
 
 impl Metadata {
     /// Creates a new Metadata container given a pointer to the native rdkafka-sys metadata.
     pub(crate) unsafe fn from_ptr(ptr: *const RDKafkaMetadata) -> Metadata {
-        Metadata(ptr)
+        Metadata(NativePtr::from_ptr(ptr as *mut _).unwrap())
     }
 
-    /// Returns the id of the broker originating this metadata.
+    /// Returns the ID of the broker originating this metadata.
     pub fn orig_broker_id(&self) -> i32 {
-        unsafe { (*self.0).orig_broker_id }
+        self.0.orig_broker_id
     }
 
     /// Returns the hostname of the broker originating this metadata.
     pub fn orig_broker_name(&self) -> &str {
         unsafe {
-            CStr::from_ptr((*self.0).orig_broker_name)
+            CStr::from_ptr(self.0.orig_broker_name)
                 .to_str()
                 .expect("Broker name is not a valid UTF-8 string")
         }
@@ -127,8 +142,8 @@ impl Metadata {
     pub fn brokers(&self) -> &[MetadataBroker] {
         unsafe {
             slice::from_raw_parts(
-                (*self.0).brokers as *const MetadataBroker,
-                (*self.0).broker_cnt as usize,
+                self.0.brokers as *const MetadataBroker,
+                self.0.broker_cnt as usize,
             )
         }
     }
@@ -137,15 +152,12 @@ impl Metadata {
     pub fn topics(&self) -> &[MetadataTopic] {
         unsafe {
             slice::from_raw_parts(
-                (*self.0).topics as *const MetadataTopic,
-                (*self.0).topic_cnt as usize,
+                self.0.topics as *const MetadataTopic,
+                self.0.topic_cnt as usize,
             )
         }
     }
 }
 
-impl Drop for Metadata {
-    fn drop(&mut self) {
-        unsafe { rdsys::rd_kafka_metadata_destroy(self.0) };
-    }
-}
+unsafe impl Send for Metadata {}
+unsafe impl Sync for Metadata {}

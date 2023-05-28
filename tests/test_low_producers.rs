@@ -1,26 +1,27 @@
 //! Test data production using low level producers.
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
-
-use rdkafka::config::ClientConfig;
-use rdkafka::error::{KafkaError, RDKafkaError};
-use rdkafka::message::{Headers, Message, OwnedHeaders, OwnedMessage};
-use rdkafka::producer::{
-    BaseProducer, BaseRecord, DeliveryResult, ProducerContext, ThreadedProducer,
-};
-use rdkafka::util::current_time_millis;
-use rdkafka::{ClientContext, Statistics};
-
-#[macro_use]
-mod utils;
-use crate::utils::*;
 
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
+use std::ffi::CString;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
+
+use maplit::hashmap;
+
+use rdkafka::config::ClientConfig;
+use rdkafka::error::{KafkaError, RDKafkaErrorCode};
+use rdkafka::message::{Header, Headers, Message, OwnedHeaders, OwnedMessage};
+use rdkafka::producer::{
+    BaseProducer, BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer,
+};
+use rdkafka::types::RDKafkaRespErr;
+use rdkafka::util::current_time_millis;
+use rdkafka::{ClientContext, Statistics};
+
+use crate::utils::*;
+
+mod utils;
 
 struct PrintingContext {
     _n: i64, // Add data for memory access validation
@@ -124,7 +125,7 @@ fn threaded_producer_with_context<C: ProducerContext>(
 
 #[test]
 fn test_base_producer_queue_full() {
-    let producer = base_producer(map!("queue.buffering.max.messages" => "10"));
+    let producer = base_producer(hashmap! { "queue.buffering.max.messages" => "10" });
     let topic_name = rand_test_topic();
 
     let results = (0..30)
@@ -144,7 +145,7 @@ fn test_base_producer_queue_full() {
     let errors = results
         .iter()
         .filter(|&e| {
-            if let &Err((KafkaError::MessageProduction(RDKafkaError::QueueFull), _)) = e {
+            if let &Err((KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull), _)) = e {
                 true
             } else {
                 false
@@ -164,8 +165,10 @@ fn test_base_producer_timeout() {
     let context = CollectingContext::new();
     let producer = base_producer_with_context(
         context.clone(),
-        map!("message.timeout.ms" => "1000",
-             "bootstrap.servers" => "1.2.3.4"),
+        hashmap! {
+            "message.timeout.ms" => "1000",
+            "bootstrap.servers" => "1.2.3.4"
+        },
     );
     let topic_name = rand_test_topic();
 
@@ -180,7 +183,7 @@ fn test_base_producer_timeout() {
         .filter(|r| r.is_ok())
         .count();
 
-    producer.flush(Duration::from_secs(10));
+    producer.flush(Duration::from_secs(10)).unwrap();
 
     assert_eq!(results_count, 10);
 
@@ -191,7 +194,9 @@ fn test_base_producer_timeout() {
         assert_eq!(message.key_view::<str>(), Some(Ok("B")));
         assert_eq!(
             error,
-            &Some(KafkaError::MessageProduction(RDKafkaError::MessageTimedOut))
+            &Some(KafkaError::MessageProduction(
+                RDKafkaErrorCode::MessageTimedOut
+            ))
         );
         ids.insert(id);
     }
@@ -211,10 +216,57 @@ impl ProducerContext for HeaderCheckContext {
         let message = delivery_result.as_ref().unwrap();
         if message_id % 2 == 0 {
             let headers = message.headers().unwrap();
-            assert_eq!(headers.count(), 3);
-            assert_eq!(headers.get(0), Some(("header1", &[1, 2, 3, 4][..])));
-            assert_eq!(headers.get_as::<str>(1), Some(("header2", Ok("value2"))));
-            assert_eq!(headers.get_as::<[u8]>(2), Some(("header3", Ok(&[][..]))));
+            assert_eq!(headers.count(), 4);
+            assert_eq!(
+                headers.get(0),
+                Header {
+                    key: "header1",
+                    value: Some(&[1, 2, 3, 4][..])
+                }
+            );
+            assert_eq!(
+                headers.get_as::<str>(1),
+                Ok(Header {
+                    key: "header2",
+                    value: Some("value2")
+                })
+            );
+            assert_eq!(
+                headers.get_as::<[u8]>(2),
+                Ok(Header {
+                    key: "header3",
+                    value: Some(&[][..])
+                })
+            );
+            assert_eq!(
+                headers.get_as::<[u8]>(3),
+                Ok(Header {
+                    key: "header4",
+                    value: None
+                })
+            );
+            let headers: Vec<_> = headers.iter().collect();
+            assert_eq!(
+                headers,
+                &[
+                    Header {
+                        key: "header1",
+                        value: Some(&[1, 2, 3, 4][..]),
+                    },
+                    Header {
+                        key: "header2",
+                        value: Some(b"value2"),
+                    },
+                    Header {
+                        key: "header3",
+                        value: Some(&[][..]),
+                    },
+                    Header {
+                        key: "header4",
+                        value: None,
+                    },
+                ],
+            )
         } else {
             assert!(message.headers().is_none());
         }
@@ -237,9 +289,22 @@ fn test_base_producer_headers() {
             if id % 2 == 0 {
                 record = record.headers(
                     OwnedHeaders::new()
-                        .add("header1", &[1, 2, 3, 4])
-                        .add("header2", "value2")
-                        .add("header3", &[]),
+                        .insert(Header {
+                            key: "header1",
+                            value: Some(&[1, 2, 3, 4]),
+                        })
+                        .insert(Header {
+                            key: "header2",
+                            value: Some("value2"),
+                        })
+                        .insert(Header {
+                            key: "header3",
+                            value: Some(&[]),
+                        })
+                        .insert::<Vec<u8>>(Header {
+                            key: "header4",
+                            value: None,
+                        }),
                 );
             }
             producer.send::<str, str>(record)
@@ -247,7 +312,7 @@ fn test_base_producer_headers() {
         .filter(|r| r.is_ok())
         .count();
 
-    producer.flush(Duration::from_secs(10));
+    producer.flush(Duration::from_secs(10)).unwrap();
 
     assert_eq!(results_count, 10);
     assert_eq!((*ids_set.lock().unwrap()).len(), 10);
@@ -271,7 +336,7 @@ fn test_threaded_producer_send() {
         .count();
 
     assert_eq!(results_count, 10);
-    producer.flush(Duration::from_secs(10));
+    producer.flush(Duration::from_secs(10)).unwrap();
 
     let delivery_results = context.results.lock().unwrap();
     let mut ids = HashSet::new();
@@ -311,9 +376,33 @@ fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
         .filter(|r| r.is_ok())
         .count();
 
-    producer.flush(Duration::from_secs(10));
+    producer.flush(Duration::from_secs(10)).unwrap();
 
     let shared_count = Arc::try_unwrap(shared_count).unwrap().into_inner()?;
     assert_eq!(results_count, shared_count);
     Ok(())
+}
+
+#[test]
+fn test_fatal_errors() {
+    let producer = base_producer(HashMap::new());
+
+    assert_eq!(producer.client().fatal_error(), None);
+
+    let msg = CString::new("fake error").unwrap();
+    unsafe {
+        rdkafka_sys::rd_kafka_test_fatal_error(
+            producer.client().native_ptr(),
+            RDKafkaRespErr::RD_KAFKA_RESP_ERR_OUT_OF_ORDER_SEQUENCE_NUMBER,
+            msg.as_ptr(),
+        );
+    }
+
+    assert_eq!(
+        producer.client().fatal_error(),
+        Some((
+            RDKafkaErrorCode::OutOfOrderSequenceNumber,
+            "test_fatal_error: fake error".into()
+        ))
+    )
 }

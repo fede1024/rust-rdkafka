@@ -1,32 +1,21 @@
 #![allow(dead_code)]
-extern crate futures;
-extern crate rand;
-extern crate rdkafka;
-extern crate regex;
-
-use futures::*;
-use rand::Rng;
-use regex::Regex;
-
-use rdkafka::client::ClientContext;
-use rdkafka::config::ClientConfig;
-use rdkafka::message::ToBytes;
-use rdkafka::producer::{FutureProducer, FutureRecord};
-use rdkafka::statistics::Statistics;
 
 use std::collections::HashMap;
 use std::env::{self, VarError};
+use std::time::Duration;
 
-#[macro_export]
-macro_rules! map(
-    { $($key:expr => $value:expr),+ } => {
-        {
-            let mut m = HashMap::new();
-            $( m.insert($key, $value); )+
-            m
-        }
-    };
-);
+use rand::Rng;
+use regex::Regex;
+
+use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
+use rdkafka::client::ClientContext;
+use rdkafka::config::ClientConfig;
+use rdkafka::consumer::ConsumerContext;
+use rdkafka::error::KafkaResult;
+use rdkafka::message::ToBytes;
+use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::statistics::Statistics;
+use rdkafka::TopicPartitionList;
 
 pub fn rand_test_topic() -> String {
     let id = rand::thread_rng()
@@ -37,6 +26,14 @@ pub fn rand_test_topic() -> String {
 }
 
 pub fn rand_test_group() -> String {
+    let id = rand::thread_rng()
+        .gen_ascii_chars()
+        .take(10)
+        .collect::<String>();
+    format!("__test_{}", id)
+}
+
+pub fn rand_test_transactional_id() -> String {
     let id = rand::thread_rng()
         .gen_ascii_chars()
         .take(10)
@@ -79,18 +76,29 @@ pub fn get_broker_version() -> KafkaVersion {
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct KafkaVersion(pub u32, pub u32, pub u32, pub u32);
 
-pub struct TestContext {
+pub struct ProducerTestContext {
     _some_data: i64, // Add some data so that valgrind can check proper allocation
 }
 
-impl ClientContext for TestContext {
+impl ClientContext for ProducerTestContext {
     fn stats(&self, _: Statistics) {} // Don't print stats
+}
+
+pub async fn create_topic(name: &str, partitions: i32) {
+    let client: AdminClient<_> = consumer_config("create_topic", None).create().unwrap();
+    client
+        .create_topics(
+            &[NewTopic::new(name, partitions, TopicReplication::Fixed(1))],
+            &AdminOptions::new(),
+        )
+        .await
+        .unwrap();
 }
 
 /// Produce the specified count of messages to the topic and partition specified. A map
 /// of (partition, offset) -> message id will be returned. It panics if any error is encountered
 /// while populating the topic.
-pub fn populate_topic<P, K, J, Q>(
+pub async fn populate_topic<P, K, J, Q>(
     topic_name: &str,
     count: i32,
     value_fn: &P,
@@ -104,41 +112,44 @@ where
     J: ToBytes,
     Q: ToBytes,
 {
-    let prod_context = TestContext { _some_data: 1234 };
+    let prod_context = ProducerTestContext { _some_data: 1234 };
 
     // Produce some messages
-    let producer = ClientConfig::new()
+    let producer = &ClientConfig::new()
         .set("bootstrap.servers", get_bootstrap_server().as_str())
         .set("statistics.interval.ms", "500")
         .set("api.version.request", "true")
         .set("debug", "all")
         .set("message.timeout.ms", "30000")
-        .create_with_context::<TestContext, FutureProducer<_>>(prod_context)
+        .create_with_context::<ProducerTestContext, FutureProducer<_>>(prod_context)
         .expect("Producer creation error");
 
     let futures = (0..count)
         .map(|id| {
-            let future = producer.send(
-                FutureRecord {
-                    topic: topic_name,
-                    payload: Some(&value_fn(id)),
-                    key: Some(&key_fn(id)),
-                    partition,
-                    timestamp,
-                    headers: None,
-                },
-                1000,
-            );
+            let future = async move {
+                producer
+                    .send(
+                        FutureRecord {
+                            topic: topic_name,
+                            payload: Some(&value_fn(id)),
+                            key: Some(&key_fn(id)),
+                            partition,
+                            timestamp,
+                            headers: None,
+                        },
+                        Duration::from_secs(1),
+                    )
+                    .await
+            };
             (id, future)
         })
         .collect::<Vec<_>>();
 
     let mut message_map = HashMap::new();
     for (id, future) in futures {
-        match future.wait() {
-            Ok(Ok((partition, offset))) => message_map.insert((partition, offset), id),
-            Ok(Err((kafka_error, _message))) => panic!("Delivery failed: {}", kafka_error),
-            Err(e) => panic!("Waiting for future failed: {}", e),
+        match future.await {
+            Ok((partition, offset)) => message_map.insert((partition, offset), id),
+            Err((kafka_error, _message)) => panic!("Delivery failed: {}", kafka_error),
         };
     }
 
@@ -157,10 +168,10 @@ pub fn key_fn(id: i32) -> String {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_populate_topic() {
+    #[tokio::test]
+    async fn test_populate_topic() {
         let topic_name = rand_test_topic();
-        let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None);
+        let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None).await;
 
         let total_messages = message_map
             .iter()
@@ -172,4 +183,48 @@ mod tests {
         ids.sort();
         assert_eq!(ids, (0..100).collect::<Vec<_>>());
     }
+}
+
+pub struct ConsumerTestContext {
+    pub _n: i64, // Add data for memory access validation
+}
+
+impl ClientContext for ConsumerTestContext {
+    // Access stats
+    fn stats(&self, stats: Statistics) {
+        let stats_str = format!("{:?}", stats);
+        println!("Stats received: {} bytes", stats_str.len());
+    }
+}
+
+impl ConsumerContext for ConsumerTestContext {
+    fn commit_callback(&self, result: KafkaResult<()>, _offsets: &TopicPartitionList) {
+        println!("Committing offsets: {:?}", result);
+    }
+}
+
+pub fn consumer_config(
+    group_id: &str,
+    config_overrides: Option<HashMap<&str, &str>>,
+) -> ClientConfig {
+    let mut config = ClientConfig::new();
+
+    config.set("group.id", group_id);
+    config.set("client.id", "rdkafka_integration_test_client");
+    config.set("bootstrap.servers", get_bootstrap_server().as_str());
+    config.set("enable.partition.eof", "false");
+    config.set("session.timeout.ms", "6000");
+    config.set("enable.auto.commit", "false");
+    config.set("statistics.interval.ms", "500");
+    config.set("api.version.request", "true");
+    config.set("debug", "all");
+    config.set("auto.offset.reset", "earliest");
+
+    if let Some(overrides) = config_overrides {
+        for (key, value) in overrides {
+            config.set(key, value);
+        }
+    }
+
+    config
 }

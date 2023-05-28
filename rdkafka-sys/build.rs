@@ -30,7 +30,7 @@ where
     );
     let ret = Command::new(cmd).current_dir(dir).args(args).status();
     match ret.map(|status| (status.success(), status.code())) {
-        Ok((true, _)) => return,
+        Ok((true, _)) => (),
         Ok((false, Some(c))) => panic!("Command failed with error code {}", c),
         Ok((false, None)) => panic!("Command got killed"),
         Err(e) => panic!("Command failed with error: {}", e),
@@ -38,19 +38,18 @@ where
 }
 
 fn main() {
-    let librdkafka_version = env!("CARGO_PKG_VERSION")
-        .split('-')
-        .next()
-        .expect("Crate version is not valid");
-
-    if env::var("DEP_OPENSSL_VENDORED").is_ok() {
-        let openssl_root = env::var("DEP_OPENSSL_ROOT").expect("DEP_OPENSSL_ROOT is not set");
-        env::set_var("CFLAGS", format!("-I{}/include", openssl_root));
-        env::set_var("LDFLAGS", format!("-L{}/lib", openssl_root));
-    }
-
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
         eprintln!("librdkafka will be linked dynamically");
+
+        let librdkafka_version = match env!("CARGO_PKG_VERSION")
+            .split('+')
+            .collect::<Vec<_>>()
+            .as_slice()
+        {
+            [_rdsys_version, librdkafka_version] => *librdkafka_version,
+            _ => panic!("Version format is not valid"),
+        };
+
         let pkg_probe = pkg_config::Config::new()
             .cargo_metadata(true)
             .atleast_version(librdkafka_version)
@@ -63,16 +62,21 @@ fn main() {
                 eprintln!("  Path: {:?}", library.link_paths);
                 eprintln!("  Version: {}", library.version);
             }
-            Err(_) => {
+            Err(err) => {
                 eprintln!(
-                    "librdkafka {} cannot be found on the system",
-                    librdkafka_version
+                    "librdkafka {} cannot be found on the system: {}",
+                    librdkafka_version, err
                 );
                 eprintln!("Dynamic linking failed. Exiting.");
                 process::exit(1);
             }
         }
     } else {
+        // Ensure that we are in the right directory
+        let rdkafkasys_root = Path::new("rdkafka-sys");
+        if rdkafkasys_root.exists() {
+            assert!(env::set_current_dir(&rdkafkasys_root).is_ok());
+        }
         if !Path::new("librdkafka/LICENSE").exists() {
             eprintln!("Setting up submodules");
             run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
@@ -108,7 +112,10 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
         configure_flags.push("--enable-gssapi".into());
-        println!("cargo:rustc-link-lib=sasl2");
+        if let Ok(sasl2_root) = env::var("DEP_SASL2_ROOT") {
+            cflags.push(format!("-I{}/include", sasl2_root));
+            ldflags.push(format!("-L{}/build", sasl2_root));
+        }
     } else {
         configure_flags.push("--disable-gssapi".into());
     }
@@ -121,6 +128,16 @@ fn build_librdkafka() {
         }
     } else {
         configure_flags.push("--disable-zlib".into());
+    }
+
+    if env::var("CARGO_FEATURE_CURL").is_ok() {
+        // There is no --enable-curl option, but it is enabled by default.
+        if let Ok(curl_root) = env::var("DEP_CURL_ROOT") {
+            cflags.push("-DCURLSTATIC_LIB".to_string());
+            cflags.push(format!("-I{}/include", curl_root));
+        }
+    } else {
+        configure_flags.push("--disable-curl".into());
     }
 
     if env::var("CARGO_FEATURE_ZSTD").is_ok() {
@@ -146,47 +163,86 @@ fn build_librdkafka() {
     env::set_var("CFLAGS", cflags.join(" "));
     env::set_var("LDFLAGS", ldflags.join(" "));
 
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR missing");
+
+    if !Path::new(&out_dir).join("LICENSE").exists() {
+        // We're not allowed to build in-tree directly, as ~/.cargo/registry is
+        // globally shared. mklove doesn't support out-of-tree builds [0], so we
+        // work around the issue by creating a clone of librdkafka inside of
+        // OUT_DIR, and build inside of *that* tree.
+        //
+        // https://github.com/edenhill/mklove/issues/17
+        println!("Cloning librdkafka");
+        run_command_or_fail(".", "cp", &["-a", "librdkafka/.", &out_dir]);
+    }
+
     println!("Configuring librdkafka");
-    run_command_or_fail("librdkafka", "./configure", configure_flags.as_slice());
+    run_command_or_fail(&out_dir, "./configure", configure_flags.as_slice());
 
     println!("Compiling librdkafka");
-    env::set_var("MAKEFLAGS", env::var_os("CARGO_MAKEFLAGS").expect("CARGO_MAKEFLAGS env var missing"));
+    if let Some(makeflags) = env::var_os("CARGO_MAKEFLAGS") {
+        env::set_var("MAKEFLAGS", makeflags);
+    }
     run_command_or_fail(
-        "librdkafka",
-        if cfg!(target_os = "freebsd") { "gmake" } else { "make" },
+        &out_dir,
+        if cfg!(target_os = "freebsd") {
+            "gmake"
+        } else {
+            "make"
+        },
         &["libs"],
     );
 
-    println!(
-        "cargo:rustc-link-search=native={}/librdkafka/src",
-        env::current_dir()
-            .expect("Can't find current dir")
-            .display()
-    );
+    println!("cargo:rustc-link-search=native={}/src", out_dir);
     println!("cargo:rustc-link-lib=static=rdkafka");
-    println!("cargo:root={}", env::var("OUT_DIR").expect("OUT_DIR missing"));
+    println!("cargo:root={}", out_dir);
 }
 
 #[cfg(feature = "cmake-build")]
 fn build_librdkafka() {
     let mut config = cmake::Config::new("librdkafka");
+    let mut cmake_library_paths = vec![];
 
     config
         .define("RDKAFKA_BUILD_STATIC", "1")
-        .build_target("rdkafka");
+        .define("RDKAFKA_BUILD_TESTS", "0")
+        .define("RDKAFKA_BUILD_EXAMPLES", "0")
+        // CMAKE_INSTALL_LIBDIR is inferred as "lib64" on some platforms, but we
+        // want a stable location that we can add to the linker search path.
+        // Since we're not actually installing to /usr or /usr/local, there's no
+        // harm to always using "lib" here.
+        .define("CMAKE_INSTALL_LIBDIR", "lib");
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         config.define("WITH_ZLIB", "1");
         config.register_dep("z");
         if let Ok(z_root) = env::var("DEP_Z_ROOT") {
-            env::set_var("CMAKE_LIBRARY_PATH", format!("{}/build", z_root));
+            cmake_library_paths.push(format!("{}/build", z_root));
         }
     } else {
         config.define("WITH_ZLIB", "0");
     }
 
+    if env::var("CARGO_FEATURE_CURL").is_ok() {
+        config.define("WITH_CURL", "1");
+        config.register_dep("curl");
+        if let Ok(curl_root) = env::var("DEP_CURL_ROOT") {
+            config.define("CURL_STATICLIB", "1");
+            cmake_library_paths.push(format!("{}/lib", curl_root));
+
+            config.cflag("-DCURL_STATICLIB");
+            config.cxxflag("-DCURL_STATICLIB");
+            config.cflag(format!("-I{}/include", curl_root));
+            config.cxxflag(format!("-I{}/include", curl_root));
+        }
+    } else {
+        config.define("WITH_CURL", "0");
+    }
+
     if env::var("CARGO_FEATURE_SSL").is_ok() {
         config.define("WITH_SSL", "1");
+        config.define("WITH_SASL_SCRAM", "1");
+        config.define("WITH_SASL_OAUTHBEARER", "1");
         config.register_dep("openssl");
     } else {
         config.define("WITH_SSL", "0");
@@ -194,7 +250,11 @@ fn build_librdkafka() {
 
     if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
         config.define("WITH_SASL", "1");
-        println!("cargo:rustc-link-lib=sasl2");
+        config.register_dep("sasl2");
+        if let Ok(sasl2_root) = env::var("DEP_SASL2_ROOT") {
+            config.cflag(format!("-I{}/include", sasl2_root));
+            config.cxxflag(format!("-I{}/include", sasl2_root));
+        }
     } else {
         config.define("WITH_SASL", "0");
     }
@@ -217,27 +277,13 @@ fn build_librdkafka() {
         config.define("CMAKE_SYSTEM_NAME", system_name);
     }
 
-    // The CMake build will incorrectly use config.h from the non-CMake build,
-    // if it exists, so remove it if it does.
-    match std::fs::remove_file("librdkafka/config.h") {
-        Ok(()) => (),
-        Err(err) => match err.kind() {
-            std::io::ErrorKind::NotFound => (),
-            _ => panic!("Unable to remove config.h from non-CMake build: {}", err),
-        }
+    if !cmake_library_paths.is_empty() {
+        env::set_var("CMAKE_LIBRARY_PATH", cmake_library_paths.join(";"));
     }
 
     println!("Configuring and compiling librdkafka");
     let dst = config.build();
 
-    if cfg!(target_env = "msvc") {
-        let profile = match &env::var("PROFILE").expect("Cannot determine build profile")[..] {
-            "release" | "bench" => "Release",
-            _ => "Debug"
-        };
-        println!("cargo:rustc-link-search=native={}/build/src/{}", dst.display(), profile);
-    } else {
-        println!("cargo:rustc-link-search=native={}/build/src", dst.display());
-    }
+    println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=rdkafka");
 }

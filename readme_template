@@ -6,9 +6,8 @@
 [![coverate](https://codecov.io/gh/fede1024/rust-rdkafka/graphs/badge.svg?branch=master)](https://codecov.io/gh/fede1024/rust-rdkafka/)
 [![Join the chat at https://gitter.im/rust-rdkafka/Lobby](https://badges.gitter.im/rust-rdkafka/Lobby.svg)](https://gitter.im/rust-rdkafka/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-A fully asynchronous, [futures]-based Kafka client library for Rust based on [librdkafka].
+__INCLUDE_RUST_DOC__$src/lib.rs
 
-__INCLUDE_RUST_DOC__$src/lib.rs$## The library
 ## rdkafka-sys
 
 See [rdkafka-sys](https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys).

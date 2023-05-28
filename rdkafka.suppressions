@@ -1,11 +1,22 @@
-# Valgrind suppression file
+# Valgrind suppression file.
+
+# Spurious statx complaints: https://github.com/rust-lang/rust/issues/68979.
+# TODO(benesch): remove when CI upgrades to Valgrind 3.16.
 {
-   thrd_tls_alloc_stack
-   Memcheck:Leak
-   match-leak-kinds: possible
-   fun:calloc
-   fun:allocate_dtv
-   fun:_dl_allocate_tls
-   fun:allocate_stack
-   fun:pthread_create@@GLIBC_2.2.5
+   <statx1>
+   Memcheck:Param
+   statx(file_name)
+   fun:statx
+   fun:statx
+   fun:_ZN3std3sys4unix2fs9try_statx*
+   ...
+}
+{
+   <statx2>
+   Memcheck:Param
+   statx(buf)
+   fun:statx
+   fun:statx
+   fun:_ZN3std3sys4unix2fs9try_statx*
+   ...
 }

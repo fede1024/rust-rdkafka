@@ -1,58 +1,71 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-set -e
+set -euo pipefail
 
-git submodule update --init
+echo_good() {
+    tput setaf 2
+    echo "$@"
+    tput sgr0
+}
 
-cargo test --no-run
+echo_bad() {
+    tput setaf 1
+    echo "$@"
+    tput sgr0
+}
 
 run_with_valgrind() {
-    if ! valgrind --error-exitcode=100 --suppressions=rdkafka.suppressions --leak-check=full "$1" --nocapture
+    if ! valgrind --error-exitcode=100 --suppressions=rdkafka.suppressions --gen-suppressions=all --leak-check=full "$1" --nocapture --test-threads=1
     then
-        echo -e "${RED}*** Failure in $1 ***${NC}"
+        echo_bad "*** Failure in $1 ***"
         exit 1
     fi
 }
 
-# run_tests CONFLUENT_VERSION KAFKA_VERSION
-run_tests() {
-    export CONFLUENT_VERSION=$1
-    export KAFKA_VERSION=$2
+# Initialize.
 
-    docker-compose down
-    docker-compose up -d
+git submodule update --init
+cargo test --no-run
+docker-compose up -d
 
-    # UNIT TESTS
+# Run unit tests.
 
-    echo -e "${GREEN}*** Run unit tests ***${NC}"
-    for test_file in target/debug/rdkafka-*
-    do
-        if [[ -x "$test_file" ]]
-        then
-            echo -e "${GREEN}Executing "$test_file"${NC}"
-            run_with_valgrind "$test_file"
-        fi
-    done
-    echo -e "${GREEN}*** Unit tests succeeded ***${NC}"
+echo_good "*** Run unit tests ***"
+for test_file in target/debug/deps/rdkafka-*
+do
+    if [[ -x "$test_file" ]]
+    then
+        echo_good "Executing "$test_file""
+        run_with_valgrind "$test_file"
+    fi
+done
+echo_good "*** Unit tests succeeded ***"
 
-    # INTEGRATION TESTS
+# Run integration tests.
 
-    echo -e "${GREEN}*** Run unit tests ***${NC}"
-    for test_file in target/debug/test_*
-    do
-        if [[ -x "$test_file" ]]
-        then
-            echo -e "${GREEN}Executing "$test_file"${NC}"
-            run_with_valgrind "$test_file"
-        fi
-    done
-    echo -e "${GREEN}*** Integration tests succeeded ***${NC}"
-}
+echo_good "*** Run unit tests ***"
+for test_file in target/debug/deps/test_*
+do
+    if [[ -x "$test_file" ]]
+    then
+        echo_good "Executing "$test_file""
+        run_with_valgrind "$test_file"
+    fi
+done
+echo_good "*** Integration tests succeeded ***"
 
-run_tests 5.3.1 2.3
-run_tests 5.0.3 2.0
-run_tests 4.1.3 1.1
+# Run smol runtime example.
+
+echo_good "*** Run runtime_smol example ***"
+cargo run --example runtime_smol --no-default-features --features cmake-build -- --topic smol
+echo_good "*** runtime_smol example succeeded ***"
+
+# Run async-std runtime example.
+
+echo_good "*** Run runtime_async_std example ***"
+cargo run --example runtime_async_std --no-default-features --features cmake-build -- --topic async-std
+echo_good "*** runtime_async_std example succeeded ***"

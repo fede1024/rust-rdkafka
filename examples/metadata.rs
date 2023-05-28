@@ -1,18 +1,14 @@
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate clap;
-extern crate rdkafka;
+use std::time::Duration;
 
-use clap::{App, Arg};
+use clap::{value_t, App, Arg};
+use log::trace;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{BaseConsumer, Consumer};
 
-use std::time::Duration;
+use crate::example_utils::setup_logger;
 
 mod example_utils;
-use crate::example_utils::setup_logger;
 
 fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_offsets: bool) {
     let consumer: BaseConsumer = ClientConfig::new()

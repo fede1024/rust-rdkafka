@@ -1,27 +1,21 @@
-/// This example shows how to achieve at-least-once message delivery semantics. This stream
-/// processing code will simply read from an input topic, and duplicate the content to any number of
-/// output topics. In case of failure (client or server side), messages might be duplicated,
-/// but they won't be lost.
-///
-/// The key point is committing the offset only once the message has been fully processed.
-/// Note that this technique only works when messages are processed in order. If a message with
-/// offset `i+n` is processed and committed before message `i`, in case of failure messages in
-/// the interval `[i, i+n)` might be lost.
-///
-/// For a simpler example of consumers and producers, check the `simple_consumer` and
-/// `simple_producer` files in the example folder.
-///
-#[macro_use]
-extern crate log;
-extern crate clap;
-extern crate futures;
-extern crate rdkafka;
-extern crate rdkafka_sys;
+//! This example shows how to achieve at-least-once message delivery semantics. This stream
+//! processing code will simply read from an input topic, and duplicate the content to any number of
+//! output topics. In case of failure (client or server side), messages might be duplicated,
+//! but they won't be lost.
+//!
+//! The key point is committing the offset only once the message has been fully processed.
+//! Note that this technique only works when messages are processed in order. If a message with
+//! offset `i+n` is processed and committed before message `i`, in case of failure messages in
+//! the interval `[i, i+n)` might be lost.
+//!
+//! For a simpler example of consumers and producers, check the `simple_consumer` and
+//! `simple_producer` files in the example folder.
+
+use std::time::Duration;
 
 use clap::{App, Arg};
-use futures::future::join_all;
-use futures::stream::Stream;
-use futures::Future;
+use futures::future;
+use log::{info, warn};
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
@@ -29,11 +23,13 @@ use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{Consumer, ConsumerContext};
 use rdkafka::error::KafkaResult;
 use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::util::get_rdkafka_version;
 use rdkafka::Message;
 
-mod example_utils;
 use crate::example_utils::setup_logger;
+
+mod example_utils;
 
 // A simple context to customize the consumer behavior and print a log line every time
 // offsets are committed
@@ -42,11 +38,7 @@ struct LoggingConsumerContext;
 impl ClientContext for LoggingConsumerContext {}
 
 impl ConsumerContext for LoggingConsumerContext {
-    fn commit_callback(
-        &self,
-        result: KafkaResult<()>,
-        _offsets: *mut rdkafka_sys::RDKafkaTopicPartitionList,
-    ) {
+    fn commit_callback(&self, result: KafkaResult<()>, _offsets: &TopicPartitionList) {
         match result {
             Ok(_) => info!("Offsets committed successfully"),
             Err(e) => warn!("Error while committing offsets: {}", e),
@@ -89,7 +81,8 @@ fn create_producer(brokers: &str) -> FutureProducer {
         .expect("Producer creation failed")
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let matches = App::new("at-least-once")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("At-least-once delivery example")
@@ -148,18 +141,15 @@ fn main() {
     let consumer = create_consumer(brokers, group_id, input_topic);
     let producer = create_producer(brokers);
 
-    for message in consumer.start().wait() {
-        match message {
-            Err(()) => {
-                warn!("Error while reading from stream");
-            }
-            Ok(Err(e)) => {
+    loop {
+        match consumer.recv().await {
+            Err(e) => {
                 warn!("Kafka error: {}", e);
             }
-            Ok(Ok(m)) => {
+            Ok(m) => {
                 // Send a copy to the message to every output topic in parallel, and wait for the
                 // delivery report to be received.
-                join_all(output_topics.iter().map(|output_topic| {
+                future::try_join_all(output_topics.iter().map(|output_topic| {
                     let mut record = FutureRecord::to(output_topic);
                     if let Some(p) = m.payload() {
                         record = record.payload(p);
@@ -167,13 +157,13 @@ fn main() {
                     if let Some(k) = m.key() {
                         record = record.key(k);
                     }
-                    producer.send(record, 1000)
+                    producer.send(record, Duration::from_secs(1))
                 }))
-                .wait()
+                .await
                 .expect("Message delivery failed for some topic");
                 // Now that the message is completely processed, add it's position to the offset
                 // store. The actual offset will be committed every 5 seconds.
-                if let Err(e) = consumer.store_offset(&m) {
+                if let Err(e) = consumer.store_offset_from_message(&m) {
                     warn!("Error while storing offset: {}", e);
                 }
             }

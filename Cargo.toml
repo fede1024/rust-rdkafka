@@ -1,6 +1,6 @@
 [package]
 name = "rdkafka"
-version = "0.22.0"
+version = "0.31.0"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 repository = "https://github.com/fede1024/rust-rdkafka"
 readme = "README.md"
@@ -9,39 +9,65 @@ description = "Rust wrapper for librdkafka"
 keywords = ["kafka", "rdkafka"]
 categories = ["api-bindings"]
 edition = "2018"
+exclude = ["Cargo.lock"]
+
+[workspace]
+members = ["rdkafka-sys"]
 
 [dependencies]
-rdkafka-sys = { path = "rdkafka-sys", version = "1.2.1", default-features = false }
-futures = "0.1.21"
+rdkafka-sys = { path = "rdkafka-sys", version = "4.4.0", default-features = false }
+futures-channel = "0.3.0"
+futures-executor = { version = "0.3.0", optional = true }
+futures-util = { version = "0.3.0", default-features = false }
 libc = "0.2.0"
 log = "0.4.8"
 serde = { version = "1.0.0", features = ["derive"] }
-serde_json = "1.0.0"
 byteorder = "1.3.2"
+serde_derive = "1.0.0"
+serde_json = "1.0.0"
+slab = "0.4"
+tokio = { version = "1.18", features = ["rt", "time"], optional = true }
+tracing = { version = "0.1.30", optional = true }
 
 [dev-dependencies]
+async-std = { version = "1.9.0", features = ["attributes"] }
 backoff = "0.1.5"
 chrono = "0.4.0"
 clap = "2.18.0"
-env_logger = "0.7.1"
+env_logger = "0.9.0"
+futures = "0.3.0"
+hdrhistogram = "7.0.0"
+maplit = "1.0.2"
 rand = "0.3.15"
 regex = "1.1.6"
-tokio = "0.1.7"
+smol = "1.2.4"
+tokio = { version = "1.18", features = ["macros", "rt-multi-thread", "time"] }
 
 # These features are re-exports of the features that the rdkafka-sys crate
 # provides. See the rdkafka-sys documentation for details.
 [features]
-default = ["libz"]
+default = ["libz", "tokio"]
+naive-runtime = ["futures-executor"]
 cmake-build = ["rdkafka-sys/cmake-build"]
 cmake_build = ["rdkafka-sys/cmake_build"]
+dynamic-linking = ["rdkafka-sys/dynamic-linking"]
 dynamic_linking = ["rdkafka-sys/dynamic_linking"]
 ssl = ["rdkafka-sys/ssl"]
 ssl-vendored = ["rdkafka-sys/ssl-vendored"]
 gssapi = ["rdkafka-sys/gssapi"]
+gssapi-vendored = ["rdkafka-sys/gssapi-vendored"]
 sasl = ["rdkafka-sys/sasl"]
 libz = ["rdkafka-sys/libz"]
 libz-static = ["rdkafka-sys/libz-static"]
+curl = ["rdkafka-sys/curl"]
+curl-static = ["rdkafka-sys/curl-static"]
 zstd = ["rdkafka-sys/zstd"]
 zstd-pkg-config = ["rdkafka-sys/zstd-pkg-config"]
 external-lz4 = ["rdkafka-sys/external-lz4"]
 external_lz4 = ["rdkafka-sys/external_lz4"]
+
+[package.metadata.docs.rs]
+# docs.rs doesn't allow writing to ~/.cargo/registry (reasonably), so we have to
+# use the CMake build for a proper out-of-tree build.
+features = ["cmake-build", "naive-runtime", "tracing", "tokio"]
+rustdoc-args = ["--cfg", "docsrs"]

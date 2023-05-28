@@ -1,43 +1,54 @@
-//! Base trait and common functionality for all consumers.
+//! Kafka consumers.
+
+use std::ptr;
+use std::sync::Arc;
+use std::time::Duration;
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
+
+use crate::client::{Client, ClientContext, NativeClient};
+use crate::error::{KafkaError, KafkaResult};
+use crate::groups::GroupList;
+use crate::log::{error, trace};
+use crate::message::BorrowedMessage;
+use crate::metadata::Metadata;
+use crate::topic_partition_list::{Offset, TopicPartitionList};
+use crate::util::{KafkaDrop, NativePtr, Timeout};
+
 pub mod base_consumer;
 pub mod stream_consumer;
 
-// Re-export
+// Re-exports.
+#[doc(inline)]
 pub use self::base_consumer::BaseConsumer;
+#[doc(inline)]
 pub use self::stream_consumer::{MessageStream, StreamConsumer};
-
-use crate::rdsys;
-use crate::rdsys::types::*;
-
-use crate::client::{ClientContext, NativeClient};
-use crate::error::KafkaResult;
-use crate::groups::GroupList;
-use crate::message::BorrowedMessage;
-use crate::metadata::Metadata;
-use crate::util::{cstr_to_owned, Timeout};
-
-use std::ptr;
-use std::time::Duration;
-
-use crate::topic_partition_list::{Offset, TopicPartitionList};
 
 /// Rebalance information.
 #[derive(Clone, Debug)]
 pub enum Rebalance<'a> {
     /// A new partition assignment is received.
     Assign(&'a TopicPartitionList),
-    /// All partitions are revoked.
-    Revoke,
+    /// A new partition revocation is received.
+    Revoke(&'a TopicPartitionList),
     /// Unexpected error from Kafka.
-    Error(String),
+    Error(KafkaError),
 }
 
-/// Consumer specific Context. This user-defined object can be used to provide custom callbacks to
-/// consumer events. Refer to the list of methods to check which callbacks can be specified.
+/// Consumer-specific context.
+///
+/// This user-defined object can be used to provide custom callbacks for
+/// consumer events. Refer to the list of methods to check which callbacks can
+/// be specified.
+///
+/// See also the [`ClientContext`] trait.
 pub trait ConsumerContext: ClientContext {
-    /// Implements the default rebalancing strategy and calls the `pre_rebalance` and
-    /// `post_rebalance` methods. If this method is overridden, it will be responsibility
-    /// of the user to call them if needed.
+    /// Implements the default rebalancing strategy and calls the
+    /// [`pre_rebalance`](ConsumerContext::pre_rebalance) and
+    /// [`post_rebalance`](ConsumerContext::post_rebalance) methods. If this
+    /// method is overridden, it will be responsibility of the user to call them
+    /// if needed.
     fn rebalance(
         &self,
         native_client: &NativeClient,
@@ -46,11 +57,11 @@ pub trait ConsumerContext: ClientContext {
     ) {
         let rebalance = match err {
             RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => Rebalance::Assign(tpl),
-            RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke,
+            RDKafkaRespErr::RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS => Rebalance::Revoke(tpl),
             _ => {
-                let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(err)) };
-                error!("Error rebalancing: {}", error);
-                Rebalance::Error(error)
+                let error_code: RDKafkaErrorCode = err.into();
+                error!("Error rebalancing: {}", error_code);
+                Rebalance::Error(KafkaError::Rebalance(error_code))
             }
         };
 
@@ -62,106 +73,180 @@ pub trait ConsumerContext: ClientContext {
         unsafe {
             match err {
                 RDKafkaRespErr::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS => {
-                    rdsys::rd_kafka_assign(native_client.ptr(), tpl.ptr());
+                    match native_client.rebalance_protocol() {
+                        RebalanceProtocol::Cooperative => {
+                            rdsys::rd_kafka_incremental_assign(native_client.ptr(), tpl.ptr());
+                        }
+                        _ => {
+                            rdsys::rd_kafka_assign(native_client.ptr(), tpl.ptr());
+                        }
+                    }
                 }
-                _ => {
-                    // Also for RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS
-                    rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
-                }
+                _ => match native_client.rebalance_protocol() {
+                    RebalanceProtocol::Cooperative => {
+                        rdsys::rd_kafka_incremental_unassign(native_client.ptr(), tpl.ptr());
+                    }
+                    _ => {
+                        rdsys::rd_kafka_assign(native_client.ptr(), ptr::null());
+                    }
+                },
             }
         }
         trace!("Running post-rebalance with {:?}", rebalance);
         self.post_rebalance(&rebalance);
     }
 
-    /// Pre-rebalance callback. This method will run before the rebalance and should
-    /// terminate its execution quickly.
+    /// Pre-rebalance callback. This method will run before the rebalance and
+    /// should terminate its execution quickly.
     #[allow(unused_variables)]
     fn pre_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
 
-    /// Post-rebalance callback. This method will run after the rebalance and should
-    /// terminate its execution quickly.
+    /// Post-rebalance callback. This method will run after the rebalance and
+    /// should terminate its execution quickly.
     #[allow(unused_variables)]
     fn post_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
 
     // TODO: convert pointer to structure
-    /// Post commit callback. This method will run after a group of offsets was committed to the
-    /// offset store.
+    /// Post commit callback. This method will run after a group of offsets was
+    /// committed to the offset store.
     #[allow(unused_variables)]
-    fn commit_callback(&self, result: KafkaResult<()>, offsets: *mut RDKafkaTopicPartitionList) {}
+    fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {}
 
     /// Returns the minimum interval at which to poll the main queue, which
     /// services the logging, stats, and error callbacks.
     ///
-    /// The main queue is polled once whenever [`Consumer.poll`] is called. If
-    /// `Consumer.poll` is called with a timeout that is larger than this
-    /// interval, then the main queue will be polled at that interval while the
-    /// consumer queue is blocked.
+    /// The main queue is polled once whenever [`BaseConsumer::poll`] is called.
+    /// If `poll` is called with a timeout that is larger than this interval,
+    /// then the main queue will be polled at that interval while the consumer
+    /// queue is blocked.
     ///
     /// For example, if the main queue's minimum poll interval is 200ms and
-    /// `Consumer.poll` is called with a timeout of 1s, then `Consumer.poll` may
-    /// block for up to 1s waiting for a message, but it will poll the main
-    /// queue every 200ms while it is waiting.
+    /// `poll` is called with a timeout of 1s, then `poll` may block for up to
+    /// 1s waiting for a message, but it will poll the main queue every 200ms
+    /// while it is waiting.
     ///
     /// By default, the minimum poll interval for the main queue is 1s.
     fn main_queue_min_poll_interval(&self) -> Timeout {
         Timeout::After(Duration::from_secs(1))
     }
-
-    /// Message queue nonempty callback. This method will run when the
-    /// consumer's message queue switches from empty to nonempty.
-    fn message_queue_nonempty_callback(&self) {}
 }
 
-/// An empty consumer context that can be user when no context is needed.
-#[derive(Clone)]
+/// An inert [`ConsumerContext`] that can be used when no customizations are
+/// needed.
+#[derive(Clone, Debug, Default)]
 pub struct DefaultConsumerContext;
 
 impl ClientContext for DefaultConsumerContext {}
 impl ConsumerContext for DefaultConsumerContext {}
 
-/// Specifies if the commit should be performed synchronously
-/// or asynchronously.
+/// Specifies whether a commit should be performed synchronously or
+/// asynchronously.
+///
+/// A commit is performed via [`Consumer::commit`] or one of its variants.
+///
+/// Regardless of the `CommitMode`, the commit APIs enqueue the commit request
+/// in a local work queue. A separate worker thread picks up this commit request
+/// and forwards it to the Kafka broker over the network.
+///
+/// The difference between [`CommitMode::Sync`] and [`CommitMode::Async`] is in
+/// whether the caller waits for the Kafka broker to respond that it finished
+/// handling the commit request.
+///
+/// Note that the commit APIs are not async in the Rust sense due to the lack of
+/// a callback-based interface exposed by librdkafka. See
+/// [librdkafka#3212](https://github.com/edenhill/librdkafka/issues/3212).
+#[derive(Clone, Copy, Debug)]
 pub enum CommitMode {
-    /// Synchronous commit.
+    /// In `Sync` mode, the caller blocks until the Kafka broker finishes
+    /// processing the commit request.
     Sync = 0,
-    /// Asynchronous commit.
+
+    /// In `Async` mode, the caller enqueues the commit request in a local
+    /// work queue and returns immediately.
     Async = 1,
+}
+
+/// Consumer group metadata.
+///
+/// For use with [`Producer::send_offsets_to_transaction`].
+///
+/// [`Producer::send_offsets_to_transaction`]: crate::producer::Producer::send_offsets_to_transaction
+pub struct ConsumerGroupMetadata(NativePtr<RDKafkaConsumerGroupMetadata>);
+
+impl ConsumerGroupMetadata {
+    pub(crate) fn ptr(&self) -> *const RDKafkaConsumerGroupMetadata {
+        self.0.ptr()
+    }
+}
+
+unsafe impl KafkaDrop for RDKafkaConsumerGroupMetadata {
+    const TYPE: &'static str = "consumer_group_metadata";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_consumer_group_metadata_destroy;
+}
+
+unsafe impl Send for ConsumerGroupMetadata {}
+unsafe impl Sync for ConsumerGroupMetadata {}
+
+/// The rebalance protocol for a consumer.
+pub enum RebalanceProtocol {
+    /// The consumer has not (yet) joined a group.
+    None,
+    /// Eager rebalance protocol.
+    Eager,
+    /// Cooperative rebalance protocol.
+    Cooperative,
 }
 
 /// Common trait for all consumers.
 ///
 /// # Note about object safety
 ///
-/// Doing type erasure on consumers is expected to be rare (eg. `Box<Consumer>`). Therefore, the
-/// API is optimised for the case where a concrete type is available. As a result, some methods are
-/// not available on trait objects, since they are generic.
-///
-/// If there's still the need to erase the type, the generic methods can still be reached through
-/// the [`get_base_consumer`](#method.get_base_consumer) method.
-pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
-    /// Returns a reference to the BaseConsumer.
-    fn get_base_consumer(&self) -> &BaseConsumer<C>;
+/// Doing type erasure on consumers is expected to be rare (eg. `Box<dyn
+/// Consumer>`). Therefore, the API is optimised for the case where a concrete
+/// type is available. As a result, some methods are not available on trait
+/// objects, since they are generic.
+pub trait Consumer<C = DefaultConsumerContext>
+where
+    C: ConsumerContext,
+{
+    /// Returns the [`Client`] underlying this consumer.
+    fn client(&self) -> &Client<C>;
 
-    // Default implementations
-
-    /// Subscribe the consumer to a list of topics.
-    fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
-        self.get_base_consumer().subscribe(topics)
+    /// Returns a reference to the [`ConsumerContext`] used to create this
+    /// consumer.
+    fn context(&self) -> &Arc<C> {
+        self.client().context()
     }
 
-    /// Unsubscribe the current subscription list.
-    fn unsubscribe(&self) {
-        self.get_base_consumer().unsubscribe();
-    }
+    /// Returns the current consumer group metadata associated with the
+    /// consumer.
+    ///
+    /// If the consumer was not configured with a `group.id`, returns `None`.
+    /// For use with [`Producer::send_offsets_to_transaction`].
+    ///
+    /// [`Producer::send_offsets_to_transaction`]: crate::producer::Producer::send_offsets_to_transaction
+    fn group_metadata(&self) -> Option<ConsumerGroupMetadata>;
 
-    /// Manually assign topics and partitions to the consumer. If used, automatic consumer
-    /// rebalance won't be activated.
-    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
-        self.get_base_consumer().assign(assignment)
-    }
+    /// Subscribes the consumer to a list of topics.
+    fn subscribe(&self, topics: &[&str]) -> KafkaResult<()>;
 
-    /// Seek to `offset` for the specified `topic` and `partition`. After a
+    /// Unsubscribes the current subscription list.
+    fn unsubscribe(&self);
+
+    /// Manually assigns topics and partitions to the consumer. If used,
+    /// automatic consumer rebalance won't be activated.
+    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()>;
+
+    /// Clears all topic and partitions currently assigned to the consumer
+    fn unassign(&self) -> KafkaResult<()>;
+
+    /// Incrementally add partitions from the current assignment
+    fn incremental_assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()>;
+
+    /// Incrementally remove partitions from the current assignment
+    fn incremental_unassign(&self, assignment: &TopicPartitionList) -> KafkaResult<()>;
+
+    /// Seeks to `offset` for the specified `topic` and `partition`. After a
     /// successful call to `seek`, the next poll of the consumer will return the
     /// message with `offset`.
     fn seek<T: Into<Timeout>>(
@@ -170,80 +255,73 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
         partition: i32,
         offset: Offset,
         timeout: T,
-    ) -> KafkaResult<()> {
-        self.get_base_consumer()
-            .seek(topic, partition, offset, timeout)
-    }
+    ) -> KafkaResult<()>;
 
-    /// Commits the offset of the specified message. The commit can be sync (blocking), or async.
-    /// Notice that when a specific offset is committed, all the previous offsets are considered
-    /// committed as well. Use this method only if you are processing messages in order.
+    /// Commits the offset of the specified message. The commit can be sync
+    /// (blocking), or async. Notice that when a specific offset is committed,
+    /// all the previous offsets are considered committed as well. Use this
+    /// method only if you are processing messages in order.
+    ///
+    /// The highest committed offset is interpreted as the next message to be
+    /// consumed in the event that a consumer rehydrates its local state from
+    /// the Kafka broker (i.e. consumer server restart). This means that,
+    /// in general, the offset of your [`TopicPartitionList`] should equal
+    /// 1 plus the offset from your last consumed message.
     fn commit(
         &self,
         topic_partition_list: &TopicPartitionList,
         mode: CommitMode,
-    ) -> KafkaResult<()> {
-        self.get_base_consumer().commit(topic_partition_list, mode)
-    }
+    ) -> KafkaResult<()>;
 
-    /// Commit the current consumer state. Notice that if the consumer fails after a message
-    /// has been received, but before the message has been processed by the user code,
-    /// this might lead to data loss. Check the "at-least-once delivery" section in the readme
-    /// for more information.
-    fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()> {
-        self.get_base_consumer().commit_consumer_state(mode)
-    }
+    /// Commits the current consumer state. Notice that if the consumer fails
+    /// after a message has been received, but before the message has been
+    /// processed by the user code, this might lead to data loss. Check the
+    /// "at-least-once delivery" section in the readme for more information.
+    fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()>;
 
-    /// Commit the provided message. Note that this will also automatically commit every
-    /// message with lower offset within the same partition.
-    fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
-        self.get_base_consumer().commit_message(message, mode)
-    }
+    /// Commit the provided message. Note that this will also automatically
+    /// commit every message with lower offset within the same partition.
+    ///
+    /// This method is exactly equivalent to invoking [`Consumer::commit`]
+    /// with a [`TopicPartitionList`] which copies the topic and partition
+    /// from the message and adds 1 to the offset of the message.
+    fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()>;
 
-    /// Store offset for this message to be used on the next (auto)commit.
-    /// When using this `enable.auto.offset.store` should be set to `false` in the config.
-    fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
-        self.get_base_consumer().store_offset(message)
-    }
+    /// Stores offset to be used on the next (auto)commit. When
+    /// using this `enable.auto.offset.store` should be set to `false` in the
+    /// config.
+    fn store_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()>;
 
-    /// Store offsets to be used on the next (auto)commit.
-    /// When using this `enable.auto.offset.store` should be set to `false` in the config.
-    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
-        self.get_base_consumer().store_offsets(tpl)
-    }
+    /// Like [`Consumer::store_offset`], but the offset to store is derived from
+    /// the provided message.
+    fn store_offset_from_message(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()>;
+
+    /// Store offsets to be used on the next (auto)commit. When using this
+    /// `enable.auto.offset.store` should be set to `false` in the config.
+    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()>;
 
     /// Returns the current topic subscription.
-    fn subscription(&self) -> KafkaResult<TopicPartitionList> {
-        self.get_base_consumer().subscription()
-    }
+    fn subscription(&self) -> KafkaResult<TopicPartitionList>;
 
     /// Returns the current partition assignment.
-    fn assignment(&self) -> KafkaResult<TopicPartitionList> {
-        self.get_base_consumer().assignment()
-    }
+    fn assignment(&self) -> KafkaResult<TopicPartitionList>;
 
-    /// Retrieve committed offsets for topics and partitions.
+    /// Retrieves the committed offsets for topics and partitions.
     fn committed<T>(&self, timeout: T) -> KafkaResult<TopicPartitionList>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer().committed(timeout)
-    }
+        Self: Sized;
 
-    /// Retrieve committed offsets for specified topics and partitions.
+    /// Retrieves the committed offsets for specified topics and partitions.
     fn committed_offsets<T>(
         &self,
         tpl: TopicPartitionList,
         timeout: T,
     ) -> KafkaResult<TopicPartitionList>
     where
-        T: Into<Timeout>,
-    {
-        self.get_base_consumer().committed_offsets(tpl, timeout)
-    }
+        T: Into<Timeout>;
 
-    /// Lookup the offsets for this consumer's partitions by timestamp.
+    /// Looks up the offsets for this consumer's partitions by timestamp.
     fn offsets_for_timestamp<T>(
         &self,
         timestamp: i64,
@@ -251,13 +329,9 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     ) -> KafkaResult<TopicPartitionList>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer()
-            .offsets_for_timestamp(timestamp, timeout)
-    }
+        Self: Sized;
 
-    /// Look up the offsets for the specified partitions by timestamp.
+    /// Looks up the offsets for the specified partitions by timestamp.
     fn offsets_for_times<T>(
         &self,
         timestamps: TopicPartitionList,
@@ -265,28 +339,19 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     ) -> KafkaResult<TopicPartitionList>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer()
-            .offsets_for_times(timestamps, timeout)
-    }
+        Self: Sized;
 
     /// Retrieve current positions (offsets) for topics and partitions.
-    fn position(&self) -> KafkaResult<TopicPartitionList> {
-        self.get_base_consumer().position()
-    }
+    fn position(&self) -> KafkaResult<TopicPartitionList>;
 
-    /// Returns the metadata information for the specified topic, or for all topics in the cluster
-    /// if no topic is specified.
+    /// Returns the metadata information for the specified topic, or for all
+    /// topics in the cluster if no topic is specified.
     fn fetch_metadata<T>(&self, topic: Option<&str>, timeout: T) -> KafkaResult<Metadata>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer().fetch_metadata(topic, timeout)
-    }
+        Self: Sized;
 
-    /// Returns the metadata information for all the topics in the cluster.
+    /// Returns the low and high watermarks for a specific topic and partition.
     fn fetch_watermarks<T>(
         &self,
         topic: &str,
@@ -295,29 +360,21 @@ pub trait Consumer<C: ConsumerContext = DefaultConsumerContext> {
     ) -> KafkaResult<(i64, i64)>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer()
-            .fetch_watermarks(topic, partition, timeout)
-    }
+        Self: Sized;
 
     /// Returns the group membership information for the given group. If no group is
     /// specified, all groups will be returned.
     fn fetch_group_list<T>(&self, group: Option<&str>, timeout: T) -> KafkaResult<GroupList>
     where
         T: Into<Timeout>,
-        Self: Sized,
-    {
-        self.get_base_consumer().fetch_group_list(group, timeout)
-    }
+        Self: Sized;
 
-    /// Pause consumption for the provided list of partitions.
-    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
-        self.get_base_consumer().pause(partitions)
-    }
+    /// Pauses consumption for the provided list of partitions.
+    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()>;
 
-    /// Resume consumption for the provided list of partitions.
-    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
-        self.get_base_consumer().resume(partitions)
-    }
+    /// Resumes consumption for the provided list of partitions.
+    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()>;
+
+    /// Reports the rebalance protocol in use.
+    fn rebalance_protocol(&self) -> RebalanceProtocol;
 }

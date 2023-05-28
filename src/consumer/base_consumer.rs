@@ -1,21 +1,30 @@
-//! Low level consumer wrapper.
-use crate::rdsys;
-use crate::rdsys::types::*;
+//! Low-level consumers.
+
+use std::cmp;
+use std::ffi::CString;
+use std::mem::ManuallyDrop;
+use std::os::raw::c_void;
+use std::ptr;
+use std::sync::Arc;
+
+use rdkafka_sys as rdsys;
+use rdkafka_sys::types::*;
 
 use crate::client::{Client, NativeClient, NativeQueue};
-use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
-use crate::consumer::{CommitMode, Consumer, ConsumerContext, DefaultConsumerContext};
-use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::config::{
+    ClientConfig, FromClientConfig, FromClientConfigAndContext, NativeClientConfig,
+};
+use crate::consumer::{
+    CommitMode, Consumer, ConsumerContext, ConsumerGroupMetadata, DefaultConsumerContext,
+    RebalanceProtocol,
+};
+use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::groups::GroupList;
+use crate::log::trace;
 use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{cstr_to_owned, Timeout};
-
-use std::cmp;
-use std::mem;
-use std::os::raw::c_void;
-use std::ptr;
+use crate::util::{cstr_to_owned, NativePtr, Timeout};
 
 pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     _conf: *mut RDKafka,
@@ -23,16 +32,19 @@ pub(crate) unsafe extern "C" fn native_commit_cb<C: ConsumerContext>(
     offsets: *mut RDKafkaTopicPartitionList,
     opaque_ptr: *mut c_void,
 ) {
-    let context = Box::from_raw(opaque_ptr as *mut C);
-
+    let context = &mut *(opaque_ptr as *mut C);
     let commit_error = if err.is_error() {
         Err(KafkaError::ConsumerCommit(err.into()))
     } else {
         Ok(())
     };
-    (*context).commit_callback(commit_error, offsets);
-
-    mem::forget(context); // Do not free the context
+    if offsets.is_null() {
+        let tpl = TopicPartitionList::new();
+        context.commit_callback(commit_error, &tpl);
+    } else {
+        let tpl = ManuallyDrop::new(TopicPartitionList::from_ptr(offsets));
+        context.commit_callback(commit_error, &tpl);
+    }
 }
 
 /// Native rebalance callback. This callback will run on every rebalance, and it will call the
@@ -43,37 +55,22 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
     native_tpl: *mut RDKafkaTopicPartitionList,
     opaque_ptr: *mut c_void,
 ) {
-    // let context: &C = &*(opaque_ptr as *const C);
-    let context = Box::from_raw(opaque_ptr as *mut C);
-    let native_client = NativeClient::from_ptr(rk);
-    let mut tpl = TopicPartitionList::from_ptr(native_tpl);
-
+    let context = &mut *(opaque_ptr as *mut C);
+    let native_client = ManuallyDrop::new(NativeClient::from_ptr(rk));
+    let mut tpl = ManuallyDrop::new(TopicPartitionList::from_ptr(native_tpl));
     context.rebalance(&native_client, err, &mut tpl);
-
-    mem::forget(context); // Do not free the context
-    mem::forget(native_client); // Do not free native client
-    tpl.leak() // Do not free native topic partition list
 }
 
-/// Native message queue nonempty callback. This callback will run whenever the
-/// consumer's message queue switches from empty to nonempty.
-unsafe extern "C" fn native_message_queue_nonempty_cb<C: ConsumerContext>(
-    _: *mut RDKafka,
-    opaque_ptr: *mut c_void,
-) {
-    let context = Box::from_raw(opaque_ptr as *mut C);
-
-    (*context).message_queue_nonempty_callback();
-
-    mem::forget(context); // Do not free the context
-}
-
-/// Low level wrapper around the librdkafka consumer. This consumer requires to be periodically polled
-/// to make progress on rebalance, callbacks and to receive messages.
-pub struct BaseConsumer<C: ConsumerContext = DefaultConsumerContext> {
+/// A low-level consumer that requires manual polling.
+///
+/// This consumer must be periodically polled to make progress on rebalancing,
+/// callbacks and to receive messages.
+pub struct BaseConsumer<C = DefaultConsumerContext>
+where
+    C: ConsumerContext,
+{
     client: Client<C>,
     main_queue_min_poll_interval: Timeout,
-    _queue: Option<NativeQueue>,
 }
 
 impl FromClientConfig for BaseConsumer {
@@ -85,7 +82,19 @@ impl FromClientConfig for BaseConsumer {
 /// Creates a new `BaseConsumer` starting from a `ClientConfig`.
 impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseConsumer<C>> {
-        let native_config = config.create_native_config()?;
+        BaseConsumer::new(config, config.create_native_config()?, context)
+    }
+}
+
+impl<C> BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
+    pub(crate) fn new(
+        config: &ClientConfig,
+        native_config: NativeClientConfig,
+        context: C,
+    ) -> KafkaResult<BaseConsumer<C>> {
         unsafe {
             rdsys::rd_kafka_conf_set_rebalance_cb(
                 native_config.ptr(),
@@ -103,41 +112,25 @@ impl<C: ConsumerContext> FromClientConfigAndContext<C> for BaseConsumer<C> {
             RDKafkaType::RD_KAFKA_CONSUMER,
             context,
         )?;
-        let queue = client.consumer_queue();
-        unsafe {
-            if let Some(queue) = &queue {
-                let context_ptr = client.context() as *const C as *mut c_void;
-                rdsys::rd_kafka_queue_cb_event_enable(
-                    queue.ptr(),
-                    Some(native_message_queue_nonempty_cb::<C>),
-                    context_ptr,
-                );
-            }
-        }
         Ok(BaseConsumer {
             client,
             main_queue_min_poll_interval,
-            _queue: queue,
         })
-    }
-}
-
-impl<C: ConsumerContext> BaseConsumer<C> {
-    /// Returns the context used to create this consumer.
-    pub fn context(&self) -> &C {
-        self.client.context()
     }
 
     /// Polls the consumer for messages and returns a pointer to the native rdkafka-sys struct.
     /// This method is for internal use only. Use poll instead.
-    pub(crate) fn poll_raw(&self, mut timeout: Timeout) -> Option<*mut RDKafkaMessage> {
+    pub(crate) fn poll_raw(&self, mut timeout: Timeout) -> Option<NativePtr<RDKafkaMessage>> {
         loop {
             unsafe { rdsys::rd_kafka_poll(self.client.native_ptr(), 0) };
             let op_timeout = cmp::min(timeout, self.main_queue_min_poll_interval);
             let message_ptr = unsafe {
-                rdsys::rd_kafka_consumer_poll(self.client.native_ptr(), op_timeout.as_millis())
+                NativePtr::from_ptr(rdsys::rd_kafka_consumer_poll(
+                    self.client.native_ptr(),
+                    op_timeout.as_millis(),
+                ))
             };
-            if !message_ptr.is_null() {
+            if let Some(message_ptr) = message_ptr {
                 break Some(message_ptr);
             }
             if op_timeout >= timeout {
@@ -160,7 +153,7 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// # Lifetime
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
-    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage>> {
+    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
         self.poll_raw(timeout.into())
             .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, self) })
     }
@@ -176,7 +169,6 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// All these are equivalent and will receive messages without timing out.
     ///
     /// ```rust,no_run
-    /// # extern crate rdkafka;
     /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
     /// #    .create()
     /// #    .unwrap();
@@ -188,7 +180,6 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// ```
     ///
     /// ```rust,no_run
-    /// # extern crate rdkafka;
     /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
     /// #    .create()
     /// #    .unwrap();
@@ -199,7 +190,6 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     /// ```
     ///
     /// ```rust,no_run
-    /// # extern crate rdkafka;
     /// # let consumer: rdkafka::consumer::BaseConsumer<_> = rdkafka::ClientConfig::new()
     /// #    .create()
     /// #    .unwrap();
@@ -208,14 +198,70 @@ impl<C: ConsumerContext> BaseConsumer<C> {
     ///   // Handle the message
     /// }
     /// ```
-    pub fn iter(&self) -> Iter<C> {
+    pub fn iter(&self) -> Iter<'_, C> {
         Iter(self)
+    }
+
+    /// Splits messages for the specified partition into their own queue.
+    ///
+    /// If the `topic` or `partition` is invalid, returns `None`.
+    ///
+    /// After calling this method, newly-fetched messages for the specified
+    /// partition will be returned via [`PartitionQueue::poll`] rather than
+    /// [`BaseConsumer::poll`]. Note that there may be buffered messages for the
+    /// specified partition that will continue to be returned by
+    /// `BaseConsumer::poll`. For best results, call `split_partition_queue`
+    /// before the first call to `BaseConsumer::poll`.
+    ///
+    /// You must continue to call `BaseConsumer::poll`, even if no messages are
+    /// expected, to serve callbacks.
+    ///
+    /// Note that calling [`Consumer::assign`] will deactivate any existing
+    /// partition queues. You will need to call this method for every partition
+    /// that should be split after every call to `assign`.
+    ///
+    /// Beware that this method is implemented for `&Arc<Self>`, not `&self`.
+    /// You will need to wrap your consumer in an `Arc` in order to call this
+    /// method. This design permits moving the partition queue to another thread
+    /// while ensuring the partition queue does not outlive the consumer.
+    pub fn split_partition_queue(
+        self: &Arc<Self>,
+        topic: &str,
+        partition: i32,
+    ) -> Option<PartitionQueue<C>> {
+        let topic = match CString::new(topic) {
+            Ok(topic) => topic,
+            Err(_) => return None,
+        };
+        let queue = unsafe {
+            NativeQueue::from_ptr(rdsys::rd_kafka_queue_get_partition(
+                self.client.native_ptr(),
+                topic.as_ptr(),
+                partition,
+            ))
+        };
+        queue.map(|queue| {
+            unsafe { rdsys::rd_kafka_queue_forward(queue.ptr(), ptr::null_mut()) }
+            PartitionQueue::new(self.clone(), queue)
+        })
     }
 }
 
-impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
-    fn get_base_consumer(&self) -> &BaseConsumer<C> {
-        self
+impl<C> Consumer<C> for BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
+    fn client(&self) -> &Client<C> {
+        &self.client
+    }
+
+    fn group_metadata(&self) -> Option<ConsumerGroupMetadata> {
+        let ptr = unsafe {
+            NativePtr::from_ptr(rdsys::rd_kafka_consumer_group_metadata(
+                self.client.native_ptr(),
+            ))
+        }?;
+        Some(ConsumerGroupMetadata(ptr))
     }
 
     fn subscribe(&self, topics: &[&str]) -> KafkaResult<()> {
@@ -245,6 +291,44 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         Ok(())
     }
 
+    fn unassign(&self) -> KafkaResult<()> {
+        // Passing null to assign clears the current static assignments list
+        let ret_code = unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), ptr::null()) };
+        if ret_code.is_error() {
+            let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
+            return Err(KafkaError::Subscription(error));
+        };
+        Ok(())
+    }
+
+    fn incremental_assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_incremental_assign(
+                self.client.native_ptr(),
+                assignment.ptr(),
+            ))
+        };
+        if ret.is_error() {
+            let error = ret.name();
+            return Err(KafkaError::Subscription(error));
+        };
+        Ok(())
+    }
+
+    fn incremental_unassign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_incremental_unassign(
+                self.client.native_ptr(),
+                assignment.ptr(),
+            ))
+        };
+        if ret.is_error() {
+            let error = ret.name();
+            return Err(KafkaError::Subscription(error));
+        };
+        Ok(())
+    }
+
     fn seek<T: Into<Timeout>>(
         &self,
         topic: &str,
@@ -253,13 +337,11 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         timeout: T,
     ) -> KafkaResult<()> {
         let topic = self.client.native_topic(topic)?;
-        let ret_code = unsafe {
-            rdsys::rd_kafka_seek(
-                topic.ptr(),
-                partition,
-                offset.to_raw(),
-                timeout.into().as_millis(),
-            )
+        let ret_code = match offset.to_raw() {
+            Some(offset) => unsafe {
+                rdsys::rd_kafka_seek(topic.ptr(), partition, offset, timeout.into().as_millis())
+            },
+            None => return Err(KafkaError::Seek("Local: Unrepresentable offset".into())),
         };
         if ret_code.is_error() {
             let error = unsafe { cstr_to_owned(rdsys::rd_kafka_err2str(ret_code)) };
@@ -298,7 +380,7 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
-    fn commit_message(&self, message: &BorrowedMessage, mode: CommitMode) -> KafkaResult<()> {
+    fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()> {
         let error = unsafe {
             rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32)
         };
@@ -309,7 +391,17 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
     }
 
-    fn store_offset(&self, message: &BorrowedMessage) -> KafkaResult<()> {
+    fn store_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()> {
+        let topic = self.client.native_topic(topic)?;
+        let error = unsafe { rdsys::rd_kafka_offset_store(topic.ptr(), partition, offset) };
+        if error.is_error() {
+            Err(KafkaError::StoreOffset(error.into()))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn store_offset_from_message(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()> {
         let error = unsafe {
             rdsys::rd_kafka_offset_store(message.topic_ptr(), message.partition(), message.offset())
         };
@@ -395,21 +487,22 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         }
         let mut tpl = unsafe { TopicPartitionList::from_ptr(tpl_ptr) };
 
-        // Set the timestamp we want in the offset field for every partition as librdkafka expects.
-        tpl.set_all_offsets(Offset::Offset(timestamp));
+        // Set the timestamp we want in the offset field for every partition as
+        // librdkafka expects.
+        tpl.set_all_offsets(Offset::Offset(timestamp))?;
 
         self.offsets_for_times(tpl, timeout)
     }
 
-    /**
-     * `timestamps` is a `TopicPartitionList` with timestamps instead of offsets.
-     */
+    // `timestamps` is a `TopicPartitionList` with timestamps instead of
+    // offsets.
     fn offsets_for_times<T: Into<Timeout>>(
         &self,
         timestamps: TopicPartitionList,
         timeout: T,
     ) -> KafkaResult<TopicPartitionList> {
-        // This call will then put the offset in the offset field of this topic partition list.
+        // This call will then put the offset in the offset field of this topic
+        // partition list.
         let offsets_for_times_error = unsafe {
             rdsys::rd_kafka_offsets_for_times(
                 self.client.native_ptr(),
@@ -426,17 +519,12 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
     }
 
     fn position(&self) -> KafkaResult<TopicPartitionList> {
-        let mut tpl_ptr = ptr::null_mut();
-        let error = unsafe {
-            // TODO: improve error handling
-            rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr);
-            rdsys::rd_kafka_position(self.client.native_ptr(), tpl_ptr)
-        };
-
+        let tpl = self.assignment()?;
+        let error = unsafe { rdsys::rd_kafka_position(self.client.native_ptr(), tpl.ptr()) };
         if error.is_error() {
             Err(KafkaError::MetadataFetch(error.into()))
         } else {
-            Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
+            Ok(tpl)
         }
     }
 
@@ -485,9 +573,16 @@ impl<C: ConsumerContext> Consumer<C> for BaseConsumer<C> {
         };
         Ok(())
     }
+
+    fn rebalance_protocol(&self) -> RebalanceProtocol {
+        self.client.native_client().rebalance_protocol()
+    }
 }
 
-impl<C: ConsumerContext> Drop for BaseConsumer<C> {
+impl<C> Drop for BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
     fn drop(&mut self) {
         trace!("Destroying consumer: {:?}", self.client.native_ptr()); // TODO: fix me (multiple executions ?)
         unsafe { rdsys::rd_kafka_consumer_close(self.client.native_ptr()) };
@@ -495,13 +590,20 @@ impl<C: ConsumerContext> Drop for BaseConsumer<C> {
     }
 }
 
-/// Iterator for more convenient interface.
+/// A convenience iterator over the messages in a [`BaseConsumer`].
 ///
-/// It simply repeatedly calls [`BaseConsumer::poll`](struct.BaseConsumer.html#method.poll).
-pub struct Iter<'a, C: ConsumerContext + 'a>(&'a BaseConsumer<C>);
+/// Each call to [`Iter::next`] simply calls [`BaseConsumer::poll`] with an
+/// infinite timeout.
+pub struct Iter<'a, C>(&'a BaseConsumer<C>)
+where
+    C: ConsumerContext;
 
-impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
+impl<'a, C> Iterator for Iter<'a, C>
+where
+    C: ConsumerContext,
+{
     type Item = KafkaResult<BorrowedMessage<'a>>;
+
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(item) = self.0.poll(None) {
@@ -511,10 +613,94 @@ impl<'a, C: ConsumerContext + 'a> Iterator for Iter<'a, C> {
     }
 }
 
-impl<'a, C: ConsumerContext + 'a> IntoIterator for &'a BaseConsumer<C> {
+impl<'a, C> IntoIterator for &'a BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
     type Item = KafkaResult<BorrowedMessage<'a>>;
     type IntoIter = Iter<'a, C>;
+
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+/// A message queue for a single partition.
+pub struct PartitionQueue<C>
+where
+    C: ConsumerContext,
+{
+    consumer: Arc<BaseConsumer<C>>,
+    queue: NativeQueue,
+    nonempty_callback: Option<Box<Box<dyn Fn() + Send + Sync>>>,
+}
+
+impl<C> PartitionQueue<C>
+where
+    C: ConsumerContext,
+{
+    pub(crate) fn new(consumer: Arc<BaseConsumer<C>>, queue: NativeQueue) -> Self {
+        PartitionQueue {
+            consumer,
+            queue,
+            nonempty_callback: None,
+        }
+    }
+
+    /// Polls the partition for new messages.
+    ///
+    /// The `timeout` parameter controls how long to block if no messages are
+    /// available.
+    ///
+    /// Remember that you must also call [`BaseConsumer::poll`] on the
+    /// associated consumer regularly, even if no messages are expected, to
+    /// serve callbacks.
+    pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
+        unsafe {
+            NativePtr::from_ptr(rdsys::rd_kafka_consume_queue(
+                self.queue.ptr(),
+                timeout.into().as_millis(),
+            ))
+        }
+        .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, &self.consumer) })
+    }
+
+    /// Sets a callback that will be invoked whenever the queue becomes
+    /// nonempty.
+    pub fn set_nonempty_callback<F>(&mut self, f: F)
+    where
+        F: Fn() + Send + Sync + 'static,
+    {
+        // SAFETY: we keep `F` alive until the next call to
+        // `rd_kafka_queue_cb_event_enable`. That might be the next call to
+        // `set_nonempty_callback` or it might be when the queue is dropped. The
+        // double indirection is required because `&dyn Fn` is a fat pointer.
+
+        unsafe extern "C" fn native_message_queue_nonempty_cb(
+            _: *mut RDKafka,
+            opaque_ptr: *mut c_void,
+        ) {
+            let f = opaque_ptr as *const *const (dyn Fn() + Send + Sync);
+            (**f)();
+        }
+
+        let f: Box<Box<dyn Fn() + Send + Sync>> = Box::new(Box::new(f));
+        unsafe {
+            rdsys::rd_kafka_queue_cb_event_enable(
+                self.queue.ptr(),
+                Some(native_message_queue_nonempty_cb),
+                &*f as *const _ as *mut c_void,
+            )
+        }
+        self.nonempty_callback = Some(f);
+    }
+}
+
+impl<C> Drop for PartitionQueue<C>
+where
+    C: ConsumerContext,
+{
+    fn drop(&mut self) {
+        unsafe { rdsys::rd_kafka_queue_cb_event_enable(self.queue.ptr(), None, ptr::null_mut()) }
     }
 }
