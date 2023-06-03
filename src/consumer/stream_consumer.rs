@@ -406,6 +406,14 @@ where
         self.base.seek(topic, partition, offset, timeout)
     }
 
+    fn seek_partitions<T: Into<Timeout>>(
+        &self,
+        topic_partition_list: &TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<()> {
+        self.base.seek_partitions(topic_partition_list, timeout)
+    }
+
     fn commit(
         &self,
         topic_partition_list: &TopicPartitionList,
