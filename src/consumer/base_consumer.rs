@@ -443,6 +443,10 @@ where
         }
     }
 
+    fn assignment_lost(&self) -> bool {
+        unsafe { rdsys::rd_kafka_assignment_lost(self.client.native_ptr()) == 1 }
+    }
+
     fn committed<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<TopicPartitionList> {
         let mut tpl_ptr = ptr::null_mut();
         let assignment_error =
