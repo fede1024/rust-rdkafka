@@ -407,12 +407,7 @@ impl<C: ClientContext> Client<C> {
     ///
     /// [`MockCluster`]: crate::mocking::MockCluster
     pub fn mock_cluster(&self) -> Option<MockCluster<'_, C>> {
-        let mc = unsafe { rdsys::rd_kafka_handle_mock_cluster(self.native.ptr()) };
-        if !mc.is_null() {
-            Some(MockCluster::new_ref(mc, self))
-        } else {
-            None
-        }
+        MockCluster::from_client(self)
     }
 
     /// Returns a NativeTopic from the current client. The NativeTopic shouldn't outlive the client

@@ -25,7 +25,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::producer::DefaultProducerContext;
 use crate::ClientContext;
 
-/// Used internally by `MockCluster` to distinguish whether the mock cluster is owned or referenced.
+/// Used internally by `MockCluster` to distinguish whether the mock cluster is owned or borrowed.
 ///
 /// The mock cluster can be created in two ways:
 ///
@@ -34,13 +34,13 @@ use crate::ClientContext;
 ///
 /// - By setting `test.mock.num.brokers` in a configuration of a producer/consumer client.
 ///   In this case, the client creates the mock cluster internally and destroys it in its d-tor,
-///   and we only hold a reference to the mock cluster obtained with `rd_kafka_handle_mock_cluster()` (cf. `Client::mock_cluser()`).
+///   and we only hold a reference to the mock cluster obtained with `rd_kafka_handle_mock_cluster()` (cf. `Client::mock_cluster()`).
 ///
-///   In this case, we **must neither** destroy the mock clsuter in `MockCluster`'s `drop()`,
+///   In this case, we **must neither** destroy the mock cluster in `MockCluster`'s `drop()`,
 ///   **nor** outlive the `Client` from which the reference is obtained, hence the lifetime.
 enum MockClusterClient<'c, C: ClientContext> {
     Owned(Client<C>),
-    Ref(&'c Client<C>),
+    Borrowed(&'c Client<C>),
 }
 
 /// Mock Kafka cluster with a configurable number of brokers that support a reasonable subset of
@@ -90,7 +90,7 @@ pub enum MockCoordinator {
 }
 
 impl MockCluster<'static, DefaultProducerContext> {
-    /// Create new mock cluster with a given number of brokers
+    /// Creates a new mock cluster with the given number of brokers
     pub fn new(broker_count: i32) -> KafkaResult<Self> {
         let config = ClientConfig::new();
         let native_config = config.create_native_config()?;
@@ -103,8 +103,8 @@ impl MockCluster<'static, DefaultProducerContext> {
             context,
         )?;
 
-        let kafka_ptr = client.native_ptr();
-        let mock_cluster = unsafe { rdsys::rd_kafka_mock_cluster_new(kafka_ptr, broker_count) };
+        let mock_cluster =
+            unsafe { rdsys::rd_kafka_mock_cluster_new(client.native_ptr(), broker_count) };
         if mock_cluster.is_null() {
             return Err(KafkaError::MockCluster(rdsys::RDKafkaErrorCode::Fail));
         }
@@ -120,20 +120,24 @@ impl<'c, C> MockCluster<'c, C>
 where
     C: ClientContext,
 {
-    pub(crate) fn new_ref(mock_cluster: *mut RDKafkaMockCluster, client: &'c Client<C>) -> Self {
-        Self {
-            mock_cluster,
-            client: MockClusterClient::Ref(client),
+    /// Returns the mock cluster associated with the given client if any
+    pub(crate) fn from_client(client: &'c Client<C>) -> Option<Self> {
+        let mock_cluster = unsafe { rdsys::rd_kafka_handle_mock_cluster(client.native_ptr()) };
+        if mock_cluster.is_null() {
+            return None;
         }
+
+        Some(MockCluster {
+            mock_cluster,
+            client: MockClusterClient::Borrowed(client),
+        })
     }
 
-    /// Obtain the bootstrap address for the mock cluster
+    /// Returns the mock cluster's bootstrap.servers list
     pub fn bootstrap_servers(&self) -> String {
-        let raw =
+        let bootstrap =
             unsafe { CStr::from_ptr(rdsys::rd_kafka_mock_cluster_bootstraps(self.mock_cluster)) };
-        raw.to_str()
-            .expect("Unexpected non-Unicode characters in bootstrap servers")
-            .to_string()
+        bootstrap.to_string_lossy().to_string()
     }
 
     /// Create a topic
@@ -147,12 +151,12 @@ where
         partition_count: i32,
         replication_factor: i32,
     ) -> KafkaResult<()> {
-        let raw_topic = CString::new(topic).unwrap();
+        let topic_c = CString::new(topic)?;
         return_mock_op! {
             unsafe {
                 rdsys::rd_kafka_mock_topic_create(
                     self.mock_cluster,
-                    raw_topic.as_ptr(),
+                    topic_c.as_ptr(),
                     partition_count,
                     replication_factor,
                 )
@@ -160,7 +164,7 @@ where
         }
     }
 
-    /// Sets the parititon leader
+    /// Sets the partition leader
     ///
     /// The topic will be created if it does not exist.
     ///
@@ -171,14 +175,14 @@ where
         partition: i32,
         broker_id: Option<i32>,
     ) -> KafkaResult<()> {
-        let raw_topic = CString::new(topic).unwrap();
+        let topic_c = CString::new(topic)?;
         let broker_id = broker_id.unwrap_or(-1);
 
         return_mock_op! {
             unsafe {
                 rdsys::rd_kafka_mock_partition_set_leader(
                     self.mock_cluster,
-                    raw_topic.as_ptr(),
+                    topic_c.as_ptr(),
                     partition,
                     broker_id,
                 )
@@ -186,7 +190,7 @@ where
         }
     }
 
-    /// Sets the partitions preferred replica / follower.
+    /// Sets the partition's preferred replica / follower.
     ///
     /// The topic will be created if it does not exist.
     ///
@@ -197,21 +201,21 @@ where
         partition: i32,
         broker_id: i32,
     ) -> KafkaResult<()> {
-        let raw_topic = CString::new(topic).unwrap();
+        let topic_c = CString::new(topic)?;
 
         return_mock_op! {
             unsafe {
                 rdsys::rd_kafka_mock_partition_set_follower(
-                    self.mock_cluster, raw_topic.as_ptr(), partition, broker_id)
+                    self.mock_cluster, topic_c.as_ptr(), partition, broker_id)
             }
         }
     }
 
-    /// Set the partitions preferred replicate / follower low and high watermarks.
+    /// Sets the partition's preferred replica / follower low and high watermarks.
     ///
     /// The topic will be created if it does not exist.
     ///
-    /// Setting an offset to `Non` will revert back to the leaders corresponding watermark.
+    /// Setting an offset to `None` will revert back to the leader's corresponding watermark.
     pub fn follower_watermarks(
         &self,
         topic: &str,
@@ -219,7 +223,7 @@ where
         low_watermark: Option<i64>,
         high_watermark: Option<i64>,
     ) -> KafkaResult<()> {
-        let raw_topic = CString::new(topic).unwrap();
+        let topic_c = CString::new(topic)?;
         let low_watermark = low_watermark.unwrap_or(-1);
         let high_watermark = high_watermark.unwrap_or(-1);
 
@@ -227,7 +231,7 @@ where
             unsafe {
                 rdsys::rd_kafka_mock_partition_set_follower_wmarks(
                     self.mock_cluster,
-                    raw_topic.as_ptr(),
+                    topic_c.as_ptr(),
                     partition,
                     low_watermark,
                     high_watermark
@@ -237,6 +241,7 @@ where
     }
 
     /// Disconnects the broker and disallows any new connections.
+    /// Use -1 for all brokers, or >= 0 for a specific broker.
     ///
     /// NOTE: This does NOT trigger leader change.
     pub fn broker_down(&self, broker_id: i32) -> KafkaResult<()> {
@@ -247,7 +252,8 @@ where
         }
     }
 
-    /// brief Makes the broker accept connections again.
+    /// Makes the broker accept connections again.
+    /// Use -1 for all brokers, or >= 0 for a specific broker.
     ///
     /// NOTE: This does NOT trigger leader change.
     pub fn broker_up(&self, broker_id: i32) -> KafkaResult<()> {
@@ -259,6 +265,7 @@ where
     }
 
     /// Set broker round-trip-time delay in milliseconds.
+    /// Use -1 for all brokers, or >= 0 for a specific broker.
     pub fn broker_round_trip_time(&self, broker_id: i32, delay: Duration) -> KafkaResult<()> {
         let rtt_ms = delay.as_millis().try_into().unwrap_or(c_int::MAX);
 
@@ -274,14 +281,15 @@ where
     }
 
     /// Sets the broker's rack as reported in Metadata to the client.
+    /// Use -1 for all brokers, or >= 0 for a specific broker.
     pub fn broker_rack(&self, broker_id: i32, rack: &str) -> KafkaResult<()> {
-        let raw_rack = CString::new(rack).unwrap();
+        let rack_c = CString::new(rack)?;
         return_mock_op! {
             unsafe {
                 rdsys::rd_kafka_mock_broker_set_rack(
                     self.mock_cluster,
                     broker_id,
-                    raw_rack.as_ptr()
+                    rack_c.as_ptr()
                 )
             }
         }
@@ -291,22 +299,22 @@ where
     ///
     /// If this API is not a standard hashing scheme will be used.
     ///
-    /// `broker_id` does not need to point to an existing broker.`
+    /// `broker_id` does not need to point to an existing broker.
     pub fn coordinator(&self, coordinator: MockCoordinator, broker_id: i32) -> KafkaResult<()> {
         let (kind, key) = match coordinator {
             MockCoordinator::Transaction(key) => ("transaction", key),
             MockCoordinator::Group(key) => ("group", key),
         };
 
-        let raw_kind = CString::new(kind).unwrap();
-        let raw_key = CString::new(key).unwrap();
+        let kind_c = CString::new(kind)?;
+        let raw_c = CString::new(key)?;
 
         return_mock_op! {
             unsafe {
                 rdsys::rd_kafka_mock_coordinator_set(
                     self.mock_cluster,
-                    raw_kind.as_ptr(),
-                    raw_key.as_ptr(),
+                    kind_c.as_ptr(),
+                    raw_c.as_ptr(),
                     broker_id
                 )
             }
@@ -356,7 +364,7 @@ mod tests {
             .create()
             .expect("Client creation error");
 
-        let rec = FutureRecord::to(TOPIC).key(b"msg1").payload(b"test");
+        let rec = FutureRecord::to(TOPIC).key("msg1").payload("test");
         producer.send_result(rec).unwrap().await.unwrap().unwrap();
 
         consumer.subscribe(&[TOPIC]).unwrap();
