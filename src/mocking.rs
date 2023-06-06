@@ -140,6 +140,40 @@ where
         bootstrap.to_string_lossy().to_string()
     }
 
+    /// Clear the cluster's error state for the given ApiKey.
+    pub fn clear_request_errors(&self, api_key: RDKafkaApiKey) {
+        unsafe { rdsys::rd_kafka_mock_clear_request_errors(self.mock_cluster, api_key.into()) }
+    }
+
+    /// Push errors onto the cluster's error stack for the given ApiKey.
+    ///
+    /// The protocol requests matching the given ApiKey will fail with the
+    /// provided error code and removed from the stack, starting with
+    /// the first error code, then the second, etc.
+    ///
+    /// Passing RD_KAFKA_RESP_ERR__TRANSPORT will make the mock broker
+    /// disconnect the client which can be useful to trigger a disconnect
+    /// on certain requests.
+    pub fn request_errors(&self, api_key: RDKafkaApiKey, errors: &[RDKafkaRespErr]) {
+        unsafe {
+            rdsys::rd_kafka_mock_push_request_errors_array(
+                self.mock_cluster,
+                api_key.into(),
+                errors.len(),
+                errors.as_ptr(),
+            )
+        }
+    }
+
+    /// Set the topic error to return in protocol requests.
+    ///
+    /// Currently only used for TopicMetadataRequest and AddPartitionsToTxnRequest.
+    pub fn topic_error(&self, topic: &str, error: RDKafkaRespErr) -> KafkaResult<()> {
+        let topic_c = CString::new(topic)?;
+        unsafe { rdsys::rd_kafka_mock_topic_set_error(self.mock_cluster, topic_c.as_ptr(), error) }
+        Ok(())
+    }
+
     /// Create a topic
     ///
     /// This is an alternative to automatic topic creation as performed by the client itself.
@@ -316,6 +350,31 @@ where
                     kind_c.as_ptr(),
                     raw_c.as_ptr(),
                     broker_id
+                )
+            }
+        }
+    }
+
+    /// Set the allowed ApiVersion range for the given ApiKey.
+    ///
+    /// Set min_version and max_version to `None` to disable the API completely.
+    /// max_version MUST not exceed the maximum implemented value.
+    pub fn apiversion(
+        &self,
+        api_key: RDKafkaApiKey,
+        min_version: Option<i16>,
+        max_version: Option<i16>,
+    ) -> KafkaResult<()> {
+        let min_version = min_version.unwrap_or(-1);
+        let max_version = max_version.unwrap_or(-1);
+
+        return_mock_op! {
+            unsafe {
+                rdsys::rd_kafka_mock_set_apiversion(
+                    self.mock_cluster,
+                    api_key.into(),
+                    min_version,
+                    max_version,
                 )
             }
         }
