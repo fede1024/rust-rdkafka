@@ -30,6 +30,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::log::{debug, error, info, trace, warn};
 use crate::metadata::Metadata;
+use crate::mocking::MockCluster;
 use crate::statistics::Statistics;
 use crate::util::{self, ErrBuf, KafkaDrop, NativePtr, Timeout};
 
@@ -398,6 +399,15 @@ impl<C: ClientContext> Client<C> {
         } else {
             Some((code.into(), err_buf.to_string()))
         }
+    }
+
+    /// If this client was configured with `test.mock.num.brokers`,
+    /// this will return a [`MockCluster`] instance associated with this client,
+    /// otherwise `None` is returned.
+    ///
+    /// [`MockCluster`]: crate::mocking::MockCluster
+    pub fn mock_cluster(&self) -> Option<MockCluster<'_, C>> {
+        MockCluster::from_client(self)
     }
 
     /// Returns a NativeTopic from the current client. The NativeTopic shouldn't outlive the client

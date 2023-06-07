@@ -282,6 +282,7 @@ pub mod error;
 pub mod groups;
 pub mod message;
 pub mod metadata;
+pub mod mocking;
 pub mod producer;
 pub mod statistics;
 pub mod topic_partition_list;
