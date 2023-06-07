@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};
+use rdkafka::groups::MemberAssignment;
 use rdkafka::error::KafkaError;
 use rdkafka::topic_partition_list::TopicPartitionList;
 
@@ -158,6 +159,17 @@ async fn test_group_membership() {
     assert_eq!(
         consumer_member.client_id(),
         "rdkafka_integration_test_client"
+    );
+
+    assert_eq!(consumer_member.assignment().unwrap().len(), 1);
+
+    let assignment_topic = &consumer_member.assignment().unwrap()[0];
+    assert_eq!(
+        assignment_topic,
+        &MemberAssignment {
+            partitions: vec![0, 1, 2],
+            topic: topic_name
+        }
     );
 }
 

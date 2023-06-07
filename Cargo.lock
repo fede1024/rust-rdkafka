@@ -1074,6 +1074,7 @@ version = "0.31.0"
 dependencies = [
  "async-std",
  "backoff",
+ "byteorder",
  "chrono",
  "clap",
  "env_logger",

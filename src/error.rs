@@ -159,6 +159,8 @@ pub enum KafkaError {
     MessageProduction(RDKafkaErrorCode),
     /// Metadata fetch error.
     MetadataFetch(RDKafkaErrorCode),
+    /// Member assignment parsing failed
+    MemberAssignment(String),
     /// No message was received.
     NoMessageReceived,
     /// Unexpected null pointer
@@ -218,6 +220,9 @@ impl fmt::Debug for KafkaError {
             KafkaError::MetadataFetch(err) => {
                 write!(f, "KafkaError (Metadata fetch error: {})", err)
             }
+            KafkaError::MemberAssignment(ref err) => {
+                write!(f, "KafkaError (Member assignment parsing error: {})", err)
+            }
             KafkaError::NoMessageReceived => {
                 write!(f, "No message received within the given poll interval")
             }
@@ -261,6 +266,7 @@ impl fmt::Display for KafkaError {
             KafkaError::MessageConsumption(err) => write!(f, "Message consumption error: {}", err),
             KafkaError::MessageProduction(err) => write!(f, "Message production error: {}", err),
             KafkaError::MetadataFetch(err) => write!(f, "Meta data fetch error: {}", err),
+            KafkaError::MemberAssignment(ref err) => write!(f, "Member assignment parsing error: {}", err),
             KafkaError::NoMessageReceived => {
                 write!(f, "No message received within the given poll interval")
             }
@@ -287,6 +293,7 @@ impl Error for KafkaError {
             KafkaError::Canceled => None,
             KafkaError::ClientConfig(..) => None,
             KafkaError::ClientCreation(_) => None,
+            KafkaError::MemberAssignment(_) => None,
             KafkaError::ConsumerCommit(err) => Some(err),
             KafkaError::Flush(err) => Some(err),
             KafkaError::Global(err) => Some(err),
@@ -326,6 +333,7 @@ impl KafkaError {
             KafkaError::Canceled => None,
             KafkaError::ClientConfig(..) => None,
             KafkaError::ClientCreation(_) => None,
+            KafkaError::MemberAssignment(_) => None,
             KafkaError::ConsumerCommit(err) => Some(*err),
             KafkaError::Flush(err) => Some(*err),
             KafkaError::Global(err) => Some(*err),
