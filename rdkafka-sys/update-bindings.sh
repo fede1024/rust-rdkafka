@@ -17,7 +17,7 @@ bindgen \
     --raw-line "use libc::{FILE, sockaddr, c_int, c_void, c_char};" \
     --raw-line "use num_enum::TryFromPrimitive;" \
     --default-macro-constant-type "signed" \
-    librdkafka/src/rdkafka.h -o src/bindings.rs
+    "bindings.h" -o "src/bindings.rs"
 
 # Derive TryFromPrimitive for rd_kafka_resp_err_t.
 perl -i -p0e 's/#\[derive\((.*)\)\]\npub enum rd_kafka_resp_err_t/#\[derive($1, TryFromPrimitive)\]\npub enum rd_kafka_resp_err_t/s' src/bindings.rs
