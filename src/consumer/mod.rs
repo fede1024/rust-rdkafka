@@ -257,34 +257,11 @@ where
         timeout: T,
     ) -> KafkaResult<()>;
 
-     /// Seeks consumer for partitions in `partitions` to the per-partition
-     /// offset in the `offset` field of `partitions`.
-     /// The offset may be either absolute (>= 0) or a logical offset.
-     /// If `timeout_ms` is specified (not 0) the seek call will wait this long
-     /// for the consumer to update its fetcher state for the given partition with
-     /// the new offset. This guarantees that no previously fetched messages for the
- /*  old offset (or fetch position) will be passed to the application.
- *
- * If the timeout is reached the internal state will be unknown to the caller
- * and this function returns `RD_KAFKA_RESP_ERR__TIMED_OUT`.
- *
- * If \p timeout_ms is 0 it will initiate the seek but return
- * immediately without any error reporting (e.g., async).
- *
- * This call will purge all pre-fetched messages for the given partition, which
- * may be up to \c queued.max.message.kbytes in size. Repeated use of seek
- * may thus lead to increased network usage as messages are re-fetched from
- * the broker.
- *
- * Individual partition errors are reported in the per-partition \c .err field
- * of \p partitions.
- *
- * @remark Seek must only be performed for already assigned/consumed partitions,
- *         use rd_kafka_assign() (et.al) to set the initial starting offset
- *         for a new assignmenmt.
- *
- * @returns NULL on success or an error object on failure.
- */
+    /// Seeks consumer for partitions in `partitions` to the per-partition offset 
+    /// in the `offset` field of `partitions`.
+    /// The offset can be either absolute (>= 0) or a logical offset.
+    /// Seek should only be performed on already assigned/consumed partitions.
+    /// Returns NULL on success or an error object on failure
     fn seek_partitions<T: Into<Timeout>>(
         &self,
         topic_partition_list: &TopicPartitionList,

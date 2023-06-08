@@ -514,8 +514,6 @@ where
 
     // `timestamps` is a `TopicPartitionList` with timestamps instead of
     // offsets.
-    // Setting the offset of timestamps to rdkafka::Offset::End will return the latest offset of the topic 
-    // partition list.
     fn offsets_for_times<T: Into<Timeout>>(
         &self,
         timestamps: TopicPartitionList,

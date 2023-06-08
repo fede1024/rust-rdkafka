@@ -6,6 +6,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 * Add support for the cluster mock API.
 
+* Add seek_partitions to consumer.
+
 ## 0.31.0 (2023-05-17)
 
 * **Breaking change.** Pass `KafkaError` to rebalance hooks instead of human-readable string
