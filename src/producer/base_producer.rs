@@ -270,6 +270,7 @@ where
 /// ```
 ///
 /// [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
+#[derive(Debug)]
 pub struct BaseProducer<C = DefaultProducerContext>
 where
     C: ProducerContext,
@@ -502,6 +503,7 @@ where
 /// queued events, such as delivery notifications. The thread will be
 /// automatically stopped when the producer is dropped.
 #[must_use = "The threaded producer will stop immediately if unused"]
+#[derive(Debug)]
 pub struct ThreadedProducer<C>
 where
     C: ProducerContext + 'static,

@@ -65,6 +65,7 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
 ///
 /// This consumer must be periodically polled to make progress on rebalancing,
 /// callbacks and to receive messages.
+#[derive(Debug)]
 pub struct BaseConsumer<C = DefaultConsumerContext>
 where
     C: ConsumerContext,

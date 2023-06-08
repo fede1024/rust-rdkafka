@@ -124,7 +124,7 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> FutureRecord<'a, K, P> {
 ///
 /// This context will use a [`Future`] as its `DeliveryOpaque` and will complete
 /// the future when the message is delivered (or failed to).
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FutureProducerContext<C: ClientContext + 'static> {
     wrapped_context: C,
 }
@@ -195,6 +195,7 @@ impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
 /// underlying producer. The internal polling thread will be terminated when the
 /// `FutureProducer` goes out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
+#[derive(Debug)]
 pub struct FutureProducer<C = DefaultClientContext, R = DefaultRuntime>
 where
     C: ClientContext + 'static,
