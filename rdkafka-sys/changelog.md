@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v4.5.0+1.9.2 (2023-06-09)
+
+* Add support for the cluster mock API.
+
 ## v4.4.0+1.9.2 (2023-05-12)
 
 * Add the `RDKafkaDeleteGroup` and `RDKafkaGroupResult` type aliases to the
