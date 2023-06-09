@@ -245,23 +245,6 @@ where
             PartitionQueue::new(self.clone(), queue)
         })
     }
-
-    /// Check whether the consumer considers the current assignment to have been lost
-    /// involuntarily.
-    ///
-    /// This method is only applicable for use with a high level subscribing consumer. Assignments
-    /// are revoked immediately when determined to have been lost, so this method is only useful
-    /// when reacting to a rebalance or from within a rebalance_cb. Partitions
-    /// that have been lost may already be owned by other members in the group and therefore
-    /// commiting offsets, for example, may fail.
-    ///
-    /// Calling rd_kafka_assign(), rd_kafka_incremental_assign() or rd_kafka_incremental_unassign()
-    /// resets this flag.
-    ///
-    /// Returns true if the current partition assignment is considered lost, false otherwise.
-    pub fn assignment_lost(&self) -> bool {
-        unsafe { rdsys::rd_kafka_assignment_lost(self.client.native_ptr()) == 1 }
-    }
 }
 
 impl<C> Consumer<C> for BaseConsumer<C>
@@ -458,6 +441,10 @@ where
         } else {
             Ok(unsafe { TopicPartitionList::from_ptr(tpl_ptr) })
         }
+    }
+
+    fn assignment_lost(&self) -> bool {
+        unsafe { rdsys::rd_kafka_assignment_lost(self.client.native_ptr()) == 1 }
     }
 
     fn committed<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<TopicPartitionList> {
