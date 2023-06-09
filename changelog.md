@@ -4,6 +4,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+## 0.32.0 (2023-06-09)
+
 * Add support for the cluster mock API.
 * Expose assignment_lost method on the consumer.
 
