@@ -71,9 +71,6 @@ async fn main() {
                 .unwrap()
                 .unwrap();
             i += 1;
-            // if i > 5 {
-            //     break;
-            // }
         }
     });
     consume_and_print(&consumer, 5).await;
