@@ -273,6 +273,8 @@ fn build_librdkafka() {
         config.define("ENABLE_LZ4_EXT", "0");
     }
 
+    config.define("WITH_SNAPPY", "1");
+
     if let Ok(system_name) = env::var("CMAKE_SYSTEM_NAME") {
         config.define("CMAKE_SYSTEM_NAME", system_name);
     }
