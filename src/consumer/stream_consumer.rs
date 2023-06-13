@@ -396,6 +396,10 @@ where
         self.base.incremental_unassign(assignment)
     }
 
+    fn assignment_lost(&self) -> bool {
+        self.base.assignment_lost()
+    }
+
     fn seek<T: Into<Timeout>>(
         &self,
         topic: &str,
