@@ -257,6 +257,16 @@ where
         timeout: T,
     ) -> KafkaResult<()>;
 
+    /// Seeks consumer for partitions in `topic_partition_list` to the per-partition offset
+    /// in the `offset` field of `TopicPartitionListElem`.
+    /// The offset can be either absolute (>= 0) or a logical offset.
+    /// Seek should only be performed on already assigned/consumed partitions.
+    fn seek_partitions<T: Into<Timeout>>(
+        &self,
+        topic_partition_list: &TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<()>;
+
     /// Commits the offset of the specified message. The commit can be sync
     /// (blocking), or async. Notice that when a specific offset is committed,
     /// all the previous offsets are considered committed as well. Use this

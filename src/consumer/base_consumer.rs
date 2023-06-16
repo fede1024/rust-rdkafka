@@ -350,6 +350,25 @@ where
         Ok(())
     }
 
+    fn seek_partitions<T: Into<Timeout>>(
+        &self,
+        topic_partition_list: &TopicPartitionList,
+        timeout: T,
+    ) -> KafkaResult<()> {
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_seek_partitions(
+                self.client.native_ptr(),
+                topic_partition_list.ptr(),
+                timeout.into().as_millis(),
+            ))
+        };
+        if ret.is_error() {
+            let error = ret.name();
+            return Err(KafkaError::Seek(error));
+        }
+        Ok(())
+    }
+
     fn commit(
         &self,
         topic_partition_list: &TopicPartitionList,

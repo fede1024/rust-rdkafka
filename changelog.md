@@ -4,6 +4,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* Add seek_partitions to consumer.
+
 ## 0.32.1 (2023-06-09)
 
 * Add support for the cluster mock API.
