@@ -195,11 +195,48 @@ pub trait ProducerContext: ClientContext {
     /// method once the message has been delivered, or failed to.
     type DeliveryOpaque: IntoOpaque;
 
+    /// todo
+    type Part: Partitioner;
+
     /// This method will be called once the message has been delivered (or
     /// failed to). The `DeliveryOpaque` will be the one provided by the user
     /// when calling send.
     fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
+
+    /// todo
+    fn get_partitioner(&self) -> Option<Arc<Self::Part>> {
+        None
+    }
 }
+
+/// Trait allowing to customize the partitioning of messages.
+pub trait Partitioner {
+    /// Return partition to use for `topic_name`.
+    /// `topic_name` is the name of a topic to which a message is being produced.
+    /// `partition_cnt` is the number of partitions for this topic.
+    /// `is_partition_available` is a function that can be called to check if a partition has an active leader broker.
+    fn partition(
+        &self,
+        topic_name: &str,
+        partition_cnt: i32,
+        is_partition_available: impl Fn(i32) -> bool,
+    ) -> i32;
+}
+
+/// todo
+pub struct TestPartitioner {}
+
+impl Partitioner for TestPartitioner {
+    fn partition(
+        &self,
+        _topic_name: &str,
+        _partition_cnt: i32,
+        _is_paritition_available: impl Fn(i32) -> bool,
+    ) -> i32 {
+        15
+    }
+}
+
 
 /// An inert producer context that can be used when customizations are not
 /// required.
@@ -209,6 +246,7 @@ pub struct DefaultProducerContext;
 impl ClientContext for DefaultProducerContext {}
 impl ProducerContext for DefaultProducerContext {
     type DeliveryOpaque = ();
+    type Part = TestPartitioner;
 
     fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
 }

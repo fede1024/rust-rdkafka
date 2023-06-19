@@ -41,7 +41,7 @@
 //! acknowledge messages quickly enough. If this error is returned, the caller
 //! should wait and try again.
 
-use std::ffi::CString;
+use std::ffi::{CString, CStr};
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
@@ -60,11 +60,14 @@ use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::log::{trace, warn};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
-use crate::producer::{DefaultProducerContext, Producer, ProducerContext, PurgeConfig};
+use crate::producer::{
+    DefaultProducerContext, Partitioner, Producer, ProducerContext, PurgeConfig,
+};
 use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{IntoOpaque, Timeout};
 
 pub use crate::message::DeliveryResult;
+use super::TestPartitioner;
 
 /// Callback that gets called from librdkafka every time a message succeeds or fails to be
 /// delivered.
@@ -206,6 +209,25 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> BaseRecord<'a, K, P, ()> {
     }
 }
 
+unsafe extern "C" fn partitioner_cb<C: ProducerContext>(
+    topic: *const RDKafkaTopic,
+    _keydata: *const c_void,
+    _keylen: usize,
+    partition_cnt: i32,
+    rkt_opaque: *mut c_void,
+    _msg_opaque: *mut c_void,
+) -> i32 {
+    let name = unsafe { CStr::from_ptr(rdsys::rd_kafka_topic_name(topic)) };
+    // todo: checking each time if the `CStr` contains valid UTF-8 seems unnecessary.
+    let name = name.to_str().unwrap();
+
+    let is_partition_available =
+        |p: i32| unsafe { rdsys::rd_kafka_topic_partition_available(topic, p) == 1 };
+
+    let producer_context = &mut *(rkt_opaque as *mut C::Part);
+    return producer_context.partition(name, partition_cnt, is_partition_available);
+}
+
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
     /// Creates a new `BaseProducer` starting from a configuration.
     fn from_config(config: &ClientConfig) -> KafkaResult<BaseProducer<DefaultProducerContext>> {
@@ -221,6 +243,29 @@ where
     /// context.
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseProducer<C>> {
         let native_config = config.create_native_config()?;
+
+        let partitioner = match context.get_partitioner() {
+            None => {
+                // todo: for tests only
+                let partitioner = Box::new(TestPartitioner {});
+                let partitioner = Box::into_raw(partitioner) as *mut c_void;
+                partitioner
+            }
+            Some(partitioner) => Arc::into_raw(partitioner) as *mut c_void,
+        };
+
+        if !partitioner.is_null() {
+            let default_topic_config =
+                unsafe { rdsys::rd_kafka_conf_get_default_topic_conf(native_config.ptr()) };
+            unsafe { rdsys::rd_kafka_topic_conf_set_opaque(default_topic_config, partitioner) };
+            unsafe {
+                rdsys::rd_kafka_topic_conf_set_partitioner_cb(
+                    default_topic_config,
+                    Some(partitioner_cb::<C>),
+                )
+            }
+        }
+
         unsafe { rdsys::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<C>)) };
         let client = Client::new(
             config,

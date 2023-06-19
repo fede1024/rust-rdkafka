@@ -167,8 +167,11 @@ impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
     }
 }
 
+use crate::producer::TestPartitioner;
+
 impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
     type DeliveryOpaque = Box<oneshot::Sender<OwnedDeliveryResult>>;
+    type Part = TestPartitioner;
 
     fn delivery(
         &self,
