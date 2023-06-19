@@ -13,7 +13,8 @@ use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::message::{Header, Headers, Message, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::{
-    BaseProducer, BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer, NoCustomPartitioner,
+    BaseProducer, BaseRecord, DeliveryResult, NoCustomPartitioner, Partitioner, Producer,
+    ProducerContext, ThreadedProducer,
 };
 use rdkafka::types::RDKafkaRespErr;
 use rdkafka::util::current_time_millis;
@@ -81,6 +82,64 @@ impl ProducerContext for CollectingContext {
                 (*results).push((message.detach(), Some(err.clone()), delivery_opaque))
             }
         }
+    }
+}
+
+#[derive(Clone)]
+struct ContextWithFixedPartitioner {
+    results: Arc<Mutex<Vec<TestProducerDeliveryResult>>>,
+    partitioner: Arc<FixedPartitioner>,
+}
+
+impl ContextWithFixedPartitioner {
+    fn new(partition: i32) -> ContextWithFixedPartitioner {
+        ContextWithFixedPartitioner {
+            results: Arc::new(Mutex::new(Vec::new())),
+            partitioner: Arc::new(FixedPartitioner::new(partition)),
+        }
+    }
+}
+
+impl ClientContext for ContextWithFixedPartitioner {}
+
+pub struct FixedPartitioner {
+    partition: i32,
+}
+
+impl FixedPartitioner {
+    fn new(partition: i32) -> Self {
+        Self { partition }
+    }
+}
+
+impl Partitioner for FixedPartitioner {
+    fn partition(
+        &self,
+        _topic_name: &str,
+        _key: Option<&[u8]>,
+        _partition_cnt: i32,
+        _is_paritition_available: impl Fn(i32) -> bool,
+    ) -> i32 {
+        self.partition
+    }
+}
+
+impl ProducerContext for ContextWithFixedPartitioner {
+    type DeliveryOpaque = usize;
+    type CustomPartitioner = FixedPartitioner;
+
+    fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
+        let mut results = self.results.lock().unwrap();
+        match *delivery_result {
+            Ok(ref message) => (*results).push((message.detach(), None, delivery_opaque)),
+            Err((ref err, ref message)) => {
+                (*results).push((message.detach(), Some(err.clone()), delivery_opaque))
+            }
+        }
+    }
+
+    fn get_custom_partitioner(&self) -> Option<Arc<Self::CustomPartitioner>> {
+        return Some(Arc::clone(&self.partitioner));
     }
 }
 
@@ -409,4 +468,32 @@ fn test_fatal_errors() {
             "test_fatal_error: fake error".into()
         ))
     )
+}
+
+#[test]
+fn test_custom_partitioner() {
+    let context = ContextWithFixedPartitioner::new(2);
+    let producer = threaded_producer_with_context(context.clone(), HashMap::new());
+    let topic_name = rand_test_topic();
+
+    let results_count = (0..10)
+        .map(|id| {
+            producer.send(
+                BaseRecord::with_opaque_to(&topic_name, id)
+                    .payload("")
+                    .key(""),
+            )
+        })
+        .filter(|r| r.is_ok())
+        .count();
+
+    assert_eq!(results_count, 10);
+    producer.flush(Duration::from_secs(10)).unwrap();
+
+    let delivery_results = context.results.lock().unwrap();
+
+    for &(ref message, ref error, _) in &(*delivery_results) {
+        assert_eq!(error, &None);
+        assert_eq!(message.partition(), 2);
+    }
 }
