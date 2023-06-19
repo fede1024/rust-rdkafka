@@ -167,11 +167,11 @@ impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
     }
 }
 
-use crate::producer::TestPartitioner;
+use crate::producer::NoCustomPartitioner;
 
 impl<C: ClientContext + 'static> ProducerContext for FutureProducerContext<C> {
     type DeliveryOpaque = Box<oneshot::Sender<OwnedDeliveryResult>>;
-    type Part = TestPartitioner;
+    type Part = NoCustomPartitioner;
 
     fn delivery(
         &self,
@@ -426,7 +426,7 @@ mod tests {
     impl ClientContext for TestContext {}
     impl ProducerContext for TestContext {
         type DeliveryOpaque = Box<i32>;
-        type Part = TestPartitioner;
+        type Part = NoCustomPartitioner;
 
         fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {
             unimplemented!()

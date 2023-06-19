@@ -44,7 +44,7 @@
 use std::ffi::{CString, CStr};
 use std::mem;
 use std::os::raw::c_void;
-use std::ptr::{self, null, null_mut};
+use std::ptr::{self, null_mut};
 use std::slice;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;

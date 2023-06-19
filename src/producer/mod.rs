@@ -195,7 +195,11 @@ pub trait ProducerContext: ClientContext {
     /// method once the message has been delivered, or failed to.
     type DeliveryOpaque: IntoOpaque;
 
-    /// todo
+    /// Partitioner is a user-defined structure that will called
+    /// when deciding to which partition send a message to.
+    ///
+    /// Associated type defaults are unstable (https://github.com/rust-lang/rust/issues/29661) so
+    /// for now it isn't possible to set it to NoCustomPartitioner.
     type Part: Partitioner;
 
     /// This method will be called once the message has been delivered (or
@@ -224,10 +228,12 @@ pub trait Partitioner {
     ) -> i32;
 }
 
-/// todo
-pub struct TestPartitioner {}
+/// Partitioner used when no custom partitioner is needed.
+/// Needed as associated type defaults are unsable (https://github.com/rust-lang/rust/issues/29661) so
+/// it can't be set as default for ProducerContext::Part for now.
+pub struct NoCustomPartitioner {}
 
-impl Partitioner for TestPartitioner {
+impl Partitioner for NoCustomPartitioner {
     fn partition(
         &self,
         _topic_name: &str,
@@ -235,7 +241,7 @@ impl Partitioner for TestPartitioner {
         _partition_cnt: i32,
         _is_paritition_available: impl Fn(i32) -> bool,
     ) -> i32 {
-        15
+        panic!("NoCustomPartitioner should not be called");
     }
 }
 
@@ -248,7 +254,7 @@ pub struct DefaultProducerContext;
 impl ClientContext for DefaultProducerContext {}
 impl ProducerContext for DefaultProducerContext {
     type DeliveryOpaque = ();
-    type Part = TestPartitioner;
+    type Part = NoCustomPartitioner;
 
     fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
 }
