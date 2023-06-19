@@ -200,7 +200,7 @@ pub trait ProducerContext: ClientContext {
     ///
     /// Associated type defaults are unstable (https://github.com/rust-lang/rust/issues/29661) so
     /// for now it isn't possible to set it to NoCustomPartitioner.
-    type Part: Partitioner;
+    type CustomPartitioner: Partitioner;
 
     /// This method will be called once the message has been delivered (or
     /// failed to). The `DeliveryOpaque` will be the one provided by the user
@@ -208,7 +208,7 @@ pub trait ProducerContext: ClientContext {
     fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
 
     /// todo
-    fn get_partitioner(&self) -> Option<Arc<Self::Part>> {
+    fn get_custom_partitioner(&self) -> Option<Arc<Self::CustomPartitioner>> {
         None
     }
 }
@@ -255,7 +255,7 @@ pub struct DefaultProducerContext;
 impl ClientContext for DefaultProducerContext {}
 impl ProducerContext for DefaultProducerContext {
     type DeliveryOpaque = ();
-    type Part = NoCustomPartitioner;
+    type CustomPartitioner = NoCustomPartitioner;
 
     fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
 }

@@ -230,7 +230,7 @@ unsafe extern "C" fn partitioner_cb<C: ProducerContext>(
         Some(unsafe { slice::from_raw_parts(keydata as *const u8, keylen) })
     };
 
-    let producer_context = &mut *(rkt_opaque as *mut C::Part);
+    let producer_context = &mut *(rkt_opaque as *mut C::CustomPartitioner);
     return producer_context.partition(name, key, partition_cnt, is_partition_available);
 }
 
@@ -250,7 +250,7 @@ where
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseProducer<C>> {
         let native_config = config.create_native_config()?;
 
-        let partitioner = match context.get_partitioner() {
+        let partitioner = match context.get_custom_partitioner() {
             None => {
                 // todo: for tests only
                 //let partitioner = Box::new(TestPartitioner {});

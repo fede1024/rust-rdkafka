@@ -37,7 +37,7 @@ impl ClientContext for PrintingContext {
 
 impl ProducerContext for PrintingContext {
     type DeliveryOpaque = usize;
-    type Part = NoCustomPartitioner;
+    type CustomPartitioner = NoCustomPartitioner;
 
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
         println!("Delivery: {:?} {:?}", delivery_result, delivery_opaque);
@@ -71,7 +71,7 @@ impl ClientContext for CollectingContext {
 
 impl ProducerContext for CollectingContext {
     type DeliveryOpaque = usize;
-    type Part = NoCustomPartitioner;
+    type CustomPartitioner = NoCustomPartitioner;
 
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
         let mut results = self.results.lock().unwrap();
@@ -213,7 +213,7 @@ impl ClientContext for HeaderCheckContext {}
 
 impl ProducerContext for HeaderCheckContext {
     type DeliveryOpaque = usize;
-    type Part = NoCustomPartitioner;
+    type CustomPartitioner = NoCustomPartitioner;
 
     fn delivery(&self, delivery_result: &DeliveryResult, message_id: usize) {
         let message = delivery_result.as_ref().unwrap();
@@ -359,7 +359,7 @@ fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
 
     impl ProducerContext for OpaqueArcContext {
         type DeliveryOpaque = Arc<Mutex<usize>>;
-        type Part = NoCustomPartitioner;
+        type CustomPartitioner = NoCustomPartitioner;
 
         fn delivery(&self, _: &DeliveryResult, opaque: Self::DeliveryOpaque) {
             let mut shared_count = opaque.lock().unwrap();
