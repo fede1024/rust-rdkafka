@@ -258,6 +258,7 @@ where
                 //partitioner
                 null_mut()
             },
+            // todo: clleanup partitioner when producer is dropped.
             Some(partitioner) => Arc::into_raw(partitioner) as *mut c_void,
         };
 
