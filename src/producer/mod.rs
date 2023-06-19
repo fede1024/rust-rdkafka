@@ -207,7 +207,7 @@ pub trait ProducerContext: ClientContext {
     /// when calling send.
     fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
 
-    /// todo
+    /// This method is called when creating producer in order to register custom partitioner.
     fn get_custom_partitioner(&self) -> Option<Arc<Self::CustomPartitioner>> {
         None
     }
@@ -231,7 +231,7 @@ pub trait Partitioner {
 
 /// Partitioner used when no custom partitioner is needed.
 /// Needed as associated type defaults are unsable (https://github.com/rust-lang/rust/issues/29661) so
-/// it can't be set as default for ProducerContext::Part for now.
+/// it can't be set as default for ProducerContext::CustomPartitioner for now.
 pub struct NoCustomPartitioner {}
 
 impl Partitioner for NoCustomPartitioner {
