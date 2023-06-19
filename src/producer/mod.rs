@@ -218,6 +218,7 @@ pub trait Partitioner {
     fn partition(
         &self,
         topic_name: &str,
+        key: Option<&[u8]>,
         partition_cnt: i32,
         is_partition_available: impl Fn(i32) -> bool,
     ) -> i32;
@@ -230,6 +231,7 @@ impl Partitioner for TestPartitioner {
     fn partition(
         &self,
         _topic_name: &str,
+        _key: Option<&[u8]>,
         _partition_cnt: i32,
         _is_paritition_available: impl Fn(i32) -> bool,
     ) -> i32 {

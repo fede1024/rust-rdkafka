@@ -45,6 +45,7 @@ use std::ffi::{CString, CStr};
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr::{self, null, null_mut};
+use std::slice;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -67,7 +68,6 @@ use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{IntoOpaque, Timeout};
 
 pub use crate::message::DeliveryResult;
-use super::TestPartitioner;
 
 /// Callback that gets called from librdkafka every time a message succeeds or fails to be
 /// delivered.
@@ -211,8 +211,8 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> BaseRecord<'a, K, P, ()> {
 
 unsafe extern "C" fn partitioner_cb<C: ProducerContext>(
     topic: *const RDKafkaTopic,
-    _keydata: *const c_void,
-    _keylen: usize,
+    keydata: *const c_void,
+    keylen: usize,
     partition_cnt: i32,
     rkt_opaque: *mut c_void,
     _msg_opaque: *mut c_void,
@@ -224,8 +224,14 @@ unsafe extern "C" fn partitioner_cb<C: ProducerContext>(
     let is_partition_available =
         |p: i32| unsafe { rdsys::rd_kafka_topic_partition_available(topic, p) == 1 };
 
+    let key = if keydata.is_null() {
+        None
+    } else {
+        Some(unsafe { slice::from_raw_parts(keydata as *const u8, keylen) })
+    };
+
     let producer_context = &mut *(rkt_opaque as *mut C::Part);
-    return producer_context.partition(name, partition_cnt, is_partition_available);
+    return producer_context.partition(name, key, partition_cnt, is_partition_available);
 }
 
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
