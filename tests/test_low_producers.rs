@@ -13,7 +13,7 @@ use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::message::{Header, Headers, Message, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::{
-    BaseProducer, BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer,
+    BaseProducer, BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer, TestPartitioner,
 };
 use rdkafka::types::RDKafkaRespErr;
 use rdkafka::util::current_time_millis;
@@ -37,6 +37,7 @@ impl ClientContext for PrintingContext {
 
 impl ProducerContext for PrintingContext {
     type DeliveryOpaque = usize;
+    type Part = TestPartitioner;
 
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
         println!("Delivery: {:?} {:?}", delivery_result, delivery_opaque);
@@ -70,6 +71,7 @@ impl ClientContext for CollectingContext {
 
 impl ProducerContext for CollectingContext {
     type DeliveryOpaque = usize;
+    type Part = TestPartitioner;
 
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
         let mut results = self.results.lock().unwrap();
@@ -211,6 +213,7 @@ impl ClientContext for HeaderCheckContext {}
 
 impl ProducerContext for HeaderCheckContext {
     type DeliveryOpaque = usize;
+    type Part = TestPartitioner;
 
     fn delivery(&self, delivery_result: &DeliveryResult, message_id: usize) {
         let message = delivery_result.as_ref().unwrap();
@@ -356,6 +359,7 @@ fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
 
     impl ProducerContext for OpaqueArcContext {
         type DeliveryOpaque = Arc<Mutex<usize>>;
+        type Part = TestPartitioner;
 
         fn delivery(&self, _: &DeliveryResult, opaque: Self::DeliveryOpaque) {
             let mut shared_count = opaque.lock().unwrap();

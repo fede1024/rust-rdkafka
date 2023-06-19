@@ -44,7 +44,7 @@
 use std::ffi::{CString, CStr};
 use std::mem;
 use std::os::raw::c_void;
-use std::ptr;
+use std::ptr::{self, null, null_mut};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -247,10 +247,11 @@ where
         let partitioner = match context.get_partitioner() {
             None => {
                 // todo: for tests only
-                let partitioner = Box::new(TestPartitioner {});
-                let partitioner = Box::into_raw(partitioner) as *mut c_void;
-                partitioner
-            }
+                //let partitioner = Box::new(TestPartitioner {});
+                //let partitioner = Box::into_raw(partitioner) as *mut c_void;
+                //partitioner
+                null_mut()
+            },
             Some(partitioner) => Arc::into_raw(partitioner) as *mut c_void,
         };
 

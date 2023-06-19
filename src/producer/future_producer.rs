@@ -426,6 +426,7 @@ mod tests {
     impl ClientContext for TestContext {}
     impl ProducerContext for TestContext {
         type DeliveryOpaque = Box<i32>;
+        type Part = TestPartitioner;
 
         fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {
             unimplemented!()
