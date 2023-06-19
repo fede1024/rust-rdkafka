@@ -218,6 +218,7 @@ pub trait Partitioner {
     /// Return partition to use for `topic_name`.
     /// `topic_name` is the name of a topic to which a message is being produced.
     /// `partition_cnt` is the number of partitions for this topic.
+    /// `key` is an optional key of the message.
     /// `is_partition_available` is a function that can be called to check if a partition has an active leader broker.
     fn partition(
         &self,
