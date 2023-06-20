@@ -220,6 +220,13 @@ pub trait Partitioner {
     /// `partition_cnt` is the number of partitions for this topic.
     /// `key` is an optional key of the message.
     /// `is_partition_available` is a function that can be called to check if a partition has an active leader broker.
+    ///
+    /// It may be called in any thread at any time,
+    /// It may be called multiple times for the same message/key.
+    /// MUST NOT block or execute for prolonged periods of time.
+    /// MUST return a value between 0 and partition_cnt-1, or the
+    /// special RD_KAFKA_PARTITION_UA value if partitioning could not be performed.
+    /// See documentation for rd_kafka_topic_conf_set_partitioner_cb from librdkafka for more info.
     fn partition(
         &self,
         topic_name: &str,
