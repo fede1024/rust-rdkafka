@@ -41,11 +41,12 @@
 //! acknowledge messages quickly enough. If this error is returned, the caller
 //! should wait and try again.
 
-use std::ffi::{CString, CStr};
+use std::ffi::{CStr, CString};
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr::{self, null_mut};
 use std::slice;
+use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -217,9 +218,8 @@ unsafe extern "C" fn partitioner_cb<C: ProducerContext>(
     rkt_opaque: *mut c_void,
     _msg_opaque: *mut c_void,
 ) -> i32 {
-    let name = unsafe { CStr::from_ptr(rdsys::rd_kafka_topic_name(topic)) };
-    // todo: checking each time if the `CStr` contains valid UTF-8 seems unnecessary.
-    let name = name.to_str().unwrap();
+    let topic_name = unsafe { CStr::from_ptr(rdsys::rd_kafka_topic_name(topic)) };
+    let topic_name = str::from_utf8_unchecked(topic_name.to_bytes());
 
     let is_partition_available =
         |p: i32| unsafe { rdsys::rd_kafka_topic_partition_available(topic, p) == 1 };
@@ -230,8 +230,9 @@ unsafe extern "C" fn partitioner_cb<C: ProducerContext>(
         Some(unsafe { slice::from_raw_parts(keydata as *const u8, keylen) })
     };
 
-    let producer_context = &mut *(rkt_opaque as *mut C::CustomPartitioner);
-    return producer_context.partition(name, key, partition_cnt, is_partition_available);
+    let producer_context: &mut <C as ProducerContext>::CustomPartitioner =
+        &mut *(rkt_opaque as *mut C::CustomPartitioner);
+    return producer_context.partition(topic_name, key, partition_cnt, is_partition_available);
 }
 
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
@@ -257,7 +258,7 @@ where
                 //let partitioner = Box::into_raw(partitioner) as *mut c_void;
                 //partitioner
                 null_mut()
-            },
+            }
             // todo: clleanup partitioner when producer is dropped.
             Some(partitioner) => Arc::into_raw(partitioner) as *mut c_void,
         };
