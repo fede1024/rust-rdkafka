@@ -248,19 +248,17 @@ where
 {
     /// Creates a new `BaseProducer` starting from a configuration and a
     /// context.
+    ///
+    /// SAFETY: Raw pointer to custom partitioner is used as opaque.
+    /// It's comes from reference to field in producer context so it's valid as the context is valid.
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseProducer<C>> {
         let native_config = config.create_native_config()?;
 
         let partitioner = match context.get_custom_partitioner() {
             None => {
-                // todo: for tests only
-                //let partitioner = Box::new(TestPartitioner {});
-                //let partitioner = Box::into_raw(partitioner) as *mut c_void;
-                //partitioner
                 null_mut()
             }
-            // todo: clleanup partitioner when producer is dropped.
-            Some(partitioner) => Arc::into_raw(partitioner) as *mut c_void,
+            Some(partitioner) => partitioner as *const C::CustomPartitioner as *mut c_void,
         };
 
         if !partitioner.is_null() {

@@ -138,8 +138,8 @@ impl ProducerContext for ContextWithFixedPartitioner {
         }
     }
 
-    fn get_custom_partitioner(&self) -> Option<Arc<Self::CustomPartitioner>> {
-        return Some(Arc::clone(&self.partitioner));
+    fn get_custom_partitioner(&self) -> Option<&Self::CustomPartitioner> {
+        return Some(&self.partitioner);
     }
 }
 

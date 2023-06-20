@@ -208,7 +208,7 @@ pub trait ProducerContext: ClientContext {
     fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
 
     /// This method is called when creating producer in order to register custom partitioner.
-    fn get_custom_partitioner(&self) -> Option<Arc<Self::CustomPartitioner>> {
+    fn get_custom_partitioner(&self) -> Option<&Self::CustomPartitioner> {
         None
     }
 }
