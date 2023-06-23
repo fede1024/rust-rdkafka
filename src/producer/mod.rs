@@ -189,7 +189,7 @@ pub use self::future_producer::{DeliveryFuture, FutureProducer, FutureRecord};
 /// be called when the acknowledgement for a delivered message is received.
 ///
 /// See also the [`ClientContext`] trait.
-pub trait ProducerContext: ClientContext {
+pub trait ProducerContext<Part: Partitioner = NoCustomPartitioner>: ClientContext {
     /// A `DeliveryOpaque` is a user-defined structure that will be passed to
     /// the producer when producing a message, and returned to the `delivery`
     /// method once the message has been delivered, or failed to.
@@ -199,7 +199,57 @@ pub trait ProducerContext: ClientContext {
     /// failed to). The `DeliveryOpaque` will be the one provided by the user
     /// when calling send.
     fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
+
+    /// This method is called when creating producer in order to register custom partitioner.
+    /// Box is used to make sure data is on the heap as partitioner address will flying across FFI boundary.
+    fn get_custom_partitioner(&self) -> Option<&Box<Part>> {
+        None
+    }
 }
+
+/// Unassigned partition.
+/// See RD_KAFKA_PARTITION_UA from librdkafka.
+pub const PARTITION_UA: i32 = -1;
+
+/// Trait allowing to customize the partitioning of messages.
+pub trait Partitioner {
+    /// Return partition to use for `topic_name`.
+    /// `topic_name` is the name of a topic to which a message is being produced.
+    /// `partition_cnt` is the number of partitions for this topic.
+    /// `key` is an optional key of the message.
+    /// `is_partition_available` is a function that can be called to check if a partition has an active leader broker.
+    ///
+    /// It may be called in any thread at any time,
+    /// It may be called multiple times for the same message/key.
+    /// MUST NOT block or execute for prolonged periods of time.
+    /// MUST return a value between 0 and partition_cnt-1, or the
+    /// special RD_KAFKA_PARTITION_UA value if partitioning could not be performed.
+    /// See documentation for rd_kafka_topic_conf_set_partitioner_cb from librdkafka for more info.
+    fn partition(
+        &self,
+        topic_name: &str,
+        key: Option<&[u8]>,
+        partition_cnt: i32,
+        is_partition_available: impl Fn(i32) -> bool,
+    ) -> i32;
+}
+
+/// Placeholder used when no custom partitioner is needed.
+#[derive(Clone)]
+pub struct NoCustomPartitioner {}
+
+impl Partitioner for NoCustomPartitioner {
+    fn partition(
+        &self,
+        _topic_name: &str,
+        _key: Option<&[u8]>,
+        _partition_cnt: i32,
+        _is_paritition_available: impl Fn(i32) -> bool,
+    ) -> i32 {
+        panic!("NoCustomPartitioner should not be called");
+    }
+}
+
 
 /// An inert producer context that can be used when customizations are not
 /// required.
@@ -207,16 +257,17 @@ pub trait ProducerContext: ClientContext {
 pub struct DefaultProducerContext;
 
 impl ClientContext for DefaultProducerContext {}
-impl ProducerContext for DefaultProducerContext {
+impl ProducerContext<NoCustomPartitioner> for DefaultProducerContext {
     type DeliveryOpaque = ();
 
     fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
 }
 
 /// Common trait for all producers.
-pub trait Producer<C = DefaultProducerContext>
+pub trait Producer<Part, C = DefaultProducerContext>
 where
-    C: ProducerContext,
+    Part: Partitioner,
+    C: ProducerContext<Part>,
 {
     /// Returns the [`Client`] underlying this producer.
     fn client(&self) -> &Client<C>;
