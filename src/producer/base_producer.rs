@@ -224,8 +224,7 @@ unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>
     let topic_name = CStr::from_ptr(rdsys::rd_kafka_topic_name(topic));
     let topic_name = str::from_utf8_unchecked(topic_name.to_bytes());
 
-    let is_partition_available =
-        |p: i32| { rdsys::rd_kafka_topic_partition_available(topic, p) == 1 };
+    let is_partition_available = |p: i32| rdsys::rd_kafka_topic_partition_available(topic, p) == 1;
 
     let key = if keydata.is_null() {
         None
