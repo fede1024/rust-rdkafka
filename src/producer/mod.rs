@@ -250,7 +250,6 @@ impl Partitioner for NoCustomPartitioner {
     }
 }
 
-
 /// An inert producer context that can be used when customizations are not
 /// required.
 #[derive(Clone)]

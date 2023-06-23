@@ -233,8 +233,7 @@ unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>
         Some(unsafe { slice::from_raw_parts(keydata as *const u8, keylen) })
     };
 
-    let producer_context: &mut Part =  
-        &mut *(rkt_opaque as *mut Part);
+    let producer_context: &mut Part = &mut *(rkt_opaque as *mut Part);
     return producer_context.partition(topic_name, key, partition_cnt, is_partition_available);
 }
 
@@ -255,13 +254,14 @@ where
     ///
     /// SAFETY: Raw pointer to custom partitioner is used as opaque.
     /// It's comes from reference to field in producer context so it's valid as the context is valid.
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseProducer<C, Part>> {
+    fn from_config_and_context(
+        config: &ClientConfig,
+        context: C,
+    ) -> KafkaResult<BaseProducer<C, Part>> {
         let native_config = config.create_native_config()?;
 
         let partitioner = match context.get_custom_partitioner() {
-            None => {
-                null_mut()
-            }
+            None => null_mut(),
             Some(partitioner) => partitioner.as_ref() as *const Part as *mut c_void,
         };
 
@@ -277,7 +277,9 @@ where
             }
         }
 
-        unsafe { rdsys::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<Part, C>)) };
+        unsafe {
+            rdsys::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<Part, C>))
+        };
         let client = Client::new(
             config,
             native_config,
@@ -326,7 +328,7 @@ where
 /// ```
 ///
 /// [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
-/// 
+///
 pub struct BaseProducer<C = DefaultProducerContext, Part = NoCustomPartitioner>
 where
     Part: Partitioner,
@@ -343,7 +345,10 @@ where
 {
     /// Creates a base producer starting from a Client.
     fn from_client(client: Client<C>) -> BaseProducer<C, Part> {
-        BaseProducer { client, _partitioner: PhantomData, }
+        BaseProducer {
+            client,
+            _partitioner: PhantomData,
+        }
     }
 
     /// Polls the producer, returning the number of events served.
