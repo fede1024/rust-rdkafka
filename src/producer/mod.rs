@@ -202,6 +202,7 @@ pub trait ProducerContext<Part: Partitioner = NoCustomPartitioner>: ClientContex
 
     /// This method is called when creating producer in order to register custom partitioner.
     /// Box is used to make sure data is on the heap as partitioner address will fly across FFI boundary.
+    #[allow(clippy::borrowed-box)]
     fn get_custom_partitioner(&self) -> Option<&Box<Part>> {
         None
     }

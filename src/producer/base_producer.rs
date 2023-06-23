@@ -221,20 +221,20 @@ unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>
     rkt_opaque: *mut c_void,
     _msg_opaque: *mut c_void,
 ) -> i32 {
-    let topic_name = unsafe { CStr::from_ptr(rdsys::rd_kafka_topic_name(topic)) };
+    let topic_name = CStr::from_ptr(rdsys::rd_kafka_topic_name(topic));
     let topic_name = str::from_utf8_unchecked(topic_name.to_bytes());
 
     let is_partition_available =
-        |p: i32| unsafe { rdsys::rd_kafka_topic_partition_available(topic, p) == 1 };
+        |p: i32| { rdsys::rd_kafka_topic_partition_available(topic, p) == 1 };
 
     let key = if keydata.is_null() {
         None
     } else {
-        Some(unsafe { slice::from_raw_parts(keydata as *const u8, keylen) })
+        Some(slice::from_raw_parts(keydata as *const u8, keylen))
     };
 
     let producer_context: &mut Part = &mut *(rkt_opaque as *mut Part);
-    return producer_context.partition(topic_name, key, partition_cnt, is_partition_available);
+    producer_context.partition(topic_name, key, partition_cnt, is_partition_available)
 }
 
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
