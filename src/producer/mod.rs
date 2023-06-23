@@ -201,7 +201,7 @@ pub trait ProducerContext<Part: Partitioner = NoCustomPartitioner>: ClientContex
     fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
 
     /// This method is called when creating producer in order to register custom partitioner.
-    /// Box is used to make sure data is on the heap as partitioner address will flying across FFI boundary.
+    /// Box is used to make sure data is on the heap as partitioner address will fly across FFI boundary.
     fn get_custom_partitioner(&self) -> Option<&Box<Part>> {
         None
     }
