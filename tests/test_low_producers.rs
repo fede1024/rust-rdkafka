@@ -94,7 +94,7 @@ impl<Part: Partitioner + Send + Sync> ProducerContext<Part> for CollectingContex
         }
     }
 
-    fn get_custom_partitioner(&self) -> Option<&Box<Part>> {
+    fn get_custom_partitioner(&self) -> Option<&Part> {
         match &self.partitioner {
             None => None,
             Some(p) => Some(&p),

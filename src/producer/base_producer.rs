@@ -258,10 +258,11 @@ where
         context: C,
     ) -> KafkaResult<BaseProducer<C, Part>> {
         let native_config = config.create_native_config()?;
+        let context = Arc::new(context);
 
         let partitioner = match context.get_custom_partitioner() {
             None => null_mut(),
-            Some(partitioner) => partitioner.as_ref() as *const Part as *mut c_void,
+            Some(partitioner) => partitioner as *const Part as *mut c_void,
         };
 
         if !partitioner.is_null() {
@@ -279,7 +280,7 @@ where
         unsafe {
             rdsys::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<Part, C>))
         };
-        let client = Client::new(
+        let client = Client::new_context_arc(
             config,
             native_config,
             RDKafkaType::RD_KAFKA_PRODUCER,
