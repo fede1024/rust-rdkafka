@@ -272,7 +272,7 @@ where
             unsafe {
                 rdsys::rd_kafka_topic_conf_set_opaque(
                     default_topic_config,
-                    Arc::as_ptr(&context) as *const Part as *mut c_void,
+                    Arc::as_ptr(&context) as *mut c_void,
                 )
             };
             unsafe {
