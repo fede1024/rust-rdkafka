@@ -45,7 +45,7 @@ use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::c_void;
-use std::ptr::{self, null_mut};
+use std::ptr;
 use std::slice;
 use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -232,8 +232,14 @@ unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>
         Some(slice::from_raw_parts(keydata as *const u8, keylen))
     };
 
-    let producer_context: &mut Part = &mut *(rkt_opaque as *mut Part);
-    producer_context.partition(topic_name, key, partition_cnt, is_partition_available)
+    let producer_context = &mut *(rkt_opaque as *mut C);
+
+    match producer_context.get_custom_partitioner() {
+        None => panic!("custom partitioner is not set"),
+        Some(partitioner) => {
+            partitioner.partition(topic_name, key, partition_cnt, is_partition_available)
+        }
+    }
 }
 
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
@@ -260,15 +266,15 @@ where
         let native_config = config.create_native_config()?;
         let context = Arc::new(context);
 
-        let partitioner = match context.get_custom_partitioner() {
-            None => null_mut(),
-            Some(partitioner) => partitioner as *const Part as *mut c_void,
-        };
-
-        if !partitioner.is_null() {
+        if let Some(_) = context.get_custom_partitioner() {
             let default_topic_config =
                 unsafe { rdsys::rd_kafka_conf_get_default_topic_conf(native_config.ptr()) };
-            unsafe { rdsys::rd_kafka_topic_conf_set_opaque(default_topic_config, partitioner) };
+            unsafe {
+                rdsys::rd_kafka_topic_conf_set_opaque(
+                    default_topic_config,
+                    Arc::as_ptr(&context) as *const Part as *mut c_void,
+                )
+            };
             unsafe {
                 rdsys::rd_kafka_topic_conf_set_partitioner_cb(
                     default_topic_config,
