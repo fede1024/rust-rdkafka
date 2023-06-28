@@ -203,7 +203,9 @@ pub trait ProducerContext<Part: Partitioner = NoCustomPartitioner>: ClientContex
 
     /// This method is called when creating producer in order to optionally register custom partitioner.
     /// If custom partitioner is not used then `partitioner` configuration property is used (or its default).
-    /// Configuration property `sticky.partitioning.linger.ms` must be set to 0 to register custom partitioner.
+    ///
+    /// sticky.partitioning.linger.ms must be 0 to run custom partitioner for messages with null key.
+    /// See https://github.com/confluentinc/librdkafka/blob/081fd972fa97f88a1e6d9a69fc893865ffbb561a/src/rdkafka_msg.c#L1192-L1196
     fn get_custom_partitioner(&self) -> Option<&Part> {
         None
     }

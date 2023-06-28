@@ -126,6 +126,21 @@ impl Partitioner for FixedPartitioner {
     }
 }
 
+#[derive(Clone)]
+pub struct PanicPartitioner {}
+
+impl Partitioner for PanicPartitioner {
+    fn partition(
+        &self,
+        _topic_name: &str,
+        _key: Option<&[u8]>,
+        _partition_cnt: i32,
+        _is_paritition_available: impl Fn(i32) -> bool,
+    ) -> i32 {
+        panic!("partition() panic");
+    }
+}
+
 fn default_config(config_overrides: HashMap<&str, &str>) -> ClientConfig {
     let mut config = ClientConfig::new();
     config
@@ -455,6 +470,29 @@ fn test_fatal_errors() {
             "test_fatal_error: fake error".into()
         ))
     )
+}
+
+#[test]
+fn test_register_custom_partitioner_linger_non_zero_key_null() {
+    // Custom partitioner is not used when sticky.partitioning.linger.ms > 0 and key is null.
+    // https://github.com/confluentinc/librdkafka/blob/081fd972fa97f88a1e6d9a69fc893865ffbb561a/src/rdkafka_msg.c#L1192-L1196
+    let context = CollectingContext::new_with_custom_partitioner(PanicPartitioner {});
+    let mut config_overrides = HashMap::new();
+    config_overrides.insert("sticky.partitioning.linger.ms", "10");
+    let producer = base_producer_with_context(context.clone(), config_overrides);
+
+    producer
+        .send(BaseRecord::<(), str, usize>::with_opaque_to(&rand_test_topic(), 0).payload(""))
+        .unwrap();
+    producer.flush(Duration::from_secs(10)).unwrap();
+
+    let delivery_results = context.results.lock().unwrap();
+
+    assert_eq!(delivery_results.len(), 1);
+
+    for &(_, ref error, _) in &(*delivery_results) {
+        assert_eq!(*error, None);
+    }
 }
 
 #[test]
