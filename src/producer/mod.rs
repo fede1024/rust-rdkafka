@@ -183,7 +183,8 @@ pub use self::future_producer::{DeliveryFuture, FutureProducer, FutureRecord};
 ///
 /// This user-defined object can be used to provide custom callbacks for
 /// producer events. Refer to the list of methods to check which callbacks can
-/// be specified.
+/// be specified. It can also specify custom partitioner to register and to be
+/// used for deciding to which partition write message into.
 ///
 /// In particular, it can be used to specify the `delivery` callback that will
 /// be called when the acknowledgement for a delivered message is received.
@@ -200,7 +201,9 @@ pub trait ProducerContext<Part: Partitioner = NoCustomPartitioner>: ClientContex
     /// when calling send.
     fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
 
-    /// This method is called when creating producer in order to register custom partitioner.
+    /// This method is called when creating producer in order to optionally register custom partitioner.
+    /// If custom partitioner is not used then `partitioner` configuration property is used (or its default).
+    /// Configuration property `sticky.partitioning.linger.ms` must be set to 0 to register custom partitioner.
     fn get_custom_partitioner(&self) -> Option<&Part> {
         None
     }

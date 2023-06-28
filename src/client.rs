@@ -226,7 +226,7 @@ impl<C: ClientContext> Client<C> {
     }
 
     /// Creates a new `Client` given a configuration, a client type and a context.
-    pub fn new_context_arc(
+    pub(crate) fn new_context_arc(
         config: &ClientConfig,
         native_config: NativeClientConfig,
         rd_kafka_type: RDKafkaType,

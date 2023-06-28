@@ -50,7 +50,7 @@ type TestProducerDeliveryResult = (OwnedMessage, Option<KafkaError>, usize);
 struct CollectingContext<Part: Partitioner = NoCustomPartitioner> {
     stats: Arc<Mutex<Vec<Statistics>>>,
     results: Arc<Mutex<Vec<TestProducerDeliveryResult>>>,
-    partitioner: Option<Box<Part>>,
+    partitioner: Option<Part>,
 }
 
 impl CollectingContext {
@@ -68,7 +68,7 @@ impl<Part: Partitioner> CollectingContext<Part> {
         CollectingContext {
             stats: Arc::new(Mutex::new(Vec::new())),
             results: Arc::new(Mutex::new(Vec::new())),
-            partitioner: Some(Box::new(partitioner)),
+            partitioner: Some(partitioner),
         }
     }
 }
