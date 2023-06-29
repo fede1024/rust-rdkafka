@@ -67,9 +67,7 @@ pub fn get_broker_version() -> KafkaVersion {
             panic!("KAFKA_VERSION env var contained non-unicode characters")
         }
         // If the environment variable is unset, assume we're running the latest version.
-        Err(VarError::NotPresent) => {
-            KafkaVersion(std::u32::MAX, std::u32::MAX, std::u32::MAX, std::u32::MAX)
-        }
+        Err(VarError::NotPresent) => KafkaVersion(u32::MAX, u32::MAX, u32::MAX, u32::MAX),
     }
 }
 

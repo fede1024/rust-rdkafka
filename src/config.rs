@@ -213,7 +213,7 @@ impl ClientConfig {
     }
 
     /// Removes a parameter from the configuration.
-    pub fn remove<'a>(&'a mut self, key: &str) -> &'a mut ClientConfig {
+    pub fn remove(&mut self, key: &str) -> &mut ClientConfig {
         self.conf_map.remove(key);
         self
     }

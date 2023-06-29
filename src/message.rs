@@ -782,7 +782,7 @@ mod test {
         let now = SystemTime::now();
         let t1 = Timestamp::now();
         let t2 = Timestamp::from(now);
-        let expected = Timestamp::CreateTime(util::millis_to_epoch(now));
+        let expected = Timestamp::CreateTime(millis_to_epoch(now));
 
         assert_eq!(t2, expected);
         assert!(t1.to_millis().unwrap() - t2.to_millis().unwrap() < 10);
