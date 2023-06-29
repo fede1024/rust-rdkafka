@@ -234,12 +234,10 @@ unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>
 
     let producer_context = &mut *(rkt_opaque as *mut C);
 
-    match producer_context.get_custom_partitioner() {
-        None => panic!("custom partitioner is not set"),
-        Some(partitioner) => {
-            partitioner.partition(topic_name, key, partition_cnt, is_partition_available)
-        }
-    }
+    producer_context
+        .get_custom_partitioner()
+        .expect("custom partitioner is not set")
+        .partition(topic_name, key, partition_cnt, is_partition_available)
 }
 
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
@@ -266,7 +264,7 @@ where
         let native_config = config.create_native_config()?;
         let context = Arc::new(context);
 
-        if let Some(_) = context.get_custom_partitioner() {
+        if context.get_custom_partitioner().is_some() {
             let default_topic_config =
                 unsafe { rdsys::rd_kafka_conf_get_default_topic_conf(native_config.ptr()) };
             unsafe {
