@@ -4,7 +4,11 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-* Add seek_partitions to consumer.
+## 0.33.0 (2023-06-30)
+
+* Add interface to specify custom partitioners by extending `ProducerContext`
+  trait with capability to return optional custom partitioner.
+* Add `seek_partitions` to consumer.
 
 ## 0.32.1 (2023-06-09)
 
