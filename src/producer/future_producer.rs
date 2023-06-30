@@ -371,7 +371,7 @@ where
     }
 }
 
-impl<C, R, Part> Producer<Part, FutureProducerContext<C>> for FutureProducer<C, R, Part>
+impl<C, R, Part> Producer<FutureProducerContext<C>, Part> for FutureProducer<C, R, Part>
 where
     C: ClientContext + 'static,
     R: AsyncRuntime,

@@ -443,7 +443,7 @@ where
     }
 }
 
-impl<C, Part> Producer<Part, C> for BaseProducer<C, Part>
+impl<C, Part> Producer<C, Part> for BaseProducer<C, Part>
 where
     Part: Partitioner,
     C: ProducerContext<Part>,
@@ -659,7 +659,7 @@ where
     }
 }
 
-impl<C, Part> Producer<Part, C> for ThreadedProducer<C, Part>
+impl<C, Part> Producer<C, Part> for ThreadedProducer<C, Part>
 where
     Part: Partitioner,
     C: ProducerContext<Part> + 'static,

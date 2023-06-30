@@ -267,7 +267,7 @@ impl ProducerContext<NoCustomPartitioner> for DefaultProducerContext {
 }
 
 /// Common trait for all producers.
-pub trait Producer<Part, C = DefaultProducerContext>
+pub trait Producer<C = DefaultProducerContext, Part = NoCustomPartitioner>
 where
     Part: Partitioner,
     C: ProducerContext<Part>,
