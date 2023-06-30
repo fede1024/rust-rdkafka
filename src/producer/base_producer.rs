@@ -41,10 +41,13 @@
 //! acknowledge messages quickly enough. If this error is returned, the caller
 //! should wait and try again.
 
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
+use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
+use std::slice;
+use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -60,15 +63,19 @@ use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::log::{trace, warn};
 use crate::message::{BorrowedMessage, OwnedHeaders, ToBytes};
-use crate::producer::{DefaultProducerContext, Producer, ProducerContext, PurgeConfig};
+use crate::producer::{
+    DefaultProducerContext, Partitioner, Producer, ProducerContext, PurgeConfig,
+};
 use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{IntoOpaque, Timeout};
 
 pub use crate::message::DeliveryResult;
 
+use super::NoCustomPartitioner;
+
 /// Callback that gets called from librdkafka every time a message succeeds or fails to be
 /// delivered.
-unsafe extern "C" fn delivery_cb<C: ProducerContext>(
+unsafe extern "C" fn delivery_cb<Part: Partitioner, C: ProducerContext<Part>>(
     _client: *mut RDKafka,
     msg: *const RDKafkaMessage,
     opaque: *mut c_void,
@@ -206,6 +213,33 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> BaseRecord<'a, K, P, ()> {
     }
 }
 
+unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>(
+    topic: *const RDKafkaTopic,
+    keydata: *const c_void,
+    keylen: usize,
+    partition_cnt: i32,
+    rkt_opaque: *mut c_void,
+    _msg_opaque: *mut c_void,
+) -> i32 {
+    let topic_name = CStr::from_ptr(rdsys::rd_kafka_topic_name(topic));
+    let topic_name = str::from_utf8_unchecked(topic_name.to_bytes());
+
+    let is_partition_available = |p: i32| rdsys::rd_kafka_topic_partition_available(topic, p) == 1;
+
+    let key = if keydata.is_null() {
+        None
+    } else {
+        Some(slice::from_raw_parts(keydata as *const u8, keylen))
+    };
+
+    let producer_context = &mut *(rkt_opaque as *mut C);
+
+    producer_context
+        .get_custom_partitioner()
+        .expect("custom partitioner is not set")
+        .partition(topic_name, key, partition_cnt, is_partition_available)
+}
+
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
     /// Creates a new `BaseProducer` starting from a configuration.
     fn from_config(config: &ClientConfig) -> KafkaResult<BaseProducer<DefaultProducerContext>> {
@@ -213,16 +247,44 @@ impl FromClientConfig for BaseProducer<DefaultProducerContext> {
     }
 }
 
-impl<C> FromClientConfigAndContext<C> for BaseProducer<C>
+impl<C, Part> FromClientConfigAndContext<C> for BaseProducer<C, Part>
 where
-    C: ProducerContext,
+    Part: Partitioner,
+    C: ProducerContext<Part>,
 {
     /// Creates a new `BaseProducer` starting from a configuration and a
     /// context.
-    fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<BaseProducer<C>> {
+    ///
+    /// SAFETY: Raw pointer to custom partitioner is used as opaque.
+    /// It's comes from reference to field in producer context so it's valid as the context is valid.
+    fn from_config_and_context(
+        config: &ClientConfig,
+        context: C,
+    ) -> KafkaResult<BaseProducer<C, Part>> {
         let native_config = config.create_native_config()?;
-        unsafe { rdsys::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<C>)) };
-        let client = Client::new(
+        let context = Arc::new(context);
+
+        if context.get_custom_partitioner().is_some() {
+            let default_topic_config =
+                unsafe { rdsys::rd_kafka_conf_get_default_topic_conf(native_config.ptr()) };
+            unsafe {
+                rdsys::rd_kafka_topic_conf_set_opaque(
+                    default_topic_config,
+                    Arc::as_ptr(&context) as *mut c_void,
+                )
+            };
+            unsafe {
+                rdsys::rd_kafka_topic_conf_set_partitioner_cb(
+                    default_topic_config,
+                    Some(partitioner_cb::<Part, C>),
+                )
+            }
+        }
+
+        unsafe {
+            rdsys::rd_kafka_conf_set_dr_msg_cb(native_config.ptr(), Some(delivery_cb::<Part, C>))
+        };
+        let client = Client::new_context_arc(
             config,
             native_config,
             RDKafkaType::RD_KAFKA_PRODUCER,
@@ -270,20 +332,27 @@ where
 /// ```
 ///
 /// [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
-pub struct BaseProducer<C = DefaultProducerContext>
+///
+pub struct BaseProducer<C = DefaultProducerContext, Part = NoCustomPartitioner>
 where
-    C: ProducerContext,
+    Part: Partitioner,
+    C: ProducerContext<Part>,
 {
     client: Client<C>,
+    _partitioner: PhantomData<Part>,
 }
 
-impl<C> BaseProducer<C>
+impl<C, Part> BaseProducer<C, Part>
 where
-    C: ProducerContext,
+    Part: Partitioner,
+    C: ProducerContext<Part>,
 {
     /// Creates a base producer starting from a Client.
-    fn from_client(client: Client<C>) -> BaseProducer<C> {
-        BaseProducer { client }
+    fn from_client(client: Client<C>) -> BaseProducer<C, Part> {
+        BaseProducer {
+            client,
+            _partitioner: PhantomData,
+        }
     }
 
     /// Polls the producer, returning the number of events served.
@@ -374,9 +443,10 @@ where
     }
 }
 
-impl<C> Producer<C> for BaseProducer<C>
+impl<C, Part> Producer<C, Part> for BaseProducer<C, Part>
 where
-    C: ProducerContext,
+    Part: Partitioner,
+    C: ProducerContext<Part>,
 {
     fn client(&self) -> &Client<C> {
         &self.client
@@ -480,9 +550,9 @@ where
     }
 }
 
-impl<C> Drop for BaseProducer<C>
+impl<C, Part: Partitioner> Drop for BaseProducer<C, Part>
 where
-    C: ProducerContext,
+    C: ProducerContext<Part>,
 {
     fn drop(&mut self) {
         self.purge(PurgeConfig::default().queue().inflight());
@@ -502,29 +572,30 @@ where
 /// queued events, such as delivery notifications. The thread will be
 /// automatically stopped when the producer is dropped.
 #[must_use = "The threaded producer will stop immediately if unused"]
-pub struct ThreadedProducer<C>
+pub struct ThreadedProducer<C, Part: Partitioner = NoCustomPartitioner>
 where
-    C: ProducerContext + 'static,
+    C: ProducerContext<Part> + 'static,
 {
-    producer: Arc<BaseProducer<C>>,
+    producer: Arc<BaseProducer<C, Part>>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
 
-impl FromClientConfig for ThreadedProducer<DefaultProducerContext> {
+impl FromClientConfig for ThreadedProducer<DefaultProducerContext, NoCustomPartitioner> {
     fn from_config(config: &ClientConfig) -> KafkaResult<ThreadedProducer<DefaultProducerContext>> {
         ThreadedProducer::from_config_and_context(config, DefaultProducerContext)
     }
 }
 
-impl<C> FromClientConfigAndContext<C> for ThreadedProducer<C>
+impl<C, Part> FromClientConfigAndContext<C> for ThreadedProducer<C, Part>
 where
-    C: ProducerContext + 'static,
+    Part: Partitioner + Send + Sync + 'static,
+    C: ProducerContext<Part> + 'static,
 {
     fn from_config_and_context(
         config: &ClientConfig,
         context: C,
-    ) -> KafkaResult<ThreadedProducer<C>> {
+    ) -> KafkaResult<ThreadedProducer<C, Part>> {
         let producer = Arc::new(BaseProducer::from_config_and_context(config, context)?);
         let should_stop = Arc::new(AtomicBool::new(false));
         let thread = {
@@ -558,9 +629,10 @@ where
     }
 }
 
-impl<C> ThreadedProducer<C>
+impl<C, Part> ThreadedProducer<C, Part>
 where
-    C: ProducerContext + 'static,
+    Part: Partitioner,
+    C: ProducerContext<Part> + 'static,
 {
     /// Sends a message to Kafka.
     ///
@@ -587,9 +659,10 @@ where
     }
 }
 
-impl<C> Producer<C> for ThreadedProducer<C>
+impl<C, Part> Producer<C, Part> for ThreadedProducer<C, Part>
 where
-    C: ProducerContext + 'static,
+    Part: Partitioner,
+    C: ProducerContext<Part> + 'static,
 {
     fn client(&self) -> &Client<C> {
         self.producer.client()
@@ -634,9 +707,10 @@ where
     }
 }
 
-impl<C> Drop for ThreadedProducer<C>
+impl<C, Part> Drop for ThreadedProducer<C, Part>
 where
-    C: ProducerContext + 'static,
+    Part: Partitioner,
+    C: ProducerContext<Part> + 'static,
 {
     fn drop(&mut self) {
         trace!("Destroy ThreadedProducer");

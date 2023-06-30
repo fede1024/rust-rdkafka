@@ -222,8 +222,17 @@ impl<C: ClientContext> Client<C> {
         rd_kafka_type: RDKafkaType,
         context: C,
     ) -> KafkaResult<Client<C>> {
+        Self::new_context_arc(config, native_config, rd_kafka_type, Arc::new(context))
+    }
+
+    /// Creates a new `Client` given a configuration, a client type and a context.
+    pub(crate) fn new_context_arc(
+        config: &ClientConfig,
+        native_config: NativeClientConfig,
+        rd_kafka_type: RDKafkaType,
+        context: Arc<C>,
+    ) -> KafkaResult<Client<C>> {
         let mut err_buf = ErrBuf::new();
-        let context = Arc::new(context);
         unsafe {
             rdsys::rd_kafka_conf_set_opaque(
                 native_config.ptr(),
