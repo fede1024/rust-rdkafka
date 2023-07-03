@@ -327,6 +327,9 @@ async fn test_consume_partition_order() {
 
 #[tokio::test]
 async fn test_partition_queue_forwarding() {
+    use rdkafka::consumer::base_consumer::PartitionQueue;
+    use rdkafka::message::BorrowedMessage;
+
     let _r = env_logger::try_init();
 
     let topic_name = rand_test_topic();
@@ -334,7 +337,7 @@ async fn test_partition_queue_forwarding() {
     populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(1), None).await;
     populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(2), None).await;
 
-    create_topic(&topic_name, 1).await;
+    create_topic(&topic_name, 3).await;
 
     let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
     let mut tpl = TopicPartitionList::new();
@@ -350,35 +353,69 @@ async fn test_partition_queue_forwarding() {
     let mut q1 = consumer.split_partition_queue(&topic_name, 1).unwrap();
     let q2 = consumer.split_partition_queue(&topic_name, 2).unwrap();
 
-    // Forward q0 into q1, then drop q0 as it won't be needed anymore.
+    // Forward q0 into q1, but keep q0 around.
     q0.forward(&mut q1).expect("Partition queue forward failed");
-    drop(q0);
 
-    // Worker consuming from (q0 + q1)
-    let worker_1 = thread::spawn(move || {
-        let mut seen = [0; 2];
-        for _ in 0..8 {
-            let queue_message = q1.poll(Timeout::Never).unwrap().unwrap();
-            let partition = queue_message.partition();
-            assert!([0, 1].contains(&partition));
-            seen[partition as usize] += 1;
-        }
-        // Check that we've received 4 messages from both partitions 0 and 1.
-        assert_eq!(seen, [4, 4]);
-    });
+    trait TestQueue: Sized {
+        fn poll_one(&self) -> BorrowedMessage<'_>;
 
-    // Worker consuming from q2
-    let worker_2 = thread::spawn(move || {
-        for _ in 0..4 {
-            let queue_message = q2.poll(Timeout::Never).unwrap().unwrap();
-            assert_eq!(queue_message.partition(), 2);
+        fn cleanup(self) {}
+
+        fn assert_consume(self, expected: &[usize]) {
+            let mut seen = vec![0; expected.len()];
+            for _ in 0..expected.iter().sum() {
+                let partition = self.poll_one().partition();
+                seen[partition as usize] += 1;
+            }
+
+            // Check that we've received all messages from expected partitions.
+            assert_eq!(&seen, expected);
+
+            self.cleanup();
         }
-    });
+    }
+
+    impl TestQueue for Arc<BaseConsumer<ConsumerTestContext>> {
+        fn poll_one(&self) -> BorrowedMessage<'_> {
+            self.poll(Timeout::Never).unwrap().unwrap()
+        }
+    }
+
+    impl TestQueue for PartitionQueue<ConsumerTestContext> {
+        fn poll_one(&self) -> BorrowedMessage<'_> {
+            self.poll(Timeout::Never).unwrap().unwrap()
+        }
+
+        // Forward queue back to consumer's queue.
+        fn cleanup(mut self) {
+            self.reset_forwarding();
+        }
+    }
+
+    // Worker consuming from (q0 + q1) should poll 8 messages from partitions 1 and 2 combined
+    let worker_1 = thread::spawn(move || q1.assert_consume(&[4, 4, 0]));
+
+    // Worker consuming from q2 should see just 4 messages from partition 2
+    let worker_2 = thread::spawn(move || q2.assert_consume(&[0, 0, 4]));
 
     consumer.poll(Duration::from_secs(0));
-    drop(consumer);
+
+    // Join to reset forwarding of q1 and q2
     worker_1.join().unwrap();
     worker_2.join().unwrap();
+
+    // Generate new messages
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(0), None).await;
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(1), None).await;
+    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(2), None).await;
+
+    // Worker consuming from q0 should now observe 4 messages in partition 0
+    let worker_0 = thread::spawn(move || q0.assert_consume(&[4, 0, 0]));
+
+    // Expect 4 messages from partitions 1 and 2 back in the main consumer queue
+    consumer.assert_consume(&[0, 4, 4]);
+
+    worker_0.join().unwrap();
 }
 
 #[tokio::test]

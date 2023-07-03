@@ -701,6 +701,13 @@ where
         }
     }
 
+    /// Forwards this queue back into the consumer queue.
+    pub fn reset_forwarding(&mut self) {
+        if let Some(consumer_queue) = self.consumer.client().consumer_queue() {
+            unsafe { rdsys::rd_kafka_queue_forward(self.queue.ptr(), consumer_queue.ptr()) };
+        }
+    }
+
     /// Sets a callback that will be invoked whenever the queue becomes
     /// nonempty.
     pub fn set_nonempty_callback<F>(&mut self, f: F)
