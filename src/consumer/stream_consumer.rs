@@ -412,9 +412,9 @@ where
 
     fn seek_partitions<T: Into<Timeout>>(
         &self,
-        topic_partition_list: &TopicPartitionList,
+        topic_partition_list: TopicPartitionList,
         timeout: T,
-    ) -> KafkaResult<()> {
+    ) -> KafkaResult<TopicPartitionList> {
         self.base.seek_partitions(topic_partition_list, timeout)
     }
 

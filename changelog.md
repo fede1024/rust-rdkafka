@@ -4,6 +4,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* **Breaking change.** Change signature for `seek_partitions`. Following
+  librdkafka, individual partition errors should be reported in the per-partition
+  `error` field of `TopicPartitionList` elements.
+
 ## 0.33.0 (2023-06-30)
 
 * Add interface to specify custom partitioners by extending `ProducerContext`

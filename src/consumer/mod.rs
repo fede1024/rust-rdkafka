@@ -261,11 +261,13 @@ where
     /// in the `offset` field of `TopicPartitionListElem`.
     /// The offset can be either absolute (>= 0) or a logical offset.
     /// Seek should only be performed on already assigned/consumed partitions.
+    /// Individual partition errors are reported in the per-partition `error` field of
+    /// `TopicPartitionListElem`.
     fn seek_partitions<T: Into<Timeout>>(
         &self,
-        topic_partition_list: &TopicPartitionList,
+        topic_partition_list: TopicPartitionList,
         timeout: T,
-    ) -> KafkaResult<()>;
+    ) -> KafkaResult<TopicPartitionList>;
 
     /// Commits the offset of the specified message. The commit can be sync
     /// (blocking), or async. Notice that when a specific offset is committed,
