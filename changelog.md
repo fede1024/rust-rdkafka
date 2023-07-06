@@ -4,7 +4,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-## 0.33.1 (2023-07-06)
+## 0.33.2 (2023-07-06)
 
 * **Breaking change.** Change signature for `seek_partitions`. Following
   librdkafka, individual partition errors should be reported in the per-partition
