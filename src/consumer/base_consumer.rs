@@ -352,9 +352,9 @@ where
 
     fn seek_partitions<T: Into<Timeout>>(
         &self,
-        topic_partition_list: &TopicPartitionList,
+        topic_partition_list: TopicPartitionList,
         timeout: T,
-    ) -> KafkaResult<()> {
+    ) -> KafkaResult<TopicPartitionList> {
         let ret = unsafe {
             RDKafkaError::from_ptr(rdsys::rd_kafka_seek_partitions(
                 self.client.native_ptr(),
@@ -366,7 +366,7 @@ where
             let error = ret.name();
             return Err(KafkaError::Seek(error));
         }
-        Ok(())
+        Ok(topic_partition_list)
     }
 
     fn commit(
