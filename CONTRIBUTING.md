@@ -50,9 +50,11 @@ autocreation in order for the tests to succeed.
 
 ## Releasing
 
+* Ensure `rdkafka-sys` has no unreleased changes.
 * Ensure the changelog is up to date.
 * Ensure Cargo.toml is up to date.
 * Run `./generate_readme.py > README.md`.
 * Run `git tag -am $VERSION $VERSION`.
+* Run `git push`.
 * Run `git push origin $VERSION`.
 * Run `cargo publish`.
