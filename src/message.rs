@@ -500,6 +500,15 @@ unsafe impl Send for OwnedHeaders {}
 unsafe impl Sync for OwnedHeaders {}
 
 impl OwnedHeaders {
+    /// Wraps an existing `RDKafkaHeaders` as `OwnedHeaders`
+    pub fn from_ptr(ptr: *mut RDKafkaHeaders) -> OwnedHeaders {
+        OwnedHeaders {
+            ptr: unsafe {
+                NativePtr::from_ptr(ptr).unwrap()
+            },
+        }
+    }
+
     /// Creates a new `OwnedHeaders` struct with initial capacity 5.
     pub fn new() -> OwnedHeaders {
         OwnedHeaders::new_with_capacity(5)
@@ -545,7 +554,8 @@ impl OwnedHeaders {
         self
     }
 
-    pub(crate) fn ptr(&self) -> *mut RDKafkaHeaders {
+    /// Allow access to underlying `RDKafkaHeaders`
+    pub fn ptr(&self) -> *mut RDKafkaHeaders {
         self.ptr.ptr()
     }
 
