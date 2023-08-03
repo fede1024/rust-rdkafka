@@ -287,6 +287,10 @@ fn build_librdkafka() {
         config.define("CMAKE_SYSTEM_NAME", system_name);
     }
 
+    if let Ok(make_program) = env::var("CMAKE_MAKE_PROGRAM") {
+        config.define("CMAKE_MAKE_PROGRAM", make_program);
+    }
+
     if !cmake_library_paths.is_empty() {
         env::set_var("CMAKE_LIBRARY_PATH", cmake_library_paths.join(";"));
     }
