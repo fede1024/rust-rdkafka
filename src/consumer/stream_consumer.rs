@@ -200,11 +200,6 @@ where
         let base = BaseConsumer::new(config, native_config, context)?;
         let native_ptr = base.client().native_ptr() as usize;
 
-        // Redirect rdkafka's main queue to the consumer queue so that we only
-        // need to listen to the consumer queue to observe events like
-        // rebalancings and stats.
-        unsafe { rdsys::rd_kafka_poll_set_consumer(base.client().native_ptr()) };
-
         let queue = base.client().consumer_queue().ok_or_else(|| {
             KafkaError::ClientCreation("librdkafka failed to create consumer queue".into())
         })?;
