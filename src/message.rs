@@ -6,11 +6,13 @@ use std::marker::PhantomData;
 use std::os::raw::c_void;
 use std::ptr;
 use std::str;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
+use crate::admin::NativeEvent;
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::util::{self, millis_to_epoch, KafkaDrop, NativePtr};
 
@@ -306,12 +308,15 @@ impl Headers for BorrowedHeaders {
 /// [`detach`](BorrowedMessage::detach) method.
 pub struct BorrowedMessage<'a> {
     ptr: NativePtr<RDKafkaMessage>,
+    _event: Option<Arc<NativeEvent>>,
     _owner: PhantomData<&'a u8>,
 }
 
+unsafe extern "C" fn no_op(_: *mut RDKafkaMessage) {}
+
 unsafe impl KafkaDrop for RDKafkaMessage {
     const TYPE: &'static str = "message";
-    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_message_destroy;
+    const DROP: unsafe extern "C" fn(*mut Self) = no_op;
 }
 
 impl<'a> fmt::Debug for BorrowedMessage<'a> {
@@ -342,22 +347,51 @@ impl<'a> BorrowedMessage<'a> {
         } else {
             Ok(BorrowedMessage {
                 ptr,
+                _event: None,
                 _owner: PhantomData,
             })
         }
     }
 
     /// Creates a new `BorrowedMessage` that wraps the native Kafka message
-    /// pointer returned by the delivery callback of a producer. The lifetime of
-    /// the message will be bound to the lifetime of the reference passed as
-    /// parameter. This method should only be used with messages coming from the
-    /// delivery callback. The message will not be freed in any circumstance.
-    pub(crate) unsafe fn from_dr_callback<O>(
+    /// pointer returned by a consumer. The lifetime of the message will be
+    /// bound to the lifetime of the event passed as parameter. If the message
+    /// contains an error, only the error is returned and the message structure
+    /// is freed.
+    pub(crate) unsafe fn from_fetch_event(
+        ptr: NativePtr<RDKafkaMessage>,
+        event: Arc<NativeEvent>,
+    ) -> KafkaResult<BorrowedMessage<'a>> {
+        if ptr.err.is_error() {
+            let err = match ptr.err {
+                rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
+                    KafkaError::PartitionEOF((*ptr).partition)
+                }
+                e => KafkaError::MessageConsumption(e.into()),
+            };
+            Err(err)
+        } else {
+            Ok(BorrowedMessage {
+                ptr,
+                _event: Some(event),
+                // TODO(sam): what does it mean this when the event holds the ownership?
+                _owner: PhantomData,
+            })
+        }
+    }
+
+    /// Creates a new `BorrowedMessage` that wraps the native Kafka message
+    /// pointer returned via the delivery report event. The lifetime of
+    /// the message will be bound to the lifetime of the event passed as
+    /// parameter. The message will not be freed in any circumstance.
+    pub(crate) unsafe fn from_dr_event(
         ptr: *mut RDKafkaMessage,
-        _owner: &'a O,
+        event: Arc<NativeEvent>,
     ) -> DeliveryResult<'a> {
         let borrowed_message = BorrowedMessage {
             ptr: NativePtr::from_ptr(ptr).unwrap(),
+            _event: Some(event),
+            // TODO(sam): what does it mean this when the event holds the ownership?
             _owner: PhantomData,
         };
         if (*ptr).err.is_error() {
