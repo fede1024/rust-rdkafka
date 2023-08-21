@@ -14,7 +14,7 @@ bindgen \
     --allowlist-var "rd_kafka.*|RD_KAFKA_.*" \
     --no-recursive-allowlist \
     --blocklist-function "rd_kafka_conf_set_open_cb" \
-    --raw-line "use libc::{FILE, sockaddr, c_int, c_void, c_char};" \
+    --raw-line "use libc::{FILE, addrinfo, sockaddr, c_int, c_void, c_char};" \
     --raw-line "use num_enum::TryFromPrimitive;" \
     --default-macro-constant-type "signed" \
     "bindings.h" -o "src/bindings.rs"
