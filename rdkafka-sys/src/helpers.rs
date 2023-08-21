@@ -173,5 +173,6 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR_FEATURE_UPDATE_FAILED => FeatureUpdateFailed,
         RD_KAFKA_RESP_ERR_PRINCIPAL_DESERIALIZATION_FAILURE => PrincipalDeserializationFailure,
         RD_KAFKA_RESP_ERR_END_ALL => EndAll,
+        RD_KAFKA_RESP_ERR__LOG_TRUNCATION => LogTruncation,
     }
 }
