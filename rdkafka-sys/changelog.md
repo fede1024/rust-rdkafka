@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Upgrade to librdkafka v2.2.0.
+
 ## v4.5.0+1.9.2 (2023-06-09)
 
 * Add support for the cluster mock API.

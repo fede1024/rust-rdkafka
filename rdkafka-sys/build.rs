@@ -1,6 +1,8 @@
 use std::borrow::Borrow;
 use std::env;
 use std::ffi::OsStr;
+#[cfg(feature = "cmake-build")]
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
@@ -234,6 +236,14 @@ fn build_librdkafka() {
             config.cxxflag("-DCURL_STATICLIB");
             config.cflag(format!("-I{}/include", curl_root));
             config.cxxflag(format!("-I{}/include", curl_root));
+            config.cflag(format!("-L{}/lib", curl_root));
+            config.cxxflag(format!("-L{}/lib", curl_root));
+            //FIXME: Upstream should be copying this in their build.rs
+            fs::copy(
+                format!("{}/build/libcurl.a", curl_root),
+                format!("{}/lib/libcurl.a", curl_root),
+            )
+            .unwrap();
         }
     } else {
         config.define("WITH_CURL", "0");
