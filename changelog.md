@@ -4,6 +4,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+## 0.34.0 (2023-08-25)
+
+* Update bundled librdkafka to 2.2.0.
+
 ## 0.33.2 (2023-07-06)
 
 * **Breaking change.** Change signature for `seek_partitions`. Following
