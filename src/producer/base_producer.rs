@@ -196,6 +196,18 @@ impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized, D: IntoOpaque> BaseRecord<'a,
         self.headers = Some(headers);
         self
     }
+
+    /// Sets the destination topic of the record.
+    pub fn topic(mut self, topic: &'a str) -> BaseRecord<'a, K, P, D> {
+        self.topic = topic;
+        self
+    }
+
+    /// Sets the delivery opaque of the record.
+    pub fn delivery_opaque(mut self, delivery_opaque: D) -> BaseRecord<'a, K, P, D> {
+        self.delivery_opaque = delivery_opaque;
+        self
+    }
 }
 
 impl<'a, K: ToBytes + ?Sized, P: ToBytes + ?Sized> BaseRecord<'a, K, P, ()> {
