@@ -75,7 +75,7 @@ curl = ["curl-sys"]
 
 # Link against the version of curl bundled with the curl-sys crate, rather than
 # the system's version.
-curl-static = ["curl", "curl-sys/static-curl"]
+curl-static = ["curl-sys/static-curl"]
 
 # Enable support for zstd compression.
 zstd = ["zstd-sys"]
