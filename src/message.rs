@@ -623,6 +623,60 @@ impl OwnedMessage {
     pub fn detach_headers(&mut self) -> Option<OwnedHeaders> {
         self.headers.take()
     }
+
+    /// Replaces the [`OwnedHeaders`] on this `OwnedMessage`.
+    pub fn replace_headers(mut self, headers: Option<OwnedHeaders>) -> Self {
+        if let Some(headers) = headers {
+            self.headers.replace(headers);
+        } else {
+            self.headers = None;
+        }
+        self
+    }
+
+    /// Sets the payload for this `OwnedMessage`.
+    pub fn set_payload(mut self, payload: Option<Vec<u8>>) -> Self {
+        if let Some(payload) = payload {
+            self.payload.replace(payload);
+        } else {
+            self.payload = None;
+        }
+        self
+    }
+
+    /// Sets the key for this `OwnedMessage`.
+    pub fn set_key(mut self, key: Option<Vec<u8>>) -> Self {
+        if let Some(key) = key {
+            self.key.replace(key);
+        } else {
+            self.key = None;
+        }
+        self
+    }
+
+    /// Sets the topic for this `OwnedMessage`.
+    pub fn set_topic(mut self, topic: String) -> Self {
+        self.topic = topic;
+        self
+    }
+
+    /// Sets the timestamp for this `OwnedMessage`.
+    pub fn set_timestamp(mut self, timestamp: Timestamp) -> Self {
+        self.timestamp = timestamp;
+        self
+    }
+
+    /// Sets the partition for this `OwnedMessage`.
+    pub fn set_partition(mut self, partition: i32) -> Self {
+        self.partition = partition;
+        self
+    }
+
+    /// Sets the offset for this `OwnedMessage`.
+    pub fn set_offset(mut self, offset: i64) -> Self {
+        self.offset = offset;
+        self
+    }
 }
 
 impl Message for OwnedMessage {
