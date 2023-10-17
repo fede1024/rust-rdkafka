@@ -237,6 +237,10 @@ where
         Iter(self)
     }
 
+    pub(crate) fn get_queue(&self) -> Arc<NativeQueue> {
+        self.queue.clone()
+    }
+
     /// Splits messages for the specified partition into their own queue.
     ///
     /// If the `topic` or `partition` is invalid, returns `None`.
