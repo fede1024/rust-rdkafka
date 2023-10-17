@@ -38,7 +38,7 @@ unsafe extern "C" fn native_message_queue_nonempty_cb(_: *mut RDKafka, opaque_pt
     wakers.wake_all();
 }
 
-unsafe fn enable_nonempty_callback(queue: &NativeQueue, wakers: &Arc<WakerSlab>) {
+unsafe fn enable_nonempty_callback(queue: &Arc<NativeQueue>, wakers: &Arc<WakerSlab>) {
     rdsys::rd_kafka_queue_cb_event_enable(
         queue.ptr(),
         Some(native_message_queue_nonempty_cb),
@@ -89,31 +89,24 @@ impl WakerSlab {
 /// A stream of messages from a [`StreamConsumer`].
 ///
 /// See the documentation of [`StreamConsumer::stream`] for details.
-pub struct MessageStream<'a> {
+pub struct MessageStream<'a, C: ConsumerContext> {
     wakers: &'a WakerSlab,
-    queue: &'a NativeQueue,
+    base: Arc<BaseConsumer<C>>,
     slot: usize,
 }
 
-impl<'a> MessageStream<'a> {
-    fn new(wakers: &'a WakerSlab, queue: &'a NativeQueue) -> MessageStream<'a> {
+impl<'a, C: ConsumerContext> MessageStream<'a, C> {
+    fn new(wakers: &'a WakerSlab, base: Arc<BaseConsumer<C>>) -> MessageStream<'a, C> {
         let slot = wakers.register();
-        MessageStream {
-            wakers,
-            queue,
-            slot,
-        }
+        MessageStream { wakers, base, slot }
     }
 
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
-        unsafe {
-            NativePtr::from_ptr(rdsys::rd_kafka_consume_queue(self.queue.ptr(), 0))
-                .map(|p| BorrowedMessage::from_consumer(p, self.queue))
-        }
+        self.base.poll(Duration::ZERO)
     }
 }
 
-impl<'a> Stream for MessageStream<'a> {
+impl<'a, C: ConsumerContext> Stream for MessageStream<'a, C> {
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -140,7 +133,7 @@ impl<'a> Stream for MessageStream<'a> {
     }
 }
 
-impl<'a> Drop for MessageStream<'a> {
+impl<'a, C: ConsumerContext> Drop for MessageStream<'a, C> {
     fn drop(&mut self) {
         self.wakers.unregister(self.slot);
     }
@@ -165,8 +158,7 @@ pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
 {
-    queue: NativeQueue, // queue must be dropped before the base to avoid deadlock
-    base: BaseConsumer<C>,
+    base: Arc<BaseConsumer<C>>,
     wakers: Arc<WakerSlab>,
     _shutdown_trigger: oneshot::Sender<()>,
     _runtime: PhantomData<R>,
@@ -197,14 +189,11 @@ where
             Duration::from_millis(millis)
         };
 
-        let base = BaseConsumer::new(config, native_config, context)?;
+        let base = Arc::new(BaseConsumer::new(config, native_config, context)?);
         let native_ptr = base.client().native_ptr() as usize;
 
-        let queue = base.client().consumer_queue().ok_or_else(|| {
-            KafkaError::ClientCreation("librdkafka failed to create consumer queue".into())
-        })?;
         let wakers = Arc::new(WakerSlab::new());
-        unsafe { enable_nonempty_callback(&queue, &wakers) }
+        unsafe { enable_nonempty_callback(&base.get_queue(), &wakers) }
 
         // We need to make sure we poll the consumer at least once every max
         // poll interval, *unless* the processing task has wedged. To accomplish
@@ -236,7 +225,6 @@ where
         Ok(StreamConsumer {
             base,
             wakers,
-            queue,
             _shutdown_trigger: shutdown_trigger,
             _runtime: PhantomData,
         })
@@ -259,8 +247,8 @@ where
     ///
     /// If you want multiple independent views of a Kafka topic, create multiple
     /// consumers, not multiple message streams.
-    pub fn stream(&self) -> MessageStream<'_> {
-        MessageStream::new(&self.wakers, &self.queue)
+    pub fn stream(&self) -> MessageStream<'_, C> {
+        MessageStream::new(&self.wakers, self.base.clone())
     }
 
     /// Receives the next message from the stream.
