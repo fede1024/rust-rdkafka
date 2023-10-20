@@ -36,7 +36,7 @@ where
     C: ConsumerContext,
 {
     client: Client<C>,
-    queue: Arc<NativeQueue>,
+    queue: NativeQueue,
     static_member: bool,
 }
 
@@ -89,9 +89,9 @@ where
         // need to listen to the consumer queue to observe events like
         // rebalancings and stats.
         unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
-        let queue = Arc::new(client.consumer_queue().ok_or(KafkaError::ClientCreation(
+        let queue = client.consumer_queue().ok_or(KafkaError::ClientCreation(
             "rdkafka consumer queue not available".to_string(),
-        ))?);
+        ))?;
         Ok(BaseConsumer {
             client,
             queue,
@@ -113,19 +113,18 @@ where
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        let event = Arc::new(
-            self.client()
-                .poll_event(self.queue.clone(), timeout.into())?,
-        );
+        let event = self
+            .client()
+            .poll_event(self.get_queue(), timeout.into())?;
         let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
         match evtype {
-            rdsys::RD_KAFKA_EVENT_FETCH => self.handle_fetch_event(event.clone()),
+            rdsys::RD_KAFKA_EVENT_FETCH => self.handle_fetch_event(event),
             rdsys::RD_KAFKA_EVENT_REBALANCE => {
-                self.handle_rebalance_event(event.clone());
+                self.handle_rebalance_event(event);
                 None
             }
             rdsys::RD_KAFKA_EVENT_OFFSET_COMMIT => {
-                self.handle_offset_commit_event(event.clone());
+                self.handle_offset_commit_event(event);
                 None
             }
             _ => {
@@ -142,15 +141,15 @@ where
 
     fn handle_fetch_event(
         &self,
-        event: Arc<NativePtr<RDKafkaEvent>>,
+        event: NativePtr<RDKafkaEvent>,
     ) -> Option<KafkaResult<BorrowedMessage<'_>>> {
         unsafe {
             NativePtr::from_ptr(rdsys::rd_kafka_event_message_next(event.ptr()) as *mut _)
-                .map(|ptr| BorrowedMessage::from_fetch_event(ptr, event.clone()))
+                .map(|ptr| BorrowedMessage::from_client(ptr, event, self.client()))
         }
     }
 
-    fn handle_rebalance_event(&self, event: Arc<NativePtr<RDKafkaEvent>>) {
+    fn handle_rebalance_event(&self, event: NativePtr<RDKafkaEvent>) {
         let err = unsafe { rdsys::rd_kafka_event_error(event.ptr()) };
         match err {
             rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS
@@ -175,7 +174,7 @@ where
         }
     }
 
-    fn handle_offset_commit_event(&self, event: Arc<NativePtr<RDKafkaEvent>>) {
+    fn handle_offset_commit_event(&self, event: NativePtr<RDKafkaEvent>) {
         let err = unsafe { rdsys::rd_kafka_event_error(event.ptr()) };
         let commit_error = if err.is_error() {
             Err(KafkaError::ConsumerCommit(err.into()))
@@ -237,8 +236,8 @@ where
         Iter(self)
     }
 
-    pub(crate) fn get_queue(&self) -> Arc<NativeQueue> {
-        self.queue.clone()
+    pub(crate) fn get_queue(&self) -> &NativeQueue {
+        &self.queue
     }
 
     /// Splits messages for the specified partition into their own queue.
@@ -717,7 +716,7 @@ where
     C: ConsumerContext,
 {
     consumer: Arc<BaseConsumer<C>>,
-    queue: NativeQueue,
+    pub(crate) queue: NativeQueue,
     nonempty_callback: Option<Box<Box<dyn Fn() + Send + Sync>>>,
 }
 
