@@ -336,7 +336,7 @@ where
     C: ProducerContext<Part>,
 {
     client: Client<C>,
-    queue: Arc<NativeQueue>,
+    queue: NativeQueue,
     _partitioner: PhantomData<Part>,
 }
 
@@ -347,7 +347,7 @@ where
 {
     /// Creates a base producer starting from a Client.
     fn from_client(client: Client<C>) -> BaseProducer<C, Part> {
-        let queue = Arc::new(client.main_queue());
+        let queue = client.main_queue();
         BaseProducer {
             client,
             queue,
@@ -360,9 +360,8 @@ where
     /// Regular calls to `poll` are required to process the events and execute
     /// the message delivery callbacks.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
-        let event = self.client().poll_event(self.queue.clone(), timeout.into());
+        let event = self.client().poll_event(&self.queue, timeout.into());
         if let Some(ev) = event {
-            let ev = Arc::new(ev);
             let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
             match evtype {
                 rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
@@ -378,7 +377,7 @@ where
         }
     }
 
-    fn handle_delivery_report_event(&self, event: Arc<NativePtr<RDKafkaEvent>>) {
+    fn handle_delivery_report_event(&self, event: NativePtr<RDKafkaEvent>) {
         let max_messages = unsafe { rdsys::rd_kafka_event_message_count(event.ptr()) };
         let messages: Vec<*const RDKafkaMessage> = Vec::with_capacity(max_messages);
 
@@ -393,8 +392,9 @@ where
         };
 
         for msg in messages {
-            let delivery_result =
-                unsafe { BorrowedMessage::from_dr_event(msg as *mut _, event.clone()) };
+            let delivery_result = unsafe {
+                BorrowedMessage::from_dr_event(msg as *mut _, event.ptr(), self.client())
+            };
             let delivery_opaque = unsafe { C::DeliveryOpaque::from_ptr((*msg)._private) };
             self.context().delivery(&delivery_result, delivery_opaque);
         }

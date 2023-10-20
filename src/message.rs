@@ -6,7 +6,6 @@ use std::marker::PhantomData;
 use std::os::raw::c_void;
 use std::ptr;
 use std::str;
-use std::sync::Arc;
 use std::time::SystemTime;
 
 use rdkafka_sys as rdsys;
@@ -308,7 +307,7 @@ impl Headers for BorrowedHeaders {
 /// [`detach`](BorrowedMessage::detach) method.
 pub struct BorrowedMessage<'a> {
     ptr: NativePtr<RDKafkaMessage>,
-    _event: Option<Arc<NativeEvent>>,
+    _event: NativeEvent,
     _owner: PhantomData<&'a u8>,
 }
 
@@ -332,9 +331,10 @@ impl<'a> BorrowedMessage<'a> {
     /// should only be used with messages coming from consumers. If the message
     /// contains an error, only the error is returned and the message structure
     /// is freed.
-    pub(crate) unsafe fn from_consumer<C>(
+    pub(crate) unsafe fn from_client<C>(
         ptr: NativePtr<RDKafkaMessage>,
-        _consumer: &'a C,
+        event: NativeEvent,
+        _client: &'a C,
     ) -> KafkaResult<BorrowedMessage<'a>> {
         if ptr.err.is_error() {
             let err = match ptr.err {
@@ -347,62 +347,38 @@ impl<'a> BorrowedMessage<'a> {
         } else {
             Ok(BorrowedMessage {
                 ptr,
-                _event: None,
+                _event: event,
                 _owner: PhantomData,
             })
         }
     }
 
-    /// Creates a new `BorrowedMessage` that wraps the native Kafka message
-    /// pointer returned by a consumer. The lifetime of the message will be
-    /// bound to the lifetime of the event passed as parameter. If the message
-    /// contains an error, only the error is returned and the message structure
-    /// is freed.
-    pub(crate) unsafe fn from_fetch_event(
-        ptr: NativePtr<RDKafkaMessage>,
-        event: Arc<NativeEvent>,
-    ) -> KafkaResult<BorrowedMessage<'a>> {
-        if ptr.err.is_error() {
-            let err = match ptr.err {
-                rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
-                    KafkaError::PartitionEOF((*ptr).partition)
-                }
-                e => KafkaError::MessageConsumption(e.into()),
-            };
-            Err(err)
-        } else {
-            Ok(BorrowedMessage {
-                ptr,
-                _event: Some(event),
-                // TODO(sam): what does it mean this when the event holds the ownership?
-                _owner: PhantomData,
-            })
-        }
-    }
-
-    /// Creates a new `BorrowedMessage` that wraps the native Kafka message
-    /// pointer returned via the delivery report event. The lifetime of
-    /// the message will be bound to the lifetime of the event passed as
-    /// parameter. The message will not be freed in any circumstance.
-    pub(crate) unsafe fn from_dr_event(
-        ptr: *mut RDKafkaMessage,
-        event: Arc<NativeEvent>,
-    ) -> DeliveryResult<'a> {
-        let borrowed_message = BorrowedMessage {
-            ptr: NativePtr::from_ptr(ptr).unwrap(),
-            _event: Some(event),
-            // TODO(sam): what does it mean this when the event holds the ownership?
-            _owner: PhantomData,
-        };
-        if (*ptr).err.is_error() {
-            Err((
-                KafkaError::MessageProduction((*ptr).err.into()),
-                borrowed_message,
-            ))
-        } else {
-            Ok(borrowed_message)
-        }
-    }
+     /// Creates a new `BorrowedMessage` that wraps the native Kafka message
+     /// pointer returned via the delivery report event. The lifetime of
+     /// the message will be bound to the lifetime of the event passed as
+     /// parameter. The message will not be freed in any circumstance.
+     pub(crate) unsafe fn from_dr_event<C>(
+         ptr: *mut RDKafkaMessage,
+         //ptr: NativePtr<RDKafkaMessage>,
+         event: *mut RDKafkaEvent,
+         _client: &'a C,
+     ) -> DeliveryResult<'a> {
+         let borrowed_message = BorrowedMessage {
+             ptr: NativePtr::from_ptr(ptr).unwrap(),
+             //ptr,
+             _event: NativePtr::from_ptr(event).unwrap(),
+             // TODO(sam): what does it mean this when the event holds the ownership?
+             _owner: PhantomData,
+         };
+         if (*ptr).err.is_error() {
+             Err((
+                 KafkaError::MessageProduction((*ptr).err.into()),
+                 borrowed_message,
+             ))
+         } else {
+             Ok(borrowed_message)
+         }
+     }
 
     /// Returns a pointer to the [`RDKafkaMessage`].
     pub fn ptr(&self) -> *mut RDKafkaMessage {

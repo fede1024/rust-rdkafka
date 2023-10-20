@@ -280,7 +280,7 @@ impl<C: ClientContext> Client<C> {
 
     pub(crate) fn poll_event(
         &self,
-        queue: Arc<NativeQueue>,
+        queue: &NativeQueue,
         timeout: Timeout,
     ) -> Option<NativeEvent> {
         let event = unsafe { NativeEvent::from_ptr(queue.poll(timeout)) };
