@@ -12,7 +12,7 @@
 
 use std::collections::HashMap;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Overall statistics.
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
