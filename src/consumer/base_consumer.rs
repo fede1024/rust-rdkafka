@@ -741,13 +741,27 @@ where
     /// associated consumer regularly, even if no messages are expected, to
     /// serve events.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        unsafe {
-            NativePtr::from_ptr(rdsys::rd_kafka_consume_queue(
-                self.queue.ptr(),
-                timeout.into().as_millis(),
-            ))
+        let event = self.consumer
+            .client()
+            .poll_event(&self.queue, timeout.into())?;
+        let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+        match evtype {
+            rdsys::RD_KAFKA_EVENT_FETCH => {
+                unsafe {
+                    NativePtr::from_ptr(rdsys::rd_kafka_event_message_next(event.ptr()) as *mut _)
+                        .map(|ptr| BorrowedMessage::from_client(ptr, event, self))
+                }
+            }
+            _ => {
+                let buf = unsafe {
+                    let evname = rdsys::rd_kafka_event_name(event.ptr());
+                    CStr::from_ptr(evname).to_bytes()
+                };
+                let evname = String::from_utf8(buf.to_vec()).unwrap();
+                warn!("Ignored event '{}' on consumer poll", evname);
+                None
+            }
         }
-        .map(|ptr| unsafe { BorrowedMessage::from_consumer(ptr, &self.consumer) })
     }
 
     /// Sets a callback that will be invoked whenever the queue becomes
