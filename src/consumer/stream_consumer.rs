@@ -100,7 +100,11 @@ pub struct MessageStream<'a> {
 impl<'a> MessageStream<'a> {
     fn new(wakers: &'a WakerSlab, queue: &'a NativeQueue) -> MessageStream<'a> {
         let slot = wakers.register();
-        MessageStream { wakers, queue, slot }
+        MessageStream {
+            wakers,
+            queue,
+            slot,
+        }
     }
 
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
@@ -109,12 +113,10 @@ impl<'a> MessageStream<'a> {
         if let Some(ev) = event {
             let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
             match evtype {
-                rdsys::RD_KAFKA_EVENT_FETCH => {
-                    unsafe {
-                        NativePtr::from_ptr(rdsys::rd_kafka_event_message_next(ev.ptr()) as *mut _)
-                            .map(|ptr| BorrowedMessage::from_client(ptr, ev, self.queue))
-                    }
-                }
+                rdsys::RD_KAFKA_EVENT_FETCH => unsafe {
+                    NativePtr::from_ptr(rdsys::rd_kafka_event_message_next(ev.ptr()) as *mut _)
+                        .map(|ptr| BorrowedMessage::from_client(ptr, Arc::new(ev), self.queue))
+                },
                 _ => {
                     let buf = unsafe {
                         let evname = rdsys::rd_kafka_event_name(ev.ptr());
@@ -350,9 +352,12 @@ where
             .split_partition_queue(topic, partition)
             .map(|queue| {
                 let wakers = Arc::new(WakerSlab::new());
-                StreamPartitionQueue { queue, wakers, _consumer: self.clone() }
+                StreamPartitionQueue {
+                    queue,
+                    wakers,
+                    _consumer: self.clone(),
+                }
             })
-
     }
 }
 
