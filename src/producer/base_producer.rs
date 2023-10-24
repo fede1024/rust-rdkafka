@@ -338,6 +338,7 @@ where
     client: Client<C>,
     queue: NativeQueue,
     _partitioner: PhantomData<Part>,
+    min_poll_interval: Timeout,
 }
 
 impl<C, Part> BaseProducer<C, Part>
@@ -352,6 +353,7 @@ where
             client,
             queue,
             _partitioner: PhantomData,
+            min_poll_interval: Timeout::After(Duration::from_millis(100)),
         }
     }
 
@@ -489,12 +491,28 @@ where
         &self.client
     }
 
+    // As this library uses the rdkafka Event API, flush will not call rd_kafka_poll() but instead wait for
+    // the librdkafka-handled message count to reach zero. Runs until value reaches zero or timeout.
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
-        let ret = unsafe { rdsys::rd_kafka_flush(self.native_ptr(), timeout.into().as_millis()) };
-        if ret.is_error() {
-            Err(KafkaError::Flush(ret.into()))
-        } else {
-            Ok(())
+        let mut timeout = timeout.into();
+        loop {
+            let op_timeout = std::cmp::min(timeout, self.min_poll_interval);
+            if self.in_flight_count() > 0 {
+                unsafe { rdsys::rd_kafka_flush(self.native_ptr(), 0) };
+                self.poll(op_timeout);
+            } else {
+                return Ok(());
+            }
+
+            if op_timeout >= timeout {
+                let ret = unsafe { rdsys::rd_kafka_flush(self.native_ptr(), 0) };
+                if ret.is_error() {
+                    return Err(KafkaError::Flush(ret.into()));
+                } else {
+                    return Ok(());
+                }
+            }
+            timeout -= op_timeout;
         }
     }
 
