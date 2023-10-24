@@ -113,9 +113,7 @@ where
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        let event = self
-            .client()
-            .poll_event(self.get_queue(), timeout.into())?;
+        let event = self.client().poll_event(self.get_queue(), timeout.into())?;
         let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
         match evtype {
             rdsys::RD_KAFKA_EVENT_FETCH => self.handle_fetch_event(event),
@@ -145,7 +143,7 @@ where
     ) -> Option<KafkaResult<BorrowedMessage<'_>>> {
         unsafe {
             NativePtr::from_ptr(rdsys::rd_kafka_event_message_next(event.ptr()) as *mut _)
-                .map(|ptr| BorrowedMessage::from_client(ptr, event, self.client()))
+                .map(|ptr| BorrowedMessage::from_client(ptr, Arc::new(event), self.client()))
         }
     }
 
@@ -741,17 +739,16 @@ where
     /// associated consumer regularly, even if no messages are expected, to
     /// serve events.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        let event = self.consumer
+        let event = self
+            .consumer
             .client()
             .poll_event(&self.queue, timeout.into())?;
         let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
         match evtype {
-            rdsys::RD_KAFKA_EVENT_FETCH => {
-                unsafe {
-                    NativePtr::from_ptr(rdsys::rd_kafka_event_message_next(event.ptr()) as *mut _)
-                        .map(|ptr| BorrowedMessage::from_client(ptr, event, self))
-                }
-            }
+            rdsys::RD_KAFKA_EVENT_FETCH => unsafe {
+                NativePtr::from_ptr(rdsys::rd_kafka_event_message_next(event.ptr()) as *mut _)
+                    .map(|ptr| BorrowedMessage::from_client(ptr, Arc::new(event), self))
+            },
             _ => {
                 let buf = unsafe {
                     let evname = rdsys::rd_kafka_event_name(event.ptr());

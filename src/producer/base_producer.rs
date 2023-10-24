@@ -391,10 +391,10 @@ where
             Vec::from_raw_parts(messages.as_mut_ptr(), msgs_cnt, max_messages)
         };
 
+        let ev = Arc::new(event);
         for msg in messages {
-            let delivery_result = unsafe {
-                BorrowedMessage::from_dr_event(msg as *mut _, event.ptr(), self.client())
-            };
+            let delivery_result =
+                unsafe { BorrowedMessage::from_dr_event(msg as *mut _, ev.clone(), self.client()) };
             let delivery_opaque = unsafe { C::DeliveryOpaque::from_ptr((*msg)._private) };
             self.context().delivery(&delivery_result, delivery_opaque);
         }
