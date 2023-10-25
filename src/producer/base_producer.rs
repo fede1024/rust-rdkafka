@@ -611,8 +611,13 @@ where
 {
     fn drop(&mut self) {
         self.purge(PurgeConfig::default().queue().inflight());
-        // Still have to poll after purging to get the results that have been made ready by the purge
-        self.poll(Timeout::After(Duration::ZERO));
+        // Still have to flush after purging to get the results that have been made ready by the purge
+        if let Err(err) = self.flush(Timeout::After(Duration::from_millis(500))) {
+            warn!(
+                "Failed to flush outstanding messages while dropping the producer: {:?}",
+                err
+            );
+        }
     }
 }
 
