@@ -362,8 +362,8 @@ impl<'a> BorrowedMessage<'a> {
 
     /// Creates a new `BorrowedMessage` that wraps the native Kafka message
     /// pointer returned via the delivery report event. The lifetime of
-    /// the message will be bound to the lifetime of the event passed as
-    /// parameter. The message will not be freed in any circumstance.
+    /// the message will be bound to the lifetime of the client passed as
+    /// parameter.
     pub(crate) unsafe fn from_dr_event<C>(
         ptr: *mut RDKafkaMessage,
         event: Arc<NativeEvent>,
