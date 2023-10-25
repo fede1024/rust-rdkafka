@@ -312,6 +312,7 @@ pub struct BorrowedMessage<'a> {
     _owner: PhantomData<&'a u8>,
 }
 
+// When using the Event API, messages must not be freed with rd_kafka_message_destroy
 unsafe extern "C" fn no_op(_: *mut RDKafkaMessage) {}
 
 unsafe impl KafkaDrop for RDKafkaMessage {
