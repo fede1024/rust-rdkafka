@@ -156,6 +156,8 @@ where
                     let native_tpl = rdsys::rd_kafka_event_topic_partition_list(event.ptr());
                     TopicPartitionList::from_ptr(native_tpl)
                 };
+                // The TPL is owned by the Event and will be destroyed when the event is destroyed.
+                // Dropping it here will lead to double free.
                 let mut tpl = ManuallyDrop::new(tpl);
                 self.context()
                     .rebalance(self.client.native_client(), err, &mut tpl);
@@ -185,6 +187,8 @@ where
             let tpl = TopicPartitionList::new();
             self.context().commit_callback(commit_error, &tpl);
         } else {
+            // The TPL is owned by the Event and will be destroyed when the event is destroyed.
+            // Dropping it here will lead to double free.
             let tpl = ManuallyDrop::new(unsafe { TopicPartitionList::from_ptr(offsets) });
             self.context().commit_callback(commit_error, &tpl);
         }
