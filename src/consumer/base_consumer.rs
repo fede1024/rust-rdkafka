@@ -121,27 +121,40 @@ where
         queue: &NativeQueue,
         timeout: T,
     ) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        let event = self.client().poll_event(queue, timeout.into())?;
-        let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-        match evtype {
-            rdsys::RD_KAFKA_EVENT_FETCH => self.handle_fetch_event(event),
-            rdsys::RD_KAFKA_EVENT_REBALANCE => {
-                self.handle_rebalance_event(event);
-                None
+        let mut timeout = timeout.into();
+        let min_poll_interval = self.context().main_queue_min_poll_interval();
+        loop {
+            let op_timeout = std::cmp::min(timeout, min_poll_interval);
+            let maybe_event = self.client().poll_event(queue, op_timeout);
+            if let Some(event) = maybe_event {
+                let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+                match evtype {
+                    rdsys::RD_KAFKA_EVENT_FETCH => {
+                        if let Some(result) = self.handle_fetch_event(event) {
+                            return Some(result);
+                        }
+                    }
+                    rdsys::RD_KAFKA_EVENT_REBALANCE => {
+                        self.handle_rebalance_event(event);
+                    }
+                    rdsys::RD_KAFKA_EVENT_OFFSET_COMMIT => {
+                        self.handle_offset_commit_event(event);
+                    }
+                    _ => {
+                        let buf = unsafe {
+                            let evname = rdsys::rd_kafka_event_name(event.ptr());
+                            CStr::from_ptr(evname).to_bytes()
+                        };
+                        let evname = String::from_utf8(buf.to_vec()).unwrap();
+                        warn!("Ignored event '{}' on consumer poll", evname);
+                    }
+                }
             }
-            rdsys::RD_KAFKA_EVENT_OFFSET_COMMIT => {
-                self.handle_offset_commit_event(event);
-                None
+
+            if op_timeout >= timeout {
+                return None;
             }
-            _ => {
-                let buf = unsafe {
-                    let evname = rdsys::rd_kafka_event_name(event.ptr());
-                    CStr::from_ptr(evname).to_bytes()
-                };
-                let evname = String::from_utf8(buf.to_vec()).unwrap();
-                warn!("Ignored event '{}' on consumer poll", evname);
-                None
-            }
+            timeout -= op_timeout;
         }
     }
 
