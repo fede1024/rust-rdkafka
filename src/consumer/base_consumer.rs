@@ -89,9 +89,9 @@ where
         // need to listen to the consumer queue to observe events like
         // rebalancings and stats.
         unsafe { rdsys::rd_kafka_poll_set_consumer(client.native_ptr()) };
-        let queue = client.consumer_queue().ok_or(KafkaError::ClientCreation(
-            "rdkafka consumer queue not available".to_string(),
-        ))?;
+        let queue = client.consumer_queue().ok_or_else(|| {
+            KafkaError::ClientCreation("rdkafka consumer queue not available".to_string())
+        })?;
         Ok(BaseConsumer {
             client,
             queue,
