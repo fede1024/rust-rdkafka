@@ -278,11 +278,7 @@ impl<C: ClientContext> Client<C> {
         &self.context
     }
 
-    pub(crate) fn poll_event(
-        &self,
-        queue: &NativeQueue,
-        timeout: Timeout,
-    ) -> Option<NativeEvent> {
+    pub(crate) fn poll_event(&self, queue: &NativeQueue, timeout: Timeout) -> Option<NativeEvent> {
         let event = unsafe { NativeEvent::from_ptr(queue.poll(timeout)) };
         if let Some(ev) = event {
             let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
