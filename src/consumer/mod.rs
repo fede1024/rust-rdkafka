@@ -113,12 +113,12 @@ pub trait ConsumerContext: ClientContext {
     fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {}
 
     /// Returns the minimum interval at which to poll the main queue, which
-    /// services the logging, stats, and error callbacks.
+    /// services the logging, stats, and error events.
     ///
     /// The main queue is polled once whenever [`BaseConsumer::poll`] is called.
     /// If `poll` is called with a timeout that is larger than this interval,
     /// then the main queue will be polled at that interval while the consumer
-    /// queue is blocked.
+    /// queue is blocked. This allows serving events while there are no messages.
     ///
     /// For example, if the main queue's minimum poll interval is 200ms and
     /// `poll` is called with a timeout of 1s, then `poll` may block for up to
