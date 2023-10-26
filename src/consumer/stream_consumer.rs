@@ -1,6 +1,5 @@
 //! High-level consumers with a [`Stream`](futures_util::Stream) interface.
 
-use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::os::raw::c_void;
 use std::pin::Pin;
@@ -14,13 +13,11 @@ use futures_channel::oneshot;
 use futures_util::future::{self, Either, FutureExt};
 use futures_util::pin_mut;
 use futures_util::stream::{Stream, StreamExt};
-use log::warn;
 use slab::Slab;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::admin::NativeEvent;
 use crate::client::{Client, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::consumer::base_consumer::{BaseConsumer, PartitionQueue};
@@ -33,7 +30,7 @@ use crate::groups::GroupList;
 use crate::message::BorrowedMessage;
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{AsyncRuntime, DefaultRuntime, NativePtr, Timeout};
+use crate::util::{AsyncRuntime, DefaultRuntime, Timeout};
 
 unsafe extern "C" fn native_message_queue_nonempty_cb(_: *mut RDKafka, opaque_ptr: *mut c_void) {
     let wakers = &*(opaque_ptr as *const WakerSlab);
@@ -91,49 +88,50 @@ impl WakerSlab {
 /// A stream of messages from a [`StreamConsumer`].
 ///
 /// See the documentation of [`StreamConsumer::stream`] for details.
-pub struct MessageStream<'a> {
+pub struct MessageStream<'a, C: ConsumerContext> {
     wakers: &'a WakerSlab,
-    queue: &'a NativeQueue,
+    consumer: &'a BaseConsumer<C>,
+    partition_queue: Option<&'a NativeQueue>,
     slot: usize,
 }
 
-impl<'a> MessageStream<'a> {
-    fn new(wakers: &'a WakerSlab, queue: &'a NativeQueue) -> MessageStream<'a> {
+impl<'a, C: ConsumerContext> MessageStream<'a, C> {
+    fn new(wakers: &'a WakerSlab, consumer: &'a BaseConsumer<C>) -> MessageStream<'a, C> {
+        Self::new_with_optional_partition_queue(wakers, consumer, None)
+    }
+
+    fn new_with_partition_queue(
+        wakers: &'a WakerSlab,
+        consumer: &'a BaseConsumer<C>,
+        partition_queue: &'a NativeQueue,
+    ) -> MessageStream<'a, C> {
+        Self::new_with_optional_partition_queue(wakers, consumer, Some(partition_queue))
+    }
+
+    fn new_with_optional_partition_queue(
+        wakers: &'a WakerSlab,
+        consumer: &'a BaseConsumer<C>,
+        partition_queue: Option<&'a NativeQueue>,
+    ) -> MessageStream<'a, C> {
         let slot = wakers.register();
         MessageStream {
             wakers,
-            queue,
+            consumer,
+            partition_queue,
             slot,
         }
     }
 
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
-        let timeout: Timeout = Duration::ZERO.into();
-        let event = unsafe { NativeEvent::from_ptr(self.queue.poll(timeout)) };
-        if let Some(ev) = event {
-            let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
-            match evtype {
-                rdsys::RD_KAFKA_EVENT_FETCH => unsafe {
-                    NativePtr::from_ptr(rdsys::rd_kafka_event_message_next(ev.ptr()) as *mut _)
-                        .map(|ptr| BorrowedMessage::from_client(ptr, Arc::new(ev), self.queue))
-                },
-                _ => {
-                    let buf = unsafe {
-                        let evname = rdsys::rd_kafka_event_name(ev.ptr());
-                        CStr::from_ptr(evname).to_bytes()
-                    };
-                    let evname = String::from_utf8(buf.to_vec()).unwrap();
-                    warn!("Ignored event '{}' on consumer poll", evname);
-                    None
-                }
-            }
+        if let Some(queue) = self.partition_queue {
+            self.consumer.poll_queue(queue, Duration::ZERO)
         } else {
-            None
+            self.consumer.poll(Duration::ZERO)
         }
     }
 }
 
-impl<'a> Stream for MessageStream<'a> {
+impl<'a, C: ConsumerContext> Stream for MessageStream<'a, C> {
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -160,7 +158,7 @@ impl<'a> Stream for MessageStream<'a> {
     }
 }
 
-impl<'a> Drop for MessageStream<'a> {
+impl<'a, C: ConsumerContext> Drop for MessageStream<'a, C> {
     fn drop(&mut self) {
         self.wakers.unregister(self.slot);
     }
@@ -186,7 +184,6 @@ where
     C: ConsumerContext,
 {
     base: Arc<BaseConsumer<C>>,
-    queue: NativeQueue,
     wakers: Arc<WakerSlab>,
     _shutdown_trigger: oneshot::Sender<()>,
     _runtime: PhantomData<R>,
@@ -218,9 +215,7 @@ where
         };
 
         let base = Arc::new(BaseConsumer::new(config, native_config, context)?);
-        let client = base.client();
-        let native_ptr = client.native_ptr() as usize;
-        let queue = client.main_queue();
+        let native_ptr = base.client().native_ptr() as usize;
 
         let wakers = Arc::new(WakerSlab::new());
         unsafe { enable_nonempty_callback(base.get_queue(), &wakers) }
@@ -255,7 +250,6 @@ where
         Ok(StreamConsumer {
             base,
             wakers,
-            queue,
             _shutdown_trigger: shutdown_trigger,
             _runtime: PhantomData,
         })
@@ -278,8 +272,8 @@ where
     ///
     /// If you want multiple independent views of a Kafka topic, create multiple
     /// consumers, not multiple message streams.
-    pub fn stream(&self) -> MessageStream<'_> {
-        MessageStream::new(&self.wakers, &self.queue)
+    pub fn stream(&self) -> MessageStream<'_, C> {
+        MessageStream::new(&self.wakers, &self.base)
     }
 
     /// Receives the next message from the stream.
@@ -322,7 +316,7 @@ where
     /// `StreamConsumer::recv`.
     ///
     /// You must periodically await `StreamConsumer::recv`, even if no messages
-    /// are expected, to serve callbacks. Consider using a background task like:
+    /// are expected, to serve events. Consider using a background task like:
     ///
     /// ```
     /// # use rdkafka::consumer::StreamConsumer;
@@ -352,6 +346,7 @@ where
             .split_partition_queue(topic, partition)
             .map(|queue| {
                 let wakers = Arc::new(WakerSlab::new());
+                unsafe { enable_nonempty_callback(&queue.queue, &wakers) };
                 StreamPartitionQueue {
                     queue,
                     wakers,
@@ -573,8 +568,12 @@ where
     ///
     /// If you want multiple independent views of a Kafka partition, create
     /// multiple consumers, not multiple partition streams.
-    pub fn stream(&self) -> MessageStream<'_> {
-        MessageStream::new(&self.wakers, &self.queue.queue)
+    pub fn stream(&self) -> MessageStream<'_, C> {
+        MessageStream::new_with_partition_queue(
+            &self.wakers,
+            &self._consumer.base,
+            &self.queue.queue,
+        )
     }
 
     /// Receives the next message from the stream.

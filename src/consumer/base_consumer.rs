@@ -113,7 +113,15 @@ where
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        let event = self.client().poll_event(self.get_queue(), timeout.into())?;
+        self.poll_queue(self.get_queue(), timeout)
+    }
+
+    pub(crate) fn poll_queue<T: Into<Timeout>>(
+        &self,
+        queue: &NativeQueue,
+        timeout: T,
+    ) -> Option<KafkaResult<BorrowedMessage<'_>>> {
+        let event = self.client().poll_event(queue, timeout.into())?;
         let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
         match evtype {
             rdsys::RD_KAFKA_EVENT_FETCH => self.handle_fetch_event(event),
@@ -743,26 +751,7 @@ where
     /// associated consumer regularly, even if no messages are expected, to
     /// serve events.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        let event = self
-            .consumer
-            .client()
-            .poll_event(&self.queue, timeout.into())?;
-        let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-        match evtype {
-            rdsys::RD_KAFKA_EVENT_FETCH => unsafe {
-                NativePtr::from_ptr(rdsys::rd_kafka_event_message_next(event.ptr()) as *mut _)
-                    .map(|ptr| BorrowedMessage::from_client(ptr, Arc::new(event), self))
-            },
-            _ => {
-                let buf = unsafe {
-                    let evname = rdsys::rd_kafka_event_name(event.ptr());
-                    CStr::from_ptr(evname).to_bytes()
-                };
-                let evname = String::from_utf8(buf.to_vec()).unwrap();
-                warn!("Ignored event '{}' on consumer poll", evname);
-                None
-            }
-        }
+        self.consumer.poll_queue(&self.queue, timeout)
     }
 
     /// Sets a callback that will be invoked whenever the queue becomes
