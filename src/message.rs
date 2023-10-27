@@ -346,7 +346,7 @@ impl<'a> BorrowedMessage<'a> {
         if ptr.err.is_error() {
             let err = match ptr.err {
                 rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
-                    KafkaError::PartitionEOF((*ptr).partition)
+                    KafkaError::PartitionEOF(ptr.partition)
                 }
                 e => KafkaError::MessageConsumption(e.into()),
             };
