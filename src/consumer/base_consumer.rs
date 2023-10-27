@@ -134,6 +134,11 @@ where
                             return Some(result);
                         }
                     }
+                    rdsys::RD_KAFKA_EVENT_ERROR => {
+                        if let Some(err) = self.handle_error_event(event) {
+                            return Some(Err(err));
+                        }
+                    }
                     rdsys::RD_KAFKA_EVENT_REBALANCE => {
                         self.handle_rebalance_event(event);
                     }
@@ -212,6 +217,24 @@ where
             // Dropping it here will lead to double free.
             let tpl = ManuallyDrop::new(unsafe { TopicPartitionList::from_ptr(offsets) });
             self.context().commit_callback(commit_error, &tpl);
+        }
+    }
+
+    fn handle_error_event(&self, event: NativePtr<RDKafkaEvent>) -> Option<KafkaError> {
+        let rdkafka_err = unsafe { rdsys::rd_kafka_event_error(event.ptr()) };
+        if rdkafka_err.is_error() {
+            let err = match rdkafka_err {
+                rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
+                    let tp_ptr = unsafe { rdsys::rd_kafka_event_topic_partition(event.ptr()) };
+                    let partition = unsafe { (*tp_ptr).partition };
+                    unsafe { rdsys::rd_kafka_topic_partition_destroy(tp_ptr) };
+                    KafkaError::PartitionEOF(partition)
+                }
+                e => KafkaError::MessageConsumption(e.into()),
+            };
+            Some(err)
+        } else {
+            None
         }
     }
 

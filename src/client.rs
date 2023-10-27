@@ -285,7 +285,13 @@ impl<C: ClientContext> Client<C> {
             match evtype {
                 rdsys::RD_KAFKA_EVENT_LOG => self.handle_log_event(ev.ptr()),
                 rdsys::RD_KAFKA_EVENT_STATS => self.handle_stats_event(ev.ptr()),
-                rdsys::RD_KAFKA_EVENT_ERROR => self.handle_error_event(ev.ptr()),
+                rdsys::RD_KAFKA_EVENT_ERROR => {
+                    // rdkafka reports consumer errors via RD_KAFKA_EVENT_ERROR but producer errors gets
+                    // embedded on the ack returned via RD_KAFKA_EVENT_DR. Hence we need to return this event
+                    // for the consumer case in order to return the error to the user.
+                    self.handle_error_event(ev.ptr());
+                    return Some(ev);
+                }
                 rdsys::RD_KAFKA_EVENT_OAUTHBEARER_TOKEN_REFRESH => {
                     if C::ENABLE_REFRESH_OAUTH_TOKEN {
                         self.handle_oauth_refresh_event(ev.ptr());
