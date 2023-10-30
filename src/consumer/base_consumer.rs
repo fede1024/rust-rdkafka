@@ -331,6 +331,27 @@ where
             PartitionQueue::new(self.clone(), queue)
         })
     }
+
+    /// Close the queue used by a consumer.
+    /// Only exposed for advanced usage of this API and should not be used under normal circumstances.
+    pub fn close_queue(&self) -> KafkaResult<()> {
+        let err = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_consumer_close_queue(
+                self.client.native_ptr(),
+                self.queue.ptr(),
+            ))
+        };
+        if err.is_error() {
+            Err(KafkaError::ConsumerQueueClose(err.code()))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Returns true if the consumer is closed, else false.
+    pub fn closed(&self) -> bool {
+        unsafe { rdsys::rd_kafka_consumer_closed(self.client.native_ptr()) == 1 }
+    }
 }
 
 impl<C> Consumer<C> for BaseConsumer<C>
