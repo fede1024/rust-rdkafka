@@ -288,13 +288,41 @@ async fn test_consume_partition_order() {
         let mut i = 0;
         while i < 12 {
             if let Some(m) = consumer.poll(Timeout::After(Duration::from_secs(0))) {
-                let partition = m.unwrap().partition();
+                // retry on transient errors until we get a message
+                let m = match m {
+                    Err(KafkaError::MessageConsumption(
+                        RDKafkaErrorCode::BrokerTransportFailure,
+                    ))
+                    | Err(KafkaError::MessageConsumption(RDKafkaErrorCode::AllBrokersDown))
+                    | Err(KafkaError::MessageConsumption(RDKafkaErrorCode::OperationTimedOut)) => {
+                        continue
+                    }
+                    Err(err) => {
+                        panic!("Unexpected error receiving message: {:?}", err);
+                    }
+                    Ok(m) => m,
+                };
+                let partition = m.partition();
                 assert!(partition == 0 || partition == 2);
                 i += 1;
             }
 
             if let Some(m) = partition1.poll(Timeout::After(Duration::from_secs(0))) {
-                assert_eq!(m.unwrap().partition(), 1);
+                // retry on transient errors until we get a message
+                let m = match m {
+                    Err(KafkaError::MessageConsumption(
+                        RDKafkaErrorCode::BrokerTransportFailure,
+                    ))
+                    | Err(KafkaError::MessageConsumption(RDKafkaErrorCode::AllBrokersDown))
+                    | Err(KafkaError::MessageConsumption(RDKafkaErrorCode::OperationTimedOut)) => {
+                        continue
+                    }
+                    Err(err) => {
+                        panic!("Unexpected error receiving message: {:?}", err);
+                    }
+                    Ok(m) => m,
+                };
+                assert_eq!(m.partition(), 1);
                 i += 1;
             }
         }

@@ -7,6 +7,7 @@ use std::sync::Arc;
 use futures::future::{self, FutureExt};
 use futures::stream::StreamExt;
 use maplit::hashmap;
+use rdkafka_sys::RDKafkaErrorCode;
 use tokio::time::{self, Duration};
 
 use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext, StreamConsumer};
@@ -546,13 +547,41 @@ async fn test_consume_partition_order() {
         let mut i = 0;
         while i < 12 {
             if let Some(m) = consumer.recv().now_or_never() {
-                let partition = m.unwrap().partition();
+                // retry on transient errors until we get a message
+                let m = match m {
+                    Err(KafkaError::MessageConsumption(
+                        RDKafkaErrorCode::BrokerTransportFailure,
+                    ))
+                    | Err(KafkaError::MessageConsumption(RDKafkaErrorCode::AllBrokersDown))
+                    | Err(KafkaError::MessageConsumption(RDKafkaErrorCode::OperationTimedOut)) => {
+                        continue
+                    }
+                    Err(err) => {
+                        panic!("Unexpected error receiving message: {:?}", err);
+                    }
+                    Ok(m) => m,
+                };
+                let partition: i32 = m.partition();
                 assert!(partition == 0 || partition == 2);
                 i += 1;
             }
 
             if let Some(m) = partition1.recv().now_or_never() {
-                assert_eq!(m.unwrap().partition(), 1);
+                // retry on transient errors until we get a message
+                let m = match m {
+                    Err(KafkaError::MessageConsumption(
+                        RDKafkaErrorCode::BrokerTransportFailure,
+                    ))
+                    | Err(KafkaError::MessageConsumption(RDKafkaErrorCode::AllBrokersDown))
+                    | Err(KafkaError::MessageConsumption(RDKafkaErrorCode::OperationTimedOut)) => {
+                        continue
+                    }
+                    Err(err) => {
+                        panic!("Unexpected error receiving message: {:?}", err);
+                    }
+                    Ok(m) => m,
+                };
+                assert_eq!(m.partition(), 1);
                 i += 1;
             }
         }
