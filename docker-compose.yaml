@@ -2,7 +2,7 @@ version: '3'
 
 services:
   kafka:
-    image: confluentinc/cp-kafka:${CONFLUENT_VERSION:-5.3.1}
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION:-7.5.1}
     environment:
       - KAFKA_BROKER_ID=0
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
@@ -16,7 +16,7 @@ services:
     links: [zookeeper]
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION:-5.3.1}
+    image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION:-7.5.1}
     environment:
       - ZOOKEEPER_CLIENT_PORT=2181
     ports: ["2181:2181"]
