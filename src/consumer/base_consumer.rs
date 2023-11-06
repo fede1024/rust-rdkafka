@@ -716,15 +716,12 @@ where
     fn drop(&mut self) {
         trace!("Destroying consumer: {:?}", self.client.native_ptr());
         if self.group_id.is_some() {
-            let err = unsafe {
-                rdsys::rd_kafka_consumer_close_queue(self.client.native_ptr(), self.queue.ptr())
-            };
-            if !err.is_null() {
-                error!("Failed to close the consumer queue on drop");
-            }
-
-            while unsafe { rdsys::rd_kafka_consumer_closed(self.client.native_ptr()) } != 1 {
-                self.poll(Duration::from_millis(100));
+            if let Err(err) = self.close_queue() {
+                error!("Failed to close consumer queue on drop: {}", err);
+            } else {
+                while !self.closed() {
+                    self.poll(Duration::from_millis(100));
+                }
             }
         }
         trace!("Consumer destroyed: {:?}", self.client.native_ptr());
