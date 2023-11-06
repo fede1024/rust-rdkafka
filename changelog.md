@@ -5,6 +5,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 ## Unreleased
 
 * Update bundled librdkafka to 2.3.0.
+* Add cargo enforcement of MSRV of 1.61.
 
 ## 0.34.0 (2023-08-25)
 
