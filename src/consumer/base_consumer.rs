@@ -225,16 +225,16 @@ where
     fn handle_error_event(&self, event: NativePtr<RDKafkaEvent>) -> Option<KafkaError> {
         let rdkafka_err = unsafe { rdsys::rd_kafka_event_error(event.ptr()) };
         if rdkafka_err.is_error() {
-            let err = match rdkafka_err {
-                rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
-                    let tp_ptr = unsafe { rdsys::rd_kafka_event_topic_partition(event.ptr()) };
-                    let partition = unsafe { (*tp_ptr).partition };
-                    unsafe { rdsys::rd_kafka_topic_partition_destroy(tp_ptr) };
-                    KafkaError::PartitionEOF(partition)
-                }
-                e => KafkaError::MessageConsumption(e.into()),
-            };
-            Some(err)
+            if rdkafka_err == rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF {
+                let tp_ptr = unsafe { rdsys::rd_kafka_event_topic_partition(event.ptr()) };
+                let partition = unsafe { (*tp_ptr).partition };
+                unsafe { rdsys::rd_kafka_topic_partition_destroy(tp_ptr) };
+                Some(KafkaError::PartitionEOF(partition))
+            } else if unsafe { rdsys::rd_kafka_event_error_is_fatal(event.ptr()) } != 0 {
+                Some(KafkaError::MessageConsumptionFatal(rdkafka_err.into()))
+            } else {
+                Some(KafkaError::MessageConsumption(rdkafka_err.into()))
+            }
         } else {
             None
         }
