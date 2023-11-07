@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v4.7.0+2.2.0 (2023-11-07)
+
 * Upgrade to librdkafka v2.3.0.
 * Add cargo enforcement of MSRV of 1.61.
 
