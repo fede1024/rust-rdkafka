@@ -5,7 +5,7 @@ use std::mem::ManuallyDrop;
 use std::os::raw::c_void;
 use std::ptr;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use log::{error, warn};
 use rdkafka_sys as rdsys;
@@ -123,6 +123,7 @@ where
         queue: &NativeQueue,
         timeout: T,
     ) -> Option<KafkaResult<BorrowedMessage<'_>>> {
+        let now = Instant::now();
         let mut timeout = timeout.into();
         let min_poll_interval = self.context().main_queue_min_poll_interval();
         loop {
@@ -158,10 +159,10 @@ where
                 }
             }
 
-            if op_timeout >= timeout {
+            timeout = timeout.saturating_sub(now.elapsed());
+            if timeout.is_zero() {
                 return None;
             }
-            timeout -= op_timeout;
         }
     }
 
