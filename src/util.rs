@@ -48,6 +48,22 @@ impl Timeout {
             Timeout::Never => -1,
         }
     }
+
+    /// Saturating `Duration` subtraction to Timeout.
+    pub(crate) fn saturating_sub(&self, rhs: Duration) -> Timeout {
+        match (self, rhs) {
+            (Timeout::After(lhs), rhs) => Timeout::After(lhs.saturating_sub(rhs)),
+            (Timeout::Never, _) => Timeout::Never,
+        }
+    }
+
+    /// Returns `true` if the timeout is zero.
+    pub(crate) fn is_zero(&self) -> bool {
+        match self {
+            Timeout::After(d) => d.is_zero(),
+            Timeout::Never => false,
+        }
+    }
 }
 
 impl std::ops::SubAssign for Timeout {

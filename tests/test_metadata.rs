@@ -22,6 +22,7 @@ fn create_consumer(group_id: &str) -> StreamConsumer {
         .set("session.timeout.ms", "6000")
         .set("api.version.request", "true")
         .set("debug", "all")
+        .set("auto.offset.reset", "earliest")
         .create()
         .expect("Failed to create StreamConsumer")
 }

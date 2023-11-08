@@ -147,6 +147,8 @@ pub enum KafkaError {
     ClientCreation(String),
     /// Consumer commit failed.
     ConsumerCommit(RDKafkaErrorCode),
+    /// Consumer queue close failed.
+    ConsumerQueueClose(RDKafkaErrorCode),
     /// Flushing failed
     Flush(RDKafkaErrorCode),
     /// Global error.
@@ -155,6 +157,8 @@ pub enum KafkaError {
     GroupListFetch(RDKafkaErrorCode),
     /// Message consumption failed.
     MessageConsumption(RDKafkaErrorCode),
+    /// Message consumption failed with fatal error.
+    MessageConsumptionFatal(RDKafkaErrorCode),
     /// Message production error.
     MessageProduction(RDKafkaErrorCode),
     /// Metadata fetch error.
@@ -204,6 +208,9 @@ impl fmt::Debug for KafkaError {
             KafkaError::ConsumerCommit(err) => {
                 write!(f, "KafkaError (Consumer commit error: {})", err)
             }
+            KafkaError::ConsumerQueueClose(err) => {
+                write!(f, "KafkaError (Consumer queue close error: {})", err)
+            }
             KafkaError::Flush(err) => write!(f, "KafkaError (Flush error: {})", err),
             KafkaError::Global(err) => write!(f, "KafkaError (Global error: {})", err),
             KafkaError::GroupListFetch(err) => {
@@ -211,6 +218,9 @@ impl fmt::Debug for KafkaError {
             }
             KafkaError::MessageConsumption(err) => {
                 write!(f, "KafkaError (Message consumption error: {})", err)
+            }
+            KafkaError::MessageConsumptionFatal(err) => {
+                write!(f, "(Fatal) KafkaError (Message consumption error: {})", err)
             }
             KafkaError::MessageProduction(err) => {
                 write!(f, "KafkaError (Message production error: {})", err)
@@ -255,10 +265,14 @@ impl fmt::Display for KafkaError {
             }
             KafkaError::ClientCreation(ref err) => write!(f, "Client creation error: {}", err),
             KafkaError::ConsumerCommit(err) => write!(f, "Consumer commit error: {}", err),
+            KafkaError::ConsumerQueueClose(err) => write!(f, "Consumer queue close error: {}", err),
             KafkaError::Flush(err) => write!(f, "Flush error: {}", err),
             KafkaError::Global(err) => write!(f, "Global error: {}", err),
             KafkaError::GroupListFetch(err) => write!(f, "Group list fetch error: {}", err),
             KafkaError::MessageConsumption(err) => write!(f, "Message consumption error: {}", err),
+            KafkaError::MessageConsumptionFatal(err) => {
+                write!(f, "(Fatal) Message consumption error: {}", err)
+            }
             KafkaError::MessageProduction(err) => write!(f, "Message production error: {}", err),
             KafkaError::MetadataFetch(err) => write!(f, "Meta data fetch error: {}", err),
             KafkaError::NoMessageReceived => {
@@ -288,10 +302,12 @@ impl Error for KafkaError {
             KafkaError::ClientConfig(..) => None,
             KafkaError::ClientCreation(_) => None,
             KafkaError::ConsumerCommit(err) => Some(err),
+            KafkaError::ConsumerQueueClose(err) => Some(err),
             KafkaError::Flush(err) => Some(err),
             KafkaError::Global(err) => Some(err),
             KafkaError::GroupListFetch(err) => Some(err),
             KafkaError::MessageConsumption(err) => Some(err),
+            KafkaError::MessageConsumptionFatal(err) => Some(err),
             KafkaError::MessageProduction(err) => Some(err),
             KafkaError::MetadataFetch(err) => Some(err),
             KafkaError::NoMessageReceived => None,
@@ -327,10 +343,12 @@ impl KafkaError {
             KafkaError::ClientConfig(..) => None,
             KafkaError::ClientCreation(_) => None,
             KafkaError::ConsumerCommit(err) => Some(*err),
+            KafkaError::ConsumerQueueClose(err) => Some(*err),
             KafkaError::Flush(err) => Some(*err),
             KafkaError::Global(err) => Some(*err),
             KafkaError::GroupListFetch(err) => Some(*err),
             KafkaError::MessageConsumption(err) => Some(*err),
+            KafkaError::MessageConsumptionFatal(err) => Some(*err),
             KafkaError::MessageProduction(err) => Some(*err),
             KafkaError::MetadataFetch(err) => Some(*err),
             KafkaError::NoMessageReceived => None,
