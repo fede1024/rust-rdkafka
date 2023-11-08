@@ -4,6 +4,11 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+## 0.36.0 (2023-11-08)
+
+* Pivot the library from using librdkafka's callback interface to using
+  the event interface. The public API of the crate does not change.
+
 ## 0.35.0 (2023-11-07)
 
 * Update bundled librdkafka to 2.3.0.
