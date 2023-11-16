@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## v4.7.0+2.2.0 (2023-11-07)
+
+* Upgrade to librdkafka v2.3.0.
+* Add cargo enforcement of MSRV of 1.61.
+
+## v4.6.0+2.2.0 (2023-08-25)
+
+* Upgrade to librdkafka v2.2.0.
+
+## v4.5.0+1.9.2 (2023-06-09)
+
+* Add support for the cluster mock API.
+
+## v4.4.0+1.9.2 (2023-05-12)
+
 * Add the `RDKafkaDeleteGroup` and `RDKafkaGroupResult` type aliases to the
   `types` module.
 

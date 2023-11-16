@@ -4,6 +4,51 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+## 0.36.0 (2023-11-08)
+
+* Pivot the library from using librdkafka's callback interface to using
+  the event interface. The public API of the crate does not change.
+
+## 0.35.0 (2023-11-07)
+
+* Update bundled librdkafka to 2.3.0.
+* Add cargo enforcement of MSRV of 1.61.
+* Derives serde::Serialize on Statistics
+
+## 0.34.0 (2023-08-25)
+
+* Update bundled librdkafka to 2.2.0.
+
+## 0.33.2 (2023-07-06)
+
+* **Breaking change.** Change signature for `seek_partitions`. Following
+  librdkafka, individual partition errors should be reported in the per-partition
+  `error` field of `TopicPartitionList` elements.
+
+## 0.33.0 (2023-06-30)
+
+* Add interface to specify custom partitioners by extending `ProducerContext`
+  trait with capability to return optional custom partitioner.
+* Add `seek_partitions` to consumer.
+
+## 0.32.1 (2023-06-09)
+
+* Add support for the cluster mock API.
+* Expose assignment_lost method on the consumer.
+
+## 0.31.0 (2023-05-17)
+
+* **Breaking change.** Pass `KafkaError` to rebalance hooks instead of human-readable string
+  representation.
+
+## 0.30.0 (2023-05-12)
+
+* Support for unassigning static partitions by passing `null` to `rdsys::rd_kafka_assign` and expose the
+feature as `unassign` in `base_consumer`
+
+* Expose `rdsys::rd_kafka_incremental_assign` and `rdsys::rd_kafka_incremental_unassign` in `base_consumer` for 
+incremental changes to static assignments
+
 * **Breaking change.** `util::get_rdkafka_version` now returns `(i32, String)`.
   Previously, it returned `(u16, String)` which would silently truncate the hex
   representation of the version:
@@ -15,13 +60,18 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
   > xx = pre-release id (0xff is the final release)
   > E.g.: 0x010902ff = 1.9.2
 
-* Add the [`AdminClient::delete_groups`] method, which deletes consumer groups
+* Add the `AdminClient::delete_groups` method, which deletes consumer groups
   from a Kafka cluster ([#510]).
 
   Thanks, [@andrewinci].
 
 [@andrewinci]: https://github.com/andrewinci
 [#510]: https://github.com/fede1024/rust-rdkafka/issues/510
+
+* Add support for the `purge` API, that allows retreiving messages that were
+  queued for production when shutting down. It is automatically called on `Drop`.
+  Fixes leaking associated data (futures...).
+
 
 ## 0.29.0 (2022-10-29)
 

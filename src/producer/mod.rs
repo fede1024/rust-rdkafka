@@ -183,13 +183,14 @@ pub use self::future_producer::{DeliveryFuture, FutureProducer, FutureRecord};
 ///
 /// This user-defined object can be used to provide custom callbacks for
 /// producer events. Refer to the list of methods to check which callbacks can
-/// be specified.
+/// be specified. It can also specify custom partitioner to register and to be
+/// used for deciding to which partition write message into.
 ///
 /// In particular, it can be used to specify the `delivery` callback that will
 /// be called when the acknowledgement for a delivered message is received.
 ///
 /// See also the [`ClientContext`] trait.
-pub trait ProducerContext: ClientContext {
+pub trait ProducerContext<Part: Partitioner = NoCustomPartitioner>: ClientContext {
     /// A `DeliveryOpaque` is a user-defined structure that will be passed to
     /// the producer when producing a message, and returned to the `delivery`
     /// method once the message has been delivered, or failed to.
@@ -199,6 +200,58 @@ pub trait ProducerContext: ClientContext {
     /// failed to). The `DeliveryOpaque` will be the one provided by the user
     /// when calling send.
     fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
+
+    /// This method is called when creating producer in order to optionally register custom partitioner.
+    /// If custom partitioner is not used then `partitioner` configuration property is used (or its default).
+    ///
+    /// sticky.partitioning.linger.ms must be 0 to run custom partitioner for messages with null key.
+    /// See https://github.com/confluentinc/librdkafka/blob/081fd972fa97f88a1e6d9a69fc893865ffbb561a/src/rdkafka_msg.c#L1192-L1196
+    fn get_custom_partitioner(&self) -> Option<&Part> {
+        None
+    }
+}
+
+/// Unassigned partition.
+/// See RD_KAFKA_PARTITION_UA from librdkafka.
+pub const PARTITION_UA: i32 = -1;
+
+/// Trait allowing to customize the partitioning of messages.
+pub trait Partitioner {
+    /// Return partition to use for `topic_name`.
+    /// `topic_name` is the name of a topic to which a message is being produced.
+    /// `partition_cnt` is the number of partitions for this topic.
+    /// `key` is an optional key of the message.
+    /// `is_partition_available` is a function that can be called to check if a partition has an active leader broker.
+    ///
+    /// It may be called in any thread at any time,
+    /// It may be called multiple times for the same message/key.
+    /// MUST NOT block or execute for prolonged periods of time.
+    /// MUST return a value between 0 and partition_cnt-1, or the
+    /// special RD_KAFKA_PARTITION_UA value if partitioning could not be performed.
+    /// See documentation for rd_kafka_topic_conf_set_partitioner_cb from librdkafka for more info.
+    fn partition(
+        &self,
+        topic_name: &str,
+        key: Option<&[u8]>,
+        partition_cnt: i32,
+        is_partition_available: impl Fn(i32) -> bool,
+    ) -> i32;
+}
+
+/// Placeholder used when no custom partitioner is needed.
+#[derive(Clone)]
+pub struct NoCustomPartitioner {}
+
+impl Partitioner for NoCustomPartitioner {
+    fn partition(
+        &self,
+        _topic_name: &str,
+        _key: Option<&[u8]>,
+        _partition_cnt: i32,
+        _is_paritition_available: impl Fn(i32) -> bool,
+    ) -> i32 {
+        panic!("NoCustomPartitioner should not be called");
+    }
 }
 
 /// An inert producer context that can be used when customizations are not
@@ -207,16 +260,17 @@ pub trait ProducerContext: ClientContext {
 pub struct DefaultProducerContext;
 
 impl ClientContext for DefaultProducerContext {}
-impl ProducerContext for DefaultProducerContext {
+impl ProducerContext<NoCustomPartitioner> for DefaultProducerContext {
     type DeliveryOpaque = ();
 
     fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
 }
 
 /// Common trait for all producers.
-pub trait Producer<C = DefaultProducerContext>
+pub trait Producer<C = DefaultProducerContext, Part = NoCustomPartitioner>
 where
-    C: ProducerContext,
+    Part: Partitioner,
+    C: ProducerContext<Part>,
 {
     /// Returns the [`Client`] underlying this producer.
     fn client(&self) -> &Client<C>;
@@ -236,6 +290,25 @@ where
     /// This method should be called before termination to ensure delivery of
     /// all enqueued messages. It will call `poll()` internally.
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
+
+    /// Purge messages currently handled by the producer instance.
+    ///
+    /// See the [`PurgeConfig`] documentation for the list of flags that may be provided.
+    ///
+    /// If providing an empty set of flags, nothing will be purged.
+    ///
+    /// The application will need to call `::poll()` or `::flush()`
+    /// afterwards to serve the delivery report callbacks of the purged messages.
+    ///
+    /// Messages purged from internal queues fail with the delivery report
+    /// error code set to
+    /// [`KafkaError::MessageProduction(RDKafkaErrorCode::PurgeQueue)`](crate::error::RDKafkaErrorCode::PurgeQueue),
+    /// while purged messages that are in-flight to or from the broker will fail
+    /// with the error code set to
+    /// [`KafkaError::MessageProduction(RDKafkaErrorCode::PurgeInflight)`](crate::error::RDKafkaErrorCode::PurgeInflight).
+    ///
+    /// This call may block for a short time while background thread queues are purged.
+    fn purge(&self, flags: PurgeConfig);
 
     /// Enable sending transactions with this producer.
     ///
@@ -367,4 +440,82 @@ where
     /// [`RDKafkaErrorCode::PurgeInflight`]: crate::error::RDKafkaErrorCode::PurgeInflight
     /// [`RDKafkaErrorCode::PurgeQueue`]: crate::error::RDKafkaErrorCode::PurgeQueue
     fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()>;
+}
+
+/// Settings to provide to [`Producer::purge`] to parametrize the purge behavior
+///
+/// `PurgeConfig::default()` corresponds to a setting where nothing is purged.
+///
+/// # Example
+/// To purge both queued messages and in-flight messages:
+/// ```
+/// # use rdkafka::producer::PurgeConfig;
+/// let settings = PurgeConfig::default().queue().inflight();
+/// ```
+#[derive(Default, Clone, Copy)]
+pub struct PurgeConfig {
+    flag_bits: i32,
+}
+impl PurgeConfig {
+    /// Purge messages in internal queues. This does not purge inflight messages.
+    #[inline]
+    pub fn queue(self) -> Self {
+        Self {
+            flag_bits: self.flag_bits | rdkafka_sys::RD_KAFKA_PURGE_F_QUEUE,
+        }
+    }
+    /// Purge messages in-flight to or from the broker.
+    /// Purging these messages will void any future acknowledgements from the
+    /// broker, making it impossible for the application to know if these
+    /// messages were successfully delivered or not.
+    /// Retrying these messages may lead to duplicates.
+    ///
+    /// This does not purge messages in internal queues.
+    #[inline]
+    pub fn inflight(self) -> Self {
+        Self {
+            flag_bits: self.flag_bits | rdkafka_sys::RD_KAFKA_PURGE_F_INFLIGHT,
+        }
+    }
+    /// Don't wait for background thread queue purging to finish.
+    #[inline]
+    pub fn non_blocking(self) -> Self {
+        Self {
+            flag_bits: self.flag_bits | rdkafka_sys::RD_KAFKA_PURGE_F_NON_BLOCKING,
+        }
+    }
+}
+
+macro_rules! negative_and_debug_impls {
+    ($($f: ident -> !$set_fn: ident,)*) => {
+        impl PurgeConfig {
+            $(
+                #[inline]
+                #[doc = concat!("Unsets the flag set by [`", stringify!($set_fn), "`](PurgeConfig::", stringify!($set_fn),")")]
+                pub fn $f(self) -> Self {
+                    Self {
+                        flag_bits: self.flag_bits & !PurgeConfig::default().$set_fn().flag_bits,
+                    }
+                }
+            )*
+        }
+        impl std::fmt::Debug for PurgeConfig {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                // Simulate a struct that holds a set of booleans
+                let mut d = f.debug_struct("PurgeConfig");
+                $(
+                    d.field(
+                        stringify!($set_fn),
+                        &((self.flag_bits & Self::default().$set_fn().flag_bits) != 0),
+                    );
+                )*
+                d.finish()
+            }
+        }
+    };
+}
+negative_and_debug_impls! {
+    no_queue -> !queue,
+    no_inflight -> !inflight,
+    blocking -> !non_blocking,
 }

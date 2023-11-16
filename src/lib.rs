@@ -176,7 +176,7 @@
 //!
 //! ### Minimum supported Rust version (MSRV)
 //!
-//! The current minimum supported Rust version (MSRV) is 1.45.0. Note that
+//! The current minimum supported Rust version (MSRV) is 1.61.0. Note that
 //! bumping the MSRV is not considered a breaking change. Any release of
 //! rust-rdkafka may bump the MSRV.
 //!
@@ -272,7 +272,7 @@
 
 mod log;
 
-pub use rdkafka_sys::types;
+pub use rdkafka_sys::{bindings, helpers, types};
 
 pub mod admin;
 pub mod client;
@@ -282,6 +282,7 @@ pub mod error;
 pub mod groups;
 pub mod message;
 pub mod metadata;
+pub mod mocking;
 pub mod producer;
 pub mod statistics;
 pub mod topic_partition_list;

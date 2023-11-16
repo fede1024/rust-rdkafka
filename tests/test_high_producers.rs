@@ -156,3 +156,42 @@ async fn test_future_producer_send_fail() {
         }
     }
 }
+
+#[tokio::test]
+async fn test_future_undelivered() {
+    let delivery_future = {
+        let mut config = ClientConfig::new();
+        // There's no server running there
+        config
+            .set("bootstrap.servers", "localhost:47021")
+            .set("message.timeout.ms", "1");
+        let producer: FutureProducer = config.create().expect("Failed to create producer");
+
+        let delivery_future = producer
+            .send_result(
+                FutureRecord::to("topic")
+                    .payload("payload")
+                    .key("key")
+                    .partition(100),
+            )
+            .expect("Failed to queue message");
+        delivery_future
+
+        // drop producer. This should resolve the future as per purge API (couldn't be delivered)
+    };
+
+    match delivery_future.await {
+        Ok(Err((kafka_error, owned_message))) => {
+            assert_eq!(
+                kafka_error.to_string(),
+                "Message production error: PurgeQueue (Local: Purged in queue)"
+            );
+            assert_eq!(owned_message.topic(), "topic");
+            assert_eq!(owned_message.key(), Some(b"key" as _));
+            assert_eq!(owned_message.payload(), Some(b"payload" as _));
+        }
+        v => {
+            panic!("Unexpected return value: {:?}", v);
+        }
+    }
+}

@@ -1,6 +1,8 @@
 use std::borrow::Borrow;
 use std::env;
 use std::ffi::OsStr;
+#[cfg(feature = "cmake-build")]
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
@@ -72,6 +74,11 @@ fn main() {
             }
         }
     } else {
+        // Ensure that we are in the right directory
+        let rdkafkasys_root = Path::new("rdkafka-sys");
+        if rdkafkasys_root.exists() {
+            assert!(env::set_current_dir(&rdkafkasys_root).is_ok());
+        }
         if !Path::new("librdkafka/LICENSE").exists() {
             eprintln!("Setting up submodules");
             run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
@@ -229,6 +236,14 @@ fn build_librdkafka() {
             config.cxxflag("-DCURL_STATICLIB");
             config.cflag(format!("-I{}/include", curl_root));
             config.cxxflag(format!("-I{}/include", curl_root));
+            config.cflag(format!("-L{}/lib", curl_root));
+            config.cxxflag(format!("-L{}/lib", curl_root));
+            //FIXME: Upstream should be copying this in their build.rs
+            fs::copy(
+                format!("{}/build/libcurl.a", curl_root),
+                format!("{}/lib/libcurl.a", curl_root),
+            )
+            .unwrap();
         }
     } else {
         config.define("WITH_CURL", "0");
@@ -270,6 +285,10 @@ fn build_librdkafka() {
 
     if let Ok(system_name) = env::var("CMAKE_SYSTEM_NAME") {
         config.define("CMAKE_SYSTEM_NAME", system_name);
+    }
+
+    if let Ok(make_program) = env::var("CMAKE_MAKE_PROGRAM") {
+        config.define("CMAKE_MAKE_PROGRAM", make_program);
     }
 
     if !cmake_library_paths.is_empty() {

@@ -174,9 +174,14 @@ async fn test_topics() {
             is_default: false,
             is_sensitive: false,
         };
+        let default_max_msg_bytes = if get_broker_version() <= KafkaVersion(2, 3, 0, 0) {
+            "1000012"
+        } else {
+            "1048588"
+        };
         let expected_entry2 = ConfigEntry {
             name: "max.message.bytes".into(),
-            value: Some("1000012".into()),
+            value: Some(default_max_msg_bytes.into()),
             source: ConfigSource::Default,
             is_read_only: false,
             is_default: true,

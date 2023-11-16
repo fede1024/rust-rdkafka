@@ -1,6 +1,6 @@
 [package]
 name = "rdkafka-sys"
-version = "4.3.0+1.9.2"
+version = "4.7.0+2.3.0"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 build = "build.rs"
 links = "rdkafka"
@@ -10,6 +10,7 @@ description = "Native bindings to the librdkafka library"
 keywords = ["kafka", "rdkafka"]
 categories = ["external-ffi-bindings"]
 edition = "2018"
+rust-version = "1.61"
 
 [dependencies]
 num_enum = "0.5.0"
@@ -17,7 +18,7 @@ libc = "0.2.65"
 openssl-sys = { version = "0.9.48", optional = true }
 libz-sys = { version = "1.0.0", optional = true }
 curl-sys = { version = "0.4.55", optional = true }
-zstd-sys = { version = "2.0.0", optional = true }
+zstd-sys = { version = "2.0.6", optional = true }
 lz4-sys = { version = "1.8.3", optional = true }
 sasl2-sys = { version = "0.1.6", optional = true }
 
@@ -75,7 +76,7 @@ curl = ["curl-sys"]
 
 # Link against the version of curl bundled with the curl-sys crate, rather than
 # the system's version.
-curl-static = ["curl", "curl-sys/static-curl"]
+curl-static = ["curl-sys/static-curl"]
 
 # Enable support for zstd compression.
 zstd = ["zstd-sys"]
