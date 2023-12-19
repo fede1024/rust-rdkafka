@@ -137,7 +137,7 @@ where
     pub fn bootstrap_servers(&self) -> String {
         let bootstrap =
             unsafe { CStr::from_ptr(rdsys::rd_kafka_mock_cluster_bootstraps(self.mock_cluster)) };
-        bootstrap.to_string_lossy().to_string()
+        bootstrap.to_string_lossy().into_owned()
     }
 
     /// Clear the cluster's error state for the given ApiKey.
