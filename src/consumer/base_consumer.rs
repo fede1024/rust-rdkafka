@@ -149,12 +149,11 @@ where
                         self.handle_offset_commit_event(event);
                     }
                     _ => {
-                        let buf = unsafe {
+                        let evname = unsafe {
                             let evname = rdsys::rd_kafka_event_name(event.ptr());
-                            CStr::from_ptr(evname).to_bytes()
+                            CStr::from_ptr(evname).to_string_lossy()
                         };
-                        let evname = String::from_utf8(buf.to_vec()).unwrap();
-                        warn!("Ignored event '{}' on consumer poll", evname);
+                        warn!("Ignored event '{evname}' on consumer poll");
                     }
                 }
             }
@@ -192,13 +191,12 @@ where
                     .rebalance(self.client.native_client(), err, &mut tpl);
             }
             _ => {
-                let buf = unsafe {
+                let err = unsafe {
                     let err_name =
                         rdsys::rd_kafka_err2name(rdsys::rd_kafka_event_error(event.ptr()));
-                    CStr::from_ptr(err_name).to_bytes()
+                    CStr::from_ptr(err_name).to_string_lossy()
                 };
-                let err = String::from_utf8(buf.to_vec()).unwrap();
-                warn!("invalid rebalance event: {:?}", err);
+                warn!("invalid rebalance event: {err}");
             }
         }
     }
