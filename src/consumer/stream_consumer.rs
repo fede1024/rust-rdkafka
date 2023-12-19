@@ -123,10 +123,11 @@ impl<'a, C: ConsumerContext> MessageStream<'a, C> {
     }
 
     fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
+        let timeout: Timeout = Duration::ZERO.into();
         if let Some(queue) = self.partition_queue {
-            self.consumer.poll_queue(queue, Duration::ZERO)
+            self.consumer.poll_queue(queue, timeout)
         } else {
-            self.consumer.poll(Duration::ZERO)
+            self.consumer.poll(timeout)
         }
     }
 }

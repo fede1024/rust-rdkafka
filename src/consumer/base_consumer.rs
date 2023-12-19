@@ -115,16 +115,15 @@ where
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        self.poll_queue(self.get_queue(), timeout)
+        self.poll_queue(self.get_queue(), timeout.into())
     }
 
-    pub(crate) fn poll_queue<T: Into<Timeout>>(
+    pub(crate) fn poll_queue(
         &self,
         queue: &NativeQueue,
-        timeout: T,
+        mut timeout: Timeout,
     ) -> Option<KafkaResult<BorrowedMessage<'_>>> {
         let now = Instant::now();
-        let mut timeout = timeout.into();
         let min_poll_interval = self.context().main_queue_min_poll_interval();
         loop {
             let op_timeout = std::cmp::min(timeout, min_poll_interval);
@@ -795,7 +794,7 @@ where
     /// associated consumer regularly, even if no messages are expected, to
     /// serve events.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        self.consumer.poll_queue(&self.queue, timeout)
+        self.consumer.poll_queue(&self.queue, timeout.into())
     }
 
     /// Sets a callback that will be invoked whenever the queue becomes
