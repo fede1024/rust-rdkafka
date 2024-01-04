@@ -144,9 +144,15 @@ where
                     }
                     rdsys::RD_KAFKA_EVENT_REBALANCE => {
                         self.handle_rebalance_event(event);
+                        if timeout != Timeout::Never {
+                            return None;
+                        }
                     }
                     rdsys::RD_KAFKA_EVENT_OFFSET_COMMIT => {
                         self.handle_offset_commit_event(event);
+                        if timeout != Timeout::Never {
+                            return None;
+                        }
                     }
                     _ => {
                         let buf = unsafe {
