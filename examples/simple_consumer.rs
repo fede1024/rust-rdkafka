@@ -4,7 +4,7 @@ use log::{info, warn};
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext, Rebalance};
+use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, ConsumerContext, Rebalance};
 use rdkafka::error::KafkaResult;
 use rdkafka::message::{Headers, Message};
 use rdkafka::topic_partition_list::TopicPartitionList;
@@ -22,11 +22,11 @@ struct CustomContext;
 impl ClientContext for CustomContext {}
 
 impl ConsumerContext for CustomContext {
-    fn pre_rebalance(&self, rebalance: &Rebalance) {
+    fn pre_rebalance(&self, _: &BaseConsumer<Self>, rebalance: &Rebalance) {
         info!("Pre rebalance {:?}", rebalance);
     }
 
-    fn post_rebalance(&self, rebalance: &Rebalance) {
+    fn post_rebalance(&self, _: &BaseConsumer<Self>, rebalance: &Rebalance) {
         info!("Post rebalance {:?}", rebalance);
     }
 

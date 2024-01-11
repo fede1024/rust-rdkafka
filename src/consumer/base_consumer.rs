@@ -11,7 +11,7 @@ use log::{error, warn};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, NativeQueue};
+use crate::client::{Client, NativeClient, NativeQueue};
 use crate::config::{
     ClientConfig, FromClientConfig, FromClientConfigAndContext, NativeClientConfig,
 };
@@ -194,8 +194,7 @@ where
                 // The TPL is owned by the Event and will be destroyed when the event is destroyed.
                 // Dropping it here will lead to double free.
                 let mut tpl = ManuallyDrop::new(tpl);
-                self.context()
-                    .rebalance(self.client.native_client(), err, &mut tpl);
+                self.context().rebalance(self, err, &mut tpl);
             }
             _ => {
                 let buf = unsafe {
@@ -358,6 +357,10 @@ where
     /// Returns true if the consumer is closed, else false.
     pub fn closed(&self) -> bool {
         unsafe { rdsys::rd_kafka_consumer_closed(self.client.native_ptr()) == 1 }
+    }
+
+    pub(crate) fn native_client(&self) -> &NativeClient {
+        self.client.native_client()
     }
 }
 
