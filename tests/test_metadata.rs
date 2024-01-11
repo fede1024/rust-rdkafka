@@ -31,7 +31,7 @@ fn create_consumer(group_id: &str) -> StreamConsumer {
 async fn test_metadata() {
     let _r = env_logger::try_init();
 
-    let topic_name = rand_test_topic();
+    let topic_name = rand_test_topic("test_metadata");
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None).await;
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None).await;
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(2), None).await;
@@ -92,7 +92,7 @@ async fn test_metadata() {
 async fn test_subscription() {
     let _r = env_logger::try_init();
 
-    let topic_name = rand_test_topic();
+    let topic_name = rand_test_topic("test_subscription");
     populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None).await;
     let consumer = create_consumer(&rand_test_group());
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
@@ -109,7 +109,7 @@ async fn test_subscription() {
 async fn test_group_membership() {
     let _r = env_logger::try_init();
 
-    let topic_name = rand_test_topic();
+    let topic_name = rand_test_topic("test_group_membership");
     let group_name = rand_test_group();
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(0), None).await;
     populate_topic(&topic_name, 1, &value_fn, &key_fn, Some(1), None).await;
