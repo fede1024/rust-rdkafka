@@ -64,8 +64,8 @@ fn count_records(topic: &str, iso: IsolationLevel) -> Result<usize, KafkaError> 
 
 #[tokio::test]
 async fn test_transaction_abort() -> Result<(), Box<dyn Error>> {
-    let consume_topic = rand_test_topic();
-    let produce_topic = rand_test_topic();
+    let consume_topic = rand_test_topic("test_transaction_abort");
+    let produce_topic = rand_test_topic("test_transaction_abort");
 
     populate_topic(&consume_topic, 30, &value_fn, &key_fn, Some(0), None).await;
 
@@ -132,8 +132,8 @@ async fn test_transaction_abort() -> Result<(), Box<dyn Error>> {
 
 #[tokio::test]
 async fn test_transaction_commit() -> Result<(), Box<dyn Error>> {
-    let consume_topic = rand_test_topic();
-    let produce_topic = rand_test_topic();
+    let consume_topic = rand_test_topic("test_transaction_commit");
+    let produce_topic = rand_test_topic("test_transaction_commit");
 
     populate_topic(&consume_topic, 30, &value_fn, &key_fn, Some(0), None).await;
 

@@ -31,7 +31,7 @@ fn create_base_consumer(
 async fn test_produce_consume_seek() {
     let _r = env_logger::try_init();
 
-    let topic_name = rand_test_topic();
+    let topic_name = rand_test_topic("test_produce_consume_seek");
     populate_topic(&topic_name, 5, &value_fn, &key_fn, Some(0), None).await;
     let consumer = create_base_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
@@ -96,7 +96,7 @@ async fn test_produce_consume_seek() {
 async fn test_produce_consume_seek_partitions() {
     let _r = env_logger::try_init();
 
-    let topic_name = rand_test_topic();
+    let topic_name = rand_test_topic("test_produce_consume_seek_partitions");
     populate_topic(&topic_name, 30, &value_fn, &key_fn, None, None).await;
 
     let consumer = create_base_consumer(&rand_test_group(), None);
@@ -158,7 +158,7 @@ async fn test_produce_consume_iter() {
     let _r = env_logger::try_init();
 
     let start_time = current_time_millis();
-    let topic_name = rand_test_topic();
+    let topic_name = rand_test_topic("test_produce_consume_iter");
     let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
     let consumer = create_base_consumer(&rand_test_group(), None);
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
@@ -196,7 +196,7 @@ async fn test_pause_resume_consumer_iter() {
 
     let _r = env_logger::try_init();
 
-    let topic_name = rand_test_topic();
+    let topic_name = rand_test_topic("test_pause_resume_consumer_iter");
     populate_topic(
         &topic_name,
         MESSAGE_COUNT,
@@ -237,7 +237,7 @@ async fn test_pause_resume_consumer_iter() {
 async fn test_consume_partition_order() {
     let _r = env_logger::try_init();
 
-    let topic_name = rand_test_topic();
+    let topic_name = rand_test_topic("test_consume_partition_order");
     populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(0), None).await;
     populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(1), None).await;
     populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(2), None).await;
@@ -357,7 +357,7 @@ async fn test_consume_partition_order() {
 async fn test_produce_consume_message_queue_nonempty_callback() {
     let _r = env_logger::try_init();
 
-    let topic_name = rand_test_topic();
+    let topic_name = rand_test_topic("test_produce_consume_message_queue_nonempty_callback");
 
     create_topic(&topic_name, 1).await;
 
