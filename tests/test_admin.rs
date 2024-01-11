@@ -32,7 +32,7 @@ fn create_admin_client() -> AdminClient<DefaultClientContext> {
 
 async fn create_consumer_group(consumer_group_name: &str) {
     let admin_client = create_admin_client();
-    let topic_name = &rand_test_topic();
+    let topic_name = &rand_test_topic(consumer_group_name);
     let consumer: BaseConsumer = create_config()
         .set("group.id", consumer_group_name.clone())
         .create()
@@ -124,8 +124,8 @@ async fn test_topics() {
     // Verify that topics are created as specified, and that they can later
     // be deleted.
     {
-        let name1 = rand_test_topic();
-        let name2 = rand_test_topic();
+        let name1 = rand_test_topic("test_topics");
+        let name2 = rand_test_topic("test_topics");
 
         // Test both the builder API and the literal construction.
         let topic1 =
@@ -254,7 +254,7 @@ async fn test_topics() {
     // Verify that incorrect replication configurations are ignored when
     // creating partitions.
     {
-        let name = rand_test_topic();
+        let name = rand_test_topic("test_topics");
         let topic = NewTopic::new(&name, 1, TopicReplication::Fixed(1));
 
         let res = admin_client
@@ -291,7 +291,7 @@ async fn test_topics() {
 
     // Verify that deleting a non-existent topic fails.
     {
-        let name = rand_test_topic();
+        let name = rand_test_topic("test_topics");
         let res = admin_client
             .delete_topics(&[&name], &opts)
             .await
@@ -305,8 +305,8 @@ async fn test_topics() {
     // Verify that mixed-success operations properly report the successful and
     // failing operators.
     {
-        let name1 = rand_test_topic();
-        let name2 = rand_test_topic();
+        let name1 = rand_test_topic("test_topics");
+        let name2 = rand_test_topic("test_topics");
 
         let topic1 = NewTopic::new(&name1, 1, TopicReplication::Fixed(1));
         let topic2 = NewTopic::new(&name2, 1, TopicReplication::Fixed(1));
