@@ -4,7 +4,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-## 0.36.1 (2024-01-11)
+## 0.36.2 (2024-01-16)
 
 * Update `BaseConsumer::poll` to return `None` when handling rebalance
   or offset commit events.
