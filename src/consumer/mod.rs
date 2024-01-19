@@ -100,12 +100,12 @@ pub trait ConsumerContext: ClientContext + Sized {
     /// Pre-rebalance callback. This method will run before the rebalance and
     /// should terminate its execution quickly.
     #[allow(unused_variables)]
-    fn pre_rebalance<'a>(&self, base_consumer: &BaseConsumer<Self>, rebalance: &Rebalance<'a>) {}
+    fn pre_rebalance(&self, base_consumer: &BaseConsumer<Self>, rebalance: &Rebalance<'_>) {}
 
     /// Post-rebalance callback. This method will run after the rebalance and
     /// should terminate its execution quickly.
     #[allow(unused_variables)]
-    fn post_rebalance<'a>(&self, base_consumer: &BaseConsumer<Self>, rebalance: &Rebalance<'a>) {}
+    fn post_rebalance(&self, base_consumer: &BaseConsumer<Self>, rebalance: &Rebalance<'_>) {}
 
     // TODO: convert pointer to structure
     /// Post commit callback. This method will run after a group of offsets was

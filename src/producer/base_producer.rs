@@ -425,6 +425,7 @@ where
     /// Note that this method will never block.
     // Simplifying the return type requires generic associated types, which are
     // unstable.
+    #[allow(clippy::result_large_err)]
     pub fn send<'a, K, P>(
         &self,
         mut record: BaseRecord<'a, K, P, C::DeliveryOpaque>,
@@ -701,6 +702,7 @@ where
     /// See the documentation for [`BaseProducer::send`] for details.
     // Simplifying the return type requires generic associated types, which are
     // unstable.
+    #[allow(clippy::result_large_err)]
     pub fn send<'a, K, P>(
         &self,
         record: BaseRecord<'a, K, P, C::DeliveryOpaque>,
