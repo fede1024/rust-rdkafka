@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+* Bump MSRV to sync with rdkafka crate
 
 ## v4.7.0+2.2.0 (2023-11-07)
 
