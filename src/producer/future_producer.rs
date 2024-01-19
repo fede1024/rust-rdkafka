@@ -346,6 +346,7 @@ where
 
     /// Like [`FutureProducer::send`], but if enqueuing fails, an error will be
     /// returned immediately, alongside the [`FutureRecord`] provided.
+    #[allow(clippy::result_large_err)]
     pub fn send_result<'a, K, P>(
         &self,
         record: FutureRecord<'a, K, P>,
