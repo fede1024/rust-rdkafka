@@ -77,7 +77,7 @@ fn main() {
         // Ensure that we are in the right directory
         let rdkafkasys_root = Path::new("rdkafka-sys");
         if rdkafkasys_root.exists() {
-            assert!(env::set_current_dir(&rdkafkasys_root).is_ok());
+            assert!(env::set_current_dir(rdkafkasys_root).is_ok());
         }
         if !Path::new("librdkafka/LICENSE").exists() {
             eprintln!("Setting up submodules");

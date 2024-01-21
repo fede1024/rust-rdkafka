@@ -20,7 +20,7 @@ use rdkafka::TopicPartitionList;
 pub fn rand_test_topic(test_name: &str) -> String {
     let id = rand::thread_rng()
         .gen_ascii_chars()
-        .take(10)
+        .take(20)
         .collect::<String>();
     format!("__{}_{}", test_name, id)
 }
