@@ -507,6 +507,10 @@ where
         self.base.offsets_for_times(timestamps, timeout)
     }
 
+    fn get_watermark_offsets(&self, topic: &str, partition: i32) -> KafkaResult<(i64, i64)> {
+        self.base.get_watermark_offsets(topic, partition)
+    }
+
     fn position(&self) -> KafkaResult<TopicPartitionList> {
         self.base.position()
     }
