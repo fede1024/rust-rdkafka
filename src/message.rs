@@ -425,20 +425,20 @@ impl<'a> Message for BorrowedMessage<'a> {
     type Headers = BorrowedHeaders;
 
     fn key(&self) -> Option<&[u8]> {
-        unsafe { util::ptr_to_opt_slice((*self.ptr).key, (*self.ptr).key_len) }
+        unsafe { util::ptr_to_opt_slice(self.ptr.key, self.ptr.key_len) }
     }
 
     fn payload(&self) -> Option<&[u8]> {
-        unsafe { util::ptr_to_opt_slice((*self.ptr).payload, (*self.ptr).len) }
+        unsafe { util::ptr_to_opt_slice(self.ptr.payload, self.ptr.len) }
     }
 
     unsafe fn payload_mut(&mut self) -> Option<&mut [u8]> {
-        util::ptr_to_opt_mut_slice((*self.ptr).payload, (*self.ptr).len)
+        util::ptr_to_opt_mut_slice(self.ptr.payload, self.ptr.len)
     }
 
     fn topic(&self) -> &str {
         unsafe {
-            CStr::from_ptr(rdsys::rd_kafka_topic_name((*self.ptr).rkt))
+            CStr::from_ptr(rdsys::rd_kafka_topic_name(self.ptr.rkt))
                 .to_str()
                 .expect("Topic name is not valid UTF-8")
         }

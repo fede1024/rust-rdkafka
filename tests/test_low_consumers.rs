@@ -365,6 +365,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
         .create_with_context(ConsumerTestContext { _n: 64 })
         .expect("Consumer creation failed");
     let consumer = Arc::new(consumer);
+    let mut queue = consumer.split_partition_queue(&topic_name, 0).unwrap();
 
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
@@ -372,11 +373,10 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     consumer.assign(&tpl).unwrap();
 
     let wakeups = Arc::new(AtomicUsize::new(0));
-    let mut queue = consumer.split_partition_queue(&topic_name, 0).unwrap();
+    let cb_wakeups = wakeups.clone();
     queue.set_nonempty_callback({
-        let wakeups = wakeups.clone();
         move || {
-            wakeups.fetch_add(1, Ordering::SeqCst);
+            cb_wakeups.fetch_add(1, Ordering::SeqCst);
         }
     });
 
@@ -401,7 +401,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     assert!(consumer.poll(Duration::from_secs(0)).is_none());
 
     // Expect no wakeups for 1s.
-    thread::sleep(Duration::from_secs(1));
+    tokio::time::sleep(Duration::from_secs(1)).await;
     assert_eq!(wakeups.load(Ordering::SeqCst), 0);
 
     // Verify there are no messages waiting.
@@ -418,7 +418,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     // Add more messages to the topic. Expect no additional wakeups, as the
     // queue is not fully drained, for 1s.
     populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None).await;
-    thread::sleep(Duration::from_secs(1));
+    tokio::time::sleep(Duration::from_secs(1)).await;
     assert_eq!(wakeups.load(Ordering::SeqCst), 1);
 
     // Drain the queue.
@@ -427,7 +427,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     assert!(queue.poll(None).is_some());
 
     // Expect no additional wakeups for 1s.
-    thread::sleep(Duration::from_secs(1));
+    tokio::time::sleep(Duration::from_secs(1)).await;
     assert_eq!(wakeups.load(Ordering::SeqCst), 1);
 
     // Add another message, and expect a wakeup.
@@ -435,7 +435,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     wait_for_wakeups(2);
 
     // Expect no additional wakeups for 1s.
-    thread::sleep(Duration::from_secs(1));
+    tokio::time::sleep(Duration::from_secs(1)).await;
     assert_eq!(wakeups.load(Ordering::SeqCst), 2);
 
     // Disable the queue and add another message.
@@ -443,7 +443,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None).await;
 
     // Expect no additional wakeups for 1s.
-    thread::sleep(Duration::from_secs(1));
+    tokio::time::sleep(Duration::from_secs(1)).await;
     assert_eq!(wakeups.load(Ordering::SeqCst), 2);
 }
 

@@ -176,7 +176,7 @@
 //!
 //! ### Minimum supported Rust version (MSRV)
 //!
-//! The current minimum supported Rust version (MSRV) is 1.61.0. Note that
+//! The current minimum supported Rust version (MSRV) is 1.70.0. Note that
 //! bumping the MSRV is not considered a breaking change. Any release of
 //! rust-rdkafka may bump the MSRV.
 //!
