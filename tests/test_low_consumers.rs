@@ -365,6 +365,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
         .create_with_context(ConsumerTestContext { _n: 64 })
         .expect("Consumer creation failed");
     let consumer = Arc::new(consumer);
+    let mut queue = consumer.split_partition_queue(&topic_name, 0).unwrap();
 
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
@@ -372,11 +373,10 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     consumer.assign(&tpl).unwrap();
 
     let wakeups = Arc::new(AtomicUsize::new(0));
-    let mut queue = consumer.split_partition_queue(&topic_name, 0).unwrap();
+    let cb_wakeups = wakeups.clone();
     queue.set_nonempty_callback({
-        let wakeups = wakeups.clone();
         move || {
-            wakeups.fetch_add(1, Ordering::SeqCst);
+            cb_wakeups.fetch_add(1, Ordering::SeqCst);
         }
     });
 
@@ -401,8 +401,8 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     assert!(consumer.poll(Duration::from_secs(0)).is_none());
 
     // Expect no wakeups for 1s.
-    //tokio::time::sleep(Duration::from_secs(1)).await;
-    //assert_eq!(wakeups.load(Ordering::SeqCst), 0);
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    assert_eq!(wakeups.load(Ordering::SeqCst), 0);
 
     // Verify there are no messages waiting.
     assert!(consumer.poll(Duration::from_secs(0)).is_none());
