@@ -3,7 +3,7 @@
 See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
-* Bump MSRV to 1.69 to pick up cargo index improvement and `CStr::from_bytes_until_nul`
+* Bump MSRV to 1.70 to pick up cargo index improvement and `CStr::from_bytes_until_nul`
 
 ## 0.36.2 (2024-01-16)
 

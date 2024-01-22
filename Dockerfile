@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y build-essential \
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2019-10-17
 ENV PATH /root/.cargo/bin/:$PATH
-#ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL sparse
+ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL sparse
 
 # # Create dummy project for rdkafka
 # COPY Cargo.toml /rdkafka/
