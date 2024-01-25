@@ -175,7 +175,18 @@ pub struct NativeClient {
 
 unsafe impl KafkaDrop for RDKafka {
     const TYPE: &'static str = "client";
-    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_destroy;
+    const DROP: unsafe extern "C" fn(*mut Self) = drop_rdkafka;
+}
+
+unsafe extern "C" fn drop_rdkafka(ptr: *mut RDKafka) {
+    // We don't want the semantics of blocking the thread until the client shuts
+    // down (this involves waiting for offset commits, message production,
+    // rebalance callbacks), as this can cause deadlocks if the client is
+    // dropped from an async task that's scheduled on the same thread as an
+    // async task handling a librdkafka callback. So we destroy on a new thread
+    // that we know can't be handling any librdkafka callbacks.
+    let ptr = ptr as usize;
+    std::thread::spawn(move || rdsys::rd_kafka_destroy(ptr as *mut RDKafka));
 }
 
 // The library is completely thread safe, according to the documentation.
