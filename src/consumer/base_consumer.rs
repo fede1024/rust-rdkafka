@@ -11,7 +11,7 @@ use log::{error, warn};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, NativeQueue};
+use crate::client::{Client, NativeClient, NativeQueue};
 use crate::config::{
     ClientConfig, FromClientConfig, FromClientConfigAndContext, NativeClientConfig,
 };
@@ -144,17 +144,22 @@ where
                     }
                     rdsys::RD_KAFKA_EVENT_REBALANCE => {
                         self.handle_rebalance_event(event);
+                        if timeout != Timeout::Never {
+                            return None;
+                        }
                     }
                     rdsys::RD_KAFKA_EVENT_OFFSET_COMMIT => {
                         self.handle_offset_commit_event(event);
+                        if timeout != Timeout::Never {
+                            return None;
+                        }
                     }
                     _ => {
-                        let buf = unsafe {
+                        let evname = unsafe {
                             let evname = rdsys::rd_kafka_event_name(event.ptr());
-                            CStr::from_ptr(evname).to_bytes()
+                            CStr::from_ptr(evname).to_string_lossy()
                         };
-                        let evname = String::from_utf8(buf.to_vec()).unwrap();
-                        warn!("Ignored event '{}' on consumer poll", evname);
+                        warn!("Ignored event '{evname}' on consumer poll");
                     }
                 }
             }
@@ -188,17 +193,15 @@ where
                 // The TPL is owned by the Event and will be destroyed when the event is destroyed.
                 // Dropping it here will lead to double free.
                 let mut tpl = ManuallyDrop::new(tpl);
-                self.context()
-                    .rebalance(self.client.native_client(), err, &mut tpl);
+                self.context().rebalance(self, err, &mut tpl);
             }
             _ => {
-                let buf = unsafe {
+                let err = unsafe {
                     let err_name =
                         rdsys::rd_kafka_err2name(rdsys::rd_kafka_event_error(event.ptr()));
-                    CStr::from_ptr(err_name).to_bytes()
+                    CStr::from_ptr(err_name).to_string_lossy()
                 };
-                let err = String::from_utf8(buf.to_vec()).unwrap();
-                warn!("invalid rebalance event: {:?}", err);
+                warn!("invalid rebalance event: {err}");
             }
         }
     }
@@ -352,6 +355,10 @@ where
     /// Returns true if the consumer is closed, else false.
     pub fn closed(&self) -> bool {
         unsafe { rdsys::rd_kafka_consumer_closed(self.client.native_ptr()) == 1 }
+    }
+
+    pub(crate) fn native_client(&self) -> &NativeClient {
+        self.client.native_client()
     }
 }
 

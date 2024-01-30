@@ -17,12 +17,12 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::statistics::Statistics;
 use rdkafka::TopicPartitionList;
 
-pub fn rand_test_topic() -> String {
+pub fn rand_test_topic(test_name: &str) -> String {
     let id = rand::thread_rng()
         .gen_ascii_chars()
         .take(10)
         .collect::<String>();
-    format!("__test_{}", id)
+    format!("__{}_{}", test_name, id)
 }
 
 pub fn rand_test_group() -> String {
@@ -170,7 +170,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_populate_topic() {
-        let topic_name = rand_test_topic();
+        let topic_name = rand_test_topic("test_populate_topic");
         let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None).await;
 
         let total_messages = message_map

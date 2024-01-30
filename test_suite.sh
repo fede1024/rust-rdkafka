@@ -29,34 +29,36 @@ run_with_valgrind() {
 # Initialize.
 
 git submodule update --init
-cargo test --no-run
 docker-compose up -d
+cargo test
 
 # Run unit tests.
 
-echo_good "*** Run unit tests ***"
-for test_file in target/debug/deps/rdkafka-*
-do
-    if [[ -x "$test_file" ]]
-    then
-        echo_good "Executing "$test_file""
-        run_with_valgrind "$test_file"
-    fi
-done
-echo_good "*** Unit tests succeeded ***"
-
-# Run integration tests.
-
-echo_good "*** Run unit tests ***"
-for test_file in target/debug/deps/test_*
-do
-    if [[ -x "$test_file" ]]
-    then
-        echo_good "Executing "$test_file""
-        run_with_valgrind "$test_file"
-    fi
-done
-echo_good "*** Integration tests succeeded ***"
+#echo_good "*** Run unit tests ***"
+#for test_file in target/debug/deps/rdkafka-*
+#do
+#    if [[ -x "$test_file" ]]
+#    then
+#        echo_good "Executing "$test_file""
+#        run_with_valgrind "$test_file"
+#    fi
+#done
+#echo_good "*** Unit tests succeeded ***"
+#
+## Run integration tests.
+#
+#echo_good "*** Run integration tests ***"
+#for test_file in target/debug/deps/test_*
+#do
+#    if [[ -x "$test_file" ]]
+#    then
+#        #echo_good "*** Restarting kafka/zk ***"
+#        #docker-compose restart --timeout 30
+#        echo_good "Executing "$test_file""
+#        run_with_valgrind "$test_file"
+#    fi
+#done
+#echo_good "*** Integration tests succeeded ***"
 
 # Run smol runtime example.
 

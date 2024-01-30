@@ -368,11 +368,10 @@ where
             match evtype {
                 rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
                 _ => {
-                    let buf = unsafe {
+                    let evname = unsafe {
                         let evname = rdsys::rd_kafka_event_name(ev.ptr());
-                        CStr::from_ptr(evname).to_bytes()
+                        CStr::from_ptr(evname).to_string_lossy()
                     };
-                    let evname = String::from_utf8(buf.to_vec()).unwrap();
                     warn!("Ignored event '{}' on base producer poll", evname);
                 }
             }

@@ -7,7 +7,7 @@ use std::time::Duration;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, ClientContext, NativeClient};
+use crate::client::{Client, ClientContext};
 use crate::error::{KafkaError, KafkaResult};
 use crate::groups::GroupList;
 use crate::log::{error, trace};
@@ -43,7 +43,7 @@ pub enum Rebalance<'a> {
 /// be specified.
 ///
 /// See also the [`ClientContext`] trait.
-pub trait ConsumerContext: ClientContext {
+pub trait ConsumerContext: ClientContext + Sized {
     /// Implements the default rebalancing strategy and calls the
     /// [`pre_rebalance`](ConsumerContext::pre_rebalance) and
     /// [`post_rebalance`](ConsumerContext::post_rebalance) methods. If this
@@ -51,7 +51,7 @@ pub trait ConsumerContext: ClientContext {
     /// if needed.
     fn rebalance(
         &self,
-        native_client: &NativeClient,
+        base_consumer: &BaseConsumer<Self>,
         err: RDKafkaRespErr,
         tpl: &mut TopicPartitionList,
     ) {
@@ -66,9 +66,10 @@ pub trait ConsumerContext: ClientContext {
         };
 
         trace!("Running pre-rebalance with {:?}", rebalance);
-        self.pre_rebalance(&rebalance);
+        self.pre_rebalance(base_consumer, &rebalance);
 
         trace!("Running rebalance with {:?}", rebalance);
+        let native_client = base_consumer.native_client();
         // Execute rebalance
         unsafe {
             match err {
@@ -93,18 +94,18 @@ pub trait ConsumerContext: ClientContext {
             }
         }
         trace!("Running post-rebalance with {:?}", rebalance);
-        self.post_rebalance(&rebalance);
+        self.post_rebalance(base_consumer, &rebalance);
     }
 
     /// Pre-rebalance callback. This method will run before the rebalance and
     /// should terminate its execution quickly.
     #[allow(unused_variables)]
-    fn pre_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
+    fn pre_rebalance<'a>(&self, base_consumer: &BaseConsumer<Self>, rebalance: &Rebalance<'a>) {}
 
     /// Post-rebalance callback. This method will run after the rebalance and
     /// should terminate its execution quickly.
     #[allow(unused_variables)]
-    fn post_rebalance<'a>(&self, rebalance: &Rebalance<'a>) {}
+    fn post_rebalance<'a>(&self, base_consumer: &BaseConsumer<Self>, rebalance: &Rebalance<'a>) {}
 
     // TODO: convert pointer to structure
     /// Post commit callback. This method will run after a group of offsets was
