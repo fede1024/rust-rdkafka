@@ -530,15 +530,6 @@ pub(crate) unsafe extern "C" fn native_resolve_cb<C: ClientContext>(
     res: *mut *mut addrinfo,
     opaque: *mut c_void,
 ) -> i32 {
-    if node.is_null() {
-        // If `node`` is `NULL`, we expect `service` and `hints` to also be
-        // `NULL`, and altogether this indicates a request to free `res`.
-        assert!(service.is_null());
-        assert!(hints.is_null());
-        unsafe { libc::freeaddrinfo(*res) }
-        return 0; // NOTE: this return code is ignored by librdkafka in this code path
-    }
-
     // Convert host and port to Rust strings.
     let host = match CStr::from_ptr(node).to_str() {
         Ok(host) => host.into(),
