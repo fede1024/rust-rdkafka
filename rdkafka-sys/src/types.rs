@@ -440,8 +440,6 @@ pub enum RDKafkaErrorCode {
     FeatureUpdateFailed = 96,
     /// Request principal deserialization failed during forwarding.
     PrincipalDeserializationFailure = 97,
-    /// Partition log truncation detected
-    LogTruncation = -139,
     #[doc(hidden)]
     EndAll,
 }

@@ -68,7 +68,6 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR__ASSIGNMENT_LOST => AssignmentLost,
         RD_KAFKA_RESP_ERR__NOOP => Noop,
         RD_KAFKA_RESP_ERR__AUTO_OFFSET_RESET => AutoOffsetReset,
-        RD_KAFKA_RESP_ERR__LOG_TRUNCATION => LogTruncation,
         RD_KAFKA_RESP_ERR__END => End,
         RD_KAFKA_RESP_ERR_UNKNOWN => Unknown,
         RD_KAFKA_RESP_ERR_NO_ERROR => NoError,

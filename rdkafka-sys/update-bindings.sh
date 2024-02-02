@@ -9,12 +9,12 @@ bindgen \
     --no-doc-comments \
     --no-layout-tests \
     --rustified-enum ".*" \
-    --allowlist-function "rd_kafka.*" \
-    --allowlist-type "rd_kafka.*" \
-    --allowlist-var "rd_kafka.*|RD_KAFKA_.*" \
-    --no-recursive-allowlist \
-    --blocklist-function "rd_kafka_conf_set_open_cb" \
-    --raw-line "use libc::{FILE, addrinfo, sockaddr, c_int, c_void, c_char};" \
+    --whitelist-function "rd_kafka.*" \
+    --whitelist-type "rd_kafka.*" \
+    --whitelist-var "rd_kafka.*|RD_KAFKA_.*" \
+    --no-recursive-whitelist \
+    --blacklist-function "rd_kafka_conf_set_open_cb" \
+    --raw-line "use libc::{FILE, sockaddr, size_t, ssize_t, c_int, c_void, c_char};" \
     --raw-line "use num_enum::TryFromPrimitive;" \
     librdkafka/src/rdkafka.h -o src/bindings.rs
 

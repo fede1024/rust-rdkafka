@@ -20,6 +20,7 @@ use crate::consumer::{
 };
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::groups::GroupList;
+use crate::log::trace;
 use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
