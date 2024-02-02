@@ -66,7 +66,7 @@ unsafe extern "C" fn native_rebalance_cb<C: ConsumerContext>(
 /// callbacks and to receive messages.
 pub struct BaseConsumer<C = DefaultConsumerContext>
 where
-    C: ConsumerContext,
+    C: ConsumerContext + 'static,
 {
     client: Client<C>,
     main_queue_min_poll_interval: Timeout,
@@ -546,7 +546,7 @@ where
 /// infinite timeout.
 pub struct Iter<'a, C>(&'a BaseConsumer<C>)
 where
-    C: ConsumerContext;
+    C: ConsumerContext + 'static;
 
 impl<'a, C> Iterator for Iter<'a, C>
 where
@@ -578,7 +578,7 @@ where
 /// A message queue for a single partition.
 pub struct PartitionQueue<C>
 where
-    C: ConsumerContext,
+    C: ConsumerContext + 'static,
 {
     consumer: Arc<BaseConsumer<C>>,
     queue: NativeQueue,

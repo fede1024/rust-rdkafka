@@ -16,7 +16,7 @@ use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::mem::ManuallyDrop;
 use std::os::raw::{c_char, c_void};
-use std::ptr;
+use std::ptr::{self, NonNull};
 use std::slice;
 use std::string::ToString;
 use std::sync::Arc;
@@ -170,23 +170,7 @@ impl ClientContext for DefaultClientContext {}
 /// higher level `Client` or producers and consumers.
 // TODO(benesch): this should be `pub(crate)`.
 pub struct NativeClient {
-    ptr: NativePtr<RDKafka>,
-}
-
-unsafe impl KafkaDrop for RDKafka {
-    const TYPE: &'static str = "client";
-    const DROP: unsafe extern "C" fn(*mut Self) = drop_rdkafka;
-}
-
-unsafe extern "C" fn drop_rdkafka(ptr: *mut RDKafka) {
-    // We don't want the semantics of blocking the thread until the client shuts
-    // down (this involves waiting for offset commits, message production,
-    // rebalance callbacks), as this can cause deadlocks if the client is
-    // dropped from an async task that's scheduled on the same thread as an
-    // async task handling a librdkafka callback. So we destroy on a new thread
-    // that we know can't be handling any librdkafka callbacks.
-    let ptr = ptr as usize;
-    std::thread::spawn(move || rdsys::rd_kafka_destroy(ptr as *mut RDKafka));
+    ptr: NonNull<RDKafka>,
 }
 
 // The library is completely thread safe, according to the documentation.
@@ -197,13 +181,13 @@ impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
     pub(crate) unsafe fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
         NativeClient {
-            ptr: NativePtr::from_ptr(ptr).unwrap(),
+            ptr: NonNull::new(ptr).unwrap(),
         }
     }
 
     /// Returns the wrapped pointer to RDKafka.
     pub fn ptr(&self) -> *mut RDKafka {
-        self.ptr.ptr()
+        self.ptr.as_ptr()
     }
 
     pub(crate) fn rebalance_protocol(&self) -> RebalanceProtocol {
@@ -233,12 +217,12 @@ impl NativeClient {
 ///
 /// [`consumer`]: crate::consumer
 /// [`producer`]: crate::producer
-pub struct Client<C: ClientContext = DefaultClientContext> {
+pub struct Client<C: ClientContext + 'static = DefaultClientContext> {
     native: NativeClient,
     context: Arc<C>,
 }
 
-impl<C: ClientContext> Client<C> {
+impl<C: ClientContext + 'static> Client<C> {
     /// Creates a new `Client` given a configuration, a client type and a context.
     pub fn new(
         config: &ClientConfig,
@@ -299,7 +283,7 @@ impl<C: ClientContext> Client<C> {
 
     /// Returns a pointer to the native rdkafka-sys client.
     pub fn native_ptr(&self) -> *mut RDKafka {
-        self.native.ptr.ptr()
+        self.native.ptr()
     }
 
     /// Returns a reference to the context.
@@ -446,6 +430,27 @@ impl<C: ClientContext> Client<C> {
 
     pub(crate) fn consumer_queue(&self) -> Option<NativeQueue> {
         unsafe { NativeQueue::from_ptr(rdsys::rd_kafka_queue_get_consumer(self.native_ptr())) }
+    }
+}
+
+impl<C: ClientContext + 'static> Drop for Client<C> {
+    fn drop(&mut self) {
+        // We don't want the semantics of blocking the thread until the client
+        // shuts down (this involves waiting for offset commits, message
+        // production, rebalance callbacks), as this can cause deadlocks if the
+        // client is dropped from an async task that's scheduled on the same
+        // thread as an async task handling a librdkafka callback. So we destroy
+        // on a new thread that we know can't be handling any librdkafka
+        // callbacks.
+        let context = Arc::clone(&self.context);
+        let ptr = self.native_ptr() as usize;
+        std::thread::spawn(move || {
+            unsafe { rdsys::rd_kafka_destroy(ptr as *mut RDKafka) }
+            // Ensure `context` is only dropped after `rd_kafka_destroy`
+            // returns, as the process of destruction may invoke callbacks on
+            // `context``.
+            drop(context);
+        });
     }
 }
 

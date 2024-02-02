@@ -273,7 +273,7 @@ where
 /// [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
 pub struct BaseProducer<C = DefaultProducerContext>
 where
-    C: ProducerContext,
+    C: ProducerContext + 'static,
 {
     client_arc: Arc<Client<C>>,
 }

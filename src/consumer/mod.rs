@@ -207,7 +207,7 @@ pub enum RebalanceProtocol {
 /// objects, since they are generic.
 pub trait Consumer<C = DefaultConsumerContext>
 where
-    C: ConsumerContext,
+    C: ConsumerContext + 'static,
 {
     /// Returns the [`Client`] underlying this consumer.
     fn client(&self) -> &Client<C>;

@@ -163,7 +163,7 @@ impl<'a> Drop for MessageStream<'a> {
 #[must_use = "Consumer polling thread will stop immediately if unused"]
 pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
-    C: ConsumerContext,
+    C: ConsumerContext + 'static,
 {
     base: BaseConsumer<C>,
     wakers: Arc<WakerSlab>,
@@ -525,7 +525,7 @@ where
 /// details.
 pub struct StreamPartitionQueue<C, R = DefaultRuntime>
 where
-    C: ConsumerContext,
+    C: ConsumerContext + 'static,
 {
     queue: NativeQueue,
     wakers: Arc<WakerSlab>,

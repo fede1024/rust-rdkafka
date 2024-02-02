@@ -216,7 +216,7 @@ impl ProducerContext for DefaultProducerContext {
 /// Common trait for all producers.
 pub trait Producer<C = DefaultProducerContext>
 where
-    C: ProducerContext,
+    C: ProducerContext + 'static,
 {
     /// Returns the [`Client`] underlying this producer.
     fn client(&self) -> &Client<C>;
