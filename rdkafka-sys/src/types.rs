@@ -233,6 +233,11 @@ pub enum RDKafkaErrorCode {
     Noop = -141,
     /// No offset to automatically reset to.
     AutoOffsetReset = -140,
+    /// Partition log truncation detected
+    LogTruncation = -139,
+    /// A different record in the batch was invalid and this message failed
+    /// persisting.
+    InvalidDifferentRecord = -138,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error.
@@ -440,6 +445,17 @@ pub enum RDKafkaErrorCode {
     FeatureUpdateFailed = 96,
     /// Request principal deserialization failed during forwarding.
     PrincipalDeserializationFailure = 97,
+    /// Unknown topic ID.
+    UnknownTopicId = 100,
+    /// The member epoch is fenced by the group coordinator.
+    FencedMemberEpoch = 110,
+    /// The instance ID is still used by another member in the consumer group.
+    UnreleasedInstanceId = 111,
+    /// The assignor or its version range is not supported by the consumer
+    /// group.
+    UnsupportedAssignor = 112,
+    /// The member epoch is stale.
+    StaleMemberEpoch = 113,
     #[doc(hidden)]
     EndAll,
 }
