@@ -155,6 +155,30 @@ impl NativeClientConfig {
             .to_string_lossy()
             .into())
     }
+
+    pub(crate) fn set(&self, key: &str, value: &str) -> KafkaResult<()> {
+        let mut err_buf = ErrBuf::new();
+        let key_c = CString::new(key)?;
+        let value_c = CString::new(value)?;
+        let ret = unsafe {
+            rdsys::rd_kafka_conf_set(
+                self.ptr(),
+                key_c.as_ptr(),
+                value_c.as_ptr(),
+                err_buf.as_mut_ptr(),
+                err_buf.capacity(),
+            )
+        };
+        if ret.is_error() {
+            return Err(KafkaError::ClientConfig(
+                ret,
+                err_buf.to_string(),
+                key.to_string(),
+                value.to_string(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// Client configuration.
@@ -228,27 +252,8 @@ impl ClientConfig {
     /// Builds a native librdkafka configuration.
     pub fn create_native_config(&self) -> KafkaResult<NativeClientConfig> {
         let conf = unsafe { NativeClientConfig::from_ptr(rdsys::rd_kafka_conf_new()) };
-        let mut err_buf = ErrBuf::new();
         for (key, value) in &self.conf_map {
-            let key_c = CString::new(key.to_string())?;
-            let value_c = CString::new(value.to_string())?;
-            let ret = unsafe {
-                rdsys::rd_kafka_conf_set(
-                    conf.ptr(),
-                    key_c.as_ptr(),
-                    value_c.as_ptr(),
-                    err_buf.as_mut_ptr(),
-                    err_buf.capacity(),
-                )
-            };
-            if ret.is_error() {
-                return Err(KafkaError::ClientConfig(
-                    ret,
-                    err_buf.to_string(),
-                    key.to_string(),
-                    value.to_string(),
-                ));
-            }
+            conf.set(key, value)?;
         }
         Ok(conf)
     }
