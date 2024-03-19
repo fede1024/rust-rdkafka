@@ -39,13 +39,13 @@ impl IsError for RDKafkaConfRes {
 
 impl IsError for RDKafkaError {
     fn is_error(&self) -> bool {
-        self.0.is_some()
+        true
     }
 }
 
 /// Native rdkafka error.
 #[derive(Clone)]
-pub struct RDKafkaError(Option<Arc<NativePtr<rdsys::rd_kafka_error_t>>>);
+pub struct RDKafkaError(Arc<NativePtr<rdsys::rd_kafka_error_t>>);
 
 unsafe impl KafkaDrop for rdsys::rd_kafka_error_t {
     const TYPE: &'static str = "error";
@@ -56,15 +56,12 @@ unsafe impl Send for RDKafkaError {}
 unsafe impl Sync for RDKafkaError {}
 
 impl RDKafkaError {
-    pub(crate) unsafe fn from_ptr(ptr: *mut rdsys::rd_kafka_error_t) -> RDKafkaError {
-        RDKafkaError(NativePtr::from_ptr(ptr).map(Arc::new))
+    pub(crate) unsafe fn from_ptr(ptr: *mut rdsys::rd_kafka_error_t) -> Option<RDKafkaError> {
+        NativePtr::from_ptr(ptr).map(|p| RDKafkaError(Arc::new(p)))
     }
 
     fn ptr(&self) -> *const rdsys::rd_kafka_error_t {
-        match &self.0 {
-            None => ptr::null(),
-            Some(p) => p.ptr(),
-        }
+        self.0.ptr()
     }
 
     /// Returns the error code or [`RDKafkaErrorCode::NoError`] if the error is

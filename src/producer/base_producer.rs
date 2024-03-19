@@ -537,7 +537,7 @@ where
                 timeout.into().as_millis(),
             ))
         };
-        if ret.is_error() {
+        if let Some(ret) = ret {
             Err(KafkaError::Transaction(ret))
         } else {
             Ok(())
@@ -547,7 +547,7 @@ where
     fn begin_transaction(&self) -> KafkaResult<()> {
         let ret =
             unsafe { RDKafkaError::from_ptr(rdsys::rd_kafka_begin_transaction(self.native_ptr())) };
-        if ret.is_error() {
+        if let Some(ret) = ret {
             Err(KafkaError::Transaction(ret))
         } else {
             Ok(())
@@ -568,7 +568,7 @@ where
                 timeout.into().as_millis(),
             ))
         };
-        if ret.is_error() {
+        if let Some(ret) = ret {
             Err(KafkaError::Transaction(ret))
         } else {
             Ok(())
@@ -589,7 +589,7 @@ where
                 timeout.as_millis(),
             ))
         };
-        if ret.is_error() {
+        if let Some(ret) = ret {
             Err(KafkaError::Transaction(ret))
         } else {
             Ok(())
@@ -603,7 +603,7 @@ where
                 timeout.into().as_millis(),
             ))
         };
-        if ret.is_error() {
+        if let Some(ret) = ret {
             Err(KafkaError::Transaction(ret))
         } else {
             Ok(())
