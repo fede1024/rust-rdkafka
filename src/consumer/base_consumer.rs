@@ -345,7 +345,7 @@ where
                 self.queue.ptr(),
             ))
         };
-        if err.is_error() {
+        if let Some(err) = err {
             Err(KafkaError::ConsumerQueueClose(err.code()))
         } else {
             Ok(())
@@ -423,7 +423,7 @@ where
                 assignment.ptr(),
             ))
         };
-        if ret.is_error() {
+        if let Some(ret) = ret {
             let error = ret.name();
             return Err(KafkaError::Subscription(error));
         };
@@ -437,7 +437,7 @@ where
                 assignment.ptr(),
             ))
         };
-        if ret.is_error() {
+        if let Some(ret) = ret {
             let error = ret.name();
             return Err(KafkaError::Subscription(error));
         };
@@ -477,7 +477,7 @@ where
                 timeout.into().as_millis(),
             ))
         };
-        if ret.is_error() {
+        if let Some(ret) = ret {
             let error = ret.name();
             return Err(KafkaError::Seek(error));
         }
