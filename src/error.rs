@@ -3,7 +3,6 @@
 use std::error::Error;
 use std::ffi::{self, CStr};
 use std::fmt;
-use std::ptr;
 use std::sync::Arc;
 
 use rdkafka_sys as rdsys;
