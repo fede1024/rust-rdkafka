@@ -11,7 +11,7 @@ use log::{error, warn};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, NativeQueue};
+use crate::client::{Client, EventPollResult, NativeQueue};
 use crate::config::{
     ClientConfig, FromClientConfig, FromClientConfigAndContext, NativeClientConfig,
 };
@@ -117,59 +117,70 @@ where
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        self.poll_queue(self.get_queue(), timeout)
+        self.poll_queue(self.get_queue(), timeout).into()
     }
 
     pub(crate) fn poll_queue<T: Into<Timeout>>(
         &self,
         queue: &NativeQueue,
         timeout: T,
-    ) -> Option<KafkaResult<BorrowedMessage<'_>>> {
+    ) -> EventPollResult<KafkaResult<BorrowedMessage<'_>>> {
         let now = Instant::now();
-        let mut timeout = timeout.into();
+        let initial_timeout = timeout.into();
+        let mut timeout = initial_timeout;
         let min_poll_interval = self.context().main_queue_min_poll_interval();
         loop {
             let op_timeout = std::cmp::min(timeout, min_poll_interval);
             let maybe_event = self.client().poll_event(queue, op_timeout);
-            if let Some(event) = maybe_event {
-                let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                match evtype {
-                    rdsys::RD_KAFKA_EVENT_FETCH => {
-                        if let Some(result) = self.handle_fetch_event(event) {
-                            return Some(result);
+            match maybe_event {
+                EventPollResult::Event(event) => {
+                    let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+                    match evtype {
+                        rdsys::RD_KAFKA_EVENT_FETCH => {
+                            if let Some(result) = self.handle_fetch_event(event) {
+                                return EventPollResult::Event(result);
+                            }
                         }
-                    }
-                    rdsys::RD_KAFKA_EVENT_ERROR => {
-                        if let Some(err) = self.handle_error_event(event) {
-                            return Some(Err(err));
+                        rdsys::RD_KAFKA_EVENT_ERROR => {
+                            if let Some(err) = self.handle_error_event(event) {
+                                return EventPollResult::Event(Err(err));
+                            }
                         }
-                    }
-                    rdsys::RD_KAFKA_EVENT_REBALANCE => {
-                        self.handle_rebalance_event(event);
-                        if timeout != Timeout::Never {
-                            return None;
+                        rdsys::RD_KAFKA_EVENT_REBALANCE => {
+                            self.handle_rebalance_event(event);
+                            if timeout != Timeout::Never {
+                                return EventPollResult::EventConsumed;
+                            }
                         }
-                    }
-                    rdsys::RD_KAFKA_EVENT_OFFSET_COMMIT => {
-                        self.handle_offset_commit_event(event);
-                        if timeout != Timeout::Never {
-                            return None;
+                        rdsys::RD_KAFKA_EVENT_OFFSET_COMMIT => {
+                            self.handle_offset_commit_event(event);
+                            if timeout != Timeout::Never {
+                                return EventPollResult::EventConsumed;
+                            }
                         }
-                    }
-                    _ => {
-                        let evname = unsafe {
-                            let evname = rdsys::rd_kafka_event_name(event.ptr());
-                            CStr::from_ptr(evname).to_string_lossy()
-                        };
-                        warn!("Ignored event '{evname}' on consumer poll");
+                        _ => {
+                            let buf = unsafe {
+                                let evname = rdsys::rd_kafka_event_name(event.ptr());
+                                CStr::from_ptr(evname).to_bytes()
+                            };
+                            let evname = String::from_utf8(buf.to_vec()).unwrap();
+                            warn!("Ignored event '{}' on consumer poll", evname);
+                        }
                     }
                 }
-            }
-
-            timeout = timeout.saturating_sub(now.elapsed());
-            if timeout.is_zero() {
-                return None;
-            }
+                EventPollResult::None => {
+                    timeout = initial_timeout.saturating_sub(now.elapsed());
+                    if timeout.is_zero() {
+                        return EventPollResult::None;
+                    }
+                }
+                EventPollResult::EventConsumed => {
+                    timeout = initial_timeout.saturating_sub(now.elapsed());
+                    if timeout.is_zero() {
+                        return EventPollResult::EventConsumed;
+                    }
+                }
+            };
         }
     }
 
@@ -833,7 +844,7 @@ where
     /// associated consumer regularly, even if no messages are expected, to
     /// serve events.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        self.consumer.poll_queue(&self.queue, timeout)
+        self.consumer.poll_queue(&self.queue, timeout).into()
     }
 
     /// Sets a callback that will be invoked whenever the queue becomes
