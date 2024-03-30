@@ -198,6 +198,21 @@ impl NativeClient {
     }
 }
 
+pub(crate) enum EventPollResult<T> {
+    None,
+    EventConsumed,
+    Event(T),
+}
+
+impl<T> Into<Option<T>> for EventPollResult<T> {
+    fn into(self) -> Option<T> {
+        match self {
+            EventPollResult::None | EventPollResult::EventConsumed => None,
+            EventPollResult::Event(evt) => Some(evt),
+        }
+    }
+}
+
 /// A low-level rdkafka client.
 ///
 /// This type is the basis of the consumers and producers in the [`consumer`]
@@ -278,31 +293,42 @@ impl<C: ClientContext> Client<C> {
         &self.context
     }
 
-    pub(crate) fn poll_event(&self, queue: &NativeQueue, timeout: Timeout) -> Option<NativeEvent> {
+    pub(crate) fn poll_event(
+        &self,
+        queue: &NativeQueue,
+        timeout: Timeout,
+    ) -> EventPollResult<NativeEvent> {
         let event = unsafe { NativeEvent::from_ptr(queue.poll(timeout)) };
         if let Some(ev) = event {
             let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
             match evtype {
-                rdsys::RD_KAFKA_EVENT_LOG => self.handle_log_event(ev.ptr()),
-                rdsys::RD_KAFKA_EVENT_STATS => self.handle_stats_event(ev.ptr()),
+                rdsys::RD_KAFKA_EVENT_LOG => {
+                    self.handle_log_event(ev.ptr());
+                    return EventPollResult::EventConsumed;
+                }
+                rdsys::RD_KAFKA_EVENT_STATS => {
+                    self.handle_stats_event(ev.ptr());
+                    return EventPollResult::EventConsumed;
+                }
                 rdsys::RD_KAFKA_EVENT_ERROR => {
                     // rdkafka reports consumer errors via RD_KAFKA_EVENT_ERROR but producer errors gets
                     // embedded on the ack returned via RD_KAFKA_EVENT_DR. Hence we need to return this event
                     // for the consumer case in order to return the error to the user.
                     self.handle_error_event(ev.ptr());
-                    return Some(ev);
+                    return EventPollResult::Event(ev);
                 }
                 rdsys::RD_KAFKA_EVENT_OAUTHBEARER_TOKEN_REFRESH => {
                     if C::ENABLE_REFRESH_OAUTH_TOKEN {
                         self.handle_oauth_refresh_event(ev.ptr());
                     }
+                    return EventPollResult::EventConsumed;
                 }
                 _ => {
-                    return Some(ev);
+                    return EventPollResult::Event(ev);
                 }
             }
         }
-        None
+        EventPollResult::None
     }
 
     fn handle_log_event(&self, event: *mut RDKafkaEvent) {
