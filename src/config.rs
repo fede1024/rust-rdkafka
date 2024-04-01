@@ -208,6 +208,20 @@ impl ClientConfig {
         self.conf_map.insert(key.into(), value.into());
         self
     }
+    /// Sets a parameter in the configuration if the value is Some.
+    ///
+    /// If there is an existing value for `key` in the configuration and value is Some, it is
+    /// overridden with the new `Some(value)`.
+    pub fn set_if<K, V>(&mut self, key: K, value: Option<V>) -> &mut ClientConfig
+    where
+        K: Into<String>,
+        V: Into<String>,
+    {
+        match value {
+            Some(value) => self.set(key, value),
+            None => self,
+        }
+    }
 
     /// Removes a parameter from the configuration.
     pub fn remove<'a>(&'a mut self, key: &str) -> &'a mut ClientConfig {
