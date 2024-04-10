@@ -362,26 +362,28 @@ where
     /// Regular calls to `poll` are required to process the events and execute
     /// the message delivery callbacks.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
-        let event = self.client().poll_event(&self.queue, timeout.into());
-        if let Some(ev) = event {
-            let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
-            match evtype {
-                rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
-                rdsys::RD_KAFKA_EVENT_ERROR => if let Some(queue_poll_error_cb) = self.client.queue_poll_error_cb {
-                    let event_error_str = unsafe {
-                        let event_error_str = rdsys::rd_kafka_event_error_string(ev.ptr());
-                        CStr::from_ptr(event_error_str).to_string_lossy()
-                    };
-                    let event_error_str = String::from(event_error_str);
-                    queue_poll_error_cb(event_error_str)
-                }
-                _ => {
-                    let evname = unsafe {
-                        let evname = rdsys::rd_kafka_event_name(ev.ptr());
-                        CStr::from_ptr(evname).to_string_lossy()
-                    };
-                    warn!("Ignored event '{}' on base producer poll", evname);
-                }
+        let ev = match self.client().poll_event(&self.queue, timeout.into()) {
+            Some(e) => e,
+            None => return,
+        };
+
+        let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
+        match evtype {
+            rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
+            rdsys::RD_KAFKA_EVENT_ERROR if self.client.queue_poll_error_cb.is_some() => {
+                let queue_poll_error_cb = self.client.queue_poll_error_cb.unwrap();
+                let event_error_str = unsafe {
+                    let event_error_str = rdsys::rd_kafka_event_error_string(ev.ptr());
+                    CStr::from_ptr(event_error_str).to_string_lossy()
+                };
+                queue_poll_error_cb(String::from(event_error_str))
+            }
+            _ => {
+                let evname = unsafe {
+                    let evname = rdsys::rd_kafka_event_name(ev.ptr());
+                    CStr::from_ptr(evname).to_string_lossy()
+                };
+                warn!("Ignored event '{}' on base producer poll", evname);
             }
         }
     }
