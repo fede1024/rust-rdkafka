@@ -212,6 +212,8 @@ impl NativeClient {
 pub struct Client<C: ClientContext = DefaultClientContext> {
     native: NativeClient,
     context: Arc<C>,
+    /// A poll error callback for main queue
+    pub queue_poll_error_cb: Option<fn(String)>,
 }
 
 impl<C: ClientContext> Client<C> {
@@ -260,6 +262,7 @@ impl<C: ClientContext> Client<C> {
         Ok(Client {
             native: unsafe { NativeClient::from_ptr(client_ptr) },
             context,
+            queue_poll_error_cb: config.queue_poll_error_cb,
         })
     }
 
