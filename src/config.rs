@@ -150,7 +150,10 @@ impl NativeClientConfig {
         }
 
         // Convert the C string to a Rust string.
-        Ok(String::from_utf8_lossy(&buf).to_string())
+        Ok(CStr::from_bytes_until_nul(&buf)
+            .expect("rd_kafka_conf_get to write a NUL-terminated string.")
+            .to_string_lossy()
+            .to_string())
     }
 }
 
