@@ -26,6 +26,12 @@ sasl2-sys = { version = "0.1.6", optional = true }
 pkg-config = "0.3.9"
 cmake = { version = "0.1.0", optional = true }
 
+# Windows only supports the CMake build. As we can't conditionally
+# make cmake-build a default feature only on some platforms, we instead
+# have to make the cmake dependency required.
+[target.'cfg(target_os = "windows")'.build-dependencies]
+cmake = { version = "0.1.0", optional = false }
+
 [lib]
 name = "rdkafka_sys"
 path = "src/lib.rs"

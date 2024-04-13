@@ -7,6 +7,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Update MSRV to 1.70
 * Remove testign for old Kafka versions (before 3.0). Add tests for 3.7.
 * Fix test dependency on docker compose.
+* Automatically use CMake for Windows targets
 
 ## 0.36.2 (2024-01-16)
 
