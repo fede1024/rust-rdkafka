@@ -46,7 +46,6 @@ use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
-use std::slice;
 use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -67,7 +66,7 @@ use crate::producer::{
     DefaultProducerContext, Partitioner, Producer, ProducerContext, PurgeConfig,
 };
 use crate::topic_partition_list::TopicPartitionList;
-use crate::util::{IntoOpaque, NativePtr, Timeout};
+use crate::util::{self, IntoOpaque, NativePtr, Timeout};
 
 pub use crate::message::DeliveryResult;
 
@@ -217,11 +216,7 @@ unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>
 
     let is_partition_available = |p: i32| rdsys::rd_kafka_topic_partition_available(topic, p) == 1;
 
-    let key = if keydata.is_null() {
-        None
-    } else {
-        Some(slice::from_raw_parts(keydata as *const u8, keylen))
-    };
+    let key = util::ptr_to_opt_slice(keydata, keylen);
 
     let producer_context = &mut *(rkt_opaque as *mut C);
 

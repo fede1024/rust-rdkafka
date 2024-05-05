@@ -1,13 +1,12 @@
 //! Cluster metadata.
 
 use std::ffi::CStr;
-use std::slice;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
 use crate::error::IsError;
-use crate::util::{KafkaDrop, NativePtr};
+use crate::util::{self, KafkaDrop, NativePtr};
 
 /// Broker metadata information.
 pub struct MetadataBroker(RDKafkaMetadataBroker);
@@ -60,12 +59,12 @@ impl MetadataPartition {
 
     /// Returns the broker IDs of the replicas.
     pub fn replicas(&self) -> &[i32] {
-        unsafe { slice::from_raw_parts(self.0.replicas, self.0.replica_cnt as usize) }
+        unsafe { util::ptr_to_slice(self.0.replicas, self.0.replica_cnt as usize) }
     }
 
     /// Returns the broker IDs of the in-sync replicas.
     pub fn isr(&self) -> &[i32] {
-        unsafe { slice::from_raw_parts(self.0.isrs, self.0.isr_cnt as usize) }
+        unsafe { util::ptr_to_slice(self.0.isrs, self.0.isr_cnt as usize) }
     }
 }
 
@@ -85,7 +84,7 @@ impl MetadataTopic {
     /// Returns the partition metadata information for all the partitions.
     pub fn partitions(&self) -> &[MetadataPartition] {
         unsafe {
-            slice::from_raw_parts(
+            ptr_to_slice(
                 self.0.partitions as *const MetadataPartition,
                 self.0.partition_cnt as usize,
             )
@@ -141,7 +140,7 @@ impl Metadata {
     /// Returns the metadata information for all the brokers in the cluster.
     pub fn brokers(&self) -> &[MetadataBroker] {
         unsafe {
-            slice::from_raw_parts(
+            util::ptr_to_slice(
                 self.0.brokers as *const MetadataBroker,
                 self.0.broker_cnt as usize,
             )
@@ -151,7 +150,7 @@ impl Metadata {
     /// Returns the metadata information for all the topics in the cluster.
     pub fn topics(&self) -> &[MetadataTopic] {
         unsafe {
-            slice::from_raw_parts(
+            util::ptr_to_slice(
                 self.0.topics as *const MetadataTopic,
                 self.0.topic_cnt as usize,
             )
