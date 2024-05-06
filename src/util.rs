@@ -105,32 +105,39 @@ pub fn current_time_millis() -> i64 {
 
 /// Converts a pointer to an array to an optional slice. If the pointer is null,
 /// returns `None`.
-pub(crate) unsafe fn ptr_to_opt_slice<'a, T>(ptr: *const c_void, size: usize) -> Option<&'a [T]> {
+pub(crate) unsafe fn ptr_to_opt_slice<'a, T>(ptr: *const T, size: usize) -> Option<&'a [T]> {
     if ptr.is_null() {
         None
     } else {
-        Some(slice::from_raw_parts::<T>(ptr as *const T, size))
+        Some(slice::from_raw_parts(ptr, size))
     }
 }
 
-pub(crate) unsafe fn ptr_to_opt_mut_slice<'a, T>(
-    ptr: *const c_void,
-    size: usize,
-) -> Option<&'a mut [T]> {
+pub(crate) unsafe fn ptr_to_opt_mut_slice<'a, T>(ptr: *mut T, size: usize) -> Option<&'a mut [T]> {
     if ptr.is_null() {
         None
     } else {
-        Some(slice::from_raw_parts_mut::<T>(ptr as *mut T, size))
+        Some(slice::from_raw_parts_mut(ptr, size))
     }
 }
 
 /// Converts a pointer to an array to a slice. If the pointer is null or the
 /// size is zero, returns a zero-length slice..
-pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> &'a [T] {
+pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const T, size: usize) -> &'a [T] {
     if ptr.is_null() || size == 0 {
         &[][..]
     } else {
-        slice::from_raw_parts::<T>(ptr as *const T, size)
+        slice::from_raw_parts(ptr, size)
+    }
+}
+
+/// Converts a pointer to an array to a mutable slice. If the pointer is null
+/// or the size is zero, returns a zero-length slice.
+pub(crate) unsafe fn ptr_to_mut_slice<'a, T>(ptr: *mut T, size: usize) -> &'a mut [T] {
+    if ptr.is_null() || size == 0 {
+        &mut [][..]
+    } else {
+        slice::from_raw_parts_mut(ptr, size)
     }
 }
 

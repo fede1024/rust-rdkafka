@@ -2,12 +2,11 @@
 
 use std::ffi::CStr;
 use std::fmt;
-use std::slice;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::util::{KafkaDrop, NativePtr};
+use crate::util::{self, KafkaDrop, NativePtr};
 
 /// Group member information container.
 pub struct GroupMemberInfo(RDKafkaGroupMemberInfo);
@@ -43,28 +42,20 @@ impl GroupMemberInfo {
     /// Return the metadata of the member.
     pub fn metadata(&self) -> Option<&[u8]> {
         unsafe {
-            if self.0.member_metadata.is_null() {
-                None
-            } else {
-                Some(slice::from_raw_parts::<u8>(
-                    self.0.member_metadata as *const u8,
-                    self.0.member_metadata_size as usize,
-                ))
-            }
+            util::ptr_to_opt_slice(
+                self.0.member_metadata as *const u8,
+                self.0.member_metadata_size as usize,
+            )
         }
     }
 
     /// Return the partition assignment of the member.
     pub fn assignment(&self) -> Option<&[u8]> {
         unsafe {
-            if self.0.member_assignment.is_null() {
-                None
-            } else {
-                Some(slice::from_raw_parts::<u8>(
-                    self.0.member_assignment as *const u8,
-                    self.0.member_assignment_size as usize,
-                ))
-            }
+            util::ptr_to_opt_slice(
+                self.0.member_assignment as *const u8,
+                self.0.member_assignment_size as usize,
+            )
         }
     }
 }
@@ -85,7 +76,7 @@ impl GroupInfo {
     /// Returns the members of the group.
     pub fn members(&self) -> &[GroupMemberInfo] {
         unsafe {
-            slice::from_raw_parts(
+            util::ptr_to_slice(
                 self.0.members as *const GroupMemberInfo,
                 self.0.member_cnt as usize,
             )
@@ -149,8 +140,6 @@ impl GroupList {
 
     /// Returns all the groups in the list.
     pub fn groups(&self) -> &[GroupInfo] {
-        unsafe {
-            slice::from_raw_parts(self.0.groups as *const GroupInfo, self.0.group_cnt as usize)
-        }
+        unsafe { util::ptr_to_slice(self.0.groups as *const GroupInfo, self.0.group_cnt as usize) }
     }
 }
