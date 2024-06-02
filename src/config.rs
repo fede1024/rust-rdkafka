@@ -150,7 +150,12 @@ impl NativeClientConfig {
         }
 
         // Convert the C string to a Rust string.
-        Ok(String::from_utf8_lossy(&buf).to_string())
+        // Note that the config value can contain null characters.
+        let value = String::from_utf8_lossy(&buf)
+            .trim_matches(char::from(0))
+            .to_owned();
+
+        Ok(value)
     }
 }
 
