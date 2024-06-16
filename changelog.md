@@ -4,6 +4,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* Bump MSRV to 1.69
+
 ## 0.36.2 (2024-01-16)
 
 * Update `BaseConsumer::poll` to return `None` when handling rebalance
