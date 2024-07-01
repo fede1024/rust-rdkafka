@@ -14,12 +14,13 @@
 use std::convert::TryFrom;
 use std::error::Error;
 use std::ffi::{CStr, CString};
-use std::mem::ManuallyDrop;
+use std::mem::{self, ManuallyDrop};
+use std::net::{SocketAddr, ToSocketAddrs};
 use std::os::raw::{c_char, c_void};
 use std::ptr::{self, NonNull};
-use std::slice;
 use std::string::ToString;
 use std::sync::Arc;
+use std::{io, slice};
 
 use libc::addrinfo;
 use rdkafka_sys as rdsys;
@@ -116,17 +117,14 @@ pub trait ClientContext: Send + Sync {
         error!("librdkafka: {}: {}", error, reason);
     }
 
-    /// Rewrites a broker address for DNS resolution.
+    /// Performs DNS resolution on a broker address.
     ///
-    /// This method is invoked before performing DNS resolution on a broker
-    /// address. The returned address is used in place of the original address.
-    /// It is useful to allow connecting to a Kafka cluster over a tunnel (e.g.,
-    /// SSH or AWS PrivateLink), where the broker addresses returned by the
-    /// bootstrap server need to be rewritten to be routed through the tunnel.
+    /// This method is invoked by librdkafka to translate a broker hostname and
+    /// port to a socket address.
     ///
-    /// The default implementation returns the address unchanged.
-    fn rewrite_broker_addr(&self, addr: BrokerAddr) -> BrokerAddr {
-        addr
+    /// The default implementation uses [`std::net::ToSocketAddr`].
+    fn resolve_broker_addr(&self, host: &str, port: u16) -> Result<Vec<SocketAddr>, io::Error> {
+        (host, port).to_socket_addrs().map(|addrs| addrs.collect())
     }
 
     /// Generates an OAuth token from the provided configuration.
@@ -535,46 +533,124 @@ pub(crate) unsafe extern "C" fn native_resolve_cb<C: ClientContext>(
         // `NULL`, and altogether this indicates a request to free `res`.
         assert!(service.is_null());
         assert!(hints.is_null());
-        unsafe { libc::freeaddrinfo(*res) }
+        libc::free(*res as *mut libc::c_void);
         return 0; // NOTE: this return code is ignored by librdkafka in this code path
     }
 
     // Convert host and port to Rust strings.
-    let host = match CStr::from_ptr(node).to_str() {
-        Ok(host) => host.into(),
-        Err(_) => return libc::EAI_FAIL,
+    let Ok(host) = CStr::from_ptr(node).to_str() else {
+        return libc::EAI_FAIL;
     };
-    let port = match CStr::from_ptr(service).to_str() {
-        Ok(port) => port.into(),
-        Err(_) => return libc::EAI_FAIL,
+    let Ok(port) = CStr::from_ptr(service).to_str() else {
+        return libc::EAI_FAIL;
+    };
+    let Ok(port) = port.parse() else {
+        return libc::EAI_SERVICE;
     };
 
-    // Apply the rewrite in the context.
+    debug!("resolving {host}:{port}");
+
+    // Use the context to perform DNS resolution.
     let context = &mut *(opaque as *mut C);
-    let addr = context.rewrite_broker_addr(BrokerAddr { host, port });
+    match context.resolve_broker_addr(host, port) {
+        Ok(addrs) => {
+            debug!("dns resolution succeeded for {host}:{port}: {addrs:?}");
 
-    // Convert host and port back to C strings.
-    let node = match CString::new(addr.host) {
-        Ok(node) => node,
-        Err(_) => return libc::EAI_FAIL,
-    };
-    let service = match CString::new(addr.port) {
-        Ok(service) => service,
-        Err(_) => return libc::EAI_FAIL,
-    };
+            // We need to convert the vector of resolved addresses to
+            // getaddrinfo output format: a linked list of `addrinfo` structs,
+            // one for each resolved address.
+            //
+            // To keep the memory management simple, we make a single allocation
+            // with enough room for all `addrinfo` and `sockaddr` structs, with
+            // `addrinfo` and `sockaddr` structs interspersed like so:
+            //
+            // +-----------+-----------+-----------+-----------+-----+-----------+-----------+
+            // | addrinfo1 | sockaddr1 | addrinfo2 | sockaddr2 | ... | addrinfon | sockaddrn |
+            // +-----------+-----------+-----------+-----------+-----+-----------+-----------+
+            //          |                       |                            |
+            //          |   ai_next    ^        |   ai_next    ^             |
+            //          +--------------+        +--------------+        ai_next = NULL
+            //
+            // We use the `AddrInfoBuf` type to manage this layout internally.
+            // When we hand it back to the caller as a `*addrinfo`, the caller
+            // has no idea about the interspersed `sockaddr`s.
 
-    // Perform DNS resolution.
-    unsafe { libc::getaddrinfo(node.as_ptr(), service.as_ptr(), hints, res) }
-}
+            #[repr(C)]
+            union CSocketAddr {
+                in4: libc::sockaddr_in,
+                in6: libc::sockaddr_in6,
+            }
 
-/// Describes the address of a broker in a Kafka cluster.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct BrokerAddr {
-    /// The host name.
-    pub host: String,
-    /// The port, either as a decimal number or the name of a service in
-    /// the services database.
-    pub port: String,
+            #[repr(C)]
+            struct AddrInfoBuf {
+                addr_info: libc::addrinfo,
+                socket_addr: CSocketAddr,
+            }
+
+            let out = libc::calloc(addrs.len(), mem::size_of::<AddrInfoBuf>());
+            let out = out as *mut AddrInfoBuf;
+
+            for (i, addr) in addrs.iter().enumerate() {
+                let ptr = out.add(i);
+                (*ptr).addr_info = libc::addrinfo {
+                    ai_addr: &mut (*ptr).socket_addr as *mut _ as *mut libc::sockaddr,
+                    ai_addrlen: match addr {
+                        SocketAddr::V4(_) => mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
+                        SocketAddr::V6(_) => {
+                            mem::size_of::<libc::sockaddr_in6>() as libc::socklen_t
+                        }
+                    },
+                    ai_canonname: ptr::null_mut(),
+                    ai_family: match addr {
+                        SocketAddr::V4(_) => libc::AF_INET,
+                        SocketAddr::V6(_) => libc::AF_INET6,
+                    },
+                    ai_flags: 0,
+                    ai_protocol: libc::IPPROTO_TCP,
+                    ai_socktype: libc::SOCK_STREAM,
+                    ai_next: if i < (addrs.len() - 1) {
+                        out.add(i + 1) as *mut libc::addrinfo
+                    } else {
+                        ptr::null_mut()
+                    },
+                };
+                match addr {
+                    SocketAddr::V4(addr) => {
+                        (*ptr).socket_addr.in4.sin_family = libc::AF_INET as libc::sa_family_t;
+                        (*ptr).socket_addr.in4.sin_port = addr.port().to_be();
+                        (*ptr).socket_addr.in4.sin_addr.s_addr =
+                            u32::from_ne_bytes(addr.ip().octets());
+                    }
+                    SocketAddr::V6(addr) => {
+                        (*ptr).socket_addr.in6.sin6_family = libc::AF_INET6 as libc::sa_family_t;
+                        (*ptr).socket_addr.in6.sin6_port = addr.port().to_be();
+                        (*ptr).socket_addr.in6.sin6_addr.s6_addr = addr.ip().octets();
+                    }
+                };
+            }
+
+            *res = out as *mut libc::addrinfo;
+
+            0
+        }
+        Err(e) => {
+            debug!("dns resolution failed for {host}:{port}: {e}");
+
+            // Perform string matching on the error to convert back to a GAI
+            // error code for the most common types of GAI errors. This is a
+            // little gross, but Rust doesn't preserve the GAI error code when
+            // it does DNS resolution.
+            let message = e.to_string();
+            for code in [libc::EAI_NODATA, libc::EAI_NONAME, libc::EAI_AGAIN] {
+                if let Ok(code_str) = CStr::from_ptr(libc::gai_strerror(code)).to_str() {
+                    if message.ends_with(code_str) {
+                        return code;
+                    }
+                }
+            }
+            libc::EAI_FAIL
+        }
+    }
 }
 
 /// A generated OAuth token and its associated metadata.
