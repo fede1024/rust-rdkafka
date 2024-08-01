@@ -1,3 +1,4 @@
 [submodule "rdkafka-sys/librdkafka"]
-	path = rdkafka-sys/librdkafka
-	url = https://github.com/edenhill/librdkafka
+    path = rdkafka-sys/librdkafka
+    url = https://github.com/DataDog/librdkafka
+    branch = datadog/main
