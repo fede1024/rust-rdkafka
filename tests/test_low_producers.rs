@@ -97,7 +97,7 @@ impl<Part: Partitioner + Send + Sync> ProducerContext<Part> for CollectingContex
     fn get_custom_partitioner(&self) -> Option<&Part> {
         match &self.partitioner {
             None => None,
-            Some(p) => Some(&p),
+            Some(p) => Some(p),
         }
     }
 }
@@ -144,7 +144,7 @@ impl Partitioner for PanicPartitioner {
 fn default_config(config_overrides: HashMap<&str, &str>) -> ClientConfig {
     let mut config = ClientConfig::new();
     config
-        .set("bootstrap.servers", &get_bootstrap_server())
+        .set("bootstrap.servers", get_bootstrap_server())
         .set("message.timeout.ms", "5000");
 
     for (key, value) in config_overrides {
@@ -210,11 +210,13 @@ fn test_base_producer_queue_full() {
     let errors = results
         .iter()
         .filter(|&e| {
-            if let &Err((KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull), _)) = e {
-                true
-            } else {
-                false
-            }
+            matches!(
+                e,
+                &Err((
+                    KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull),
+                    _
+                ))
+            )
         })
         .count();
 
@@ -496,7 +498,7 @@ fn test_register_custom_partitioner_linger_non_zero_key_null() {
 
     assert_eq!(delivery_results.len(), 1);
 
-    for &(_, ref error, _) in &(*delivery_results) {
+    for (_, error, _) in &(*delivery_results) {
         assert_eq!(*error, None);
     }
 }
@@ -523,7 +525,7 @@ fn test_custom_partitioner_base_producer() {
 
     let delivery_results = context.results.lock().unwrap();
 
-    for &(ref message, ref error, _) in &(*delivery_results) {
+    for (message, error, _) in &(*delivery_results) {
         assert_eq!(error, &None);
         assert_eq!(message.partition(), 2);
     }
@@ -551,7 +553,7 @@ fn test_custom_partitioner_threaded_producer() {
 
     let delivery_results = context.results.lock().unwrap();
 
-    for &(ref message, ref error, _) in &(*delivery_results) {
+    for (message, error, _) in &(*delivery_results) {
         assert_eq!(error, &None);
         assert_eq!(message.partition(), 2);
     }
