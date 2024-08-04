@@ -26,10 +26,10 @@ fn create_consumer(
 fn create_producer() -> Result<BaseProducer, KafkaError> {
     let mut config = ClientConfig::new();
     config
-        .set("bootstrap.servers", &get_bootstrap_server())
+        .set("bootstrap.servers", get_bootstrap_server())
         .set("message.timeout.ms", "5000")
         .set("enable.idempotence", "true")
-        .set("transactional.id", &rand_test_transactional_id())
+        .set("transactional.id", rand_test_transactional_id())
         .set("debug", "eos");
     config.set_log_level(RDKafkaLogLevel::Debug);
     config.create()

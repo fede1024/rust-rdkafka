@@ -385,11 +385,11 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
         let timeout = Duration::from_secs(15);
         loop {
             let w = wakeups.load(Ordering::SeqCst);
-            if w == target {
-                break;
-            } else if w > target {
-                panic!("wakeups {} exceeds target {}", w, target);
-            }
+            match w.cmp(&target) {
+                std::cmp::Ordering::Equal => break,
+                std::cmp::Ordering::Greater => panic!("wakeups {} exceeds target {}", w, target),
+                std::cmp::Ordering::Less => (),
+            };
             thread::sleep(Duration::from_millis(100));
             if start.elapsed() > timeout {
                 panic!("timeout exceeded while waiting for wakeup");
