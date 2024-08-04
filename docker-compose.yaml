@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   kafka:
     image: confluentinc/cp-kafka:${CONFLUENT_VERSION:-7.5.1}

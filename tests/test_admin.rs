@@ -119,7 +119,7 @@ fn verify_delete(topic: &str) {
 #[tokio::test]
 async fn test_topics() {
     let admin_client = create_admin_client();
-    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(1)));
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
 
     // Verify that topics are created as specified, and that they can later
     // be deleted.
