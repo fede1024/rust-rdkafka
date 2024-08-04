@@ -28,7 +28,7 @@ use rdkafka_sys::types::*;
 
 use crate::config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 use crate::consumer::RebalanceProtocol;
-use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::groups::GroupList;
 use crate::log::{debug, error, info, trace, warn};
 use crate::metadata::Metadata;
@@ -247,7 +247,8 @@ impl<C: ClientContext + 'static> Client<C> {
                 rdsys::rd_kafka_conf_set_oauthbearer_token_refresh_cb(
                     native_config.ptr(),
                     Some(native_oauth_refresh_cb::<C>),
-                )
+                );
+                rdkafka_sys::rd_kafka_conf_enable_sasl_queue(native_config.ptr(), 1);
             };
         }
 
@@ -267,6 +268,18 @@ impl<C: ClientContext + 'static> Client<C> {
         }
 
         unsafe { rdsys::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
+
+        let sasl_mechanism = config
+            .get("sasl.mechanisms")
+            .or_else(|| config.get("sasl.mechanism"));
+        if sasl_mechanism.map_or(false, |m| m.eq_ignore_ascii_case("OAUTHBEARER")) {
+            let ret = unsafe {
+                RDKafkaError::from_ptr(rdsys::rd_kafka_sasl_background_callbacks_enable(client_ptr))
+            };
+            if ret.is_error() {
+                return Err(KafkaError::OAuthConfig(ret));
+            }
+        }
 
         Ok(Client {
             native: unsafe { NativeClient::from_ptr(client_ptr) },

@@ -163,6 +163,8 @@ pub enum KafkaError {
     NoMessageReceived,
     /// Unexpected null pointer
     Nul(ffi::NulError),
+    /// OAuth configuration failed.
+    OAuthConfig(RDKafkaError),
     /// Offset fetch failed.
     OffsetFetch(RDKafkaErrorCode),
     /// End of partition reached.
@@ -218,6 +220,7 @@ impl fmt::Debug for KafkaError {
                 write!(f, "No message received within the given poll interval")
             }
             KafkaError::Nul(_) => write!(f, "FFI null error"),
+            KafkaError::OAuthConfig(err) => write!(f, "KafkaError (OAuth config error: {})", err),
             KafkaError::OffsetFetch(err) => write!(f, "KafkaError (Offset fetch error: {})", err),
             KafkaError::PartitionEOF(part_n) => write!(f, "KafkaError (Partition EOF: {})", part_n),
             KafkaError::PauseResume(ref err) => {
@@ -259,6 +262,7 @@ impl fmt::Display for KafkaError {
                 write!(f, "No message received within the given poll interval")
             }
             KafkaError::Nul(_) => write!(f, "FFI nul error"),
+            KafkaError::OAuthConfig(err) => write!(f, "OAuth config error: {}", err),
             KafkaError::OffsetFetch(err) => write!(f, "Offset fetch error: {}", err),
             KafkaError::PartitionEOF(part_n) => write!(f, "Partition EOF: {}", part_n),
             KafkaError::PauseResume(ref err) => write!(f, "Pause/resume error: {}", err),
@@ -288,6 +292,7 @@ impl Error for KafkaError {
             KafkaError::MetadataFetch(err) => Some(err),
             KafkaError::NoMessageReceived => None,
             KafkaError::Nul(_) => None,
+            KafkaError::OAuthConfig(err) => Some(err),
             KafkaError::OffsetFetch(err) => Some(err),
             KafkaError::PartitionEOF(_) => None,
             KafkaError::PauseResume(_) => None,
@@ -325,6 +330,7 @@ impl KafkaError {
             KafkaError::MetadataFetch(err) => Some(*err),
             KafkaError::NoMessageReceived => None,
             KafkaError::Nul(_) => None,
+            KafkaError::OAuthConfig(err) => Some(err.code()),
             KafkaError::OffsetFetch(err) => Some(*err),
             KafkaError::PartitionEOF(_) => None,
             KafkaError::PauseResume(_) => None,
