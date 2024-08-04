@@ -4,6 +4,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* Update MSRV to 1.70
+* Remove testign for old Kafka versions (before 3.0). Add tests for 3.7.
+* Fix test dependency on docker compose.
+
 ## 0.36.2 (2024-01-16)
 
 * Update `BaseConsumer::poll` to return `None` when handling rebalance
