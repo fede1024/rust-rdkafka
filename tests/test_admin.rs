@@ -34,7 +34,7 @@ async fn create_consumer_group(consumer_group_name: &str) {
     let admin_client = create_admin_client();
     let topic_name = &rand_test_topic(consumer_group_name);
     let consumer: BaseConsumer = create_config()
-        .set("group.id", consumer_group_name.clone())
+        .set("group.id", consumer_group_name)
         .create()
         .expect("create consumer failed");
 
@@ -74,17 +74,19 @@ fn fetch_metadata(topic: &str) -> Metadata {
         create_config().create().expect("consumer creation failed");
     let timeout = Some(Duration::from_secs(1));
 
-    let mut backoff = ExponentialBackoff::default();
-    backoff.max_elapsed_time = Some(Duration::from_secs(5));
+    let mut backoff = ExponentialBackoff {
+        max_elapsed_time: Some(Duration::from_secs(5)),
+        ..Default::default()
+    };
     (|| {
         let metadata = consumer
             .fetch_metadata(Some(topic), timeout)
             .map_err(|e| e.to_string())?;
-        if metadata.topics().len() == 0 {
+        if metadata.topics().is_empty() {
             Err("metadata fetch returned no topics".to_string())?
         }
         let topic = &metadata.topics()[0];
-        if topic.partitions().len() == 0 {
+        if topic.partitions().is_empty() {
             Err("metadata fetch returned a topic with no partitions".to_string())?
         }
         Ok(metadata)
@@ -98,8 +100,10 @@ fn verify_delete(topic: &str) {
         create_config().create().expect("consumer creation failed");
     let timeout = Some(Duration::from_secs(1));
 
-    let mut backoff = ExponentialBackoff::default();
-    backoff.max_elapsed_time = Some(Duration::from_secs(5));
+    let mut backoff = ExponentialBackoff {
+        max_elapsed_time: Some(Duration::from_secs(5)),
+        ..Default::default()
+    };
     (|| {
         // Asking about the topic specifically will recreate it (under the
         // default Kafka configuration, at least) so we have to ask for the list
@@ -107,7 +111,7 @@ fn verify_delete(topic: &str) {
         let metadata = consumer
             .fetch_metadata(None, timeout)
             .map_err(|e| e.to_string())?;
-        if let Some(_) = metadata.topics().iter().find(|t| t.name() == topic) {
+        if metadata.topics().iter().any(|t| t.name() == topic) {
             Err(format!("topic {} still exists", topic))?
         }
         Ok(())
@@ -416,7 +420,7 @@ async fn test_configs() {
         }
     }
 
-    let config = AlterConfig::new(broker).set("log.flush.interval.ms", &orig_val);
+    let config = AlterConfig::new(broker).set("log.flush.interval.ms", orig_val);
     let res = admin_client
         .alter_configs(&[config], &opts)
         .await
