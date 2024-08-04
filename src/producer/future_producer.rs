@@ -443,6 +443,7 @@ mod tests {
     #[test]
     fn test_future_producer_clone() {
         let producer = ClientConfig::new().create::<FutureProducer>().unwrap();
+        #[allow(clippy::redundant_clone)]
         let _producer_clone = producer.clone();
     }
 
@@ -453,6 +454,7 @@ mod tests {
         let producer = ClientConfig::new()
             .create_with_context::<_, FutureProducer<TestContext>>(test_context)
             .unwrap();
+        #[allow(clippy::redundant_clone)]
         let _producer_clone = producer.clone();
     }
 }
