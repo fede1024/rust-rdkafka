@@ -367,7 +367,7 @@ mod tests {
 
         assert_eq!(stats.brokers.len(), 1);
 
-        let broker = stats.brokers.values().into_iter().collect::<Vec<_>>()[0];
+        let broker = stats.brokers.values().collect::<Vec<_>>()[0];
 
         assert_eq!(
             broker.req,
@@ -391,7 +391,7 @@ mod tests {
     }
 
     // Example from https://github.com/edenhill/librdkafka/wiki/Statistics
-    const EXAMPLE: &'static str = r#"
+    const EXAMPLE: &str = r#"
       {
         "name": "rdkafka#producer-1",
         "client_id": "rdkafka",

@@ -23,7 +23,7 @@
 //! [librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::iter::FromIterator;
 use std::os::raw::c_char;
 use std::ptr;
@@ -150,7 +150,9 @@ impl NativeClientConfig {
         }
 
         // Convert the C string to a Rust string.
-        Ok(String::from_utf8_lossy(&buf).to_string())
+        Ok(String::from_utf8_lossy(&buf)
+            .trim_matches(char::from(0))
+            .to_string())
     }
 }
 

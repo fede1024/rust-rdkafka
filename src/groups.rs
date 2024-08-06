@@ -84,6 +84,9 @@ impl GroupInfo {
 
     /// Returns the members of the group.
     pub fn members(&self) -> &[GroupMemberInfo] {
+        if self.0.members.is_null() {
+            return &[];
+        }
         unsafe {
             slice::from_raw_parts(
                 self.0.members as *const GroupMemberInfo,

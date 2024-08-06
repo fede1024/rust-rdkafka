@@ -320,7 +320,7 @@ impl TopicPartitionList {
         if self.count() == 0 {
             return Ok(());
         }
-        let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
+        let slice = unsafe { slice::from_raw_parts_mut(self.ptr.elems, self.count()) };
         for elem_ptr in slice {
             let mut elem = TopicPartitionListElem::from_ptr(self, &mut *elem_ptr);
             elem.set_offset(offset)?;
@@ -334,7 +334,7 @@ impl TopicPartitionList {
         if self.count() == 0 {
             return vec;
         }
-        let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
+        let slice = unsafe { slice::from_raw_parts_mut(self.ptr.elems, self.count()) };
         for elem_ptr in slice {
             vec.push(TopicPartitionListElem::from_ptr(self, &mut *elem_ptr));
         }
@@ -347,7 +347,7 @@ impl TopicPartitionList {
         if self.count() == 0 {
             return vec;
         }
-        let slice = unsafe { slice::from_raw_parts_mut((*self.ptr).elems, self.count()) };
+        let slice = unsafe { slice::from_raw_parts_mut(self.ptr.elems, self.count()) };
         for elem_ptr in slice {
             let tp = TopicPartitionListElem::from_ptr(self, &mut *elem_ptr);
             if tp.topic() == topic {
