@@ -1,8 +1,6 @@
 use std::borrow::Borrow;
 use std::env;
 use std::ffi::OsStr;
-#[cfg(feature = "cmake-build")]
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
@@ -88,7 +86,7 @@ fn main() {
     }
 }
 
-#[cfg(not(feature = "cmake-build"))]
+#[cfg(all(not(feature = "cmake-build"), not(target_os = "windows")))]
 fn build_librdkafka() {
     let mut configure_flags: Vec<String> = Vec::new();
 
@@ -200,8 +198,9 @@ fn build_librdkafka() {
     println!("cargo:root={}", out_dir);
 }
 
-#[cfg(feature = "cmake-build")]
+#[cfg(any(feature = "cmake-build", target_os = "windows"))]
 fn build_librdkafka() {
+    use std::fs;
     let mut config = cmake::Config::new("librdkafka");
     let mut cmake_library_paths = vec![];
 

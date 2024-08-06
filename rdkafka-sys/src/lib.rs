@@ -28,8 +28,9 @@
 //!   dependency is present. The current design of Cargo unfortunately makes
 //!   this nearly impossible to fix.
 //!
-//! * Windows is only supported when using the CMake build system via the
-//!   `cmake-build` Cargo feature.
+//! * Windows builds always use the CMake build system, regardless of whether
+//!   the `cmake-build` Cargo feature is enabled or not. This is because Windows
+//!   is only supported with CMake as the build system.
 //!
 //! ### Features
 //!

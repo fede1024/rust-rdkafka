@@ -160,13 +160,14 @@ your executable. To compile librdkafka you'll need:
 * GNU `make`
 * `pthreads`
 * `zlib`: optional, but included by default (feature: `libz`)
-* `cmake`: optional, *not* included by default (feature: `cmake-build`)
+* `cmake`: optional¹, *not* included by default (feature: `cmake-build`)
 * `libssl-dev`: optional, *not* included by default (feature: `ssl`)
 * `libsasl2-dev`: optional, *not* included by default (feature: `gssapi`)
 * `libzstd-dev`: optional, *not* included by default (feature: `zstd-pkg-config`)
 
 Note that using the CMake build system, via the `cmake-build` feature, is
-encouraged if you can take the dependency on CMake.
+encouraged if you can take the dependency on CMake. ¹Windows is only supported
+via CMake, where it is the default build system.
 
 By default a submodule with the librdkafka sources pinned to a specific
 commit will be used to compile and statically link the library. The
