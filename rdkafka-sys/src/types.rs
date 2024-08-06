@@ -72,6 +72,9 @@ pub type RDKafkaNewTopic = bindings::rd_kafka_NewTopic_t;
 /// Native rdkafka delete topic object.
 pub type RDKafkaDeleteTopic = bindings::rd_kafka_DeleteTopic_t;
 
+/// Native rdkafka delete records object.
+pub type RDKafkaDeleteRecords = bindings::rd_kafka_DeleteRecords_t;
+
 /// Native rdkafka delete group object.
 pub type RDKafkaDeleteGroup = bindings::rd_kafka_DeleteGroup_t;
 
