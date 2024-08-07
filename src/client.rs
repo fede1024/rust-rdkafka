@@ -239,6 +239,7 @@ impl<C: ClientContext> Client<C> {
                 Arc::as_ptr(&context) as *mut c_void,
             )
         };
+        native_config.set("log.queue", "true")?;
 
         let client_ptr = unsafe {
             let native_config = ManuallyDrop::new(native_config);
@@ -255,6 +256,12 @@ impl<C: ClientContext> Client<C> {
             return Err(KafkaError::ClientCreation(err_buf.to_string()));
         }
 
+        let ret = unsafe {
+            rdsys::rd_kafka_set_log_queue(client_ptr, rdsys::rd_kafka_queue_get_main(client_ptr))
+        };
+        if ret.is_error() {
+            return Err(KafkaError::Global(ret.into()));
+        }
         unsafe { rdsys::rd_kafka_set_log_level(client_ptr, config.log_level as i32) };
 
         Ok(Client {
