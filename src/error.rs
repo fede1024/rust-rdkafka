@@ -145,6 +145,8 @@ pub enum KafkaError {
     ClientConfig(RDKafkaConfRes, String, String, String),
     /// Client creation failed.
     ClientCreation(String),
+    /// Client instances do not match.
+    ClientMismatch,
     /// Consumer commit failed.
     ConsumerCommit(RDKafkaErrorCode),
     /// Consumer queue close failed.
@@ -205,6 +207,9 @@ impl fmt::Debug for KafkaError {
             KafkaError::ClientCreation(ref err) => {
                 write!(f, "KafkaError (Client creation error: {})", err)
             }
+            KafkaError::ClientMismatch => {
+                write!(f, "KafkaError (Client mismatch error)")
+            }
             KafkaError::ConsumerCommit(err) => {
                 write!(f, "KafkaError (Consumer commit error: {})", err)
             }
@@ -264,6 +269,7 @@ impl fmt::Display for KafkaError {
                 write!(f, "Client config error: {} {} {}", desc, key, value)
             }
             KafkaError::ClientCreation(ref err) => write!(f, "Client creation error: {}", err),
+            KafkaError::ClientMismatch => write!(f, "Client mismatch error"),
             KafkaError::ConsumerCommit(err) => write!(f, "Consumer commit error: {}", err),
             KafkaError::ConsumerQueueClose(err) => write!(f, "Consumer queue close error: {}", err),
             KafkaError::Flush(err) => write!(f, "Flush error: {}", err),
@@ -301,6 +307,7 @@ impl Error for KafkaError {
             KafkaError::Canceled => None,
             KafkaError::ClientConfig(..) => None,
             KafkaError::ClientCreation(_) => None,
+            KafkaError::ClientMismatch => None,
             KafkaError::ConsumerCommit(err) => Some(err),
             KafkaError::ConsumerQueueClose(err) => Some(err),
             KafkaError::Flush(err) => Some(err),
@@ -342,6 +349,7 @@ impl KafkaError {
             KafkaError::Canceled => None,
             KafkaError::ClientConfig(..) => None,
             KafkaError::ClientCreation(_) => None,
+            KafkaError::ClientMismatch => None,
             KafkaError::ConsumerCommit(err) => Some(*err),
             KafkaError::ConsumerQueueClose(err) => Some(*err),
             KafkaError::Flush(err) => Some(*err),
