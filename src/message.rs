@@ -534,7 +534,7 @@ impl OwnedHeaders {
     where
         V: ToBytes + ?Sized,
     {
-        let name_cstring = CString::new(header.key.to_owned()).unwrap();
+        let name_cstring = CString::new(header.key).unwrap();
         let (value_ptr, value_len) = match header.value {
             None => (ptr::null_mut(), 0),
             Some(value) => {
