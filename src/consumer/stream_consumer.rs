@@ -129,16 +129,12 @@ impl<'a, C: ConsumerContext> MessageStream<'a, C> {
             self.consumer.poll(Duration::ZERO)
         }
     }
-}
 
-impl<'a, C: ConsumerContext> Stream for MessageStream<'a, C> {
-    type Item = KafkaResult<BorrowedMessage<'a>>;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next_item(&self, cx: &mut Context<'_>) -> Poll<KafkaResult<BorrowedMessage<'a>>> {
         // If there is a message ready, yield it immediately to avoid the
         // taking the lock in `self.set_waker`.
         if let Some(message) = self.poll() {
-            return Poll::Ready(Some(message));
+            return Poll::Ready(message);
         }
 
         // Otherwise, we need to wait for a message to become available. Store
@@ -153,8 +149,16 @@ impl<'a, C: ConsumerContext> Stream for MessageStream<'a, C> {
         // installed the waker.
         match self.poll() {
             None => Poll::Pending,
-            Some(message) => Poll::Ready(Some(message)),
+            Some(message) => Poll::Ready(message),
         }
+    }
+}
+
+impl<'a, C: ConsumerContext> Stream for MessageStream<'a, C> {
+    type Item = KafkaResult<BorrowedMessage<'a>>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.poll_next_item(cx).map(Some)
     }
 }
 
@@ -297,10 +301,8 @@ where
     ///
     /// [cancellation safe]: https://docs.rs/tokio/latest/tokio/macro.select.html#cancellation-safety
     pub async fn recv(&self) -> Result<BorrowedMessage<'_>, KafkaError> {
-        self.stream()
-            .next()
-            .await
-            .expect("kafka streams never terminate")
+        let stream = self.stream();
+        futures_util::future::poll_fn(move |cx| stream.poll_next_item(cx)).await
     }
 
     /// Splits messages for the specified partition into their own stream.
