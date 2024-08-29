@@ -159,12 +159,11 @@ where
                             }
                         }
                         _ => {
-                            let buf = unsafe {
+                            let evname = unsafe {
                                 let evname = rdsys::rd_kafka_event_name(event.ptr());
-                                CStr::from_ptr(evname).to_bytes()
+                                CStr::from_ptr(evname).to_string_lossy()
                             };
-                            let evname = String::from_utf8(buf.to_vec()).unwrap();
-                            warn!("Ignored event '{}' on consumer poll", evname);
+                            warn!("Ignored event '{evname}' on consumer poll");
                         }
                     }
                 }
