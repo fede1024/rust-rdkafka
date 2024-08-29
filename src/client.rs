@@ -204,9 +204,9 @@ pub(crate) enum EventPollResult<T> {
     Event(T),
 }
 
-impl<T> Into<Option<T>> for EventPollResult<T> {
-    fn into(self) -> Option<T> {
-        match self {
+impl<T> From<EventPollResult<T>> for Option<T> {
+    fn from(val: EventPollResult<T>) -> Self {
+        match val {
             EventPollResult::None | EventPollResult::EventConsumed => None,
             EventPollResult::Event(evt) => Some(evt),
         }
