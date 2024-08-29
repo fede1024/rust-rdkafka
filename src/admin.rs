@@ -26,6 +26,7 @@ use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::log::{trace, warn};
 use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, KafkaDrop, NativePtr, Timeout};
+use crate::TopicPartitionList;
 
 //
 // ********** ADMIN CLIENT **********
@@ -141,6 +142,44 @@ impl<C: ClientContext> AdminClient<C> {
             Ok(rx) => Either::Left(DeleteGroupsFuture { rx }),
             Err(err) => Either::Right(future::err(err)),
         }
+    }
+
+    /// Deletes the records in topics.
+    ///
+    /// Note that while the API supports deleting records from multiple topics at once, it is
+    /// not transactional. Deletion of some records in topics may succeed while others
+    /// fail. Be sure to check the result of each individual operation.
+    pub fn delete_records(
+        &self,
+        offsets: &TopicPartitionList,
+        opts: &AdminOptions,
+    ) -> impl Future<Output = KafkaResult<Vec<RecordsResult>>> {
+        match self.delete_records_inner(offsets, opts) {
+            Ok(rx) => Either::Left(DeleteRecordsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
+        }
+    }
+
+    fn delete_records_inner(
+        &self,
+        offsets: &TopicPartitionList,
+        opts: &AdminOptions,
+    ) -> KafkaResult<oneshot::Receiver<NativeEvent>> {
+        let mut err_buf = ErrBuf::new();
+        let delete_records = unsafe {
+            NativeDeleteRecords::from_ptr(rdsys::rd_kafka_DeleteRecords_new(offsets.ptr())).unwrap()
+        };
+        let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
+        unsafe {
+            rdsys::rd_kafka_DeleteRecords(
+                self.client.native_ptr(),
+                &mut delete_records.ptr(),
+                1,
+                native_opts.ptr(),
+                self.queue.ptr(),
+            );
+        }
+        Ok(rx)
     }
 
     fn delete_groups_inner(
@@ -601,6 +640,25 @@ fn build_topic_results(topics: *const *const RDKafkaTopicResult, n: usize) -> Ve
     out
 }
 
+/// The result of a DeleteRecords operation.
+pub type RecordsResult = Result<String, (String, RDKafkaErrorCode)>;
+
+fn build_records_results(offsets: *const RDKafkaTopicPartitionList) -> Vec<RecordsResult> {
+    let count = unsafe { (*offsets).cnt as usize };
+    let mut out = Vec::with_capacity(count);
+    for i in 0..count {
+        let item = unsafe { (*offsets).elems.add(i) };
+        let kafka_err = unsafe { (*item).err };
+        let name = unsafe { cstr_to_owned((*item).topic) };
+        if kafka_err.is_error() {
+            out.push(Err((name, kafka_err.into())));
+        } else {
+            out.push(Ok(name));
+        }
+    }
+    out
+}
+
 /// The result of a DeleteGroup operation.
 pub type GroupResult = Result<String, (String, RDKafkaErrorCode)>;
 
@@ -798,6 +856,40 @@ impl Future for DeleteTopicsFuture {
         let mut n = 0;
         let topics = unsafe { rdsys::rd_kafka_DeleteTopics_result_topics(res, &mut n) };
         Poll::Ready(Ok(build_topic_results(topics, n)))
+    }
+}
+
+//
+// Delete records handling
+//
+
+type NativeDeleteRecords = NativePtr<RDKafkaDeleteRecords>;
+
+unsafe impl KafkaDrop for RDKafkaDeleteRecords {
+    const TYPE: &'static str = "delete records";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_DeleteRecords_destroy;
+}
+
+struct DeleteRecordsFuture {
+    rx: oneshot::Receiver<NativeEvent>,
+}
+
+impl Future for DeleteRecordsFuture {
+    type Output = KafkaResult<Vec<RecordsResult>>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_DeleteRecords_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "delete records request received response of incorrect type ({})",
+                typ
+            ))));
+        }
+        let offsets = unsafe { rdsys::rd_kafka_DeleteRecords_result_offsets(res) };
+        Poll::Ready(Ok(build_records_results(offsets)))
     }
 }
 

@@ -12,7 +12,7 @@ use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, DefaultConsumerContext};
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::metadata::Metadata;
-use rdkafka::{ClientConfig, TopicPartitionList};
+use rdkafka::{ClientConfig, Offset, TopicPartitionList};
 
 use crate::utils::*;
 
@@ -157,6 +157,172 @@ async fn test_topics() {
         assert_eq!(&name2, metadata_topic2.name());
         assert_eq!(1, metadata_topic1.partitions().len());
         assert_eq!(3, metadata_topic2.partitions().len());
+
+        // Verify that records can be deleted from an empty topic
+        let mut offsets = TopicPartitionList::new();
+        offsets
+            .add_partition_offset(&name1, 0, Offset::Offset(0))
+            .expect("add partition offset failed");
+        let res = admin_client
+            .delete_records(&offsets, &opts)
+            .await
+            .expect("delete records failed");
+        assert_eq!(res, &[Ok(name1.clone())]);
+
+        // Verify that records can be deleted from a non-empty topic
+        let partition = 0;
+        let message_count = 10;
+        populate_topic(
+            &name1,
+            message_count,
+            &value_fn,
+            &key_fn,
+            Some(partition),
+            None,
+        )
+        .await;
+
+        let mut offsets = TopicPartitionList::new();
+        offsets
+            .add_partition_offset(&name1, partition, Offset::Offset(message_count.into()))
+            .expect("add partition offset failed");
+        let res = admin_client
+            .delete_records(&offsets, &opts)
+            .await
+            .expect("delete records failed");
+        assert_eq!(res, &[Ok(name1.clone())]);
+
+        // Verify that records can be deleted from multiple topics
+        populate_topic(
+            &name1,
+            message_count,
+            &value_fn,
+            &key_fn,
+            Some(partition),
+            None,
+        )
+        .await;
+        populate_topic(
+            &name2,
+            message_count,
+            &value_fn,
+            &key_fn,
+            Some(partition),
+            None,
+        )
+        .await;
+
+        let mut offsets = TopicPartitionList::new();
+        offsets
+            .add_partition_offset(&name1, partition, Offset::Offset(message_count.into()))
+            .expect("add partition offset1 failed");
+        offsets
+            .add_partition_offset(&name2, partition, Offset::Offset(message_count.into()))
+            .expect("add partition offset2 failed");
+        let results = admin_client
+            .delete_records(&offsets, &opts)
+            .await
+            .expect("delete records failed");
+
+        // Results can be in any order that is why we can't just say the following:
+        // assert_eq!(res, &[Ok(name1.clone()), Ok(name2.clone())]);
+
+        let mut found = false;
+        for result in &results {
+            if let Ok(name) = result {
+                if *name == name1 {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        assert!(found);
+
+        let mut found = false;
+        for result in &results {
+            if let Ok(name) = result {
+                if *name == name2 {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        assert!(found);
+
+        // Verify that mixed-success operations properly report the successful and
+        // failing operations.
+        populate_topic(
+            &name1,
+            message_count,
+            &value_fn,
+            &key_fn,
+            Some(partition),
+            None,
+        )
+        .await;
+        populate_topic(
+            &name2,
+            message_count,
+            &value_fn,
+            &key_fn,
+            Some(partition),
+            None,
+        )
+        .await;
+
+        let mut offsets = TopicPartitionList::new();
+        offsets
+            .add_partition_offset(&name1, partition, Offset::Offset(message_count.into()))
+            .expect("add partition offset1 failed");
+        let unknown_partition = 42;
+        offsets
+            .add_partition_offset(
+                &name2,
+                unknown_partition,
+                Offset::Offset(message_count.into()),
+            )
+            .expect("add partition offset2 failed");
+        let results = admin_client
+            .delete_records(&offsets, &opts)
+            .await
+            .expect("delete records failed");
+
+        // Results can be in any order that is why we can't just say the following:
+        // assert_eq!(res, &[Ok(name1.clone()), Err((name2.clone(), RDKafkaErrorCode::UnknownPartition))]);
+
+        let mut found = false;
+        for result in &results {
+            if let Ok(name) = result {
+                if *name == name1 {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        assert!(found);
+
+        let mut found = false;
+        for result in &results {
+            if let Err((name, err)) = result {
+                if *name == name2 {
+                    assert_eq!(err, &RDKafkaErrorCode::UnknownPartition);
+                    found = true;
+                    break;
+                }
+            }
+        }
+        assert!(found);
+
+        // Verify that deleting records from a non-existent topic fails.
+        {
+            let nonexistent_topic_name = rand_test_topic();
+            let mut offsets = TopicPartitionList::new();
+            offsets
+                .add_partition_offset(&nonexistent_topic_name, 0, Offset::Offset(0))
+                .expect("add partition offset failed");
+            let res = admin_client.delete_records(&offsets, &opts).await;
+            assert_eq!(res, Err(KafkaError::AdminOp(RDKafkaErrorCode::NoEnt)));
+        }
 
         let res = admin_client
             .describe_configs(
