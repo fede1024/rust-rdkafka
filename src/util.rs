@@ -318,20 +318,6 @@ where
     }
 }
 
-#[allow(dead_code)]
-pub(crate) struct OnDrop<F>(pub F)
-where
-    F: Fn();
-
-impl<F> Drop for OnDrop<F>
-where
-    F: Fn(),
-{
-    fn drop(&mut self) {
-        (self.0)()
-    }
-}
-
 /// An abstraction over asynchronous runtimes.
 ///
 /// There are several asynchronous runtimes available for Rust. By default
