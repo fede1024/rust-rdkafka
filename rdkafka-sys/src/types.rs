@@ -459,6 +459,12 @@ pub enum RDKafkaErrorCode {
     UnsupportedAssignor = 112,
     /// The member epoch is stale.
     StaleMemberEpoch = 113,
+    /// The client sent a push telemetry request with an invalid or outdated
+    /// subscription ID.
+    UnknownSubscriptionId = 117,
+    /// The client sent a push telemetry request larger than the maximum size
+    /// that the broker will accept.
+    TelemetryTooLarge = 118,
     #[doc(hidden)]
     EndAll,
 }

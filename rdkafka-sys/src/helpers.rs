@@ -179,6 +179,8 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR_UNRELEASED_INSTANCE_ID => UnreleasedInstanceId,
         RD_KAFKA_RESP_ERR_UNSUPPORTED_ASSIGNOR => UnsupportedAssignor,
         RD_KAFKA_RESP_ERR_STALE_MEMBER_EPOCH => StaleMemberEpoch,
+        RD_KAFKA_RESP_ERR_UNKNOWN_SUBSCRIPTION_ID => UnknownSubscriptionId,
+        RD_KAFKA_RESP_ERR_TELEMETRY_TOO_LARGE => TelemetryTooLarge,
         RD_KAFKA_RESP_ERR_END_ALL => EndAll,
     }
 }
