@@ -26,6 +26,7 @@ use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::log::{trace, warn};
 use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, KafkaDrop, NativePtr, Timeout};
+use crate::TopicPartitionList;
 
 //
 // ********** ADMIN CLIENT **********
@@ -211,6 +212,53 @@ impl<C: ClientContext> AdminClient<C> {
                 self.client.native_ptr(),
                 native_partitions.as_c_array(),
                 native_partitions.len(),
+                native_opts.ptr(),
+                self.queue.ptr(),
+            );
+        }
+        Ok(rx)
+    }
+
+    /// Deletes records from a topic.
+    ///
+    /// The provided `offsets` is a topic partition list specifying which
+    /// records to delete from a list of topic partitions. For each entry in the
+    /// list, the messages at offsets before the specified offsets (exclusive)
+    /// in the specified partition will be deleted. Use offset [`Offset::End`]
+    /// to delete all records in the partition.
+    ///
+    /// Returns a topic partition list describing the result of the deletion. If
+    /// the operation succeeded for a partition, the offset for that partition
+    /// will be set to the post-deletion low-water mark for that partition. If
+    /// the operation failed for a partition, there will be an error for that
+    /// partition's entry in the list.
+    pub fn delete_records(
+        &self,
+        offsets: &TopicPartitionList,
+        opts: &AdminOptions,
+    ) -> impl Future<Output = KafkaResult<TopicPartitionList>> {
+        match self.delete_records_inner(offsets, opts) {
+            Ok(rx) => Either::Left(DeleteRecordsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
+        }
+    }
+
+    fn delete_records_inner(
+        &self,
+        offsets: &TopicPartitionList,
+        opts: &AdminOptions,
+    ) -> KafkaResult<oneshot::Receiver<NativeEvent>> {
+        let mut err_buf = ErrBuf::new();
+        let delete_records = unsafe {
+            NativeDeleteRecords::from_ptr(rdsys::rd_kafka_DeleteRecords_new(offsets.ptr()))
+        }
+        .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
+        let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
+        unsafe {
+            rdsys::rd_kafka_DeleteRecords(
+                self.client.native_ptr(),
+                &mut delete_records.ptr(),
+                1,
                 native_opts.ptr(),
                 self.queue.ptr(),
             );
@@ -947,6 +995,43 @@ impl Future for CreatePartitionsFuture {
         let mut n = 0;
         let topics = unsafe { rdsys::rd_kafka_CreatePartitions_result_topics(res, &mut n) };
         Poll::Ready(Ok(build_topic_results(topics, n)))
+    }
+}
+
+//
+// Delete records handling
+//
+
+type NativeDeleteRecords = NativePtr<RDKafkaDeleteRecords>;
+
+unsafe impl KafkaDrop for RDKafkaDeleteRecords {
+    const TYPE: &'static str = "delete records";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_DeleteRecords_destroy;
+}
+
+struct DeleteRecordsFuture {
+    rx: oneshot::Receiver<NativeEvent>,
+}
+
+impl Future for DeleteRecordsFuture {
+    type Output = KafkaResult<TopicPartitionList>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_DeleteRecords_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "delete records request received response of incorrect type ({})",
+                typ
+            ))));
+        }
+        let tpl = unsafe {
+            let tpl = rdsys::rd_kafka_DeleteRecords_result_offsets(res);
+            TopicPartitionList::from_ptr(rdsys::rd_kafka_topic_partition_list_copy(tpl))
+        };
+        Poll::Ready(Ok(tpl))
     }
 }
 
