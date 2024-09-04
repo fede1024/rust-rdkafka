@@ -29,8 +29,9 @@ jobs:
         include:
           - os: macos-11.0
           - os: windows-2019
-            features: cmake-build,libz-static,curl-static
-            rdkafka-sys-features: cmake-build,libz-static,curl-static
+            # The Windows build should automatically use CMake
+            features: libz-static,curl-static
+            rdkafka-sys-features: libz-static,curl-static
           - os: ubuntu-20.04
             features: tracing
           - os: ubuntu-20.04
