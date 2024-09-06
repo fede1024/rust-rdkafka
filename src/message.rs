@@ -425,20 +425,20 @@ impl<'a> Message for BorrowedMessage<'a> {
     type Headers = BorrowedHeaders;
 
     fn key(&self) -> Option<&[u8]> {
-        unsafe { util::ptr_to_opt_slice((*self.ptr).key, (*self.ptr).key_len) }
+        unsafe { util::ptr_to_opt_slice(self.ptr.key, self.ptr.key_len) }
     }
 
     fn payload(&self) -> Option<&[u8]> {
-        unsafe { util::ptr_to_opt_slice((*self.ptr).payload, (*self.ptr).len) }
+        unsafe { util::ptr_to_opt_slice(self.ptr.payload, self.ptr.len) }
     }
 
     unsafe fn payload_mut(&mut self) -> Option<&mut [u8]> {
-        util::ptr_to_opt_mut_slice((*self.ptr).payload, (*self.ptr).len)
+        util::ptr_to_opt_mut_slice(self.ptr.payload, self.ptr.len)
     }
 
     fn topic(&self) -> &str {
         unsafe {
-            CStr::from_ptr(rdsys::rd_kafka_topic_name((*self.ptr).rkt))
+            CStr::from_ptr(rdsys::rd_kafka_topic_name(self.ptr.rkt))
                 .to_str()
                 .expect("Topic name is not valid UTF-8")
         }
@@ -534,7 +534,7 @@ impl OwnedHeaders {
     where
         V: ToBytes + ?Sized,
     {
-        let name_cstring = CString::new(header.key.to_owned()).unwrap();
+        let name_cstring = CString::new(header.key).unwrap();
         let (value_ptr, value_len) = match header.value {
             None => (ptr::null_mut(), 0),
             Some(value) => {
@@ -822,22 +822,10 @@ impl ToBytes for () {
     }
 }
 
-// Implement to_bytes for arrays - https://github.com/rust-lang/rfcs/issues/1038
-macro_rules! array_impls {
-    ($($N:expr)+) => {
-        $(
-            impl ToBytes for [u8; $N] {
-                fn to_bytes(&self) -> &[u8] { self }
-            }
-         )+
+impl<const N: usize> ToBytes for [u8; N] {
+    fn to_bytes(&self) -> &[u8] {
+        self
     }
-}
-
-array_impls! {
-     0  1  2  3  4  5  6  7  8  9
-    10 11 12 13 14 15 16 17 18 19
-    20 21 22 23 24 25 26 27 28 29
-    30 31 32
 }
 
 #[cfg(test)]

@@ -251,24 +251,13 @@ impl fmt::Display for ErrBuf {
     }
 }
 
-pub(crate) trait WrappedCPointer {
-    type Target;
-
-    fn ptr(&self) -> *mut Self::Target;
-
-    fn is_null(&self) -> bool {
-        self.ptr().is_null()
-    }
+pub(crate) trait AsCArray<T> {
+    fn as_c_array(&self) -> *mut *mut T;
 }
 
-/// Converts a container into a C array.
-pub(crate) trait AsCArray<T: WrappedCPointer> {
-    fn as_c_array(&self) -> *mut *mut T::Target;
-}
-
-impl<T: WrappedCPointer> AsCArray<T> for Vec<T> {
-    fn as_c_array(&self) -> *mut *mut T::Target {
-        self.as_ptr() as *mut *mut T::Target
+impl<T: KafkaDrop> AsCArray<T> for Vec<NativePtr<T>> {
+    fn as_c_array(&self) -> *mut *mut T {
+        self.as_ptr() as *mut *mut T
     }
 }
 
@@ -295,17 +284,6 @@ where
 pub(crate) unsafe trait KafkaDrop {
     const TYPE: &'static str;
     const DROP: unsafe extern "C" fn(*mut Self);
-}
-
-impl<T> WrappedCPointer for NativePtr<T>
-where
-    T: KafkaDrop,
-{
-    type Target = T;
-
-    fn ptr(&self) -> *mut T {
-        self.ptr.as_ptr()
-    }
 }
 
 impl<T> Deref for NativePtr<T>
@@ -337,19 +315,6 @@ where
 
     pub(crate) fn ptr(&self) -> *mut T {
         self.ptr.as_ptr()
-    }
-}
-
-pub(crate) struct OnDrop<F>(pub F)
-where
-    F: Fn();
-
-impl<F> Drop for OnDrop<F>
-where
-    F: Fn(),
-{
-    fn drop(&mut self) {
-        (self.0)()
     }
 }
 

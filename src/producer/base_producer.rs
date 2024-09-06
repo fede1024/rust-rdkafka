@@ -435,6 +435,7 @@ where
     /// Note that this method will never block.
     // Simplifying the return type requires generic associated types, which are
     // unstable.
+    #[allow(clippy::result_large_err)]
     pub fn send<'a, K, P>(
         &self,
         mut record: BaseRecord<'a, K, P, C::DeliveryOpaque>,
@@ -451,7 +452,7 @@ where
         }
         let (payload_ptr, payload_len) = as_bytes(record.payload);
         let (key_ptr, key_len) = as_bytes(record.key);
-        let topic_cstring = CString::new(record.topic.to_owned()).unwrap();
+        let topic_cstring = CString::new(record.topic).unwrap();
         let opaque_ptr = record.delivery_opaque.into_ptr();
         let produce_error = unsafe {
             rdsys::rd_kafka_producev(
@@ -711,6 +712,7 @@ where
     /// See the documentation for [`BaseProducer::send`] for details.
     // Simplifying the return type requires generic associated types, which are
     // unstable.
+    #[allow(clippy::result_large_err)]
     pub fn send<'a, K, P>(
         &self,
         record: BaseRecord<'a, K, P, C::DeliveryOpaque>,

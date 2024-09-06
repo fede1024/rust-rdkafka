@@ -150,7 +150,9 @@ impl NativeClientConfig {
         }
 
         // Convert the C string to a Rust string.
-        Ok(String::from_utf8_lossy(&buf).to_string())
+        Ok(String::from_utf8_lossy(&buf)
+            .trim_matches(char::from(0))
+            .to_string())
     }
 }
 

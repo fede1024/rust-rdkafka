@@ -38,6 +38,7 @@ where
     client: Client<C>,
     queue: NativeQueue,
     group_id: Option<String>,
+    nonempty_callback: Option<Box<Box<dyn Fn() + Send + Sync>>>,
 }
 
 impl FromClientConfig for BaseConsumer {
@@ -98,6 +99,7 @@ where
             client,
             queue,
             group_id,
+            nonempty_callback: None,
         })
     }
 
@@ -359,6 +361,36 @@ where
 
     pub(crate) fn native_client(&self) -> &NativeClient {
         self.client.native_client()
+    }
+
+    /// Sets a callback that will be invoked whenever the queue becomes
+    /// nonempty.
+    pub fn set_nonempty_callback<F>(&mut self, f: F)
+    where
+        F: Fn() + Send + Sync + 'static,
+    {
+        // SAFETY: we keep `F` alive until the next call to
+        // `rd_kafka_queue_cb_event_enable`. That might be the next call to
+        // `set_nonempty_callback` or it might be when the queue is dropped. The
+        // double indirection is required because `&dyn Fn` is a fat pointer.
+
+        unsafe extern "C" fn native_message_queue_nonempty_cb(
+            _: *mut RDKafka,
+            opaque_ptr: *mut c_void,
+        ) {
+            let f = opaque_ptr as *const *const (dyn Fn() + Send + Sync);
+            (**f)();
+        }
+
+        let f: Box<Box<dyn Fn() + Send + Sync>> = Box::new(Box::new(f));
+        unsafe {
+            rdsys::rd_kafka_queue_cb_event_enable(
+                self.queue.ptr(),
+                Some(native_message_queue_nonempty_cb),
+                &*f as *const _ as *mut c_void,
+            )
+        }
+        self.nonempty_callback = Some(f);
     }
 }
 
@@ -722,6 +754,8 @@ where
     C: ConsumerContext,
 {
     fn drop(&mut self) {
+        unsafe { rdsys::rd_kafka_queue_cb_event_enable(self.queue.ptr(), None, ptr::null_mut()) }
+
         trace!("Destroying consumer: {:?}", self.client.native_ptr());
         if self.group_id.is_some() {
             if let Err(err) = self.close_queue() {
