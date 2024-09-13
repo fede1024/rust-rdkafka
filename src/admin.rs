@@ -28,6 +28,7 @@ use crate::log::{trace, warn};
 use crate::util::{cstr_to_owned, AsCArray, ErrBuf, IntoOpaque, KafkaDrop, NativePtr, Timeout};
 use crate::TopicPartitionList;
 
+use uuid::Uuid;
 //
 // ********** ADMIN CLIENT **********
 //
@@ -53,9 +54,9 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         topics: I,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<TopicResult>>>
+    ) -> impl Future<Output=KafkaResult<Vec<TopicResult>>>
     where
-        I: IntoIterator<Item = &'a NewTopic<'a>>,
+        I: IntoIterator<Item=&'a NewTopic<'a>>,
     {
         match self.create_topics_inner(topics, opts) {
             Ok(rx) => Either::Left(CreateTopicsFuture { rx }),
@@ -69,7 +70,7 @@ impl<C: ClientContext> AdminClient<C> {
         opts: &AdminOptions,
     ) -> KafkaResult<oneshot::Receiver<NativeEvent>>
     where
-        I: IntoIterator<Item = &'a NewTopic<'a>>,
+        I: IntoIterator<Item=&'a NewTopic<'a>>,
     {
         let mut native_topics = Vec::new();
         let mut err_buf = ErrBuf::new();
@@ -98,7 +99,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         topic_names: &[&str],
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<TopicResult>>> {
+    ) -> impl Future<Output=KafkaResult<Vec<TopicResult>>> {
         match self.delete_topics_inner(topic_names, opts) {
             Ok(rx) => Either::Left(DeleteTopicsFuture { rx }),
             Err(err) => Either::Right(future::err(err)),
@@ -137,7 +138,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         group_names: &[&str],
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<GroupResult>>> {
+    ) -> impl Future<Output=KafkaResult<Vec<GroupResult>>> {
         match self.delete_groups_inner(group_names, opts) {
             Ok(rx) => Either::Left(DeleteGroupsFuture { rx }),
             Err(err) => Either::Right(future::err(err)),
@@ -183,9 +184,9 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         partitions: I,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<TopicResult>>>
+    ) -> impl Future<Output=KafkaResult<Vec<TopicResult>>>
     where
-        I: IntoIterator<Item = &'a NewPartitions<'a>>,
+        I: IntoIterator<Item=&'a NewPartitions<'a>>,
     {
         match self.create_partitions_inner(partitions, opts) {
             Ok(rx) => Either::Left(CreatePartitionsFuture { rx }),
@@ -199,7 +200,7 @@ impl<C: ClientContext> AdminClient<C> {
         opts: &AdminOptions,
     ) -> KafkaResult<oneshot::Receiver<NativeEvent>>
     where
-        I: IntoIterator<Item = &'a NewPartitions<'a>>,
+        I: IntoIterator<Item=&'a NewPartitions<'a>>,
     {
         let mut native_partitions = Vec::new();
         let mut err_buf = ErrBuf::new();
@@ -236,7 +237,7 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         offsets: &TopicPartitionList,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<TopicPartitionList>> {
+    ) -> impl Future<Output=KafkaResult<TopicPartitionList>> {
         match self.delete_records_inner(offsets, opts) {
             Ok(rx) => Either::Left(DeleteRecordsFuture { rx }),
             Err(err) => Either::Right(future::err(err)),
@@ -252,7 +253,7 @@ impl<C: ClientContext> AdminClient<C> {
         let delete_records = unsafe {
             NativeDeleteRecords::from_ptr(rdsys::rd_kafka_DeleteRecords_new(offsets.ptr()))
         }
-        .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
+            .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
         let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
         unsafe {
             rdsys::rd_kafka_DeleteRecords(
@@ -275,9 +276,9 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         configs: I,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<ConfigResourceResult>>>
+    ) -> impl Future<Output=KafkaResult<Vec<ConfigResourceResult>>>
     where
-        I: IntoIterator<Item = &'a ResourceSpecifier<'a>>,
+        I: IntoIterator<Item=&'a ResourceSpecifier<'a>>,
     {
         match self.describe_configs_inner(configs, opts) {
             Ok(rx) => Either::Left(DescribeConfigsFuture { rx }),
@@ -291,7 +292,7 @@ impl<C: ClientContext> AdminClient<C> {
         opts: &AdminOptions,
     ) -> KafkaResult<oneshot::Receiver<NativeEvent>>
     where
-        I: IntoIterator<Item = &'a ResourceSpecifier<'a>>,
+        I: IntoIterator<Item=&'a ResourceSpecifier<'a>>,
     {
         let mut native_configs = Vec::new();
         let mut err_buf = ErrBuf::new();
@@ -315,7 +316,7 @@ impl<C: ClientContext> AdminClient<C> {
                     typ,
                     name.as_ptr(),
                 ))
-                .unwrap()
+                    .unwrap()
             });
         }
         let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
@@ -340,9 +341,9 @@ impl<C: ClientContext> AdminClient<C> {
         &self,
         configs: I,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<AlterConfigsResult>>>
+    ) -> impl Future<Output=KafkaResult<Vec<AlterConfigsResult>>>
     where
-        I: IntoIterator<Item = &'a AlterConfig<'a>>,
+        I: IntoIterator<Item=&'a AlterConfig<'a>>,
     {
         match self.alter_configs_inner(configs, opts) {
             Ok(rx) => Either::Left(AlterConfigsFuture { rx }),
@@ -356,7 +357,7 @@ impl<C: ClientContext> AdminClient<C> {
         opts: &AdminOptions,
     ) -> KafkaResult<oneshot::Receiver<NativeEvent>>
     where
-        I: IntoIterator<Item = &'a AlterConfig<'a>>,
+        I: IntoIterator<Item=&'a AlterConfig<'a>>,
     {
         let mut native_configs = Vec::new();
         let mut err_buf = ErrBuf::new();
@@ -369,6 +370,43 @@ impl<C: ClientContext> AdminClient<C> {
                 self.client.native_ptr(),
                 native_configs.as_c_array(),
                 native_configs.len(),
+                native_opts.ptr(),
+                self.queue.ptr(),
+            );
+        }
+        Ok(rx)
+    }
+
+    pub fn describe_topics(
+        &self,
+        topic_names: &[&str],
+        opts: &AdminOptions,
+    ) -> impl Future<Output=KafkaResult<Vec<TopicDescription>>> {
+        match self.describe_topics_inner(topic_names, opts) {
+            Ok(rx) => Either::Left(DescribeTopicsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
+        }
+    }
+
+    fn describe_topics_inner(
+        &self,
+        topic_names: &[&str],
+        opts: &AdminOptions,
+    ) -> KafkaResult<oneshot::Receiver<NativeEvent>> {
+        let topic_names_string_array = topic_names
+            .iter()
+            .map(|tn| CString::new(*tn).map(|s| s.as_ptr()))
+            .collect::<Result<Vec<_>, _>>()?
+            .as_mut_ptr();
+        let native_topic_collection = unsafe {
+            NativeTopicCollection::from_ptr(rdsys::rd_kafka_TopicCollection_of_topic_names(topic_names_string_array, topic_names.len())).unwrap()
+        };
+        let mut err_buf = ErrBuf::new();
+        let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
+        unsafe {
+            rdsys::rd_kafka_DescribeTopics(
+                self.client.native_ptr(),
+                native_topic_collection.ptr(),
                 native_opts.ptr(),
                 self.queue.ptr(),
             );
@@ -542,7 +580,7 @@ impl AdminOptions {
                 client,
                 RDKafkaAdminOp::RD_KAFKA_ADMIN_OP_ANY,
             ))
-            .unwrap()
+                .unwrap()
         };
 
         if let Some(timeout) = self.request_timeout {
@@ -737,7 +775,7 @@ impl<'a> NewTopic<'a> {
                 err_buf.capacity(),
             ))
         }
-        .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
+            .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
 
         if let TopicReplication::Variable(assignment) = self.replication {
             for (partition_id, broker_ids) in assignment.iter().enumerate() {
@@ -946,7 +984,7 @@ impl<'a> NewPartitions<'a> {
                 err_buf.capacity(),
             ))
         }
-        .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
+            .ok_or_else(|| KafkaError::AdminOpCreation(err_buf.to_string()))?;
 
         if let Some(assignment) = self.assignment {
             for (partition_id, broker_ids) in assignment.iter().enumerate() {
@@ -1249,7 +1287,7 @@ impl Future for DescribeConfigsFuture {
 
 /// The result of an individual AlterConfig operation.
 pub type AlterConfigsResult =
-    Result<OwnedResourceSpecifier, (OwnedResourceSpecifier, RDKafkaErrorCode)>;
+Result<OwnedResourceSpecifier, (OwnedResourceSpecifier, RDKafkaErrorCode)>;
 
 /// Configuration for an AlterConfig operation.
 pub struct AlterConfig<'a> {
@@ -1339,4 +1377,185 @@ impl Future for AlterConfigsFuture {
         }
         Poll::Ready(Ok(out))
     }
+}
+
+//
+// Describe topics handling
+//
+
+#[derive(Debug)]
+pub struct Node {
+    pub id: i32,
+    pub host: String,
+    pub port: u16,
+    pub rack: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct TopicPartitionInfo {
+    pub partition: i32,
+    pub leader: Node,
+    pub isr: Vec<Node>,
+    pub replicas: Vec<Node>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum AclOperation {
+    Unknown,
+    Any,
+    All,
+    Read,
+    Write,
+    Create,
+    Delete,
+    Alter,
+    Describe,
+    ClusterAction,
+    DescribeConfigs,
+    AlterConfigs,
+    IdempotentWrite,
+}
+
+#[derive(Debug)]
+pub struct TopicDescription {
+    pub name: String,
+    pub topic_id: Uuid,
+    pub partitions: Vec<TopicPartitionInfo>,
+    pub is_internal: bool,
+    pub authorized_operations: Vec<AclOperation>,
+}
+
+type NativeTopicCollection = NativePtr<RDKafkaTopicCollection>;
+
+unsafe impl KafkaDrop for RDKafkaTopicCollection {
+    const TYPE: &'static str = "topic collection";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_TopicCollection_destroy;
+}
+
+
+struct DescribeTopicsFuture {
+    rx: oneshot::Receiver<NativeEvent>,
+}
+
+impl Future for DescribeTopicsFuture {
+    type Output = KafkaResult<Vec<TopicDescription>>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_DescribeTopics_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "describe topics request received response of incorrect type ({})",
+                typ
+            ))));
+        }
+        let mut n = 0;
+        let topic_descriptions = unsafe { rdsys::rd_kafka_DescribeTopics_result_topics(res, &mut n) };
+        let mut out = Vec::with_capacity(n);
+        for i in 0..n {
+            let topic_description = unsafe { *topic_descriptions.add(i) };
+            let topic_description = TopicDescription {
+                name: unsafe { cstr_to_owned(rdsys::rd_kafka_TopicDescription_name(topic_description)) },
+                topic_id: extract_topic_id(topic_description),
+                partitions: extract_partitions(topic_description),
+                is_internal: unsafe { rdsys::rd_kafka_TopicDescription_is_internal(topic_description) } != 0,
+                authorized_operations: extract_authorized_operations(topic_description)?,
+            };
+            out.push(topic_description);
+        }
+        Poll::Ready(Ok(out))
+    }
+}
+
+fn extract_topic_id(topic_description: *const RDKafkaTopicDescription) -> Uuid {
+    let topic_id = unsafe { rdsys::rd_kafka_TopicDescription_topic_id(topic_description) };
+    let high_bits = unsafe { rdsys::rd_kafka_Uuid_most_significant_bits(topic_id) } as u64;
+    let low_bits = unsafe { rdsys::rd_kafka_Uuid_least_significant_bits(topic_id) } as u64;
+    Uuid::from_u64_pair(high_bits, low_bits)
+}
+
+fn extract_partitions(topic_description: *const RDKafkaTopicDescription) -> Vec<TopicPartitionInfo> {
+    let mut n = 0;
+    let partitions = unsafe { rdsys::rd_kafka_TopicDescription_partitions(topic_description, &mut n) };
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        let partition = unsafe { *partitions.add(i) };
+        let leader = extract_node(unsafe { rdsys::rd_kafka_TopicPartitionInfo_leader(partition) });
+        let isr = extract_isr(partition);
+        let replicas = extract_replicas(partition );
+        out.push(TopicPartitionInfo {
+            partition: unsafe { rdsys::rd_kafka_TopicPartitionInfo_partition(partition) },
+            leader,
+            isr,
+            replicas,
+        });
+    }
+    out
+}
+
+fn extract_node(node: *const RDKafkaNode) -> Node {
+    let rack = unsafe { rdsys::rd_kafka_Node_rack(node) };
+    let rack = if rack.is_null() {
+        None
+    } else {
+        Some(unsafe { cstr_to_owned(rack) })
+    };
+    Node {
+        id: unsafe { rdsys::rd_kafka_Node_id(node) },
+        host: unsafe { cstr_to_owned(rdsys::rd_kafka_Node_host(node)) },
+        port: unsafe { rdsys::rd_kafka_Node_port(node) },
+        rack,
+    }
+}
+
+fn extract_isr(partition: *const RDKafkaTopicPartitionInfo) -> Vec<Node> {
+    let mut n = 0;
+    let nodes = unsafe { rdsys::rd_kafka_TopicPartitionInfo_isr(partition, &mut n) };
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        out.push(extract_node(unsafe { *nodes.add(i) }));
+    }
+    out
+}
+
+fn extract_replicas(nodes: *const RDKafkaTopicPartitionInfo) -> Vec<Node> {
+    let mut n = 0;
+    let nodes = unsafe { rdsys::rd_kafka_TopicPartitionInfo_replicas(nodes, &mut n) };
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        out.push(extract_node(unsafe { *nodes.add(i) }));
+    }
+    out
+}
+
+
+fn extract_authorized_operations(topic_description: *const RDKafkaTopicDescription) -> KafkaResult<Vec<AclOperation>> {
+    let mut n = 0;
+    let operations = unsafe { rdsys::rd_kafka_TopicDescription_authorized_operations(topic_description, &mut n) };
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        let operation = unsafe { *operations.add(i) };
+        out.push(match operation {
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_UNKNOWN => AclOperation::Unknown,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_ANY => AclOperation::Any,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_ALL => AclOperation::All,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_READ => AclOperation::Read,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_WRITE => AclOperation::Write,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_CREATE => AclOperation::Create,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_DELETE => AclOperation::Delete,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_ALTER => AclOperation::Alter,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_DESCRIBE => AclOperation::Describe,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_CLUSTER_ACTION => AclOperation::ClusterAction,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_DESCRIBE_CONFIGS => AclOperation::DescribeConfigs,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_ALTER_CONFIGS => AclOperation::AlterConfigs,
+            RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_IDEMPOTENT_WRITE => AclOperation::IdempotentWrite,
+            _ => return Err(KafkaError::AdminOpCreation(format!(
+                "bogus acl operation in kafka response: {:?}",
+                operation
+            )))
+        });
+    }
+    Ok(out)
 }

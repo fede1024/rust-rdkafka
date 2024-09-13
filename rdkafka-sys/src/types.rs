@@ -99,6 +99,18 @@ pub type RDKafkaGroupResult = bindings::rd_kafka_group_result_t;
 /// Native rdkafka mock cluster.
 pub type RDKafkaMockCluster = bindings::rd_kafka_mock_cluster_t;
 
+/// Native rdkafka topic collection.
+pub type RDKafkaTopicCollection = bindings::rd_kafka_TopicCollection_t;
+
+/// Native rdkafka node.
+pub type RDKafkaNode = bindings::rd_kafka_Node_t;
+
+/// Native rdkafka topic description.
+pub type RDKafkaTopicDescription = bindings::rd_kafka_TopicDescription_t;
+
+/// Native rdkafka topic partition info.
+pub type RDKafkaTopicPartitionInfo = bindings::rd_kafka_TopicPartitionInfo_t;
+
 // ENUMS
 
 /// Client types.
@@ -118,6 +130,9 @@ pub use bindings::rd_kafka_ResourceType_t as RDKafkaResourceType;
 
 /// Config source.
 pub use bindings::rd_kafka_ConfigSource_t as RDKafkaConfigSource;
+
+/// ACL operation.
+pub use bindings::rd_kafka_AclOperation_t as RDKafkaAclOperation;
 
 // Errors enum
 
