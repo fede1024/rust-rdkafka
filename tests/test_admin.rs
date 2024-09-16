@@ -613,6 +613,28 @@ async fn test_describe_topics() {
 }
 
 #[tokio::test]
+async fn test_describe_cluster() {
+    let admin_client = create_admin_client();
+    let opts = AdminOptions::new();
+
+    // Describe the cluster and verify its properties.
+    let res = admin_client
+        .describe_cluster(&opts)
+        .await
+        .expect("describe cluster failed");
+    assert!(res.nodes.len() > 0);
+    assert_eq!(res.authorized_operations, None);
+
+    // Describe the cluster with authorized operations and verify the properties.
+    let opts = opts.include_authorized_operations(true);
+    let res = admin_client
+        .describe_cluster(&opts)
+        .await
+        .expect("describe cluster failed");
+    assert!(res.authorized_operations.is_some());
+}
+
+#[tokio::test]
 async fn test_groups() {
     let admin_client = create_admin_client();
 

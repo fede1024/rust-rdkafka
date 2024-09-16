@@ -432,6 +432,33 @@ impl<C: ClientContext> AdminClient<C> {
         Ok(rx)
     }
 
+    /// Describe the Kafka cluster.
+    pub fn describe_cluster(
+        &self,
+        opts: &AdminOptions,
+    ) -> impl Future<Output = KafkaResult<ClusterDescription>> {
+        match self.describe_cluster_inner(opts) {
+            Ok(rx) => Either::Left(DescribeClusterFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
+        }
+    }
+
+    fn describe_cluster_inner(
+        &self,
+        opts: &AdminOptions,
+    ) -> KafkaResult<oneshot::Receiver<NativeEvent>> {
+        let mut err_buf = ErrBuf::new();
+        let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
+        unsafe {
+            rdsys::rd_kafka_DescribeCluster(
+                self.client.native_ptr(),
+                native_opts.ptr(),
+                self.queue.ptr(),
+            );
+        }
+        Ok(rx)
+    }
+
     /// Returns the client underlying this admin client.
     pub fn inner(&self) -> &Client<C> {
         &self.client
@@ -1591,6 +1618,15 @@ impl Future for DescribeTopicsFuture {
                 let err = rdsys::rd_kafka_TopicDescription_error(topic_description);
                 rdsys::rd_kafka_error_code(err)
             };
+
+            let mut n_operations = 0;
+            let operations = unsafe {
+                rdsys::rd_kafka_TopicDescription_authorized_operations(
+                    topic_description,
+                    &mut n_operations,
+                )
+            };
+
             let topic_description = TopicDescription {
                 name: unsafe {
                     cstr_to_owned(rdsys::rd_kafka_TopicDescription_name(topic_description))
@@ -1600,7 +1636,7 @@ impl Future for DescribeTopicsFuture {
                 is_internal: unsafe {
                     rdsys::rd_kafka_TopicDescription_is_internal(topic_description)
                 } != 0,
-                authorized_operations: extract_authorized_operations(topic_description)?,
+                authorized_operations: extract_authorized_operations(operations, n_operations)?,
             };
 
             if err.is_error() {
@@ -1629,14 +1665,19 @@ fn extract_partitions(
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
         let partition = unsafe { *partitions.add(i) };
-        let leader = extract_node(unsafe { rdsys::rd_kafka_TopicPartitionInfo_leader(partition) });
-        let isr = extract_isr(partition);
-        let replicas = extract_replicas(partition);
+
+        let mut n_isr = 0;
+        let isr = unsafe { rdsys::rd_kafka_TopicPartitionInfo_isr(partition, &mut n_isr) };
+
+        let mut n_replicas = 0;
+        let replicas =
+            unsafe { rdsys::rd_kafka_TopicPartitionInfo_replicas(partition, &mut n_replicas) };
+
         out.push(TopicPartitionInfo {
             partition: unsafe { rdsys::rd_kafka_TopicPartitionInfo_partition(partition) },
-            leader,
-            isr,
-            replicas,
+            leader: extract_node(unsafe { rdsys::rd_kafka_TopicPartitionInfo_leader(partition) }),
+            isr: extract_nodes(isr, n_isr),
+            replicas: extract_nodes(replicas, n_replicas),
         });
     }
     out
@@ -1657,19 +1698,7 @@ fn extract_node(node: *const RDKafkaNode) -> Node {
     }
 }
 
-fn extract_isr(partition: *const RDKafkaTopicPartitionInfo) -> Vec<Node> {
-    let mut n = 0;
-    let nodes = unsafe { rdsys::rd_kafka_TopicPartitionInfo_isr(partition, &mut n) };
-    let mut out = Vec::with_capacity(n);
-    for i in 0..n {
-        out.push(extract_node(unsafe { *nodes.add(i) }));
-    }
-    out
-}
-
-fn extract_replicas(nodes: *const RDKafkaTopicPartitionInfo) -> Vec<Node> {
-    let mut n = 0;
-    let nodes = unsafe { rdsys::rd_kafka_TopicPartitionInfo_replicas(nodes, &mut n) };
+fn extract_nodes(nodes: *mut *const RDKafkaNode, n: usize) -> Vec<Node> {
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
         out.push(extract_node(unsafe { *nodes.add(i) }));
@@ -1678,13 +1707,9 @@ fn extract_replicas(nodes: *const RDKafkaTopicPartitionInfo) -> Vec<Node> {
 }
 
 fn extract_authorized_operations(
-    topic_description: *const RDKafkaTopicDescription,
+    operations: *const RDKafkaAclOperation,
+    n: usize,
 ) -> KafkaResult<Option<Vec<AclOperation>>> {
-    let mut n = 0;
-    let operations = unsafe {
-        rdsys::rd_kafka_TopicDescription_authorized_operations(topic_description, &mut n)
-    };
-
     if operations.is_null() {
         return Ok(None);
     }
@@ -1721,4 +1746,63 @@ fn extract_authorized_operations(
         out.push(operation);
     }
     Ok(Some(out))
+}
+
+//
+// Describe cluster handling
+//
+
+/// DescribeCluster result.
+#[derive(Debug)]
+pub struct ClusterDescription {
+    /// Cluster id.
+    pub cluster_id: String,
+    /// Current controller.
+    pub controller: Node,
+    /// Brokers in the cluster.
+    pub nodes: Vec<Node>,
+    /// Operations allowed for cluster. It may be None if operations were not requested.
+    pub authorized_operations: Option<Vec<AclOperation>>,
+}
+
+struct DescribeClusterFuture {
+    rx: oneshot::Receiver<NativeEvent>,
+}
+
+impl Future for DescribeClusterFuture {
+    type Output = KafkaResult<ClusterDescription>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_DescribeCluster_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "describe cluster request received response of incorrect type ({})",
+                typ
+            ))));
+        }
+
+        let mut n_nodes = 0;
+        let nodes = unsafe { rdsys::rd_kafka_DescribeCluster_result_nodes(res, &mut n_nodes) };
+
+        let mut n_operations = 0;
+        let operations = unsafe {
+            rdsys::rd_kafka_DescribeCluster_result_authorized_operations(res, &mut n_operations)
+        };
+
+        let out = Ok(ClusterDescription {
+            cluster_id: unsafe {
+                cstr_to_owned(rdsys::rd_kafka_DescribeCluster_result_cluster_id(res))
+            },
+            controller: extract_node(unsafe {
+                rdsys::rd_kafka_DescribeCluster_result_controller(res)
+            }),
+            nodes: extract_nodes(nodes, n_nodes),
+            authorized_operations: extract_authorized_operations(operations, n_operations)?,
+        });
+
+        Poll::Ready(out)
+    }
 }
