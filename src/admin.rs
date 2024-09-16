@@ -377,31 +377,45 @@ impl<C: ClientContext> AdminClient<C> {
         Ok(rx)
     }
 
-    pub fn describe_topics(
+    /// Describe topics as specified by the `topic_names` array.
+    pub fn describe_topics<'a, I>(
         &self,
-        topic_names: &[&str],
+        topic_names: I,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<Vec<TopicDescription>>> {
+    ) -> impl Future<Output = KafkaResult<Vec<TopicDescriptionResult>>>
+    where
+        I: IntoIterator<Item = &'a str>,
+    {
         match self.describe_topics_inner(topic_names, opts) {
             Ok(rx) => Either::Left(DescribeTopicsFuture { rx }),
             Err(err) => Either::Right(future::err(err)),
         }
     }
 
-    fn describe_topics_inner(
+    fn describe_topics_inner<'a, I>(
         &self,
-        topic_names: &[&str],
+        topic_names: I,
         opts: &AdminOptions,
-    ) -> KafkaResult<oneshot::Receiver<NativeEvent>> {
-        let topic_names_string_array = topic_names
+    ) -> KafkaResult<oneshot::Receiver<NativeEvent>>
+    where
+        I: IntoIterator<Item = &'a str>,
+    {
+        let topic_names_cstrings = topic_names
+            .into_iter()
+            .map(|t| CString::new(t))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // Don't consume topic_names_cstrings here because pointers become invalid.
+        // Use .iter() instead of .into_iter()
+        let mut topic_names_ptrs = topic_names_cstrings
             .iter()
-            .map(|tn| CString::new(*tn).map(|s| s.as_ptr()))
-            .collect::<Result<Vec<_>, _>>()?
-            .as_mut_ptr();
+            .map(|s| s.as_ptr())
+            .collect::<Vec<_>>();
+
         let native_topic_collection = unsafe {
             NativeTopicCollection::from_ptr(rdsys::rd_kafka_TopicCollection_of_topic_names(
-                topic_names_string_array,
-                topic_names.len(),
+                topic_names_ptrs.as_mut_ptr(),
+                topic_names_ptrs.len(),
             ))
             .unwrap()
         };
@@ -525,6 +539,10 @@ pub struct AdminOptions {
     operation_timeout: Option<Timeout>,
     validate_only: bool,
     broker_id: Option<i32>,
+    require_stable_offsets: bool,
+    include_authorized_operations: bool,
+    match_consumer_group_states: Option<Vec<RDKafkaConsumerGroupState>>,
+    isolation_level: Option<RDKafkaIsolationLevel>,
 }
 
 impl AdminOptions {
@@ -571,6 +589,39 @@ impl AdminOptions {
     /// librdkafka docs on `rd_kafka_AdminOptions_set_broker` for details.
     pub fn broker_id<T: Into<Option<i32>>>(mut self, broker_id: T) -> Self {
         self.broker_id = broker_id.into();
+        self
+    }
+
+    /// Whether the broker should return stable offsets (transaction-committed).
+    ///
+    /// Defaults to false.
+    pub fn require_stable_offsets(mut self, require_stable_offsets: bool) -> Self {
+        self.require_stable_offsets = require_stable_offsets;
+        self
+    }
+
+    /// Whether the broker should return authorized operations.
+    ///
+    /// Defaults to false.
+    pub fn include_authorized_operations(mut self, include_authorized_operations: bool) -> Self {
+        self.include_authorized_operations = include_authorized_operations;
+        self
+    }
+
+    /// List of consumer group states to query for.
+    pub fn match_consumer_group_states<T: Into<Vec<RDKafkaConsumerGroupState>>>(
+        mut self,
+        match_consumer_group_states: T,
+    ) -> Self {
+        self.match_consumer_group_states = Some(match_consumer_group_states.into());
+        self
+    }
+
+    /// Isolation Level needed for list Offset to query for.
+    ///
+    /// Defaults to [`IsolationLevel::ReadUncommitted`]
+    pub fn isolation_level<T: Into<RDKafkaIsolationLevel>>(mut self, isolation_level: T) -> Self {
+        self.isolation_level = Some(isolation_level.into());
         self
     }
 
@@ -632,6 +683,48 @@ impl AdminOptions {
                     err_buf.capacity(),
                 )
             };
+            check_rdkafka_invalid_arg(res, err_buf)?;
+        }
+
+        if self.require_stable_offsets {
+            let res = unsafe {
+                rdsys::rd_kafka_AdminOptions_set_require_stable_offsets(
+                    native_opts.ptr(),
+                    1, // true
+                )
+            };
+            let res = unsafe { rdsys::rd_kafka_error_code(res) };
+            check_rdkafka_invalid_arg(res, err_buf)?;
+        }
+
+        if self.include_authorized_operations {
+            let res = unsafe {
+                rdsys::rd_kafka_AdminOptions_set_include_authorized_operations(
+                    native_opts.ptr(),
+                    1, // true
+                )
+            };
+            let res = unsafe { rdsys::rd_kafka_error_code(res) };
+            check_rdkafka_invalid_arg(res, err_buf)?;
+        }
+
+        if let Some(match_consumer_group_states) = &self.match_consumer_group_states {
+            let res = unsafe {
+                rdsys::rd_kafka_AdminOptions_set_match_consumer_group_states(
+                    native_opts.ptr(),
+                    match_consumer_group_states.as_ptr(),
+                    match_consumer_group_states.len(),
+                )
+            };
+            let res = unsafe { rdsys::rd_kafka_error_code(res) };
+            check_rdkafka_invalid_arg(res, err_buf)?;
+        }
+
+        if let Some(isolation_level) = self.isolation_level {
+            let res = unsafe {
+                rdsys::rd_kafka_AdminOptions_set_isolation_level(native_opts.ptr(), isolation_level)
+            };
+            let res = unsafe { rdsys::rd_kafka_error_code(res) };
             check_rdkafka_invalid_arg(res, err_buf)?;
         }
 
@@ -1387,46 +1480,79 @@ impl Future for AlterConfigsFuture {
 // Describe topics handling
 //
 
+/// The result of a DescribeTopics operation.
+pub type TopicDescriptionResult = Result<TopicDescription, (TopicDescription, RDKafkaErrorCode)>;
+
+/// Node represents a broker.
 #[derive(Debug)]
 pub struct Node {
+    /// Node id.
     pub id: i32,
+    /// Node host.
     pub host: String,
+    /// Node port.
     pub port: u16,
+    /// (Optional) Node rack id.
     pub rack: Option<String>,
 }
 
+/// TopicPartition result type in DescribeTopics result.
 #[derive(Debug)]
 pub struct TopicPartitionInfo {
+    /// Partition id.
     pub partition: i32,
+    /// Leader of the partition.
     pub leader: Node,
+    /// List of in sync replica nodes.
     pub isr: Vec<Node>,
+    /// List of replica nodes.
     pub replicas: Vec<Node>,
 }
 
+/// Apache Kafka ACL operation types. Common type for multiple Admin API functions.
 #[derive(Debug, Eq, PartialEq)]
 pub enum AclOperation {
+    /// Unknown
     Unknown,
+    /// In a filter, matches any AclOperation
     Any,
+    /// ALL operation
     All,
+    /// READ operation
     Read,
+    /// WRITE operation
     Write,
+    /// CREATE operation
     Create,
+    /// DELETE operation
     Delete,
+    /// ALTER operation
     Alter,
+    /// DESCRIBE operation
     Describe,
+    /// CLUSTER_ACTION operation
     ClusterAction,
+    /// DESCRIBE_CONFIGS operation
     DescribeConfigs,
+    /// ALTER_CONFIGS  operation
     AlterConfigs,
+    /// IDEMPOTENT_WRITE operation
     IdempotentWrite,
 }
 
+/// DescribeTopics result.
 #[derive(Debug)]
 pub struct TopicDescription {
+    /// Topic name.
     pub name: String,
+    /// Topic id.
     pub topic_id: Uuid,
+    /// Partitions.
     pub partitions: Vec<TopicPartitionInfo>,
+    /// Is the topic internal to Kafka?
     pub is_internal: bool,
-    pub authorized_operations: Vec<AclOperation>,
+    /// Operations allowed for topic. It may be None if operations were not requested.
+    pub authorized_operations: Option<Vec<AclOperation>>,
 }
 
 type NativeTopicCollection = NativePtr<RDKafkaTopicCollection>;
@@ -1441,7 +1567,7 @@ struct DescribeTopicsFuture {
 }
 
 impl Future for DescribeTopicsFuture {
-    type Output = KafkaResult<Vec<TopicDescription>>;
+    type Output = KafkaResult<Vec<TopicDescriptionResult>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
@@ -1460,6 +1586,11 @@ impl Future for DescribeTopicsFuture {
         let mut out = Vec::with_capacity(n);
         for i in 0..n {
             let topic_description = unsafe { *topic_descriptions.add(i) };
+
+            let err = unsafe {
+                let err = rdsys::rd_kafka_TopicDescription_error(topic_description);
+                rdsys::rd_kafka_error_code(err)
+            };
             let topic_description = TopicDescription {
                 name: unsafe {
                     cstr_to_owned(rdsys::rd_kafka_TopicDescription_name(topic_description))
@@ -1471,7 +1602,12 @@ impl Future for DescribeTopicsFuture {
                 } != 0,
                 authorized_operations: extract_authorized_operations(topic_description)?,
             };
-            out.push(topic_description);
+
+            if err.is_error() {
+                out.push(Err((topic_description, err.into())));
+            } else {
+                out.push(Ok(topic_description));
+            }
         }
         Poll::Ready(Ok(out))
     }
@@ -1543,15 +1679,19 @@ fn extract_replicas(nodes: *const RDKafkaTopicPartitionInfo) -> Vec<Node> {
 
 fn extract_authorized_operations(
     topic_description: *const RDKafkaTopicDescription,
-) -> KafkaResult<Vec<AclOperation>> {
+) -> KafkaResult<Option<Vec<AclOperation>>> {
     let mut n = 0;
     let operations = unsafe {
         rdsys::rd_kafka_TopicDescription_authorized_operations(topic_description, &mut n)
     };
+
+    if operations.is_null() {
+        return Ok(None);
+    }
+
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
-        let operation = unsafe { *operations.add(i) };
-        out.push(match operation {
+        let operation = match unsafe { *operations.add(i) } {
             RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_UNKNOWN => AclOperation::Unknown,
             RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_ANY => AclOperation::Any,
             RDKafkaAclOperation::RD_KAFKA_ACL_OPERATION_ALL => AclOperation::All,
@@ -1574,10 +1714,11 @@ fn extract_authorized_operations(
             _ => {
                 return Err(KafkaError::AdminOpCreation(format!(
                     "bogus acl operation in kafka response: {:?}",
-                    operation
+                    unsafe { *operations.add(i) }
                 )))
             }
-        });
+        };
+        out.push(operation);
     }
-    Ok(out)
+    Ok(Some(out))
 }

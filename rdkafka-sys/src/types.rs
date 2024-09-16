@@ -131,6 +131,12 @@ pub use bindings::rd_kafka_ResourceType_t as RDKafkaResourceType;
 /// Config source.
 pub use bindings::rd_kafka_ConfigSource_t as RDKafkaConfigSource;
 
+/// Isolation level.
+pub use bindings::rd_kafka_IsolationLevel_t as RDKafkaIsolationLevel;
+
+/// Consumer group state.
+pub use bindings::rd_kafka_consumer_group_state_t as RDKafkaConsumerGroupState;
+
 /// ACL operation.
 pub use bindings::rd_kafka_AclOperation_t as RDKafkaAclOperation;
 
