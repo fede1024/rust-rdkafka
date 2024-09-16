@@ -402,7 +402,7 @@ impl<C: ClientContext> AdminClient<C> {
     {
         let topic_names_cstrings = topic_names
             .into_iter()
-            .map(|t| CString::new(t))
+            .map(CString::new)
             .collect::<Result<Vec<_>, _>>()?;
 
         // Don't consume topic_names_cstrings here because pointers become invalid.

@@ -561,7 +561,7 @@ async fn test_describe_topics() {
     assert_eq!(topic_description.name, first_name);
     assert_eq!(topic_description.partitions.len(), 1);
     assert_eq!(topic_description.partitions[0].replicas.len(), 1);
-    assert_eq!(topic_description.is_internal, false);
+    assert!(!topic_description.is_internal);
     assert_eq!(topic_description.authorized_operations, None);
 
     // Create a second topic with 2 partitions whose replication factors are 1.
@@ -585,7 +585,7 @@ async fn test_describe_topics() {
     assert_eq!(first_topic_description.name, first_name);
     assert_eq!(first_topic_description.partitions.len(), 1);
     assert_eq!(first_topic_description.partitions[0].replicas.len(), 1);
-    assert_eq!(first_topic_description.is_internal, false);
+    assert!(!first_topic_description.is_internal);
     assert_eq!(first_topic_description.authorized_operations, None);
 
     let second_topic_description = res[1].as_ref().expect("describe topics failed");
@@ -593,7 +593,7 @@ async fn test_describe_topics() {
     assert_eq!(second_topic_description.partitions.len(), 2);
     assert_eq!(second_topic_description.partitions[0].replicas.len(), 1);
     assert_eq!(second_topic_description.partitions[1].replicas.len(), 1);
-    assert_eq!(second_topic_description.is_internal, false);
+    assert!(!second_topic_description.is_internal);
     assert_eq!(second_topic_description.authorized_operations, None);
 
     // Include authorized operations in the description options and describe both topics again.
@@ -622,7 +622,7 @@ async fn test_describe_cluster() {
         .describe_cluster(&opts)
         .await
         .expect("describe cluster failed");
-    assert!(res.nodes.len() > 0);
+    assert!(!res.nodes.is_empty());
     assert_eq!(res.authorized_operations, None);
 
     // Describe the cluster with authorized operations and verify the properties.
