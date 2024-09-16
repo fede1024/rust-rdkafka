@@ -594,7 +594,7 @@ impl AdminOptions {
     /// If unset (the default), the API calls will return immediately after
     /// triggering the operation.
     ///
-    /// Only the CreateTopics, DeleteTopics, and CreatePartitions API calls
+    /// Only the CreatePartitions, CreateTopics, DeleteTopics, and DeleteRecords API calls
     /// respect this option.
     pub fn operation_timeout<T: Into<Timeout>>(mut self, timeout: Option<T>) -> Self {
         self.operation_timeout = timeout.map(Into::into);
@@ -605,6 +605,9 @@ impl AdminOptions {
     /// requested operation.
     ///
     /// Defaults to false.
+    ///
+    /// Only the CreateTopics, CreatePartitions, AlterConfigs, and IncrementalAlterConfigs
+    /// API calls respect this option.
     pub fn validate_only(mut self, validate_only: bool) -> Self {
         self.validate_only = validate_only;
         self
@@ -622,6 +625,8 @@ impl AdminOptions {
     /// Whether the broker should return stable offsets (transaction-committed).
     ///
     /// Defaults to false.
+    ///
+    /// Only the ListConsumerGroupOffsets API call respects this option.
     pub fn require_stable_offsets(mut self, require_stable_offsets: bool) -> Self {
         self.require_stable_offsets = require_stable_offsets;
         self
@@ -630,12 +635,17 @@ impl AdminOptions {
     /// Whether the broker should return authorized operations.
     ///
     /// Defaults to false.
+    ///
+    /// Only the DescribeConsumerGroups, DescribeCluster, and DescribeTopics API calls
+    /// respect this option.
     pub fn include_authorized_operations(mut self, include_authorized_operations: bool) -> Self {
         self.include_authorized_operations = include_authorized_operations;
         self
     }
 
     /// List of consumer group states to query for.
+    ///
+    /// Only the ListConsumerGroups API call respects this option.
     pub fn match_consumer_group_states<T: Into<Vec<RDKafkaConsumerGroupState>>>(
         mut self,
         match_consumer_group_states: T,
@@ -646,7 +656,7 @@ impl AdminOptions {
 
     /// Isolation Level needed for list Offset to query for.
     ///
-    /// Defaults to [`IsolationLevel::ReadUncommitted`]
+    /// Defaults to read uncommitted.
     pub fn isolation_level<T: Into<RDKafkaIsolationLevel>>(mut self, isolation_level: T) -> Self {
         self.isolation_level = Some(isolation_level.into());
         self
