@@ -18,7 +18,7 @@ use slab::Slab;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, NativeQueue};
+use crate::client::{Client, EventPollResult, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::consumer::base_consumer::{BaseConsumer, PartitionQueue};
 use crate::consumer::{
@@ -122,11 +122,12 @@ impl<'a, C: ConsumerContext> MessageStream<'a, C> {
         }
     }
 
-    fn poll(&self) -> Option<KafkaResult<BorrowedMessage<'a>>> {
+    fn poll(&self) -> EventPollResult<KafkaResult<BorrowedMessage<'a>>> {
         if let Some(queue) = self.partition_queue {
             self.consumer.poll_queue(queue, Duration::ZERO)
         } else {
-            self.consumer.poll(Duration::ZERO)
+            self.consumer
+                .poll_queue(self.consumer.get_queue(), Duration::ZERO)
         }
     }
 }
@@ -135,25 +136,38 @@ impl<'a, C: ConsumerContext> Stream for MessageStream<'a, C> {
     type Item = KafkaResult<BorrowedMessage<'a>>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        // If there is a message ready, yield it immediately to avoid the
-        // taking the lock in `self.set_waker`.
-        if let Some(message) = self.poll() {
-            return Poll::Ready(Some(message));
-        }
-
-        // Otherwise, we need to wait for a message to become available. Store
-        // the waker so that we are woken up if the queue flips from non-empty
-        // to empty. We have to store the waker repatedly in case this future
-        // migrates between tasks.
-        self.wakers.set_waker(self.slot, cx.waker().clone());
-
-        // Check whether a new message became available after we installed the
-        // waker. This avoids a race where `poll` returns None to indicate that
-        // the queue is empty, but the queue becomes non-empty before we've
-        // installed the waker.
         match self.poll() {
-            None => Poll::Pending,
-            Some(message) => Poll::Ready(Some(message)),
+            EventPollResult::Event(message) => {
+                // If there is a message ready, yield it immediately to avoid the
+                // taking the lock in `self.set_waker`.
+                Poll::Ready(Some(message))
+            }
+            EventPollResult::EventConsumed => {
+                // Event was consumed, yield to runtime
+                cx.waker().wake_by_ref();
+                Poll::Pending
+            }
+            EventPollResult::None => {
+                // Otherwise, we need to wait for a message to become available. Store
+                // the waker so that we are woken up if the queue flips from non-empty
+                // to empty. We have to store the waker repatedly in case this future
+                // migrates between tasks.
+                self.wakers.set_waker(self.slot, cx.waker().clone());
+
+                // Check whether a new message became available after we installed the
+                // waker. This avoids a race where `poll` returns None to indicate that
+                // the queue is empty, but the queue becomes non-empty before we've
+                // installed the waker.
+                match self.poll() {
+                    EventPollResult::Event(message) => Poll::Ready(Some(message)),
+                    EventPollResult::EventConsumed => {
+                        // Event was consumed, yield to runtime
+                        cx.waker().wake_by_ref();
+                        Poll::Pending
+                    }
+                    EventPollResult::None => Poll::Pending,
+                }
+            }
         }
     }
 }
