@@ -29,8 +29,12 @@ run_with_valgrind() {
 # Initialize.
 
 git submodule update --init
-docker-compose up -d
-cargo test
+docker compose up -d --wait
+
+# Run integration tests
+
+RUST_LOG=1 RUST_BACKTRACE=1 cargo test
+
 
 # Run unit tests.
 

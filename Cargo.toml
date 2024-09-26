@@ -10,7 +10,7 @@ keywords = ["kafka", "rdkafka"]
 categories = ["api-bindings"]
 edition = "2018"
 exclude = ["Cargo.lock"]
-rust-version = "1.61"
+rust-version = "1.70"
 
 [workspace]
 members = ["rdkafka-sys"]

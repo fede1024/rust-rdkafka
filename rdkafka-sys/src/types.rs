@@ -78,6 +78,9 @@ pub type RDKafkaDeleteGroup = bindings::rd_kafka_DeleteGroup_t;
 /// Native rdkafka new partitions object.
 pub type RDKafkaNewPartitions = bindings::rd_kafka_NewPartitions_t;
 
+/// Native rdkafka delete records object.
+pub type RDKafkaDeleteRecords = bindings::rd_kafka_DeleteRecords_t;
+
 /// Native rdkafka config resource.
 pub type RDKafkaConfigResource = bindings::rd_kafka_ConfigResource_t;
 
