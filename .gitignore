@@ -1,3 +1,5 @@
 target
 src/*.bk
 .idea
+kafka/
+zookeeper/
