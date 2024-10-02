@@ -1,4 +1,4 @@
 [submodule "rdkafka-sys/librdkafka"]
     path = rdkafka-sys/librdkafka
     url = https://github.com/DataDog/librdkafka
-    branch = datadog/main
+    branch = zineb/main-and-multibatch
