@@ -494,13 +494,14 @@ where
 /// queued events, such as delivery notifications. The thread will be
 /// automatically stopped when the producer is dropped.
 #[must_use = "The threaded producer will stop immediately if unused"]
+#[derive(Clone)]
 pub struct ThreadedProducer<C>
 where
     C: ProducerContext + 'static,
 {
     producer: BaseProducer<C>,
     should_stop: Arc<AtomicBool>,
-    handle: Option<JoinHandle<()>>,
+    handle: Option<Arc<JoinHandle<()>>>,
 }
 
 impl FromClientConfig for ThreadedProducer<DefaultProducerContext> {
@@ -545,7 +546,7 @@ where
         Ok(ThreadedProducer {
             producer,
             should_stop,
-            handle: Some(thread),
+            handle: Some(Arc::new(thread)),
         })
     }
 }
@@ -628,7 +629,7 @@ where
 {
     fn drop(&mut self) {
         trace!("Destroy ThreadedProducer");
-        if let Some(handle) = self.handle.take() {
+        if let Some(handle) = self.handle.take().and_then(Arc::into_inner) {
             trace!("Stopping polling");
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
