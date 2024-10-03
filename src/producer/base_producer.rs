@@ -494,7 +494,6 @@ where
 /// queued events, such as delivery notifications. The thread will be
 /// automatically stopped when the producer is dropped.
 #[must_use = "The threaded producer will stop immediately if unused"]
-#[derive(Clone)]
 pub struct ThreadedProducer<C>
 where
     C: ProducerContext + 'static,
@@ -620,6 +619,16 @@ where
 
     fn abort_transaction<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         self.producer.abort_transaction(timeout)
+    }
+}
+
+impl<C: ProducerContext + 'static> Clone for ThreadedProducer<C> {
+    fn clone(&self) -> Self {
+        Self {
+            producer: self.producer.clone(),
+            should_stop: Arc::clone(&self.should_stop),
+            handle: self.handle.clone(),
+        }
     }
 }
 
