@@ -1,9 +1,9 @@
 //! Store and manipulate Kafka messages.
 
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use std::fmt;
 use std::marker::PhantomData;
-use std::os::raw::c_void;
+use std::os::raw::{c_char, c_void};
 use std::ptr;
 use std::str;
 use std::sync::Arc;
@@ -534,7 +534,6 @@ impl OwnedHeaders {
     where
         V: ToBytes + ?Sized,
     {
-        let name_cstring = CString::new(header.key).unwrap();
         let (value_ptr, value_len) = match header.value {
             None => (ptr::null_mut(), 0),
             Some(value) => {
@@ -548,8 +547,8 @@ impl OwnedHeaders {
         let err = unsafe {
             rdsys::rd_kafka_header_add(
                 self.ptr(),
-                name_cstring.as_ptr(),
-                name_cstring.as_bytes().len() as isize,
+                header.key.as_ptr() as *const c_char,
+                header.key.as_bytes().len() as isize,
                 value_ptr,
                 value_len,
             )
