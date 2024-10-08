@@ -31,7 +31,7 @@ tracing = { version = "0.1.30", optional = true }
 
 [dev-dependencies]
 async-std = { version = "1.9.0", features = ["attributes"] }
-backoff = "0.1.5"
+backon = { version = "1.2", default-features = false, features = ["std-blocking-sleep"] }
 chrono = "0.4.0"
 clap = "2.18.0"
 env_logger = "0.9.0"
