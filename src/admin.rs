@@ -331,7 +331,8 @@ impl<C: ClientContext> AdminClient<C> {
         Ok(rx)
     }
 
-    /// Sets configuration parameters for the specified resources.
+    /// Sets configuration parameters for the specified resources,
+    /// resetting unspecified parameters to their default values.
     ///
     /// Note that while the API supports altering multiple resources at once, it
     /// is not transactional. Alteration of some resources may succeed while
