@@ -78,7 +78,6 @@ impl Offset {
     }
 }
 
-// TODO: implement Debug
 /// One element of the topic partition list.
 pub struct TopicPartitionListElem<'a> {
     ptr: &'a mut RDKafkaTopicPartition,
@@ -162,6 +161,18 @@ impl<'a> PartialEq for TopicPartitionListElem<'a> {
             && self.partition() == other.partition()
             && self.offset() == other.offset()
             && self.metadata() == other.metadata()
+    }
+}
+
+impl fmt::Debug for TopicPartitionListElem<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TopicPartitionListElem")
+            .field("topic", &self.topic())
+            .field("partition", &self.partition())
+            .field("offset", &self.offset())
+            .field("metadata", &self.metadata())
+            .field("error", &self.error())
+            .finish()
     }
 }
 
@@ -389,22 +400,7 @@ impl Default for TopicPartitionList {
 
 impl fmt::Debug for TopicPartitionList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "TPL {{")?;
-        for (i, elem) in self.elements().iter().enumerate() {
-            if i > 0 {
-                write!(f, "; ")?;
-            }
-            write!(
-                f,
-                "{}/{}: offset={:?} metadata={:?}, error={:?}",
-                elem.topic(),
-                elem.partition(),
-                elem.offset(),
-                elem.metadata(),
-                elem.error(),
-            )?;
-        }
-        write!(f, "}}")
+        f.debug_list().entries(self.elements()).finish()
     }
 }
 
