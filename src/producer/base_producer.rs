@@ -57,7 +57,7 @@ use rdkafka_sys as rdsys;
 use rdkafka_sys::rd_kafka_vtype_t::*;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, NativeQueue};
+use crate::client::{Client, EventPollResult, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::consumer::ConsumerGroupMetadata;
 use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
@@ -362,28 +362,26 @@ where
     /// Regular calls to `poll` are required to process the events and execute
     /// the message delivery callbacks.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
-        let ev = match self.client().poll_event(&self.queue, timeout.into()) {
-            Some(e) => e,
-            None => return,
-        };
-
-        let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
-        match evtype {
-            rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
-            rdsys::RD_KAFKA_EVENT_ERROR if self.client.queue_poll_error_cb.is_some() => {
-                let queue_poll_error_cb = self.client.queue_poll_error_cb.unwrap();
-                let event_error_str = unsafe {
-                    let event_error_str = rdsys::rd_kafka_event_error_string(ev.ptr());
-                    CStr::from_ptr(event_error_str).to_string_lossy()
-                };
-                queue_poll_error_cb(String::from(event_error_str))
-            }
-            _ => {
-                let evname = unsafe {
-                    let evname = rdsys::rd_kafka_event_name(ev.ptr());
-                    CStr::from_ptr(evname).to_string_lossy()
-                };
-                warn!("Ignored event '{}' on base producer poll", evname);
+        let event = self.client().poll_event(&self.queue, timeout.into());
+        if let EventPollResult::Event(ev) = event {
+            let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
+            match evtype {
+                rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
+                rdsys::RD_KAFKA_EVENT_ERROR if self.client.queue_poll_error_cb.is_some() => {
+                    let queue_poll_error_cb = self.client.queue_poll_error_cb.unwrap();
+                    let event_error_str = unsafe {
+                        let event_error_str = rdsys::rd_kafka_event_error_string(ev.ptr());
+                        CStr::from_ptr(event_error_str).to_string_lossy()
+                    };
+                    queue_poll_error_cb(String::from(event_error_str))
+                },
+                _ => {
+                    let evname = unsafe {
+                        let evname = rdsys::rd_kafka_event_name(ev.ptr());
+                        CStr::from_ptr(evname).to_string_lossy()
+                    };
+                    warn!("Ignored event '{}' on base producer poll", evname);
+                }
             }
         }
     }
@@ -655,7 +653,7 @@ where
 {
     producer: Arc<BaseProducer<C, Part>>,
     should_stop: Arc<AtomicBool>,
-    handle: Option<JoinHandle<()>>,
+    handle: Option<Arc<JoinHandle<()>>>,
 }
 
 impl FromClientConfig for ThreadedProducer<DefaultProducerContext, NoCustomPartitioner> {
@@ -697,7 +695,7 @@ where
         Ok(ThreadedProducer {
             producer,
             should_stop,
-            handle: Some(thread),
+            handle: Some(Arc::new(thread)),
         })
     }
 }
@@ -781,6 +779,16 @@ where
     }
 }
 
+impl<C: ProducerContext + 'static> Clone for ThreadedProducer<C> {
+    fn clone(&self) -> Self {
+        Self {
+            producer: Arc::clone(&self.producer),
+            should_stop: Arc::clone(&self.should_stop),
+            handle: self.handle.clone(),
+        }
+    }
+}
+
 impl<C, Part> Drop for ThreadedProducer<C, Part>
 where
     Part: Partitioner,
@@ -788,7 +796,7 @@ where
 {
     fn drop(&mut self) {
         trace!("Destroy ThreadedProducer");
-        if let Some(handle) = self.handle.take() {
+        if let Some(handle) = self.handle.take().and_then(Arc::into_inner) {
             trace!("Stopping polling");
             self.should_stop.store(true, Ordering::Relaxed);
             trace!("Waiting for polling thread termination");
