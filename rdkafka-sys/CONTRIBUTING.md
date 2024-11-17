@@ -21,7 +21,7 @@ Then:
 
 * Checkout into master and pull the latest changes.
 * Ensure the changelog is up to date (i.e not Unreleased changes).
-* Run `cd rdkafka-sys && ../generate_readme.py > README.md`.
+* Run `cd rdkafka-sys && ../generate_readme.py > README.md`. 
 * Bump the version in Cargo.toml and commit locally.
 * Run `cargo publish`.
 * Push the commit.
