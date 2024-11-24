@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+* Add cargo enforcement of MSRV of 1.70.
 
 ## v4.7.0+2.2.0 (2023-11-07)
 
