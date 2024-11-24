@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use backoff::{ExponentialBackoff, Operation};
+use backon::{BlockingRetryable, ExponentialBuilder};
 
 use rdkafka::admin::{
     AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult, NewPartitions,
@@ -75,10 +75,6 @@ fn fetch_metadata(topic: &str) -> Metadata {
         create_config().create().expect("consumer creation failed");
     let timeout = Some(Duration::from_secs(1));
 
-    let mut backoff = ExponentialBackoff {
-        max_elapsed_time: Some(Duration::from_secs(5)),
-        ..Default::default()
-    };
     (|| {
         let metadata = consumer
             .fetch_metadata(Some(topic), timeout)
@@ -90,9 +86,10 @@ fn fetch_metadata(topic: &str) -> Metadata {
         if topic.partitions().is_empty() {
             Err("metadata fetch returned a topic with no partitions".to_string())?
         }
-        Ok(metadata)
+        Ok::<_, String>(metadata)
     })
-    .retry(&mut backoff)
+    .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
+    .call()
     .unwrap()
 }
 
@@ -101,10 +98,6 @@ fn verify_delete(topic: &str) {
         create_config().create().expect("consumer creation failed");
     let timeout = Some(Duration::from_secs(1));
 
-    let mut backoff = ExponentialBackoff {
-        max_elapsed_time: Some(Duration::from_secs(5)),
-        ..Default::default()
-    };
     (|| {
         // Asking about the topic specifically will recreate it (under the
         // default Kafka configuration, at least) so we have to ask for the list
@@ -115,9 +108,10 @@ fn verify_delete(topic: &str) {
         if metadata.topics().iter().any(|t| t.name() == topic) {
             Err(format!("topic {} still exists", topic))?
         }
-        Ok(())
+        Ok::<(), String>(())
     })
-    .retry(&mut backoff)
+    .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
+    .call()
     .unwrap()
 }
 
