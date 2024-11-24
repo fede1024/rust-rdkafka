@@ -187,6 +187,8 @@ pub struct ClientConfig {
     /// The librdkafka logging level. Refer to [`RDKafkaLogLevel`] for the list
     /// of available levels.
     pub log_level: RDKafkaLogLevel,
+    /// Poll error callback
+    pub queue_poll_error_cb: Option<fn(String)>,
 }
 
 impl Default for ClientConfig {
@@ -201,6 +203,7 @@ impl ClientConfig {
         ClientConfig {
             conf_map: HashMap::new(),
             log_level: log_level_from_global_config(),
+            queue_poll_error_cb: None,
         }
     }
 
@@ -245,6 +248,12 @@ impl ClientConfig {
     /// on the global log level of the log crate.
     pub fn set_log_level(&mut self, log_level: RDKafkaLogLevel) -> &mut ClientConfig {
         self.log_level = log_level;
+        self
+    }
+
+    /// Sets the error callback for poll method.
+    pub fn set_queue_poll_error_cb(&mut self, error_cb: fn(String)) -> &mut ClientConfig {
+        self.queue_poll_error_cb = Some(error_cb);
         self
     }
 
