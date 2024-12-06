@@ -73,7 +73,19 @@ fn main() {
                 process::exit(1);
             }
         }
-    } else {
+    } else if env::var("CARGO_FEATURE_STATIC_EXTERNAL").is_ok() {
+        if let Ok(rdkafka_dir) = env::var("DEP_LIBRDKAFKA_STATIC_ROOT") {
+            println!("cargo:rustc-link-search=native={}/src", rdkafka_dir);
+            println!("cargo:rustc-link-lib=static=rdkafka");
+            println!("cargo:root={}", rdkafka_dir);
+        } else {
+            eprintln!("Path to DEP_LIBRDKAFKA_STATIC_ROOT not set. Static linking failed. Exiting.");
+            process::exit(1);
+        }
+        eprintln!("librdkafka will be linked statically using prebuilt binaries");
+
+    }
+        else {
         // Ensure that we are in the right directory
         let rdkafkasys_root = Path::new("rdkafka-sys");
         if rdkafkasys_root.exists() {
