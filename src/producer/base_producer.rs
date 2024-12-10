@@ -67,7 +67,7 @@ use crate::producer::{
     DefaultProducerContext, Partitioner, Producer, ProducerContext, PurgeConfig,
 };
 use crate::topic_partition_list::TopicPartitionList;
-use crate::util::{IntoOpaque, NativePtr, Timeout};
+use crate::util::{Deadline, IntoOpaque, NativePtr, Timeout};
 
 pub use crate::message::DeliveryResult;
 
@@ -338,7 +338,6 @@ where
     client: Client<C>,
     queue: NativeQueue,
     _partitioner: PhantomData<Part>,
-    min_poll_interval: Timeout,
 }
 
 impl<C, Part> BaseProducer<C, Part>
@@ -353,7 +352,6 @@ where
             client,
             queue,
             _partitioner: PhantomData,
-            min_poll_interval: Timeout::After(Duration::from_millis(100)),
         }
     }
 
@@ -362,19 +360,30 @@ where
     /// Regular calls to `poll` are required to process the events and execute
     /// the message delivery callbacks.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
-        let event = self.client().poll_event(&self.queue, timeout.into());
-        if let EventPollResult::Event(ev) = event {
-            let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
-            match evtype {
-                rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
-                _ => {
-                    let evname = unsafe {
-                        let evname = rdsys::rd_kafka_event_name(ev.ptr());
-                        CStr::from_ptr(evname).to_string_lossy()
-                    };
-                    warn!("Ignored event '{}' on base producer poll", evname);
+        let deadline = if let Timeout::After(dur) = timeout.into() {
+            Deadline::new(dur)
+        } else {
+            Deadline::new(Duration::MAX)
+        };
+        let mut attempt = 0;
+        while attempt >= 0 && !deadline.elapsed() {
+            let event = self
+                .client()
+                .poll_event(&self.queue, Timeout::After(deadline.remaining()));
+            if let EventPollResult::Event(ev) = event {
+                let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
+                match evtype {
+                    rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
+                    _ => {
+                        let evname = unsafe {
+                            let evname = rdsys::rd_kafka_event_name(ev.ptr());
+                            CStr::from_ptr(evname).to_string_lossy()
+                        };
+                        warn!("Ignored event '{}' on base producer poll", evname);
+                    }
                 }
             }
+            attempt += 1;
         }
     }
 
@@ -494,26 +503,26 @@ where
     // As this library uses the rdkafka Event API, flush will not call rd_kafka_poll() but instead wait for
     // the librdkafka-handled message count to reach zero. Runs until value reaches zero or timeout.
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
-        let mut timeout = timeout.into();
-        loop {
-            let op_timeout = std::cmp::min(timeout, self.min_poll_interval);
-            if self.in_flight_count() > 0 {
-                unsafe { rdsys::rd_kafka_flush(self.native_ptr(), 0) };
-                self.poll(op_timeout);
+        let deadline = if let Timeout::After(dur) = timeout.into() {
+            Deadline::new(dur)
+        } else {
+            Deadline::new(Duration::MAX)
+        };
+        while self.in_flight_count() > 0 && !deadline.elapsed() {
+            let ret = unsafe {
+                // This cast to i32 will truncate to i32::MAX
+                rdsys::rd_kafka_flush(
+                    self.client().native_ptr(),
+                    deadline.remaining().as_millis() as i32,
+                )
+            };
+            if ret.is_error() {
+                return Err(KafkaError::Flush(ret.into()));
             } else {
-                return Ok(());
+                self.poll(&deadline);
             }
-
-            if op_timeout >= timeout {
-                let ret = unsafe { rdsys::rd_kafka_flush(self.native_ptr(), 0) };
-                if ret.is_error() {
-                    return Err(KafkaError::Flush(ret.into()));
-                } else {
-                    return Ok(());
-                }
-            }
-            timeout -= op_timeout;
         }
+        Ok(())
     }
 
     fn purge(&self, flags: PurgeConfig) {
