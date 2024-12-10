@@ -508,12 +508,12 @@ where
         let mut remaining = if let Timeout::After(dur) = timeout.into() {
             dur
         } else {
-            // librdkafka's flush api requires an i32 millisecond timeout
-            Duration::from_millis(i32::MAX as u64)
+            Duration::MAX
         };
         while self.in_flight_count() > 0 && remaining > Duration::ZERO {
             let flush_start = Instant::now();
             let ret = unsafe {
+                // This cast to i32 will truncate to i32::MAX
                 rdsys::rd_kafka_flush(self.client().native_ptr(), remaining.as_millis() as i32)
             };
             if ret.is_error() {
