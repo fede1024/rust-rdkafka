@@ -51,7 +51,7 @@ use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use rdkafka_sys as rdsys;
 use rdkafka_sys::rd_kafka_vtype_t::*;
@@ -67,7 +67,7 @@ use crate::producer::{
     DefaultProducerContext, Partitioner, Producer, ProducerContext, PurgeConfig,
 };
 use crate::topic_partition_list::TopicPartitionList;
-use crate::util::{IntoOpaque, NativePtr, Timeout};
+use crate::util::{Deadline, IntoOpaque, NativePtr, Timeout};
 
 pub use crate::message::DeliveryResult;
 
@@ -360,17 +360,16 @@ where
     /// Regular calls to `poll` are required to process the events and execute
     /// the message delivery callbacks.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
-        let mut remaining = if let Timeout::After(dur) = timeout.into() {
-            dur
+        let deadline = if let Timeout::After(dur) = timeout.into() {
+            Deadline::new(dur)
         } else {
-            Duration::MAX
+            Deadline::new(Duration::MAX)
         };
         let mut attempt = 0;
-        while attempt >= 0 && remaining > Duration::ZERO {
-            let start = Instant::now();
+        while attempt >= 0 && !deadline.elapsed() {
             let event = self
                 .client()
-                .poll_event(&self.queue, Timeout::After(remaining));
+                .poll_event(&self.queue, Timeout::After(deadline.remaining()));
             if let EventPollResult::Event(ev) = event {
                 let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
                 match evtype {
@@ -384,7 +383,6 @@ where
                     }
                 }
             }
-            remaining = remaining.saturating_sub(start.elapsed());
             attempt += 1;
         }
     }
@@ -505,24 +503,23 @@ where
     // As this library uses the rdkafka Event API, flush will not call rd_kafka_poll() but instead wait for
     // the librdkafka-handled message count to reach zero. Runs until value reaches zero or timeout.
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
-        let mut remaining = if let Timeout::After(dur) = timeout.into() {
-            dur
+        let deadline = if let Timeout::After(dur) = timeout.into() {
+            Deadline::new(dur)
         } else {
-            Duration::MAX
+            Deadline::new(Duration::MAX)
         };
-        while self.in_flight_count() > 0 && remaining > Duration::ZERO {
-            let flush_start = Instant::now();
+        while self.in_flight_count() > 0 && !deadline.elapsed() {
             let ret = unsafe {
                 // This cast to i32 will truncate to i32::MAX
-                rdsys::rd_kafka_flush(self.client().native_ptr(), remaining.as_millis() as i32)
+                rdsys::rd_kafka_flush(
+                    self.client().native_ptr(),
+                    deadline.remaining().as_millis() as i32,
+                )
             };
             if ret.is_error() {
                 return Err(KafkaError::Flush(ret.into()));
             } else {
-                remaining = remaining.saturating_sub(flush_start.elapsed());
-                let poll_start = Instant::now();
-                self.poll(remaining);
-                remaining = remaining.saturating_sub(poll_start.elapsed());
+                self.poll(&deadline);
             }
         }
         Ok(())

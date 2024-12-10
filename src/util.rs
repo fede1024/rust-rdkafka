@@ -12,7 +12,7 @@ use std::slice;
 use std::sync::Arc;
 #[cfg(feature = "naive-runtime")]
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "naive-runtime")]
 use futures_channel::oneshot;
@@ -29,6 +29,26 @@ pub fn get_rdkafka_version() -> (i32, String) {
     let version_number = unsafe { rdsys::rd_kafka_version() };
     let c_str = unsafe { CStr::from_ptr(rdsys::rd_kafka_version_str()) };
     (version_number, c_str.to_string_lossy().into_owned())
+}
+
+pub(crate) struct Deadline {
+    deadline: Instant,
+}
+
+impl Deadline {
+    pub(crate) fn new(duration: Duration) -> Self {
+        Self {
+            deadline: Instant::now() + duration,
+        }
+    }
+
+    pub(crate) fn remaining(&self) -> Duration {
+        self.deadline - Instant::now()
+    }
+
+    pub(crate) fn elapsed(&self) -> bool {
+        self.remaining() <= Duration::ZERO
+    }
 }
 
 /// Specifies a timeout for a Kafka operation.
@@ -73,6 +93,18 @@ impl std::ops::SubAssign for Timeout {
             (Timeout::Never, Timeout::After(_)) => (),
             _ => panic!("subtraction of Timeout::Never is ill-defined"),
         }
+    }
+}
+
+impl From<Deadline> for Timeout {
+    fn from(d: Deadline) -> Timeout {
+        Timeout::After(d.remaining())
+    }
+}
+
+impl From<&Deadline> for Timeout {
+    fn from(d: &Deadline) -> Timeout {
+        Timeout::After(d.remaining())
     }
 }
 
