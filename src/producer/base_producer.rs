@@ -366,7 +366,7 @@ where
             Duration::MAX
         };
         let mut attempt = 0;
-        while attempt > 0 && remaining > Duration::ZERO {
+        while attempt >= 0 && remaining > Duration::ZERO {
             let start = Instant::now();
             let event = self
                 .client()
