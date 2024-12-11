@@ -96,6 +96,16 @@ impl std::ops::SubAssign for Timeout {
     }
 }
 
+impl From<Timeout> for Deadline {
+    fn from(t: Timeout) -> Deadline {
+        if let Timeout::After(dur) = t {
+            Deadline::new(dur)
+        } else {
+            Deadline::new(Duration::MAX)
+        }
+    }
+}
+
 impl From<Deadline> for Timeout {
     fn from(d: Deadline) -> Timeout {
         Timeout::After(d.remaining())

@@ -360,11 +360,7 @@ where
     /// Regular calls to `poll` are required to process the events and execute
     /// the message delivery callbacks.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
-        let deadline = if let Timeout::After(dur) = timeout.into() {
-            Deadline::new(dur)
-        } else {
-            Deadline::new(Duration::MAX)
-        };
+        let deadline: Deadline = timeout.into().into();
         let mut attempt = 0;
         while attempt >= 0 && !deadline.elapsed() {
             let event = self
@@ -503,11 +499,7 @@ where
     // As this library uses the rdkafka Event API, flush will not call rd_kafka_poll() but instead wait for
     // the librdkafka-handled message count to reach zero. Runs until value reaches zero or timeout.
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
-        let deadline = if let Timeout::After(dur) = timeout.into() {
-            Deadline::new(dur)
-        } else {
-            Deadline::new(Duration::MAX)
-        };
+        let deadline: Deadline = timeout.into().into();
         while self.in_flight_count() > 0 && !deadline.elapsed() {
             let ret = unsafe {
                 // This cast to i32 will truncate to i32::MAX
