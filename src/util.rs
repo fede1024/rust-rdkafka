@@ -1,5 +1,6 @@
 //! Utility functions and types.
 
+use std::cmp;
 use std::ffi::CStr;
 use std::fmt;
 use std::future::Future;
@@ -31,19 +32,29 @@ pub fn get_rdkafka_version() -> (i32, String) {
     (version_number, c_str.to_string_lossy().into_owned())
 }
 
-pub(crate) struct Deadline {
-    deadline: Instant,
+pub(crate) enum Deadline {
+    At(Instant),
+    Never,
 }
 
 impl Deadline {
-    pub(crate) fn new(duration: Duration) -> Self {
-        Self {
-            deadline: Instant::now() + duration,
+    // librdkafka's flush api requires an i32 millisecond timeout
+    const MAX_FLUSH_DURATION: Duration = Duration::from_millis(i32::MAX as u64);
+
+    pub(crate) fn new(duration: Option<Duration>) -> Self {
+        if let Some(d) = duration {
+            Self::At(Instant::now() + d)
+        } else {
+            Self::Never
         }
     }
 
     pub(crate) fn remaining(&self) -> Duration {
-        self.deadline - Instant::now()
+        if let Deadline::At(i) = self {
+            *i - Instant::now()
+        } else {
+            Duration::MAX
+        }
     }
 
     pub(crate) fn elapsed(&self) -> bool {
@@ -99,22 +110,30 @@ impl std::ops::SubAssign for Timeout {
 impl From<Timeout> for Deadline {
     fn from(t: Timeout) -> Deadline {
         if let Timeout::After(dur) = t {
-            Deadline::new(dur)
+            Deadline::new(Some(cmp::min(Deadline::MAX_FLUSH_DURATION, dur)))
         } else {
-            Deadline::new(Duration::MAX)
+            Deadline::new(None)
         }
     }
 }
 
 impl From<Deadline> for Timeout {
     fn from(d: Deadline) -> Timeout {
-        Timeout::After(d.remaining())
+        if let Deadline::Never = d {
+            Timeout::Never
+        } else {
+            Timeout::After(d.remaining())
+        }
     }
 }
 
 impl From<&Deadline> for Timeout {
     fn from(d: &Deadline) -> Timeout {
-        Timeout::After(d.remaining())
+        if let Deadline::Never = d {
+            Timeout::Never
+        } else {
+            Timeout::After(d.remaining())
+        }
     }
 }
 
