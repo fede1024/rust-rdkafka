@@ -362,9 +362,7 @@ where
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
         let deadline: Deadline = timeout.into().into();
         loop {
-            let event = self
-                .client()
-                .poll_event(&self.queue, Timeout::After(deadline.remaining()));
+            let event = self.client().poll_event(&self.queue, &deadline);
             if let EventPollResult::Event(ev) = event {
                 let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
                 match evtype {

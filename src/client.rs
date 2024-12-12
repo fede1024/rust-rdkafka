@@ -300,10 +300,10 @@ impl<C: ClientContext> Client<C> {
         &self.context
     }
 
-    pub(crate) fn poll_event(
+    pub(crate) fn poll_event<T: Into<Timeout>>(
         &self,
         queue: &NativeQueue,
-        timeout: Timeout,
+        timeout: T,
     ) -> EventPollResult<NativeEvent> {
         let event = unsafe { NativeEvent::from_ptr(queue.poll(timeout)) };
         if let Some(ev) = event {
