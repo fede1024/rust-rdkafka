@@ -532,6 +532,103 @@ async fn test_configs() {
 }
 
 #[tokio::test]
+async fn test_describe_topics() {
+    let admin_client = create_admin_client();
+    let opts = AdminOptions::new();
+
+    // Create a new topic with a single partition whose replication factor is 1.
+    let first_name = rand_test_topic("first_topic");
+    let first_topic = NewTopic::new(&first_name, 1, TopicReplication::Fixed(1));
+    let res = admin_client
+        .create_topics([&first_topic], &opts)
+        .await
+        .expect("topic creation failed");
+    assert_eq!(res, &[Ok(first_name.clone())]);
+
+    // Describe the created topic and verify its properties.
+    let res = admin_client
+        .describe_topics([first_name.as_ref()], &opts)
+        .await
+        .expect("describe topics failed");
+    assert_eq!(res.len(), 1);
+    let topic_description = res[0].as_ref().expect("describe topics failed");
+    assert_eq!(topic_description.name, first_name);
+    assert_eq!(topic_description.partitions.len(), 1);
+    assert_eq!(topic_description.partitions[0].replicas.len(), 1);
+    assert!(!topic_description.is_internal);
+    assert_eq!(topic_description.authorized_operations, None);
+
+    // Create a second topic with 2 partitions whose replication factors are 1.
+    let second_name = rand_test_topic("second_topic");
+    let second_topic = NewTopic::new(&second_name, 2, TopicReplication::Fixed(1));
+    let res = admin_client
+        .create_topics([&second_topic], &opts)
+        .await
+        .expect("topic creation failed");
+    assert_eq!(res, &[Ok(second_name.clone())]);
+
+    // Describe both topics and verify their properties.
+    let res = admin_client
+        .describe_topics([first_name.as_ref(), second_name.as_ref()], &opts)
+        .await
+        .expect("describe topics failed");
+
+    assert_eq!(res.len(), 2);
+
+    let first_topic_description = res[0].as_ref().expect("describe topics failed");
+    assert_eq!(first_topic_description.name, first_name);
+    assert_eq!(first_topic_description.partitions.len(), 1);
+    assert_eq!(first_topic_description.partitions[0].replicas.len(), 1);
+    assert!(!first_topic_description.is_internal);
+    assert_eq!(first_topic_description.authorized_operations, None);
+
+    let second_topic_description = res[1].as_ref().expect("describe topics failed");
+    assert_eq!(second_topic_description.name, second_name);
+    assert_eq!(second_topic_description.partitions.len(), 2);
+    assert_eq!(second_topic_description.partitions[0].replicas.len(), 1);
+    assert_eq!(second_topic_description.partitions[1].replicas.len(), 1);
+    assert!(!second_topic_description.is_internal);
+    assert_eq!(second_topic_description.authorized_operations, None);
+
+    // Include authorized operations in the description options and describe both topics again.
+    let opts = opts.include_authorized_operations(true);
+    let res = admin_client
+        .describe_topics([first_name.as_ref(), second_name.as_ref()], &opts)
+        .await
+        .expect("describe topics failed");
+
+    assert_eq!(res.len(), 2);
+
+    let first_topic_description = res[0].as_ref().expect("describe topics failed");
+    assert!(first_topic_description.authorized_operations.is_some());
+
+    let second_topic_description = res[1].as_ref().expect("describe topics failed");
+    assert!(second_topic_description.authorized_operations.is_some());
+}
+
+#[tokio::test]
+async fn test_describe_cluster() {
+    let admin_client = create_admin_client();
+    let opts = AdminOptions::new();
+
+    // Describe the cluster and verify its properties.
+    let res = admin_client
+        .describe_cluster(&opts)
+        .await
+        .expect("describe cluster failed");
+    assert!(!res.nodes.is_empty());
+    assert_eq!(res.authorized_operations, None);
+
+    // Describe the cluster with authorized operations and verify the properties.
+    let opts = opts.include_authorized_operations(true);
+    let res = admin_client
+        .describe_cluster(&opts)
+        .await
+        .expect("describe cluster failed");
+    assert!(res.authorized_operations.is_some());
+}
+
+#[tokio::test]
 async fn test_groups() {
     let admin_client = create_admin_client();
 
