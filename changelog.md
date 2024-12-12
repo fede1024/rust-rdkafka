@@ -8,6 +8,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Remove testing for old Kafka versions (before 3.0). Add tests for 3.7.
 * Fix test dependency on docker compose.
 * Address wakeup races introduced by pivoting to the event API.
+* Update `BaseProducer::poll` to not return early, and instead continue
+  looping until the passed timeout is reached.
 
 ## 0.36.2 (2024-01-16)
 
