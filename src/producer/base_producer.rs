@@ -503,11 +503,7 @@ where
         let deadline: Deadline = timeout.into().into();
         while self.in_flight_count() > 0 && !deadline.elapsed() {
             let ret = unsafe {
-                // This cast to i32 will truncate to i32::MAX
-                rdsys::rd_kafka_flush(
-                    self.client().native_ptr(),
-                    deadline.remaining().as_millis() as i32,
-                )
+                rdsys::rd_kafka_flush(self.client().native_ptr(), deadline.remaining_millis_i32())
             };
             if ret.is_error() {
                 return Err(KafkaError::Flush(ret.into()));

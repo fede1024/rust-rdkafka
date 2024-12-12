@@ -57,6 +57,10 @@ impl Deadline {
         }
     }
 
+    pub(crate) fn remaining_millis_i32(&self) -> i32 {
+        cmp::min(Deadline::MAX_FLUSH_DURATION, self.remaining()).as_millis() as i32
+    }
+
     pub(crate) fn elapsed(&self) -> bool {
         self.remaining() <= Duration::ZERO
     }
