@@ -121,16 +121,6 @@ impl From<Timeout> for Deadline {
     }
 }
 
-impl From<Deadline> for Timeout {
-    fn from(d: Deadline) -> Timeout {
-        if let Deadline::Never = d {
-            Timeout::Never
-        } else {
-            Timeout::After(d.remaining())
-        }
-    }
-}
-
 impl From<&Deadline> for Timeout {
     fn from(d: &Deadline) -> Timeout {
         if let Deadline::Never = d {
