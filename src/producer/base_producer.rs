@@ -503,13 +503,14 @@ where
             let ret = unsafe {
                 rdsys::rd_kafka_flush(self.client().native_ptr(), deadline.remaining_millis_i32())
             };
-            if ret.is_error() {
-                return Err(KafkaError::Flush(ret.into()));
-            } else if let Deadline::Never = &deadline {
+            if let Deadline::Never = &deadline {
                 self.poll(Timeout::After(Duration::ZERO));
             } else {
                 self.poll(&deadline);
             }
+            if ret.is_error() {
+                return Err(KafkaError::Flush(ret.into()));
+            };
         }
         Ok(())
     }
