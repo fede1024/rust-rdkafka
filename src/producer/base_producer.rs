@@ -505,6 +505,8 @@ where
             };
             if ret.is_error() {
                 return Err(KafkaError::Flush(ret.into()));
+            } else if let Deadline::Never = &deadline {
+                self.poll(Timeout::After(Duration::ZERO));
             } else {
                 self.poll(&deadline);
             }
