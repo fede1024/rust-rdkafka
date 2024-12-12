@@ -361,8 +361,7 @@ where
     /// the message delivery callbacks.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) {
         let deadline: Deadline = timeout.into().into();
-        let mut called = false;
-        while !called || !deadline.elapsed() {
+        loop {
             let event = self
                 .client()
                 .poll_event(&self.queue, Timeout::After(deadline.remaining()));
@@ -379,7 +378,9 @@ where
                     }
                 }
             }
-            called = true;
+            if deadline.elapsed() {
+                break;
+            }
         }
     }
 
