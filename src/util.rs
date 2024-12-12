@@ -114,7 +114,7 @@ impl std::ops::SubAssign for Timeout {
 impl From<Timeout> for Deadline {
     fn from(t: Timeout) -> Deadline {
         if let Timeout::After(dur) = t {
-            Deadline::new(Some(cmp::min(Deadline::MAX_FLUSH_DURATION, dur)))
+            Deadline::new(Some(dur))
         } else {
             Deadline::new(None)
         }
