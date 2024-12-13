@@ -270,7 +270,7 @@ logging framework.
 [rdkafka-sys-known-issues]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#known-issues
 [smol]: https://docs.rs/smol
 [timely-blog]: https://github.com/frankmcsherry/blog/blob/master/posts/2017-11-08.md
-[timely-dataflow]: https://github.com/frankmcsherry/timely-dataflow
+[timely-dataflow]: https://github.com/TimelyDataflow/timely-dataflow
 [Tokio]: https://tokio.rs/
 
 ## rdkafka-sys
