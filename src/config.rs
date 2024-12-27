@@ -23,7 +23,7 @@
 //! [librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::iter::FromIterator;
 use std::os::raw::c_char;
 use std::ptr;
@@ -150,7 +150,33 @@ impl NativeClientConfig {
         }
 
         // Convert the C string to a Rust string.
-        Ok(String::from_utf8_lossy(&buf).to_string())
+        Ok(String::from_utf8_lossy(&buf)
+            .trim_matches(char::from(0))
+            .to_string())
+    }
+
+    pub(crate) fn set(&self, key: &str, value: &str) -> KafkaResult<()> {
+        let mut err_buf = ErrBuf::new();
+        let key_c = CString::new(key)?;
+        let value_c = CString::new(value)?;
+        let ret = unsafe {
+            rdsys::rd_kafka_conf_set(
+                self.ptr(),
+                key_c.as_ptr(),
+                value_c.as_ptr(),
+                err_buf.as_mut_ptr(),
+                err_buf.capacity(),
+            )
+        };
+        if ret.is_error() {
+            return Err(KafkaError::ClientConfig(
+                ret,
+                err_buf.to_string(),
+                key.to_string(),
+                value.to_string(),
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -225,27 +251,8 @@ impl ClientConfig {
     /// Builds a native librdkafka configuration.
     pub fn create_native_config(&self) -> KafkaResult<NativeClientConfig> {
         let conf = unsafe { NativeClientConfig::from_ptr(rdsys::rd_kafka_conf_new()) };
-        let mut err_buf = ErrBuf::new();
         for (key, value) in &self.conf_map {
-            let key_c = CString::new(key.to_string())?;
-            let value_c = CString::new(value.to_string())?;
-            let ret = unsafe {
-                rdsys::rd_kafka_conf_set(
-                    conf.ptr(),
-                    key_c.as_ptr(),
-                    value_c.as_ptr(),
-                    err_buf.as_mut_ptr(),
-                    err_buf.capacity(),
-                )
-            };
-            if ret.is_error() {
-                return Err(KafkaError::ClientConfig(
-                    ret,
-                    err_buf.to_string(),
-                    key.to_string(),
-                    value.to_string(),
-                ));
-            }
+            conf.set(key, value)?;
         }
         Ok(conf)
     }

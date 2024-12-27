@@ -11,7 +11,7 @@ use log::{error, warn};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, NativeClient, NativeQueue};
+use crate::client::{Client, EventPollResult, NativeClient, NativeQueue};
 use crate::config::{
     ClientConfig, FromClientConfig, FromClientConfigAndContext, NativeClientConfig,
 };
@@ -38,6 +38,7 @@ where
     client: Client<C>,
     queue: NativeQueue,
     group_id: Option<String>,
+    nonempty_callback: Option<Box<Box<dyn Fn() + Send + Sync>>>,
 }
 
 impl FromClientConfig for BaseConsumer {
@@ -98,6 +99,7 @@ where
             client,
             queue,
             group_id,
+            nonempty_callback: None,
         })
     }
 
@@ -115,59 +117,69 @@ where
     ///
     /// The returned message lives in the memory of the consumer and cannot outlive it.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        self.poll_queue(self.get_queue(), timeout)
+        self.poll_queue(self.get_queue(), timeout).into()
     }
 
     pub(crate) fn poll_queue<T: Into<Timeout>>(
         &self,
         queue: &NativeQueue,
         timeout: T,
-    ) -> Option<KafkaResult<BorrowedMessage<'_>>> {
+    ) -> EventPollResult<KafkaResult<BorrowedMessage<'_>>> {
         let now = Instant::now();
-        let mut timeout = timeout.into();
+        let initial_timeout = timeout.into();
+        let mut timeout = initial_timeout;
         let min_poll_interval = self.context().main_queue_min_poll_interval();
         loop {
             let op_timeout = std::cmp::min(timeout, min_poll_interval);
             let maybe_event = self.client().poll_event(queue, op_timeout);
-            if let Some(event) = maybe_event {
-                let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
-                match evtype {
-                    rdsys::RD_KAFKA_EVENT_FETCH => {
-                        if let Some(result) = self.handle_fetch_event(event) {
-                            return Some(result);
+            match maybe_event {
+                EventPollResult::Event(event) => {
+                    let evtype = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+                    match evtype {
+                        rdsys::RD_KAFKA_EVENT_FETCH => {
+                            if let Some(result) = self.handle_fetch_event(event) {
+                                return EventPollResult::Event(result);
+                            }
                         }
-                    }
-                    rdsys::RD_KAFKA_EVENT_ERROR => {
-                        if let Some(err) = self.handle_error_event(event) {
-                            return Some(Err(err));
+                        rdsys::RD_KAFKA_EVENT_ERROR => {
+                            if let Some(err) = self.handle_error_event(event) {
+                                return EventPollResult::Event(Err(err));
+                            }
                         }
-                    }
-                    rdsys::RD_KAFKA_EVENT_REBALANCE => {
-                        self.handle_rebalance_event(event);
-                        if timeout != Timeout::Never {
-                            return None;
+                        rdsys::RD_KAFKA_EVENT_REBALANCE => {
+                            self.handle_rebalance_event(event);
+                            if timeout != Timeout::Never {
+                                return EventPollResult::EventConsumed;
+                            }
                         }
-                    }
-                    rdsys::RD_KAFKA_EVENT_OFFSET_COMMIT => {
-                        self.handle_offset_commit_event(event);
-                        if timeout != Timeout::Never {
-                            return None;
+                        rdsys::RD_KAFKA_EVENT_OFFSET_COMMIT => {
+                            self.handle_offset_commit_event(event);
+                            if timeout != Timeout::Never {
+                                return EventPollResult::EventConsumed;
+                            }
                         }
-                    }
-                    _ => {
-                        let evname = unsafe {
-                            let evname = rdsys::rd_kafka_event_name(event.ptr());
-                            CStr::from_ptr(evname).to_string_lossy()
-                        };
-                        warn!("Ignored event '{evname}' on consumer poll");
+                        _ => {
+                            let evname = unsafe {
+                                let evname = rdsys::rd_kafka_event_name(event.ptr());
+                                CStr::from_ptr(evname).to_string_lossy()
+                            };
+                            warn!("Ignored event '{evname}' on consumer poll");
+                        }
                     }
                 }
-            }
-
-            timeout = timeout.saturating_sub(now.elapsed());
-            if timeout.is_zero() {
-                return None;
-            }
+                EventPollResult::None => {
+                    timeout = initial_timeout.saturating_sub(now.elapsed());
+                    if timeout.is_zero() {
+                        return EventPollResult::None;
+                    }
+                }
+                EventPollResult::EventConsumed => {
+                    timeout = initial_timeout.saturating_sub(now.elapsed());
+                    if timeout.is_zero() {
+                        return EventPollResult::EventConsumed;
+                    }
+                }
+            };
         }
     }
 
@@ -359,6 +371,36 @@ where
 
     pub(crate) fn native_client(&self) -> &NativeClient {
         self.client.native_client()
+    }
+
+    /// Sets a callback that will be invoked whenever the queue becomes
+    /// nonempty.
+    pub fn set_nonempty_callback<F>(&mut self, f: F)
+    where
+        F: Fn() + Send + Sync + 'static,
+    {
+        // SAFETY: we keep `F` alive until the next call to
+        // `rd_kafka_queue_cb_event_enable`. That might be the next call to
+        // `set_nonempty_callback` or it might be when the queue is dropped. The
+        // double indirection is required because `&dyn Fn` is a fat pointer.
+
+        unsafe extern "C" fn native_message_queue_nonempty_cb(
+            _: *mut RDKafka,
+            opaque_ptr: *mut c_void,
+        ) {
+            let f = opaque_ptr as *const *const (dyn Fn() + Send + Sync);
+            (**f)();
+        }
+
+        let f: Box<Box<dyn Fn() + Send + Sync>> = Box::new(Box::new(f));
+        unsafe {
+            rdsys::rd_kafka_queue_cb_event_enable(
+                self.queue.ptr(),
+                Some(native_message_queue_nonempty_cb),
+                &*f as *const _ as *mut c_void,
+            )
+        }
+        self.nonempty_callback = Some(f);
     }
 }
 
@@ -722,6 +764,8 @@ where
     C: ConsumerContext,
 {
     fn drop(&mut self) {
+        unsafe { rdsys::rd_kafka_queue_cb_event_enable(self.queue.ptr(), None, ptr::null_mut()) }
+
         trace!("Destroying consumer: {:?}", self.client.native_ptr());
         if self.group_id.is_some() {
             if let Err(err) = self.close_queue() {
@@ -802,7 +846,7 @@ where
     /// associated consumer regularly, even if no messages are expected, to
     /// serve events.
     pub fn poll<T: Into<Timeout>>(&self, timeout: T) -> Option<KafkaResult<BorrowedMessage<'_>>> {
-        self.consumer.poll_queue(&self.queue, timeout)
+        self.consumer.poll_queue(&self.queue, timeout).into()
     }
 
     /// Sets a callback that will be invoked whenever the queue becomes

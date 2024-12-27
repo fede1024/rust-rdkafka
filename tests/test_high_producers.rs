@@ -64,13 +64,13 @@ async fn test_future_producer_send_full() {
 
     // Fill up the queue.
     producer
-        .send_result(FutureRecord::to(&topic_name).payload("A").key("B"))
+        .send_result(FutureRecord::to(topic_name).payload("A").key("B"))
         .unwrap();
 
     let send_message = |timeout| async move {
         let start = Instant::now();
         let res = producer
-            .send(FutureRecord::to(&topic_name).payload("A").key("B"), timeout)
+            .send(FutureRecord::to(topic_name).payload("A").key("B"), timeout)
             .await;
         match res {
             Ok(_) => panic!("send unexpectedly succeeded"),
