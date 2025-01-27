@@ -10,7 +10,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 * Address wakeup races introduced by pivoting to the event API.
 * Update `BaseProducer::poll` to not return early, and instead continue
   looping until the passed timeout is reached.
-* **Breaking change.** Change signature for `OwnedDeliveryResult`. The `Ok` variant is now a `Delivery` struct, rather than a tuple. This allows or including `Timestamp` as a result field. It means that adding values in the future will not require a breaking change.
+* **Breaking change.** Change signature for `OwnedDeliveryResult`. The 
+`Ok` variant is now a `Delivery` struct, rather than a tuple. This allows
+or including `Timestamp` as a result field. It means that adding values 
+in the future will not require a breaking change.
 
 ## 0.36.2 (2024-01-16)
 
