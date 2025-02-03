@@ -146,7 +146,7 @@ where
     let mut message_map = HashMap::new();
     for (id, future) in futures {
         match future.await {
-            Ok((partition, offset)) => message_map.insert((partition, offset), id),
+            Ok(delivered) => message_map.insert((delivered.partition, delivered.offset), id),
             Err((kafka_error, _message)) => panic!("Delivery failed: {}", kafka_error),
         };
     }
