@@ -849,6 +849,46 @@ where
         self.consumer.poll_queue(&self.queue, timeout).into()
     }
 
+    /// Forwards this queue into a _destination_ queue or _resets_ current formatting.
+    ///
+    /// After being forwarded into another queue, this queue stops receiving messages. One can
+    /// either safely drop this source queue or keep it around and _clear_ its forwarding some time
+    /// later to consume messages from it again.
+    ///
+    /// For specific forwarding modes see [`ForwardMode`].
+    ///
+    /// Note that only [`ForwardMode::Queue`] might return an `Err`, other modes are infallible and
+    /// thus safe to `unwrap`.
+    pub fn forward<'a, M>(&'a mut self, mode: M) -> KafkaResult<()>
+    where
+        C: 'a,
+        M: Into<ForwardMode<'a, C>>,
+    {
+        match mode.into() {
+            ForwardMode::Clear => {
+                unsafe { rdsys::rd_kafka_queue_forward(self.queue.ptr(), ptr::null_mut()) };
+            }
+
+            ForwardMode::Consumer => {
+                if let Some(consumer_queue) = self.consumer.client().consumer_queue() {
+                    unsafe {
+                        rdsys::rd_kafka_queue_forward(self.queue.ptr(), consumer_queue.ptr())
+                    };
+                }
+            }
+
+            ForwardMode::Queue(dst)
+                if std::ptr::eq(self.consumer.client(), dst.consumer.client()) =>
+            {
+                unsafe { rdsys::rd_kafka_queue_forward(self.queue.ptr(), dst.queue.ptr()) };
+            }
+
+            ForwardMode::Queue(_) => return Err(KafkaError::ClientMismatch),
+        };
+
+        Ok(())
+    }
+
     /// Sets a callback that will be invoked whenever the queue becomes
     /// nonempty.
     pub fn set_nonempty_callback<F>(&mut self, f: F)
@@ -886,5 +926,31 @@ where
 {
     fn drop(&mut self) {
         unsafe { rdsys::rd_kafka_queue_cb_event_enable(self.queue.ptr(), None, ptr::null_mut()) }
+    }
+}
+
+/// Partition queue forwarding mode (see [`PartitionQueue::forward`])
+pub enum ForwardMode<'a, C: ConsumerContext> {
+    /// Clear current forwarding
+    Clear,
+
+    /// Forward to the main consumer queue
+    Consumer,
+
+    /// Forward to this specific queue
+    ///
+    /// Note that if both the queues being forwarded and this queue point to a
+    /// different underlying [`Client`], then [`PartitionQueue::forward`] will
+    /// result in a [`KafkaError::ClientMismatch`] error.
+    Queue(&'a mut PartitionQueue<C>),
+}
+
+impl<'a, C> From<&'a mut PartitionQueue<C>> for ForwardMode<'a, C>
+where
+    C: ConsumerContext,
+{
+    #[inline]
+    fn from(queue: &'a mut PartitionQueue<C>) -> Self {
+        Self::Queue(queue)
     }
 }
