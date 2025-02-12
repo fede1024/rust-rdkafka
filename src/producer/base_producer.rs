@@ -367,11 +367,13 @@ where
                 let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
                 match evtype {
                     rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
+                    rdsys::RD_KAFKA_EVENT_ERROR => self.handle_error_event(ev),
                     _ => {
                         let evname = unsafe {
                             let evname = rdsys::rd_kafka_event_name(ev.ptr());
                             CStr::from_ptr(evname).to_string_lossy()
                         };
+
                         warn!("Ignored event '{}' on base producer poll", evname);
                     }
                 }
@@ -403,6 +405,14 @@ where
             let delivery_opaque = unsafe { C::DeliveryOpaque::from_ptr((*msg)._private) };
             self.context().delivery(&delivery_result, delivery_opaque);
         }
+    }
+
+    fn handle_error_event(&self, event: NativePtr<RDKafkaEvent>) {
+        let rdkafka_err = unsafe { rdsys::rd_kafka_event_error(event.ptr()) };
+        let error = KafkaError::Global(rdkafka_err.into());
+        let reason =
+            unsafe { CStr::from_ptr(rdsys::rd_kafka_event_error_string(event.ptr())).to_string_lossy() };
+        self.context().error(error, reason.trim());
     }
 
     /// Returns a pointer to the native Kafka client.
