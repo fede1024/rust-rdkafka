@@ -176,6 +176,10 @@ the system's version of librdkafka. Example:
 rdkafka = { version = "0.25", features = ["dynamic-linking"] }
 ```
 
+If you'd like to compile librdkafka statically yourself, then use
+that, you can use `static-linking` while supplying `DEP_LIBRDKAFKA_STATIC_ROOT`
+with path to where librdkafka was built.
+
 For a full listing of features, consult the [rdkafka-sys crate's
 documentation][rdkafka-sys-features]. All of rdkafka-sys features are
 re-exported as rdkafka features.
