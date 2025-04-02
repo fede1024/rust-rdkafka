@@ -213,7 +213,10 @@ fn build_librdkafka() {
         // want a stable location that we can add to the linker search path.
         // Since we're not actually installing to /usr or /usr/local, there's no
         // harm to always using "lib" here.
-        .define("CMAKE_INSTALL_LIBDIR", "lib");
+        .define("CMAKE_INSTALL_LIBDIR", "lib")
+	// CMake 4.0.0 drops support for 3.2 compatibility, which is
+	// required by librdkafka 2.3.0.
+	.define("CMAKE_POLICY_VERSION_MINIMUM", "3.5");
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         config.define("WITH_ZLIB", "1");
