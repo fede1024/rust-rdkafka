@@ -135,8 +135,6 @@ To learn more about using transactions in rust-rdkafka, see the
 
 Here are some of the projects using rust-rdkafka:
 
-- [timely-dataflow]: a distributed data-parallel compute engine. See also
-  the [blog post][timely-blog] announcing its Kafka integration.
 - [kafka-view]: a web interface for Kafka clusters.
 - [kafka-benchmark]: a high performance benchmarking tool for Kafka.
 - [callysto]: Stream processing framework in Rust.
@@ -269,8 +267,6 @@ logging framework.
 [rdkafka-sys-features]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#features
 [rdkafka-sys-known-issues]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#known-issues
 [smol]: https://docs.rs/smol
-[timely-blog]: https://github.com/frankmcsherry/blog/blob/master/posts/2017-11-08.md
-[timely-dataflow]: https://github.com/frankmcsherry/timely-dataflow
 [Tokio]: https://tokio.rs/
 
 ## rdkafka-sys

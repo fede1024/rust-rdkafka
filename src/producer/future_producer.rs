@@ -132,14 +132,23 @@ pub struct FutureProducerContext<C: ClientContext + 'static> {
     wrapped_context: C,
 }
 
-/// Represents the result of message production as performed from the
-/// `FutureProducer`.
+/// Contains information about a successfully delivered message
+#[derive(Debug, PartialEq, Eq)]
+pub struct Delivery {
+    /// The partition the message was delivered to
+    pub partition: i32,
+    /// The offset within the partition
+    pub offset: i64,
+    /// The timestamp associated with the message
+    pub timestamp: Timestamp,
+}
+
+/// Represents the result of message production as performed from the FutureProducer.
 ///
-/// If message delivery was successful, `OwnedDeliveryResult` will return the
-/// partition and offset of the message. If the message failed to be delivered
-/// an error will be returned, together with an owned copy of the original
-/// message.
-pub type OwnedDeliveryResult = Result<(i32, i64), (KafkaError, OwnedMessage)>;
+/// If message delivery was successful, returns `DeliveredMessage` containing the partition,
+/// offset and timestamp. If the message failed to be delivered, returns the error and
+/// an owned copy of the original message.
+pub type OwnedDeliveryResult = Result<Delivery, (KafkaError, OwnedMessage)>;
 
 // Delegates all the methods calls to the wrapped context.
 impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
@@ -183,7 +192,11 @@ where
         tx: Box<oneshot::Sender<OwnedDeliveryResult>>,
     ) {
         let owned_delivery_result = match *delivery_result {
-            Ok(ref message) => Ok((message.partition(), message.offset())),
+            Ok(ref message) => Ok(Delivery {
+                partition: message.partition(),
+                offset: message.offset(),
+                timestamp: message.timestamp(),
+            }),
             Err((ref error, ref message)) => Err((error.clone(), message.detach())),
         };
         let _ = tx.send(owned_delivery_result); // TODO: handle error

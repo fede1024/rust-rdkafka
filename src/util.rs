@@ -1,5 +1,6 @@
 //! Utility functions and types.
 
+use std::cmp;
 use std::ffi::CStr;
 use std::fmt;
 use std::future::Future;
@@ -12,7 +13,7 @@ use std::slice;
 use std::sync::Arc;
 #[cfg(feature = "naive-runtime")]
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "naive-runtime")]
 use futures_channel::oneshot;
@@ -29,6 +30,40 @@ pub fn get_rdkafka_version() -> (i32, String) {
     let version_number = unsafe { rdsys::rd_kafka_version() };
     let c_str = unsafe { CStr::from_ptr(rdsys::rd_kafka_version_str()) };
     (version_number, c_str.to_string_lossy().into_owned())
+}
+
+pub(crate) enum Deadline {
+    At(Instant),
+    Never,
+}
+
+impl Deadline {
+    // librdkafka's flush api requires an i32 millisecond timeout
+    const MAX_FLUSH_DURATION: Duration = Duration::from_millis(i32::MAX as u64);
+
+    pub(crate) fn new(duration: Option<Duration>) -> Self {
+        if let Some(d) = duration {
+            Self::At(Instant::now() + d)
+        } else {
+            Self::Never
+        }
+    }
+
+    pub(crate) fn remaining(&self) -> Duration {
+        if let Deadline::At(i) = self {
+            *i - Instant::now()
+        } else {
+            Duration::MAX
+        }
+    }
+
+    pub(crate) fn remaining_millis_i32(&self) -> i32 {
+        cmp::min(Deadline::MAX_FLUSH_DURATION, self.remaining()).as_millis() as i32
+    }
+
+    pub(crate) fn elapsed(&self) -> bool {
+        self.remaining() <= Duration::ZERO
+    }
 }
 
 /// Specifies a timeout for a Kafka operation.
@@ -72,6 +107,26 @@ impl std::ops::SubAssign for Timeout {
             (Timeout::After(lhs), Timeout::After(rhs)) => *lhs -= rhs,
             (Timeout::Never, Timeout::After(_)) => (),
             _ => panic!("subtraction of Timeout::Never is ill-defined"),
+        }
+    }
+}
+
+impl From<Timeout> for Deadline {
+    fn from(t: Timeout) -> Deadline {
+        if let Timeout::After(dur) = t {
+            Deadline::new(Some(dur))
+        } else {
+            Deadline::new(None)
+        }
+    }
+}
+
+impl From<&Deadline> for Timeout {
+    fn from(d: &Deadline) -> Timeout {
+        if let Deadline::Never = d {
+            Timeout::Never
+        } else {
+            Timeout::After(d.remaining())
         }
     }
 }

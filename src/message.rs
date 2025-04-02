@@ -17,7 +17,7 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::util::{self, millis_to_epoch, KafkaDrop, NativePtr};
 
 /// Timestamp of a Kafka message.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
 pub enum Timestamp {
     /// Timestamp not available.
     NotAvailable,
