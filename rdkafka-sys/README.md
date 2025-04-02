@@ -45,6 +45,11 @@ system, and it will configure the compiler to dynamically link against it.
 The system version of librdkafka must exactly match the version of
 librdkafka bundled with this crate.
 
+The **`static-linking`** feature can be used to link rdkafka to a locally
+built version of librdkafka: if the feature is enabled, the build script
+will try to find `DEP_LIBRDKAFKA_STATIC_ROOT` environment variable
+and it will statically link against it.
+
 The **`cmake-build`** feature builds librdkafka with its [CMake] build
 system, rather than its default [mklove]-based build system. This feature
 requires that CMake is installed on the build machine.
