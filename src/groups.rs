@@ -140,15 +140,15 @@ unsafe impl KafkaDrop for RDKafkaGroupList {
     const DROP: unsafe extern "C" fn(*mut Self) = drop_group_list;
 }
 
-unsafe extern "C" fn drop_group_list(ptr: *mut RDKafkaGroupList) {
+unsafe extern "C" fn drop_group_list(ptr: *mut RDKafkaGroupList) { unsafe {
     rdsys::rd_kafka_group_list_destroy(ptr as *const _)
-}
+}}
 
 impl GroupList {
     /// Creates a new group list given a pointer to the native rdkafka-sys group list structure.
-    pub(crate) unsafe fn from_ptr(ptr: *const RDKafkaGroupList) -> GroupList {
+    pub(crate) unsafe fn from_ptr(ptr: *const RDKafkaGroupList) -> GroupList { unsafe {
         GroupList(NativePtr::from_ptr(ptr as *mut _).unwrap())
-    }
+    }}
 
     /// Returns all the groups in the list.
     pub fn groups(&self) -> &[GroupInfo] {

@@ -4,9 +4,10 @@ use std::collections::HashMap;
 use std::env::{self, VarError};
 use std::time::Duration;
 
-use rand::Rng;
+use rand::distr::{Alphanumeric, SampleString};
 use regex::Regex;
 
+use rdkafka::TopicPartitionList;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::client::ClientContext;
 use rdkafka::config::ClientConfig;
@@ -15,29 +16,19 @@ use rdkafka::error::KafkaResult;
 use rdkafka::message::ToBytes;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::statistics::Statistics;
-use rdkafka::TopicPartitionList;
 
 pub fn rand_test_topic(test_name: &str) -> String {
-    let id = rand::thread_rng()
-        .gen_ascii_chars()
-        .take(10)
-        .collect::<String>();
+    let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
     format!("__{}_{}", test_name, id)
 }
 
 pub fn rand_test_group() -> String {
-    let id = rand::thread_rng()
-        .gen_ascii_chars()
-        .take(10)
-        .collect::<String>();
+    let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
     format!("__test_{}", id)
 }
 
 pub fn rand_test_transactional_id() -> String {
-    let id = rand::thread_rng()
-        .gen_ascii_chars()
-        .take(10)
-        .collect::<String>();
+    let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
     format!("__test_{}", id)
 }
 

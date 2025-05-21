@@ -8,39 +8,39 @@ license = "MIT"
 description = "Rust wrapper for librdkafka"
 keywords = ["kafka", "rdkafka"]
 categories = ["api-bindings"]
-edition = "2018"
+edition = "2024"
 exclude = ["Cargo.lock"]
-rust-version = "1.70"
+rust-version = "1.87"
 
 [workspace]
 members = ["rdkafka-sys"]
 
 [dependencies]
 rdkafka-sys = { path = "rdkafka-sys", version = "4.8.0", default-features = false }
-futures-channel = "0.3.0"
-futures-executor = { version = "0.3.0", optional = true }
-futures-util = { version = "0.3.0", default-features = false }
-libc = "0.2.0"
-log = "0.4.8"
-serde = { version = "1.0.0", features = ["derive"] }
-serde_derive = "1.0.0"
-serde_json = "1.0.0"
+futures-channel = "0.3.31"
+futures-executor = { version = "0.3.31", optional = true }
+futures-util = { version = "0.3.31", default-features = false }
+libc = "0.2.172"
+log = "0.4.27"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_derive = "1.0.219"
+serde_json = "1.0.140"
 slab = "0.4"
-tokio = { version = "1.18", features = ["rt", "time"], optional = true }
-tracing = { version = "0.1.30", optional = true }
+tokio = { version = "1.45.0", features = ["rt", "time"], optional = true }
+tracing = { version = "0.1.41", optional = true }
 
 [dev-dependencies]
-async-std = { version = "1.9.0", features = ["attributes"] }
-backon = { version = "1.2", default-features = false, features = ["std-blocking-sleep"] }
-chrono = "0.4.0"
-clap = "2.18.0"
-env_logger = "0.9.0"
-futures = "0.3.0"
+async-std = { version = "1.13.1", features = ["attributes"] }
+backon = { version = "1.5.0", default-features = false, features = ["std-blocking-sleep"] }
+chrono = "0.4.41"
+clap = "4.5.38"
+env_logger = "0.11.8"
+futures = "0.3.31"
 hdrhistogram = "7.0.0"
 maplit = "1.0.2"
-rand = "0.3.15"
-regex = "1.1.6"
-smol = "1.2.4"
+rand = "0.9.1"
+regex = "1.11.1"
+smol = "2.0.2"
 tokio = { version = "1.18", features = ["macros", "rt-multi-thread", "time"] }
 
 # These features are re-exports of the features that the rdkafka-sys crate

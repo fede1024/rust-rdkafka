@@ -169,15 +169,15 @@ async fn test_future_undelivered() {
             .set("message.timeout.ms", "1");
         let producer: FutureProducer = config.create().expect("Failed to create producer");
 
-        let delivery_future = producer
+        
+        producer
             .send_result(
                 FutureRecord::to("topic")
                     .payload("payload")
                     .key("key")
                     .partition(100),
             )
-            .expect("Failed to queue message");
-        delivery_future
+            .expect("Failed to queue message")
 
         // drop producer. This should resolve the future as per purge API (couldn't be delivered)
     };

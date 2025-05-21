@@ -481,6 +481,7 @@ async fn test_produce_consume_consumer_nonempty_callback() {
         let timeout = Duration::from_secs(15);
         loop {
             let w = wakeups.load(Ordering::SeqCst);
+            print!("{} ", w);
             match w.cmp(&target) {
                 std::cmp::Ordering::Equal => break,
                 std::cmp::Ordering::Greater => panic!("wakeups {} exceeds target {}", w, target),

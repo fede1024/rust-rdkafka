@@ -16,9 +16,9 @@ pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
 
         let local_time: DateTime<Local> = Local::now();
         let time_str = local_time.format("%H:%M:%S%.3f").to_string();
-        write!(
+        writeln!(
             formatter,
-            "{} {}{} - {} - {}\n",
+            "{} {}{} - {} - {}",
             time_str,
             thread_name,
             record.level(),

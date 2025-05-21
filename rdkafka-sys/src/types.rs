@@ -249,6 +249,10 @@ pub enum RDKafkaErrorCode {
     AutoOffsetReset = -140,
     /// Partition log truncation detected
     LogTruncation = -139,
+    /// A different record in the batch was invalid and this message failed persisting.
+    InvalidDifferentRecord = -138,
+    /// Broker is going away but client isn't terminating */
+    DestroyBroker = -137,
     #[doc(hidden)]
     End = -100,
     /// Unknown broker error.
@@ -456,6 +460,25 @@ pub enum RDKafkaErrorCode {
     FeatureUpdateFailed = 96,
     /// Request principal deserialization failed during forwarding.
     PrincipalDeserializationFailure = 97,
+    /// Unknown Topic Id
+    UnknownTopicId = 100,
+    /// The member epoch is fenced by the group coordinator
+    FencedMemberEpoch = 110,
+    /// The instance ID is still used by another member in the consumer group
+    UnreleasedInstanceId = 111,
+    /// The assignor or its version range is not supported by the consumer group
+    UnsupportedAssignor = 112,
+    /// The member epoch is stale
+    StaleMemberEpoch = 113,
+    /// Client sent a push telemetry request with an invalid or outdated
+    /// subscription ID.
+    UnknownSubscriptionId = 117,
+    /// Client sent a push telemetry request larger than the maximum size
+    /// the broker will accept.
+    TelemetryTooLarge = 118,
+    /// Client metadata is stale,
+    /// client should rebootstrap to obtain new metadata.
+    RebootstrapRequired = 129,
     #[doc(hidden)]
     EndAll,
 }

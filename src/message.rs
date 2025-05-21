@@ -237,9 +237,9 @@ impl BorrowedHeaders {
     unsafe fn from_native_ptr<T>(
         _owner: &T,
         headers_ptr: *mut rdsys::rd_kafka_headers_t,
-    ) -> &BorrowedHeaders {
+    ) -> &BorrowedHeaders { unsafe {
         &*(headers_ptr as *mut BorrowedHeaders)
-    }
+    }}
 
     fn as_native_ptr(&self) -> *const RDKafkaHeaders {
         self as *const BorrowedHeaders as *const RDKafkaHeaders
@@ -368,7 +368,7 @@ impl<'a> BorrowedMessage<'a> {
         ptr: *mut RDKafkaMessage,
         event: Arc<NativeEvent>,
         _client: &'a C,
-    ) -> DeliveryResult<'a> {
+    ) -> DeliveryResult<'a> { unsafe {
         let borrowed_message = BorrowedMessage {
             ptr: NativePtr::from_ptr(ptr).unwrap(),
             _event: event,
@@ -382,7 +382,7 @@ impl<'a> BorrowedMessage<'a> {
         } else {
             Ok(borrowed_message)
         }
-    }
+    }}
 
     /// Returns a pointer to the [`RDKafkaMessage`].
     pub fn ptr(&self) -> *mut RDKafkaMessage {
@@ -432,9 +432,9 @@ impl<'a> Message for BorrowedMessage<'a> {
         unsafe { util::ptr_to_opt_slice(self.ptr.payload, self.ptr.len) }
     }
 
-    unsafe fn payload_mut(&mut self) -> Option<&mut [u8]> {
+    unsafe fn payload_mut(&mut self) -> Option<&mut [u8]> { unsafe {
         util::ptr_to_opt_mut_slice(self.ptr.payload, self.ptr.len)
-    }
+    }}
 
     fn topic(&self) -> &str {
         unsafe {
@@ -548,7 +548,7 @@ impl OwnedHeaders {
             rdsys::rd_kafka_header_add(
                 self.ptr(),
                 header.key.as_ptr() as *const c_char,
-                header.key.as_bytes().len() as isize,
+                header.key.len() as isize,
                 value_ptr,
                 value_len,
             )
@@ -809,7 +809,7 @@ impl ToBytes for String {
     }
 }
 
-impl<'a, T: ToBytes> ToBytes for &'a T {
+impl<T: ToBytes> ToBytes for &T {
     fn to_bytes(&self) -> &[u8] {
         (*self).to_bytes()
     }

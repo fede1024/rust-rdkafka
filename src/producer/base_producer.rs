@@ -211,7 +211,7 @@ unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>
     partition_cnt: i32,
     rkt_opaque: *mut c_void,
     _msg_opaque: *mut c_void,
-) -> i32 {
+) -> i32 { unsafe {
     let topic_name = CStr::from_ptr(rdsys::rd_kafka_topic_name(topic));
     let topic_name = str::from_utf8_unchecked(topic_name.to_bytes());
 
@@ -229,7 +229,7 @@ unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>
         .get_custom_partitioner()
         .expect("custom partitioner is not set")
         .partition(topic_name, key, partition_cnt, is_partition_available)
-}
+}}
 
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
     /// Creates a new `BaseProducer` starting from a configuration.

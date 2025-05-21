@@ -75,6 +75,8 @@ jobs:
       max-parallel: 1
       matrix:
         include:
+          - confluent-version: 7.9.1
+            kafka-version: 4.0
           - confluent-version: 7.7.0
             kafka-version: 3.7
           - confluent-version: 7.5.1

@@ -387,10 +387,10 @@ where
         unsafe extern "C" fn native_message_queue_nonempty_cb(
             _: *mut RDKafka,
             opaque_ptr: *mut c_void,
-        ) {
+        ) { unsafe {
             let f = opaque_ptr as *const *const (dyn Fn() + Send + Sync);
             (**f)();
-        }
+        }}
 
         let f: Box<Box<dyn Fn() + Send + Sync>> = Box::new(Box::new(f));
         unsafe {
@@ -863,10 +863,10 @@ where
         unsafe extern "C" fn native_message_queue_nonempty_cb(
             _: *mut RDKafka,
             opaque_ptr: *mut c_void,
-        ) {
+        ) { unsafe {
             let f = opaque_ptr as *const *const (dyn Fn() + Send + Sync);
             (**f)();
-        }
+        }}
 
         let f: Box<Box<dyn Fn() + Send + Sync>> = Box::new(Box::new(f));
         unsafe {
