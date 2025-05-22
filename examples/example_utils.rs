@@ -6,7 +6,7 @@ use env_logger::fmt::Formatter;
 use env_logger::Builder;
 use log::{LevelFilter, Record};
 
-pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
+pub fn setup_logger(log_thread: bool, rust_log: Option<&String>) {
     let output_format = move |formatter: &mut Formatter, record: &Record| {
         let thread_name = if log_thread {
             format!("(t: {}) ", thread::current().name().unwrap_or("unknown"))

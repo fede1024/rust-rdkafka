@@ -120,7 +120,7 @@ async fn main() {
         )
         .get_matches();
 
-    setup_logger(true, *matches.get_one("log-conf").unwrap());
+    setup_logger(true, matches.get_one("log-conf"));
 
     let (_, version) = get_rdkafka_version();
     info!("rd_kafka_version: {}", version);

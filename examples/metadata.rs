@@ -10,7 +10,12 @@ use crate::example_utils::setup_logger;
 
 mod example_utils;
 
-fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_offsets: bool) {
+fn print_metadata(
+    brokers: &String,
+    topic: Option<&String>,
+    timeout: Duration,
+    fetch_offsets: bool,
+) {
     let consumer: BaseConsumer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create()
@@ -19,7 +24,7 @@ fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_o
     trace!("Consumer created");
 
     let metadata = consumer
-        .fetch_metadata(topic, timeout)
+        .fetch_metadata(topic.map(|x| x.as_str()), timeout)
         .expect("Failed to fetch metadata");
 
     let mut message_count = 0;
@@ -97,29 +102,31 @@ fn main() {
         .arg(
             Arg::new("log-conf")
                 .long("log-conf")
+                .default_value("trace")
                 .help("Configure the logging format (example: 'rdkafka=trace')")
                 .num_args(1),
         )
         .arg(
             Arg::new("timeout")
                 .long("timeout")
+                .value_parser(clap::value_parser!(u64))
                 .help("Metadata fetch timeout in milliseconds")
                 .num_args(1)
                 .default_value("60000"),
         )
         .get_matches();
 
-    setup_logger(true, *matches.get_one("log-conf").unwrap());
+    setup_logger(true, matches.get_one::<String>("log-conf"));
 
-    let brokers = *matches.get_one("brokers").unwrap();
-    let timeout = *matches.get_one::<u64>("timeout").unwrap();
+    let brokers = matches.get_one("brokers").unwrap();
+    let timeout = matches.get_one::<u64>("timeout").unwrap();
     let topic = matches.get_one::<String>("topic");
     let fetch_offsets = matches.contains_id("offsets");
 
     print_metadata(
         brokers,
-        topic.map(|x| x.as_str()),
-        Duration::from_millis(timeout),
+        topic,
+        Duration::from_millis(*timeout),
         fetch_offsets,
     );
 }

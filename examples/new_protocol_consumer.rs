@@ -38,18 +38,29 @@ impl ConsumerContext for CustomContext {
 // A type alias with your custom consumer can be created for convenience.
 type LoggingConsumer = StreamConsumer<CustomContext>;
 
-async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
+async fn consume_and_print(
+    brokers: &str,
+    group_id: &str,
+    topics: &[&str],
+    assignor: Option<&String>,
+) {
     let context = CustomContext;
 
-    let consumer: LoggingConsumer = ClientConfig::new()
+    let mut config = ClientConfig::new();
+
+    config
+        .set("group.protocol", "consumer")
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
-        .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "true")
-        //.set("statistics.interval.ms", "30000")
-        //.set("auto.offset.reset", "smallest")
-        .set_log_level(RDKafkaLogLevel::Debug)
+        .set_log_level(RDKafkaLogLevel::Debug);
+
+    if let Some(assignor) = assignor {
+        config.set("group.remote.assignor", assignor);
+    }
+
+    let consumer: LoggingConsumer = config
         .create_with_context(context)
         .expect("Consumer creation failed");
 
@@ -121,6 +132,12 @@ async fn main() {
                 .num_args(0..)
                 .required(true),
         )
+        .arg(
+            Arg::new("assignor")
+                .short('a')
+                .long("assignor")
+                .help("Partition assignor"),
+        )
         .get_matches();
 
     setup_logger(true, matches.get_one("log-conf"));
@@ -134,9 +151,10 @@ async fn main() {
         .flatten()
         .map(|s| s.as_str())
         .collect::<Vec<_>>();
-    
+
     let brokers = matches.get_one::<String>("brokers").unwrap();
     let group_id = matches.get_one::<String>("group-id").unwrap();
+    let assignor = matches.get_one::<String>("assignor");
 
-    consume_and_print(brokers, group_id, &topics).await
+    consume_and_print(brokers, group_id, &topics, assignor).await
 }

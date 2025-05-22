@@ -158,11 +158,12 @@ async fn main() {
             Arg::new("num-workers")
                 .long("num-workers")
                 .help("Number of workers")
+                .value_parser(clap::value_parser!(usize))
                 .default_value("1"),
         )
         .get_matches();
 
-    setup_logger(true, *matches.get_one("log-conf").unwrap());
+    setup_logger(true, matches.get_one("log-conf"));
 
     let brokers = matches.get_one::<String>("brokers").unwrap();
     let group_id = matches.get_one::<String>("group-id").unwrap();

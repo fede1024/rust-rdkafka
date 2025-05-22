@@ -7,11 +7,11 @@ on:
     branches: [master]
 
 env:
-  rust_version: 1.70.0
+  rust_version: 1.87.0
 
 jobs:
   lint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
@@ -31,9 +31,9 @@ jobs:
           - os: windows-2019
             features: cmake-build,libz-static,curl-static
             rdkafka-sys-features: cmake-build,libz-static,curl-static
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             features: tracing
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             features: cmake-build,ssl-vendored,gssapi-vendored,libz-static,curl-static,zstd
             rdkafka-sys-features: cmake-build,ssl-vendored,gssapi-vendored,libz-static,curl-static,zstd
     runs-on: ${{ matrix.os }}
@@ -49,7 +49,7 @@ jobs:
   # Use the `minimal-versions` resolver to ensure we're not claiming to support
   # an older version of a dependency than we actually do.
   check-minimal-versions:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
@@ -75,15 +75,11 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - confluent-version: 7.9.1
-            kafka-version: 4.0
-          - confluent-version: 7.7.0
-            kafka-version: 3.7
-          - confluent-version: 7.5.1
-            kafka-version: 3.6
-          - confluent-version: 7.5.1
-            kafka-version: 3.5
-    runs-on: ubuntu-20.04
+          - kafka-version: 3.9
+          - kafka-version: 3.7
+          - kafka-version: 3.6
+          - kafka-version: 3.5
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: lukka/get-cmake@latest
@@ -94,6 +90,5 @@ jobs:
       # - run: sudo apt-get install -qy valgrind  # Valgrind currently disabled in testing
       - run: ./test_suite.sh
         env:
-          CONFLUENT_VERSION: ${{ matrix.confluent-version }}
           KAFKA_VERSION: ${{ matrix.kafka-version }}
           TERM: xterm-256color

@@ -38,7 +38,7 @@ async fn main() {
                )
         .get_matches();
 
-    setup_logger(true, *matches.get_one("log-conf").unwrap());
+    setup_logger(true, matches.get_one("log-conf"));
 
     let brokers = matches.get_one::<String>("brokers").unwrap();
     let topic = matches.get_one::<String>("topic").unwrap().to_owned();
