@@ -1,6 +1,6 @@
 [package]
 name = "rdkafka"
-version = "0.37.0"
+version = "0.40.0"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 repository = "https://github.com/fede1024/rust-rdkafka"
 readme = "README.md"
@@ -8,15 +8,15 @@ license = "MIT"
 description = "Rust wrapper for librdkafka"
 keywords = ["kafka", "rdkafka"]
 categories = ["api-bindings"]
-edition = "2024"
+edition = "2021"
 exclude = ["Cargo.lock"]
-rust-version = "1.87"
+rust-version = "1.67"
 
 [workspace]
 members = ["rdkafka-sys"]
 
 [dependencies]
-rdkafka-sys = { path = "rdkafka-sys", version = "4.8.0", default-features = false }
+rdkafka-sys = { path = "rdkafka-sys", version = "4.9.0", default-features = false }
 futures-channel = "0.3.31"
 futures-executor = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", default-features = false }
