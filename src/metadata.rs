@@ -114,15 +114,15 @@ unsafe impl KafkaDrop for RDKafkaMetadata {
     const DROP: unsafe extern "C" fn(*mut Self) = drop_metadata;
 }
 
-unsafe extern "C" fn drop_metadata(ptr: *mut RDKafkaMetadata) { unsafe {
-    rdsys::rd_kafka_metadata_destroy(ptr as *const _)
-}}
+unsafe extern "C" fn drop_metadata(ptr: *mut RDKafkaMetadata) {
+    unsafe { rdsys::rd_kafka_metadata_destroy(ptr as *const _) }
+}
 
 impl Metadata {
     /// Creates a new Metadata container given a pointer to the native rdkafka-sys metadata.
-    pub(crate) unsafe fn from_ptr(ptr: *const RDKafkaMetadata) -> Metadata { unsafe {
-        Metadata(NativePtr::from_ptr(ptr as *mut _).unwrap())
-    }}
+    pub(crate) unsafe fn from_ptr(ptr: *const RDKafkaMetadata) -> Metadata {
+        unsafe { Metadata(NativePtr::from_ptr(ptr as *mut _).unwrap()) }
+    }
 
     /// Returns the ID of the broker originating this metadata.
     pub fn orig_broker_id(&self) -> i32 {

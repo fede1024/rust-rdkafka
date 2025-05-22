@@ -134,7 +134,7 @@ async fn main() {
         .flatten()
         .map(|s| s.as_str())
         .collect::<Vec<_>>();
-    
+
     let brokers = matches.get_one::<String>("brokers").unwrap();
     let group_id = matches.get_one::<String>("group-id").unwrap();
 

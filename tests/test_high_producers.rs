@@ -5,13 +5,13 @@ use std::time::{Duration, Instant};
 
 use futures::stream::{FuturesUnordered, StreamExt};
 
+use rdkafka::Timestamp;
 use rdkafka::client::DefaultClientContext;
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::message::{Header, Headers, Message, OwnedHeaders};
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::util::Timeout;
-use rdkafka::Timestamp;
 
 use crate::utils::*;
 
@@ -169,7 +169,6 @@ async fn test_future_undelivered() {
             .set("message.timeout.ms", "1");
         let producer: FutureProducer = config.create().expect("Failed to create producer");
 
-        
         producer
             .send_result(
                 FutureRecord::to("topic")

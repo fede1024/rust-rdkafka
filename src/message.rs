@@ -14,7 +14,7 @@ use rdkafka_sys::types::*;
 
 use crate::admin::NativeEvent;
 use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::util::{self, millis_to_epoch, KafkaDrop, NativePtr};
+use crate::util::{self, KafkaDrop, NativePtr, millis_to_epoch};
 
 /// Timestamp of a Kafka message.
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
@@ -237,9 +237,9 @@ impl BorrowedHeaders {
     unsafe fn from_native_ptr<T>(
         _owner: &T,
         headers_ptr: *mut rdsys::rd_kafka_headers_t,
-    ) -> &BorrowedHeaders { unsafe {
-        &*(headers_ptr as *mut BorrowedHeaders)
-    }}
+    ) -> &BorrowedHeaders {
+        unsafe { &*(headers_ptr as *mut BorrowedHeaders) }
+    }
 
     fn as_native_ptr(&self) -> *const RDKafkaHeaders {
         self as *const BorrowedHeaders as *const RDKafkaHeaders
@@ -368,21 +368,23 @@ impl<'a> BorrowedMessage<'a> {
         ptr: *mut RDKafkaMessage,
         event: Arc<NativeEvent>,
         _client: &'a C,
-    ) -> DeliveryResult<'a> { unsafe {
-        let borrowed_message = BorrowedMessage {
-            ptr: NativePtr::from_ptr(ptr).unwrap(),
-            _event: event,
-            _owner: PhantomData,
-        };
-        if (*ptr).err.is_error() {
-            Err((
-                KafkaError::MessageProduction((*ptr).err.into()),
-                borrowed_message,
-            ))
-        } else {
-            Ok(borrowed_message)
+    ) -> DeliveryResult<'a> {
+        unsafe {
+            let borrowed_message = BorrowedMessage {
+                ptr: NativePtr::from_ptr(ptr).unwrap(),
+                _event: event,
+                _owner: PhantomData,
+            };
+            if (*ptr).err.is_error() {
+                Err((
+                    KafkaError::MessageProduction((*ptr).err.into()),
+                    borrowed_message,
+                ))
+            } else {
+                Ok(borrowed_message)
+            }
         }
-    }}
+    }
 
     /// Returns a pointer to the [`RDKafkaMessage`].
     pub fn ptr(&self) -> *mut RDKafkaMessage {
@@ -432,9 +434,9 @@ impl<'a> Message for BorrowedMessage<'a> {
         unsafe { util::ptr_to_opt_slice(self.ptr.payload, self.ptr.len) }
     }
 
-    unsafe fn payload_mut(&mut self) -> Option<&mut [u8]> { unsafe {
-        util::ptr_to_opt_mut_slice(self.ptr.payload, self.ptr.len)
-    }}
+    unsafe fn payload_mut(&mut self) -> Option<&mut [u8]> {
+        unsafe { util::ptr_to_opt_mut_slice(self.ptr.payload, self.ptr.len) }
+    }
 
     fn topic(&self) -> &str {
         unsafe {

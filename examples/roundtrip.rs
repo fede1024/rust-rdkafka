@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use clap::{Command, Arg};
+use clap::{Arg, Command};
 use hdrhistogram::Histogram;
 
 use rdkafka::config::ClientConfig;
@@ -25,17 +25,12 @@ async fn main() {
                 .help("Broker list in kafka format")
                 .default_value("localhost:9092"),
         )
-        .arg(
-            Arg::new("topic")
-                .long("topic")
-                .help("topic")
-                .required(true),
-        )
+        .arg(Arg::new("topic").long("topic").help("topic").required(true))
         .arg(
             Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-               )
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
+        )
         .get_matches();
 
     setup_logger(true, matches.get_one("log-conf"));

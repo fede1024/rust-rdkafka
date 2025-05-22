@@ -181,6 +181,6 @@ async fn main() {
             ))
         })
         .collect::<FuturesUnordered<_>>()
-        .for_each(|_| async {  })
+        .for_each(|_| async {})
         .await
 }

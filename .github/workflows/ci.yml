@@ -7,7 +7,7 @@ on:
     branches: [master]
 
 env:
-  rust_version: 1.87.0
+  rust_version: 1.87
 
 jobs:
   lint:
@@ -75,10 +75,14 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - kafka-version: 3.9
-          - kafka-version: 3.7
-          - kafka-version: 3.6
-          - kafka-version: 3.5
+          - confluent-version: 7.9.1
+            kafka-version: 3.9
+          - confluent-version: 7.7.0
+            kafka-version: 3.7
+          - confluent-version: 7.5.1
+            kafka-version: 3.6
+          - confluent-version: 7.5.1
+            kafka-version: 3.5
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
@@ -90,5 +94,6 @@ jobs:
       # - run: sudo apt-get install -qy valgrind  # Valgrind currently disabled in testing
       - run: ./test_suite.sh
         env:
+          CONFLUENT_VERSION: ${{ matrix.confluent-version }}
           KAFKA_VERSION: ${{ matrix.kafka-version }}
           TERM: xterm-256color

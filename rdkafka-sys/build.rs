@@ -294,7 +294,9 @@ fn build_librdkafka() {
     }
 
     if !cmake_library_paths.is_empty() {
-        env::set_var("CMAKE_LIBRARY_PATH", cmake_library_paths.join(";"));
+        unsafe {
+            env::set_var("CMAKE_LIBRARY_PATH", cmake_library_paths.join(";"));
+        }
     }
 
     println!("Configuring and compiling librdkafka");

@@ -196,11 +196,13 @@ impl TopicPartitionList {
 
     /// Transforms a pointer to the native librdkafka RDTopicPartitionList into a
     /// managed `TopicPartitionList` instance.
-    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList { unsafe {
-        TopicPartitionList {
-            ptr: NativePtr::from_ptr(ptr).unwrap(),
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList {
+        unsafe {
+            TopicPartitionList {
+                ptr: NativePtr::from_ptr(ptr).unwrap(),
+            }
         }
-    }}
+    }
 
     /// Given a topic map, generates a new `TopicPartitionList`.
     pub fn from_topic_map(
@@ -445,12 +447,14 @@ mod tests {
             .unwrap();
 
         assert_eq!(tpl.count(), 4);
-        assert!(tpl
-            .set_partition_offset("topic0", 3, Offset::Offset(0))
-            .is_err());
-        assert!(tpl
-            .set_partition_offset("topic3", 0, Offset::Offset(0))
-            .is_err());
+        assert!(
+            tpl.set_partition_offset("topic0", 3, Offset::Offset(0))
+                .is_err()
+        );
+        assert!(
+            tpl.set_partition_offset("topic3", 0, Offset::Offset(0))
+                .is_err()
+        );
 
         let tp0 = tpl.find_partition("topic1", 0).unwrap();
         let tp1 = tpl.find_partition("topic1", 1).unwrap();
@@ -488,9 +492,10 @@ mod tests {
             .unwrap();
         tpl.set_partition_offset("topic1", 3, Offset::Offset(3))
             .unwrap();
-        assert!(tpl
-            .set_partition_offset("topic1", 4, Offset::Offset(2))
-            .is_err());
+        assert!(
+            tpl.set_partition_offset("topic1", 4, Offset::Offset(2))
+                .is_err()
+        );
     }
 
     #[test]

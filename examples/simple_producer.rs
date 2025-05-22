@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use clap::{Command, Arg};
+use clap::{Arg, Command};
 use log::info;
 
 use rdkafka::config::ClientConfig;
@@ -65,8 +65,8 @@ async fn main() {
         .arg(
             Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-               )
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
+        )
         .arg(
             Arg::new("topic")
                 .short('t')

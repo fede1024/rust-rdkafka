@@ -2,7 +2,7 @@ use std::future::Future;
 use std::process;
 use std::time::{Duration, Instant};
 
-use clap::{Command, Arg};
+use clap::{Arg, Command};
 use futures::future::{self, FutureExt};
 use futures::stream::StreamExt;
 
@@ -44,17 +44,12 @@ fn main() {
                 .help("Broker list in kafka format")
                 .default_value("localhost:9092"),
         )
-        .arg(
-            Arg::new("topic")
-                .long("topic")
-                .help("topic")
-                .required(true),
-        )
+        .arg(Arg::new("topic").long("topic").help("topic").required(true))
         .arg(
             Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-               )
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
+        )
         .get_matches();
 
     setup_logger(true, matches.get_one("log-conf"));

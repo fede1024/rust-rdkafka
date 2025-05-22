@@ -13,12 +13,12 @@
 //!
 //! - `client.id`: Client identifier. Default: `rdkafka`.
 //! - `bootstrap.servers`: Initial list of brokers as a CSV list of broker host
-//!    or host:port. Default: empty.
+//!   or host:port. Default: empty.
 //! - `message.max.bytes`: Maximum message size. Default: 1000000.
 //! - `debug`: A comma-separated list of debug contexts to enable. Use 'all' to
-//!    print all the debugging information. Default: empty (off).
+//!   print all the debugging information. Default: empty (off).
 //! - `statistics.interval.ms`: how often the statistic callback
-//!    specified in the [`ClientContext`] will be called. Default: 0 (disabled).
+//!   specified in the [`ClientContext`] will be called. Default: 0 (disabled).
 //!
 //! [librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 
@@ -33,7 +33,7 @@ use rdkafka_sys::types::*;
 
 use crate::client::ClientContext;
 use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::log::{log_enabled, DEBUG, INFO, WARN};
+use crate::log::{DEBUG, INFO, WARN, log_enabled};
 use crate::util::{ErrBuf, KafkaDrop, NativePtr};
 
 /// The log levels supported by librdkafka.
@@ -92,11 +92,13 @@ unsafe impl KafkaDrop for RDKafkaConf {
 
 impl NativeClientConfig {
     /// Wraps a pointer to an `RDKafkaConfig` object and returns a new `NativeClientConfig`.
-    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaConf) -> NativeClientConfig { unsafe {
-        NativeClientConfig {
-            ptr: NativePtr::from_ptr(ptr).unwrap(),
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaConf) -> NativeClientConfig {
+        unsafe {
+            NativeClientConfig {
+                ptr: NativePtr::from_ptr(ptr).unwrap(),
+            }
         }
-    }}
+    }
 
     /// Returns the pointer to the librdkafka RDKafkaConf structure.
     pub fn ptr(&self) -> *mut RDKafkaConf {

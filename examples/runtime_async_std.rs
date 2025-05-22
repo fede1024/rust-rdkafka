@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::process;
 use std::time::Duration;
 
-use clap::{Command, Arg};
+use clap::{Arg, Command};
 use futures::stream::StreamExt;
 
 use rdkafka::config::ClientConfig;
@@ -45,17 +45,12 @@ async fn main() {
                 .help("Broker list in kafka format")
                 .default_value("localhost:9092"),
         )
-        .arg(
-            Arg::new("topic")
-                .long("topic")
-                .help("topic")
-                .required(true),
-        )
+        .arg(Arg::new("topic").long("topic").help("topic").required(true))
         .arg(
             Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-               )
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
+        )
         .get_matches();
 
     setup_logger(true, matches.get_one("log-conf"));

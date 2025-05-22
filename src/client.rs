@@ -171,11 +171,13 @@ unsafe impl Send for NativeClient {}
 
 impl NativeClient {
     /// Wraps a pointer to an RDKafka object and returns a new NativeClient.
-    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafka) -> NativeClient { unsafe {
-        NativeClient {
-            ptr: NativePtr::from_ptr(ptr).unwrap(),
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafka) -> NativeClient {
+        unsafe {
+            NativeClient {
+                ptr: NativePtr::from_ptr(ptr).unwrap(),
+            }
         }
-    }}
+    }
 
     /// Returns the wrapped pointer to RDKafka.
     pub fn ptr(&self) -> *mut RDKafka {
@@ -416,7 +418,10 @@ impl<C: ClientContext> Client<C> {
                 let message = match CString::new(e.to_string()) {
                     Ok(message) => message,
                     Err(e) => {
-                        error!("error message generated while refreshing OAuth token has embedded null character: {}", e);
+                        error!(
+                            "error message generated while refreshing OAuth token has embedded null character: {}",
+                            e
+                        );
                         CString::new(
                             "error while refreshing OAuth token has embedded null character",
                         )

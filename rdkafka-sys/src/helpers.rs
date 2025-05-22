@@ -124,8 +124,8 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR_CONCURRENT_TRANSACTIONS => ConcurrentTransactions,
         RD_KAFKA_RESP_ERR_TRANSACTION_COORDINATOR_FENCED => TransactionCoordinatorFenced,
         RD_KAFKA_RESP_ERR_TRANSACTIONAL_ID_AUTHORIZATION_FAILED => {
-                        TransactionalIdAuthorizationFailed
-            }
+            TransactionalIdAuthorizationFailed
+        }
         RD_KAFKA_RESP_ERR_SECURITY_DISABLED => SecurityDisabled,
         RD_KAFKA_RESP_ERR_OPERATION_NOT_ATTEMPTED => OperationNotAttempted,
         RD_KAFKA_RESP_ERR_KAFKA_STORAGE_ERROR => KafkaStorageError,
@@ -138,8 +138,8 @@ pub fn rd_kafka_resp_err_t_to_rdkafka_error(err: RDKafkaRespErr) -> RDKafkaError
         RD_KAFKA_RESP_ERR_DELEGATION_TOKEN_OWNER_MISMATCH => DelegationTokenOwnerMismatch,
         RD_KAFKA_RESP_ERR_DELEGATION_TOKEN_REQUEST_NOT_ALLOWED => DelegationTokenRequestNotAllowed,
         RD_KAFKA_RESP_ERR_DELEGATION_TOKEN_AUTHORIZATION_FAILED => {
-                DelegationTokenAuthorizationFailed
-            }
+            DelegationTokenAuthorizationFailed
+        }
         RD_KAFKA_RESP_ERR_DELEGATION_TOKEN_EXPIRED => DelegationTokenExpired,
         RD_KAFKA_RESP_ERR_INVALID_PRINCIPAL_TYPE => InvalidPrincipalType,
         RD_KAFKA_RESP_ERR_NON_EMPTY_GROUP => NonEmptyGroup,
