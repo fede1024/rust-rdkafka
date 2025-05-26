@@ -370,6 +370,7 @@ where
                 let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
                 match evtype {
                     rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
+                    rdsys::RD_KAFKA_EVENT_ERROR => self.handle_error_event(ev),
                     _ => {
                         let evname = unsafe {
                             let evname = rdsys::rd_kafka_event_name(ev.ptr());
@@ -408,6 +409,14 @@ where
         }
     }
 
+    fn handle_error_event(&self, event: NativePtr<RDKafkaEvent>) {
+        let rdkafka_err = unsafe { rdsys::rd_kafka_event_error(event.ptr()) };
+        let error = KafkaError::Global(rdkafka_err.into());
+        let reason =
+            unsafe { CStr::from_ptr(rdsys::rd_kafka_event_error_string(event.ptr())).to_string_lossy() };
+        self.context().error(error, reason.trim());
+    }
+    
     /// Returns a pointer to the native Kafka client.
     fn native_ptr(&self) -> *mut RDKafka {
         self.client.native_ptr()
