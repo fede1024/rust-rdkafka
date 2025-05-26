@@ -6,12 +6,12 @@ use futures::stream::FuturesUnordered;
 use futures::{StreamExt, TryStreamExt};
 use log::info;
 
-use rdkafka::Message;
 use rdkafka::config::ClientConfig;
-use rdkafka::consumer::Consumer;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
+use rdkafka::consumer::Consumer;
 use rdkafka::message::{BorrowedMessage, OwnedMessage};
 use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::Message;
 
 use crate::example_utils::setup_logger;
 

@@ -447,14 +447,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(tpl.count(), 4);
-        assert!(
-            tpl.set_partition_offset("topic0", 3, Offset::Offset(0))
-                .is_err()
-        );
-        assert!(
-            tpl.set_partition_offset("topic3", 0, Offset::Offset(0))
-                .is_err()
-        );
+        assert!(tpl
+            .set_partition_offset("topic0", 3, Offset::Offset(0))
+            .is_err());
+        assert!(tpl
+            .set_partition_offset("topic3", 0, Offset::Offset(0))
+            .is_err());
 
         let tp0 = tpl.find_partition("topic1", 0).unwrap();
         let tp1 = tpl.find_partition("topic1", 1).unwrap();
@@ -492,10 +490,9 @@ mod tests {
             .unwrap();
         tpl.set_partition_offset("topic1", 3, Offset::Offset(3))
             .unwrap();
-        assert!(
-            tpl.set_partition_offset("topic1", 4, Offset::Offset(2))
-                .is_err()
-        );
+        assert!(tpl
+            .set_partition_offset("topic1", 4, Offset::Offset(2))
+            .is_err());
     }
 
     #[test]

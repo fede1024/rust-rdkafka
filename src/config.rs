@@ -33,7 +33,7 @@ use rdkafka_sys::types::*;
 
 use crate::client::ClientContext;
 use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::log::{DEBUG, INFO, WARN, log_enabled};
+use crate::log::{log_enabled, DEBUG, INFO, WARN};
 use crate::util::{ErrBuf, KafkaDrop, NativePtr};
 
 /// The log levels supported by librdkafka.

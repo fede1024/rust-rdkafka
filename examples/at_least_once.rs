@@ -17,7 +17,6 @@ use clap::{Arg, Command};
 use futures::future;
 use log::{info, warn};
 
-use rdkafka::Message;
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -26,6 +25,7 @@ use rdkafka::error::KafkaResult;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::util::get_rdkafka_version;
+use rdkafka::Message;
 
 use crate::example_utils::setup_logger;
 

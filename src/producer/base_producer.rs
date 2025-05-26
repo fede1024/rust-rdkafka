@@ -48,8 +48,8 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::slice;
 use std::str;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 

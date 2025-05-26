@@ -9,8 +9,8 @@ license = "MIT"
 description = "Native bindings to the librdkafka library"
 keywords = ["kafka", "rdkafka"]
 categories = ["external-ffi-bindings"]
-edition = "2024"
-rust-version = "1.87"
+edition = "2021"
+rust-version = "1.74"
 
 [dependencies]
 num_enum = "0.7.3"

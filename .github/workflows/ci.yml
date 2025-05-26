@@ -7,13 +7,13 @@ on:
     branches: [master]
 
 env:
-  rust_version: 1.87
+  rust_version: 1.74
 
 jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.rust_version }}
@@ -38,7 +38,7 @@ jobs:
             rdkafka-sys-features: cmake-build,ssl-vendored,gssapi-vendored,libz-static,curl-static,zstd
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -51,7 +51,7 @@ jobs:
   check-minimal-versions:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           # The version of this toolchain doesn't matter much. It's only used to
@@ -85,7 +85,7 @@ jobs:
             kafka-version: 3.5
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
       - uses: dtolnay/rust-toolchain@stable
         with:

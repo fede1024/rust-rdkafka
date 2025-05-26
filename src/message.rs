@@ -14,7 +14,7 @@ use rdkafka_sys::types::*;
 
 use crate::admin::NativeEvent;
 use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::util::{self, KafkaDrop, NativePtr, millis_to_epoch};
+use crate::util::{self, millis_to_epoch, KafkaDrop, NativePtr};
 
 /// Timestamp of a Kafka message.
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]

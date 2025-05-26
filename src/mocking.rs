@@ -19,11 +19,11 @@ use std::time::Duration;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::ClientContext;
 use crate::client::Client;
 use crate::config::ClientConfig;
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::producer::DefaultProducerContext;
+use crate::ClientContext;
 
 /// Used internally by `MockCluster` to distinguish whether the mock cluster is owned or borrowed.
 ///
@@ -398,10 +398,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::Message;
     use crate::consumer::{Consumer, StreamConsumer};
     use crate::message::ToBytes;
     use crate::producer::{FutureProducer, FutureRecord};
+    use crate::Message;
     use tokio;
 
     use super::*;

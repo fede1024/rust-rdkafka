@@ -2,15 +2,15 @@
 
 use std::collections::HashMap;
 use std::convert::TryInto;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
 use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext};
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
-use rdkafka::util::{Timeout, current_time_millis};
+use rdkafka::util::{current_time_millis, Timeout};
 use rdkafka::{ClientConfig, Message, Timestamp};
 
 use crate::utils::*;

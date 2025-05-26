@@ -90,116 +90,114 @@ fn main() {
 
 #[cfg(not(feature = "cmake-build"))]
 fn build_librdkafka() {
-    unsafe {
-        let mut configure_flags: Vec<String> = Vec::new();
+    let mut configure_flags: Vec<String> = Vec::new();
 
-        let mut cflags = Vec::new();
-        if let Ok(var) = env::var("CFLAGS") {
-            cflags.push(var);
-        }
-
-        let mut ldflags = Vec::new();
-        if let Ok(var) = env::var("LDFLAGS") {
-            ldflags.push(var);
-        }
-
-        if env::var("CARGO_FEATURE_SSL").is_ok() {
-            configure_flags.push("--enable-ssl".into());
-            if let Ok(openssl_root) = env::var("DEP_OPENSSL_ROOT") {
-                cflags.push(format!("-I{}/include", openssl_root));
-                ldflags.push(format!("-L{}/lib", openssl_root));
-            }
-        } else {
-            configure_flags.push("--disable-ssl".into());
-        }
-
-        if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
-            configure_flags.push("--enable-gssapi".into());
-            if let Ok(sasl2_root) = env::var("DEP_SASL2_ROOT") {
-                cflags.push(format!("-I{}/include", sasl2_root));
-                ldflags.push(format!("-L{}/build", sasl2_root));
-            }
-        } else {
-            configure_flags.push("--disable-gssapi".into());
-        }
-
-        if env::var("CARGO_FEATURE_LIBZ").is_ok() {
-            // There is no --enable-zlib option, but it is enabled by default.
-            if let Ok(z_root) = env::var("DEP_Z_ROOT") {
-                cflags.push(format!("-I{}/include", z_root));
-                ldflags.push(format!("-L{}/build", z_root));
-            }
-        } else {
-            configure_flags.push("--disable-zlib".into());
-        }
-
-        if env::var("CARGO_FEATURE_CURL").is_ok() {
-            // There is no --enable-curl option, but it is enabled by default.
-            if let Ok(curl_root) = env::var("DEP_CURL_ROOT") {
-                cflags.push("-DCURLSTATIC_LIB".to_string());
-                cflags.push(format!("-I{}/include", curl_root));
-            }
-        } else {
-            configure_flags.push("--disable-curl".into());
-        }
-
-        if env::var("CARGO_FEATURE_ZSTD").is_ok() {
-            configure_flags.push("--enable-zstd".into());
-            if let Ok(zstd_root) = env::var("DEP_ZSTD_ROOT") {
-                cflags.push(format!("-I{}/include", zstd_root));
-                ldflags.push(format!("-L{}", zstd_root));
-            }
-        } else {
-            configure_flags.push("--disable-zstd".into());
-        }
-
-        if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
-            configure_flags.push("--enable-lz4-ext".into());
-            if let Ok(lz4_root) = env::var("DEP_LZ4_ROOT") {
-                cflags.push(format!("-I{}/include", lz4_root));
-                ldflags.push(format!("-L{}", lz4_root));
-            }
-        } else {
-            configure_flags.push("--disable-lz4-ext".into());
-        }
-
-        env::set_var("CFLAGS", cflags.join(" "));
-        env::set_var("LDFLAGS", ldflags.join(" "));
-
-        let out_dir = env::var("OUT_DIR").expect("OUT_DIR missing");
-
-        if !Path::new(&out_dir).join("LICENSE").exists() {
-            // We're not allowed to build in-tree directly, as ~/.cargo/registry is
-            // globally shared. mklove doesn't support out-of-tree builds [0], so we
-            // work around the issue by creating a clone of librdkafka inside of
-            // OUT_DIR, and build inside of *that* tree.
-            //
-            // https://github.com/edenhill/mklove/issues/17
-            println!("Cloning librdkafka");
-            run_command_or_fail(".", "cp", &["-a", "librdkafka/.", &out_dir]);
-        }
-
-        println!("Configuring librdkafka");
-        run_command_or_fail(&out_dir, "./configure", configure_flags.as_slice());
-
-        println!("Compiling librdkafka");
-        if let Some(makeflags) = env::var_os("CARGO_MAKEFLAGS") {
-            env::set_var("MAKEFLAGS", makeflags);
-        }
-        run_command_or_fail(
-            &out_dir,
-            if cfg!(target_os = "freebsd") {
-                "gmake"
-            } else {
-                "make"
-            },
-            &["libs"],
-        );
-
-        println!("cargo:rustc-link-search=native={}/src", out_dir);
-        println!("cargo:rustc-link-lib=static=rdkafka");
-        println!("cargo:root={}", out_dir);
+    let mut cflags = Vec::new();
+    if let Ok(var) = env::var("CFLAGS") {
+        cflags.push(var);
     }
+
+    let mut ldflags = Vec::new();
+    if let Ok(var) = env::var("LDFLAGS") {
+        ldflags.push(var);
+    }
+
+    if env::var("CARGO_FEATURE_SSL").is_ok() {
+        configure_flags.push("--enable-ssl".into());
+        if let Ok(openssl_root) = env::var("DEP_OPENSSL_ROOT") {
+            cflags.push(format!("-I{}/include", openssl_root));
+            ldflags.push(format!("-L{}/lib", openssl_root));
+        }
+    } else {
+        configure_flags.push("--disable-ssl".into());
+    }
+
+    if env::var("CARGO_FEATURE_GSSAPI").is_ok() {
+        configure_flags.push("--enable-gssapi".into());
+        if let Ok(sasl2_root) = env::var("DEP_SASL2_ROOT") {
+            cflags.push(format!("-I{}/include", sasl2_root));
+            ldflags.push(format!("-L{}/build", sasl2_root));
+        }
+    } else {
+        configure_flags.push("--disable-gssapi".into());
+    }
+
+    if env::var("CARGO_FEATURE_LIBZ").is_ok() {
+        // There is no --enable-zlib option, but it is enabled by default.
+        if let Ok(z_root) = env::var("DEP_Z_ROOT") {
+            cflags.push(format!("-I{}/include", z_root));
+            ldflags.push(format!("-L{}/build", z_root));
+        }
+    } else {
+        configure_flags.push("--disable-zlib".into());
+    }
+
+    if env::var("CARGO_FEATURE_CURL").is_ok() {
+        // There is no --enable-curl option, but it is enabled by default.
+        if let Ok(curl_root) = env::var("DEP_CURL_ROOT") {
+            cflags.push("-DCURLSTATIC_LIB".to_string());
+            cflags.push(format!("-I{}/include", curl_root));
+        }
+    } else {
+        configure_flags.push("--disable-curl".into());
+    }
+
+    if env::var("CARGO_FEATURE_ZSTD").is_ok() {
+        configure_flags.push("--enable-zstd".into());
+        if let Ok(zstd_root) = env::var("DEP_ZSTD_ROOT") {
+            cflags.push(format!("-I{}/include", zstd_root));
+            ldflags.push(format!("-L{}", zstd_root));
+        }
+    } else {
+        configure_flags.push("--disable-zstd".into());
+    }
+
+    if env::var("CARGO_FEATURE_EXTERNAL_LZ4").is_ok() {
+        configure_flags.push("--enable-lz4-ext".into());
+        if let Ok(lz4_root) = env::var("DEP_LZ4_ROOT") {
+            cflags.push(format!("-I{}/include", lz4_root));
+            ldflags.push(format!("-L{}", lz4_root));
+        }
+    } else {
+        configure_flags.push("--disable-lz4-ext".into());
+    }
+
+    env::set_var("CFLAGS", cflags.join(" "));
+    env::set_var("LDFLAGS", ldflags.join(" "));
+
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR missing");
+
+    if !Path::new(&out_dir).join("LICENSE").exists() {
+        // We're not allowed to build in-tree directly, as ~/.cargo/registry is
+        // globally shared. mklove doesn't support out-of-tree builds [0], so we
+        // work around the issue by creating a clone of librdkafka inside of
+        // OUT_DIR, and build inside of *that* tree.
+        //
+        // https://github.com/edenhill/mklove/issues/17
+        println!("Cloning librdkafka");
+        run_command_or_fail(".", "cp", &["-a", "librdkafka/.", &out_dir]);
+    }
+
+    println!("Configuring librdkafka");
+    run_command_or_fail(&out_dir, "./configure", configure_flags.as_slice());
+
+    println!("Compiling librdkafka");
+    if let Some(makeflags) = env::var_os("CARGO_MAKEFLAGS") {
+        env::set_var("MAKEFLAGS", makeflags);
+    }
+    run_command_or_fail(
+        &out_dir,
+        if cfg!(target_os = "freebsd") {
+            "gmake"
+        } else {
+            "make"
+        },
+        &["libs"],
+    );
+
+    println!("cargo:rustc-link-search=native={}/src", out_dir);
+    println!("cargo:rustc-link-lib=static=rdkafka");
+    println!("cargo:root={}", out_dir);
 }
 
 #[cfg(feature = "cmake-build")]
@@ -294,9 +292,7 @@ fn build_librdkafka() {
     }
 
     if !cmake_library_paths.is_empty() {
-        unsafe {
             env::set_var("CMAKE_LIBRARY_PATH", cmake_library_paths.join(";"));
-        }
     }
 
     println!("Configuring and compiling librdkafka");

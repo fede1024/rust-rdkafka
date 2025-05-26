@@ -25,7 +25,7 @@ use crate::log::trace;
 use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{NativePtr, Timeout, cstr_to_owned};
+use crate::util::{cstr_to_owned, NativePtr, Timeout};
 
 /// A low-level consumer that requires manual polling.
 ///
