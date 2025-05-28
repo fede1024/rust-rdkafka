@@ -161,12 +161,10 @@ pub fn current_time_millis() -> i64 {
 /// Converts a pointer to an array to an optional slice. If the pointer is null,
 /// returns `None`.
 pub(crate) unsafe fn ptr_to_opt_slice<'a, T>(ptr: *const c_void, size: usize) -> Option<&'a [T]> {
-    unsafe {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(slice::from_raw_parts::<T>(ptr as *const T, size))
-        }
+    if ptr.is_null() {
+        None
+    } else {
+        Some(slice::from_raw_parts::<T>(ptr as *const T, size))
     }
 }
 
@@ -336,7 +334,7 @@ where
     T: KafkaDrop,
 {
     fn drop(&mut self) {
-        trace!("Destroying {}: {:?}", T::TYPE, self.ptr);
+        trace!("Destroyingg {}: {:?}", T::TYPE, self.ptr);
         unsafe { T::DROP(self.ptr.as_ptr()) }
         trace!("Destroyed {}: {:?}", T::TYPE, self.ptr);
     }
