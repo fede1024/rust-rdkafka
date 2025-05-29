@@ -27,7 +27,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-11.0
+          - os: macos-14.0
           - os: windows-2019
             features: cmake-build,libz-static,curl-static
             rdkafka-sys-features: cmake-build,libz-static,curl-static
