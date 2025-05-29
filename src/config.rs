@@ -93,10 +93,8 @@ unsafe impl KafkaDrop for RDKafkaConf {
 impl NativeClientConfig {
     /// Wraps a pointer to an `RDKafkaConfig` object and returns a new `NativeClientConfig`.
     pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaConf) -> NativeClientConfig {
-        unsafe {
-            NativeClientConfig {
-                ptr: NativePtr::from_ptr(ptr).unwrap(),
-            }
+        NativeClientConfig {
+            ptr: NativePtr::from_ptr(ptr).unwrap(),
         }
     }
 

@@ -40,17 +40,15 @@ unsafe extern "C" fn native_message_queue_nonempty_cb(_: *mut RDKafka, opaque_pt
 }
 
 unsafe fn enable_nonempty_callback(queue: &NativeQueue, wakers: &Arc<WakerSlab>) {
-    unsafe {
-        rdsys::rd_kafka_queue_cb_event_enable(
-            queue.ptr(),
-            Some(native_message_queue_nonempty_cb),
-            Arc::as_ptr(wakers) as *mut c_void,
-        )
-    }
+    rdsys::rd_kafka_queue_cb_event_enable(
+        queue.ptr(),
+        Some(native_message_queue_nonempty_cb),
+        Arc::as_ptr(wakers) as *mut c_void,
+    )
 }
 
 unsafe fn disable_nonempty_callback(queue: &NativeQueue) {
-    unsafe { rdsys::rd_kafka_queue_cb_event_enable(queue.ptr(), None, ptr::null_mut()) }
+    rdsys::rd_kafka_queue_cb_event_enable(queue.ptr(), None, ptr::null_mut())
 }
 
 struct WakerSlab {

@@ -147,7 +147,7 @@ unsafe extern "C" fn drop_group_list(ptr: *mut RDKafkaGroupList) {
 impl GroupList {
     /// Creates a new group list given a pointer to the native rdkafka-sys group list structure.
     pub(crate) unsafe fn from_ptr(ptr: *const RDKafkaGroupList) -> GroupList {
-        unsafe { GroupList(NativePtr::from_ptr(ptr as *mut _).unwrap()) }
+        GroupList(NativePtr::from_ptr(ptr as *mut _).unwrap())
     }
 
     /// Returns all the groups in the list.

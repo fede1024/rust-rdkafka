@@ -184,12 +184,10 @@ pub(crate) unsafe fn ptr_to_opt_mut_slice<'a, T>(
 /// Converts a pointer to an array to a slice. If the pointer is null or the
 /// size is zero, returns a zero-length slice..
 pub(crate) unsafe fn ptr_to_slice<'a, T>(ptr: *const c_void, size: usize) -> &'a [T] {
-    unsafe {
-        if ptr.is_null() || size == 0 {
-            &[][..]
-        } else {
-            slice::from_raw_parts::<T>(ptr as *const T, size)
-        }
+    if ptr.is_null() || size == 0 {
+        &[][..]
+    } else {
+        slice::from_raw_parts::<T>(ptr as *const T, size)
     }
 }
 
@@ -236,7 +234,7 @@ impl<T: Send + Sync> IntoOpaque for Box<T> {
     }
 
     unsafe fn from_ptr(ptr: *mut c_void) -> Self {
-        unsafe { Box::from_raw(ptr as *mut T) }
+        Box::from_raw(ptr as *mut T)
     }
 }
 
@@ -246,7 +244,7 @@ impl<T: Send + Sync> IntoOpaque for Arc<T> {
     }
 
     unsafe fn from_ptr(ptr: *mut c_void) -> Self {
-        unsafe { Arc::from_raw(ptr as *const T) }
+        Arc::from_raw(ptr as *const T)
     }
 }
 
@@ -256,11 +254,9 @@ impl<T: Send + Sync> IntoOpaque for Arc<T> {
 ///
 /// `cstr` must point to a valid, null-terminated C string.
 pub unsafe fn cstr_to_owned(cstr: *const c_char) -> String {
-    unsafe {
-        CStr::from_ptr(cstr as *const c_char)
-            .to_string_lossy()
-            .into_owned()
-    }
+    CStr::from_ptr(cstr as *const c_char)
+        .to_string_lossy()
+        .into_owned()
 }
 
 pub(crate) struct ErrBuf {

@@ -121,7 +121,7 @@ unsafe extern "C" fn drop_metadata(ptr: *mut RDKafkaMetadata) {
 impl Metadata {
     /// Creates a new Metadata container given a pointer to the native rdkafka-sys metadata.
     pub(crate) unsafe fn from_ptr(ptr: *const RDKafkaMetadata) -> Metadata {
-        unsafe { Metadata(NativePtr::from_ptr(ptr as *mut _).unwrap()) }
+        Metadata(NativePtr::from_ptr(ptr as *mut _).unwrap())
     }
 
     /// Returns the ID of the broker originating this metadata.

@@ -57,7 +57,7 @@ unsafe impl Sync for RDKafkaError {}
 
 impl RDKafkaError {
     pub(crate) unsafe fn from_ptr(ptr: *mut rdsys::rd_kafka_error_t) -> RDKafkaError {
-        unsafe { RDKafkaError(NativePtr::from_ptr(ptr).map(Arc::new)) }
+        RDKafkaError(NativePtr::from_ptr(ptr).map(Arc::new))
     }
 
     fn ptr(&self) -> *const rdsys::rd_kafka_error_t {

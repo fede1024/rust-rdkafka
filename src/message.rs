@@ -435,7 +435,7 @@ impl<'a> Message for BorrowedMessage<'a> {
     }
 
     unsafe fn payload_mut(&mut self) -> Option<&mut [u8]> {
-        unsafe { util::ptr_to_opt_mut_slice(self.ptr.payload, self.ptr.len) }
+        util::ptr_to_opt_mut_slice(self.ptr.payload, self.ptr.len)
     }
 
     fn topic(&self) -> &str {
