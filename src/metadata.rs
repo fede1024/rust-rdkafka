@@ -115,7 +115,7 @@ unsafe impl KafkaDrop for RDKafkaMetadata {
 }
 
 unsafe extern "C" fn drop_metadata(ptr: *mut RDKafkaMetadata) {
-    unsafe { rdsys::rd_kafka_metadata_destroy(ptr as *const _) }
+    rdsys::rd_kafka_metadata_destroy(ptr as *const _)
 }
 
 impl Metadata {

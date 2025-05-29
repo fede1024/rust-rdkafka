@@ -141,7 +141,7 @@ unsafe impl KafkaDrop for RDKafkaGroupList {
 }
 
 unsafe extern "C" fn drop_group_list(ptr: *mut RDKafkaGroupList) {
-    unsafe { rdsys::rd_kafka_group_list_destroy(ptr as *const _) }
+    rdsys::rd_kafka_group_list_destroy(ptr as *const _)
 }
 
 impl GroupList {

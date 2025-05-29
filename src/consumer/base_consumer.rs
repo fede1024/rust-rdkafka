@@ -388,10 +388,8 @@ where
             _: *mut RDKafka,
             opaque_ptr: *mut c_void,
         ) {
-            unsafe {
-                let f = opaque_ptr as *const *const (dyn Fn() + Send + Sync);
-                (**f)();
-            }
+            let f = opaque_ptr as *const *const (dyn Fn() + Send + Sync);
+            (**f)();
         }
 
         let f: Box<Box<dyn Fn() + Send + Sync>> = Box::new(Box::new(f));
@@ -866,10 +864,8 @@ where
             _: *mut RDKafka,
             opaque_ptr: *mut c_void,
         ) {
-            unsafe {
-                let f = opaque_ptr as *const *const (dyn Fn() + Send + Sync);
-                (**f)();
-            }
+            let f = opaque_ptr as *const *const (dyn Fn() + Send + Sync);
+            (**f)();
         }
 
         let f: Box<Box<dyn Fn() + Send + Sync>> = Box::new(Box::new(f));

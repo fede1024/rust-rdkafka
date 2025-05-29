@@ -212,26 +212,23 @@ unsafe extern "C" fn partitioner_cb<Part: Partitioner, C: ProducerContext<Part>>
     rkt_opaque: *mut c_void,
     _msg_opaque: *mut c_void,
 ) -> i32 {
-    unsafe {
-        let topic_name = CStr::from_ptr(rdsys::rd_kafka_topic_name(topic));
-        let topic_name = str::from_utf8_unchecked(topic_name.to_bytes());
+    let topic_name = CStr::from_ptr(rdsys::rd_kafka_topic_name(topic));
+    let topic_name = str::from_utf8_unchecked(topic_name.to_bytes());
 
-        let is_partition_available =
-            |p: i32| rdsys::rd_kafka_topic_partition_available(topic, p) == 1;
+    let is_partition_available = |p: i32| rdsys::rd_kafka_topic_partition_available(topic, p) == 1;
 
-        let key = if keydata.is_null() {
-            None
-        } else {
-            Some(slice::from_raw_parts(keydata as *const u8, keylen))
-        };
+    let key = if keydata.is_null() {
+        None
+    } else {
+        Some(slice::from_raw_parts(keydata as *const u8, keylen))
+    };
 
-        let producer_context = &mut *(rkt_opaque as *mut C);
+    let producer_context = &mut *(rkt_opaque as *mut C);
 
-        producer_context
-            .get_custom_partitioner()
-            .expect("custom partitioner is not set")
-            .partition(topic_name, key, partition_cnt, is_partition_available)
-    }
+    producer_context
+        .get_custom_partitioner()
+        .expect("custom partitioner is not set")
+        .partition(topic_name, key, partition_cnt, is_partition_available)
 }
 
 impl FromClientConfig for BaseProducer<DefaultProducerContext> {
@@ -514,13 +511,14 @@ where
         let deadline: Deadline = timeout.into().into();
         while self.in_flight_count() > 0 && !deadline.elapsed() {
             let ret: RDKafkaRespErr = unsafe {
-                rdsys::rd_kafka_flush(self.client().native_ptr(), deadline.remaining_millis_i32())
+                rdsys::rd_kafka_flush(self.native_ptr(), deadline.remaining_millis_i32())
             };
             if let Deadline::Never = &deadline {
                 self.poll(Timeout::After(Duration::ZERO));
             } else {
                 self.poll(&deadline);
             }
+
             if ret.is_error() {
                 return Err(KafkaError::Flush(ret.into()));
             };

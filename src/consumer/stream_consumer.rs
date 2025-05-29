@@ -33,10 +33,8 @@ use crate::topic_partition_list::{Offset, TopicPartitionList};
 use crate::util::{AsyncRuntime, DefaultRuntime, Timeout};
 
 unsafe extern "C" fn native_message_queue_nonempty_cb(_: *mut RDKafka, opaque_ptr: *mut c_void) {
-    unsafe {
-        let wakers = &*(opaque_ptr as *const WakerSlab);
-        wakers.wake_all();
-    }
+    let wakers = &*(opaque_ptr as *const WakerSlab);
+    wakers.wake_all();
 }
 
 unsafe fn enable_nonempty_callback(queue: &NativeQueue, wakers: &Arc<WakerSlab>) {

@@ -238,7 +238,7 @@ impl BorrowedHeaders {
         _owner: &T,
         headers_ptr: *mut rdsys::rd_kafka_headers_t,
     ) -> &BorrowedHeaders {
-        unsafe { &*(headers_ptr as *mut BorrowedHeaders) }
+        &*(headers_ptr as *mut BorrowedHeaders)
     }
 
     fn as_native_ptr(&self) -> *const RDKafkaHeaders {
@@ -369,20 +369,18 @@ impl<'a> BorrowedMessage<'a> {
         event: Arc<NativeEvent>,
         _client: &'a C,
     ) -> DeliveryResult<'a> {
-        unsafe {
-            let borrowed_message = BorrowedMessage {
-                ptr: NativePtr::from_ptr(ptr).unwrap(),
-                _event: event,
-                _owner: PhantomData,
-            };
-            if (*ptr).err.is_error() {
-                Err((
-                    KafkaError::MessageProduction((*ptr).err.into()),
-                    borrowed_message,
-                ))
-            } else {
-                Ok(borrowed_message)
-            }
+        let borrowed_message = BorrowedMessage {
+            ptr: NativePtr::from_ptr(ptr).unwrap(),
+            _event: event,
+            _owner: PhantomData,
+        };
+        if (*ptr).err.is_error() {
+            Err((
+                KafkaError::MessageProduction((*ptr).err.into()),
+                borrowed_message,
+            ))
+        } else {
+            Ok(borrowed_message)
         }
     }
 
