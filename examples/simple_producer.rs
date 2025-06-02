@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use log::info;
 
 use rdkafka::config::ClientConfig;
@@ -52,40 +52,37 @@ async fn produce(brokers: &str, topic_name: &str) {
 
 #[tokio::main]
 async fn main() {
-    let matches = App::new("producer example")
+    let matches = Command::new("producer example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Simple command line producer")
         .arg(
-            Arg::with_name("brokers")
-                .short("b")
+            Arg::new("brokers")
+                .short('b')
                 .long("brokers")
                 .help("Broker list in kafka format")
-                .takes_value(true)
                 .default_value("localhost:9092"),
         )
         .arg(
-            Arg::with_name("log-conf")
+            Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-                .takes_value(true),
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
         )
         .arg(
-            Arg::with_name("topic")
-                .short("t")
+            Arg::new("topic")
+                .short('t')
                 .long("topic")
                 .help("Destination topic")
-                .takes_value(true)
                 .required(true),
         )
         .get_matches();
 
-    setup_logger(true, matches.value_of("log-conf"));
+    setup_logger(true, matches.get_one("log-conf"));
 
     let (version_n, version_s) = get_rdkafka_version();
     info!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
 
-    let topic = matches.value_of("topic").unwrap();
-    let brokers = matches.value_of("brokers").unwrap();
+    let topic = matches.get_one::<String>("topic").unwrap();
+    let brokers = matches.get_one::<String>("brokers").unwrap();
 
     produce(brokers, topic).await;
 }

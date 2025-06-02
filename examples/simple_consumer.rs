@@ -1,4 +1,4 @@
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use log::{info, warn};
 
 use rdkafka::client::ClientContext;
@@ -38,10 +38,17 @@ impl ConsumerContext for CustomContext {
 // A type alias with your custom consumer can be created for convenience.
 type LoggingConsumer = StreamConsumer<CustomContext>;
 
-async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
+async fn consume_and_print(
+    brokers: &str,
+    group_id: &str,
+    topics: &[&str],
+    assignor: Option<&String>,
+) {
     let context = CustomContext;
 
-    let consumer: LoggingConsumer = ClientConfig::new()
+    let mut config = ClientConfig::new();
+
+    config
         .set("group.id", group_id)
         .set("bootstrap.servers", brokers)
         .set("enable.partition.eof", "false")
@@ -49,12 +56,21 @@ async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
         .set("enable.auto.commit", "true")
         //.set("statistics.interval.ms", "30000")
         //.set("auto.offset.reset", "smallest")
-        .set_log_level(RDKafkaLogLevel::Debug)
+        .set_log_level(RDKafkaLogLevel::Debug);
+
+    if let Some(assignor) = assignor {
+        config
+            .set("group.remote.assignor", assignor)
+            .set("group.protocol", "consumer")
+            .remove("session.timeout.ms");
+    }
+
+    let consumer: LoggingConsumer = config
         .create_with_context(context)
         .expect("Consumer creation failed");
 
     consumer
-        .subscribe(&topics.to_vec())
+        .subscribe(topics)
         .expect("Can't subscribe to specified topics");
 
     loop {
@@ -69,8 +85,15 @@ async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
                         ""
                     }
                 };
-                info!("key: '{:?}', payload: '{}', topic: {}, partition: {}, offset: {}, timestamp: {:?}",
-                      m.key(), payload, m.topic(), m.partition(), m.offset(), m.timestamp());
+                info!(
+                    "key: '{:?}', payload: '{}', topic: {}, partition: {}, offset: {}, timestamp: {:?}",
+                    m.key(),
+                    payload,
+                    m.topic(),
+                    m.partition(),
+                    m.offset(),
+                    m.timestamp()
+                );
                 if let Some(headers) = m.headers() {
                     for header in headers.iter() {
                         info!("  Header {:#?}: {:?}", header.key, header.value);
@@ -84,50 +107,59 @@ async fn consume_and_print(brokers: &str, group_id: &str, topics: &[&str]) {
 
 #[tokio::main]
 async fn main() {
-    let matches = App::new("consumer example")
+    let matches = Command::new("consumer example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Simple command line consumer")
         .arg(
-            Arg::with_name("brokers")
-                .short("b")
+            Arg::new("brokers")
+                .short('b')
                 .long("brokers")
                 .help("Broker list in kafka format")
-                .takes_value(true)
                 .default_value("localhost:9092"),
         )
         .arg(
-            Arg::with_name("group-id")
-                .short("g")
+            Arg::new("group-id")
+                .short('g')
                 .long("group-id")
                 .help("Consumer group id")
-                .takes_value(true)
                 .default_value("example_consumer_group_id"),
         )
         .arg(
-            Arg::with_name("log-conf")
+            Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-                .takes_value(true),
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
         )
         .arg(
-            Arg::with_name("topics")
-                .short("t")
+            Arg::new("topics")
+                .short('t')
                 .long("topics")
                 .help("Topic list")
-                .takes_value(true)
-                .multiple(true)
+                .num_args(0..)
                 .required(true),
+        )
+        .arg(
+            Arg::new("assignor")
+                .short('a')
+                .long("assignor")
+                .help("Partition assignor"),
         )
         .get_matches();
 
-    setup_logger(true, matches.value_of("log-conf"));
+    setup_logger(true, matches.get_one("log-conf"));
 
     let (version_n, version_s) = get_rdkafka_version();
     info!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
 
-    let topics = matches.values_of("topics").unwrap().collect::<Vec<&str>>();
-    let brokers = matches.value_of("brokers").unwrap();
-    let group_id = matches.value_of("group-id").unwrap();
+    let topics = matches
+        .get_many::<String>("topics")
+        .into_iter()
+        .flatten()
+        .map(|s| s.as_str())
+        .collect::<Vec<_>>();
 
-    consume_and_print(brokers, group_id, &topics).await
+    let brokers = matches.get_one::<String>("brokers").unwrap();
+    let group_id = matches.get_one::<String>("group-id").unwrap();
+    let assignor = matches.get_one::<String>("assignor");
+
+    consume_and_print(brokers, group_id, &topics, assignor).await
 }

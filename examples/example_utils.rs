@@ -6,7 +6,7 @@ use env_logger::fmt::Formatter;
 use env_logger::Builder;
 use log::{LevelFilter, Record};
 
-pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
+pub fn setup_logger(log_thread: bool, rust_log: Option<&String>) {
     let output_format = move |formatter: &mut Formatter, record: &Record| {
         let thread_name = if log_thread {
             format!("(t: {}) ", thread::current().name().unwrap_or("unknown"))
@@ -16,9 +16,9 @@ pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
 
         let local_time: DateTime<Local> = Local::now();
         let time_str = local_time.format("%H:%M:%S%.3f").to_string();
-        write!(
+        writeln!(
             formatter,
-            "{} {}{} - {} - {}\n",
+            "{} {}{} - {} - {}",
             time_str,
             thread_name,
             record.level(),

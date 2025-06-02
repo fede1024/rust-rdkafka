@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use hdrhistogram::Histogram;
 
 use rdkafka::config::ClientConfig;
@@ -15,36 +15,28 @@ mod example_utils;
 
 #[tokio::main]
 async fn main() {
-    let matches = App::new("Roundtrip example")
+    let matches = Command::new("Roundtrip example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Measures latency between producer and consumer")
         .arg(
-            Arg::with_name("brokers")
-                .short("b")
+            Arg::new("brokers")
+                .short('b')
                 .long("brokers")
                 .help("Broker list in kafka format")
-                .takes_value(true)
                 .default_value("localhost:9092"),
         )
+        .arg(Arg::new("topic").long("topic").help("topic").required(true))
         .arg(
-            Arg::with_name("topic")
-                .long("topic")
-                .help("topic")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("log-conf")
+            Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-                .takes_value(true),
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
         )
         .get_matches();
 
-    setup_logger(true, matches.value_of("log-conf"));
+    setup_logger(true, matches.get_one("log-conf"));
 
-    let brokers = matches.value_of("brokers").unwrap();
-    let topic = matches.value_of("topic").unwrap().to_owned();
+    let brokers = matches.get_one::<String>("brokers").unwrap();
+    let topic = matches.get_one::<String>("topic").unwrap().to_owned();
 
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
@@ -88,7 +80,7 @@ async fn main() {
         if start.elapsed() < Duration::from_secs(10) {
             // Warming up.
         } else if start.elapsed() < Duration::from_secs(20) {
-            if latencies.len() == 0 {
+            if latencies.is_empty() {
                 println!("Recording for 10s...");
             }
             latencies += (now() - then) as u64;

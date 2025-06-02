@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::process;
 use std::time::Duration;
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use futures::stream::StreamExt;
 
 use rdkafka::config::ClientConfig;
@@ -35,36 +35,28 @@ impl AsyncRuntime for AsyncStdRuntime {
 
 #[async_std::main]
 async fn main() {
-    let matches = App::new("smol runtime example")
+    let matches = Command::new("smol runtime example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Demonstrates using rust-rdkafka with a custom async runtime")
         .arg(
-            Arg::with_name("brokers")
-                .short("b")
+            Arg::new("brokers")
+                .short('b')
                 .long("brokers")
                 .help("Broker list in kafka format")
-                .takes_value(true)
                 .default_value("localhost:9092"),
         )
+        .arg(Arg::new("topic").long("topic").help("topic").required(true))
         .arg(
-            Arg::with_name("topic")
-                .long("topic")
-                .help("topic")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("log-conf")
+            Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-                .takes_value(true),
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
         )
         .get_matches();
 
-    setup_logger(true, matches.value_of("log-conf"));
+    setup_logger(true, matches.get_one("log-conf"));
 
-    let brokers = matches.value_of("brokers").unwrap();
-    let topic = matches.value_of("topic").unwrap().to_owned();
+    let brokers = matches.get_one::<String>("brokers").unwrap();
+    let topic = matches.get_one::<String>("topic").unwrap().to_owned();
 
     let producer: FutureProducer<_, AsyncStdRuntime> = ClientConfig::new()
         .set("bootstrap.servers", brokers)

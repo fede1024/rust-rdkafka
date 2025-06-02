@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use clap::{value_t, App, Arg};
+use clap::{Arg, Command};
 use log::trace;
 
 use rdkafka::config::ClientConfig;
@@ -10,7 +10,12 @@ use crate::example_utils::setup_logger;
 
 mod example_utils;
 
-fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_offsets: bool) {
+fn print_metadata(
+    brokers: &String,
+    topic: Option<&String>,
+    timeout: Duration,
+    fetch_offsets: bool,
+) {
     let consumer: BaseConsumer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
         .create()
@@ -19,7 +24,7 @@ fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_o
     trace!("Consumer created");
 
     let metadata = consumer
-        .fetch_metadata(topic, timeout)
+        .fetch_metadata(topic.map(|x| x.as_str()), timeout)
         .expect("Failed to fetch metadata");
 
     let mut message_count = 0;
@@ -72,54 +77,56 @@ fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_o
 }
 
 fn main() {
-    let matches = App::new("metadata fetch example")
+    let matches = Command::new("metadata fetch example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Fetch and print the cluster metadata")
         .arg(
-            Arg::with_name("brokers")
-                .short("b")
+            Arg::new("brokers")
+                .short('b')
                 .long("brokers")
                 .help("Broker list in kafka format")
-                .takes_value(true)
+                .num_args(1)
                 .default_value("localhost:9092"),
         )
         .arg(
-            Arg::with_name("offsets")
+            Arg::new("offsets")
                 .long("offsets")
                 .help("Enables offset fetching"),
         )
         .arg(
-            Arg::with_name("topic")
+            Arg::new("topic")
                 .long("topic")
                 .help("Only fetch the metadata of the specified topic")
-                .takes_value(true),
+                .num_args(1),
         )
         .arg(
-            Arg::with_name("log-conf")
+            Arg::new("log-conf")
                 .long("log-conf")
+                .default_value("trace")
                 .help("Configure the logging format (example: 'rdkafka=trace')")
-                .takes_value(true),
+                .num_args(1),
         )
         .arg(
-            Arg::with_name("timeout")
+            Arg::new("timeout")
                 .long("timeout")
+                .value_parser(clap::value_parser!(u64))
                 .help("Metadata fetch timeout in milliseconds")
-                .takes_value(true)
+                .num_args(1)
                 .default_value("60000"),
         )
         .get_matches();
 
-    setup_logger(true, matches.value_of("log-conf"));
+    setup_logger(true, matches.get_one::<String>("log-conf"));
 
-    let brokers = matches.value_of("brokers").unwrap();
-    let timeout = value_t!(matches, "timeout", u64).unwrap();
-    let topic = matches.value_of("topic");
-    let fetch_offsets = matches.is_present("offsets");
+    let brokers = matches.get_one("brokers").unwrap();
+    let timeout = matches.get_one::<u64>("timeout").unwrap();
+    let topic = matches.get_one::<String>("topic");
+    let fetch_offsets = matches.contains_id("offsets");
 
     print_metadata(
         brokers,
         topic,
-        Duration::from_millis(timeout),
+        Duration::from_millis(*timeout),
         fetch_offsets,
     );
 }

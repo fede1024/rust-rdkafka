@@ -13,7 +13,7 @@
 
 use std::time::Duration;
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use futures::future;
 use log::{info, warn};
 
@@ -83,60 +83,56 @@ fn create_producer(brokers: &str) -> FutureProducer {
 
 #[tokio::main]
 async fn main() {
-    let matches = App::new("at-least-once")
+    let matches = Command::new("at-least-once")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("At-least-once delivery example")
         .arg(
-            Arg::with_name("brokers")
-                .short("b")
+            Arg::new("brokers")
+                .short('b')
                 .long("brokers")
                 .help("Broker list in kafka format")
-                .takes_value(true)
                 .default_value("localhost:9092"),
         )
         .arg(
-            Arg::with_name("group-id")
-                .short("g")
+            Arg::new("group-id")
+                .short('g')
                 .long("group-id")
                 .help("Consumer group id")
-                .takes_value(true)
                 .default_value("example_consumer_group_id"),
         )
         .arg(
-            Arg::with_name("log-conf")
+            Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-                .takes_value(true),
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
         )
         .arg(
-            Arg::with_name("input-topic")
+            Arg::new("input-topic")
                 .long("input-topic")
                 .help("Input topic name")
-                .takes_value(true)
                 .required(true),
         )
         .arg(
-            Arg::with_name("output-topics")
+            Arg::new("output-topics")
                 .long("output-topics")
                 .help("Output topics names")
-                .takes_value(true)
-                .multiple(true)
+                .num_args(0..)
                 .required(true),
         )
         .get_matches();
 
-    setup_logger(true, matches.value_of("log-conf"));
+    setup_logger(true, matches.get_one("log-conf"));
 
     let (_, version) = get_rdkafka_version();
     info!("rd_kafka_version: {}", version);
 
-    let input_topic = matches.value_of("input-topic").unwrap();
+    let input_topic = matches.get_one::<String>("input-topic").unwrap();
     let output_topics = matches
-        .values_of("output-topics")
-        .unwrap()
-        .collect::<Vec<&str>>();
-    let brokers = matches.value_of("brokers").unwrap();
-    let group_id = matches.value_of("group-id").unwrap();
+        .get_many::<String>("output-topics")
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    let brokers = matches.get_one::<String>("brokers").unwrap();
+    let group_id = matches.get_one::<String>("group-id").unwrap();
 
     let consumer = create_consumer(brokers, group_id, input_topic);
     let producer = create_producer(brokers);

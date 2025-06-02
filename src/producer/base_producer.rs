@@ -367,6 +367,7 @@ where
                 let evtype = unsafe { rdsys::rd_kafka_event_type(ev.ptr()) };
                 match evtype {
                     rdsys::RD_KAFKA_EVENT_DR => self.handle_delivery_report_event(ev),
+                    rdsys::RD_KAFKA_EVENT_ERROR => self.handle_error_event(ev),
                     _ => {
                         let evname = unsafe {
                             let evname = rdsys::rd_kafka_event_name(ev.ptr());
@@ -403,6 +404,15 @@ where
             let delivery_opaque = unsafe { C::DeliveryOpaque::from_ptr((*msg)._private) };
             self.context().delivery(&delivery_result, delivery_opaque);
         }
+    }
+
+    fn handle_error_event(&self, event: NativePtr<RDKafkaEvent>) {
+        let rdkafka_err = unsafe { rdsys::rd_kafka_event_error(event.ptr()) };
+        let error = KafkaError::Global(rdkafka_err.into());
+        let reason = unsafe {
+            CStr::from_ptr(rdsys::rd_kafka_event_error_string(event.ptr())).to_string_lossy()
+        };
+        self.context().error(error, reason.trim());
     }
 
     /// Returns a pointer to the native Kafka client.
@@ -500,14 +510,15 @@ where
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         let deadline: Deadline = timeout.into().into();
         while self.in_flight_count() > 0 && !deadline.elapsed() {
-            let ret = unsafe {
-                rdsys::rd_kafka_flush(self.client().native_ptr(), deadline.remaining_millis_i32())
+            let ret: RDKafkaRespErr = unsafe {
+                rdsys::rd_kafka_flush(self.native_ptr(), deadline.remaining_millis_i32())
             };
             if let Deadline::Never = &deadline {
                 self.poll(Timeout::After(Duration::ZERO));
             } else {
                 self.poll(&deadline);
             }
+
             if ret.is_error() {
                 return Err(KafkaError::Flush(ret.into()));
             };

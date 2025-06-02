@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:24.10
 
 RUN apt-get update && apt-get install -y build-essential \
     curl \
@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y build-essential \
     valgrind \
     zlib1g-dev
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2019-10-17
-ENV PATH /root/.cargo/bin/:$PATH
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.74
+ENV PATH=/root/.cargo/bin/:$PATH
 
 # # Create dummy project for rdkafka
 # COPY Cargo.toml /rdkafka/
@@ -25,6 +25,6 @@ ENV PATH /root/.cargo/bin/:$PATH
 
 COPY docker/run_tests.sh /rdkafka/
 
-ENV KAFKA_HOST kafka:9092
+ENV KAFKA_HOST=kafka:9092
 
 WORKDIR /rdkafka

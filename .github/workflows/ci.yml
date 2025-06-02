@@ -7,13 +7,13 @@ on:
     branches: [master]
 
 env:
-  rust_version: 1.70.0
+  rust_version: 1.74
 
 jobs:
   lint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.rust_version }}
@@ -27,18 +27,18 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-11.0
+          - os: macos-14.0
           - os: windows-2019
             features: cmake-build,libz-static,curl-static
             rdkafka-sys-features: cmake-build,libz-static,curl-static
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             features: tracing
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             features: cmake-build,ssl-vendored,gssapi-vendored,libz-static,curl-static,zstd
             rdkafka-sys-features: cmake-build,ssl-vendored,gssapi-vendored,libz-static,curl-static,zstd
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -49,9 +49,9 @@ jobs:
   # Use the `minimal-versions` resolver to ensure we're not claiming to support
   # an older version of a dependency than we actually do.
   check-minimal-versions:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           # The version of this toolchain doesn't matter much. It's only used to
@@ -75,15 +75,17 @@ jobs:
       max-parallel: 1
       matrix:
         include:
+          - confluent-version: 7.9.1
+            kafka-version: 3.9
           - confluent-version: 7.7.0
             kafka-version: 3.7
           - confluent-version: 7.5.1
             kafka-version: 3.6
           - confluent-version: 7.5.1
             kafka-version: 3.5
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
       - uses: dtolnay/rust-toolchain@stable
         with:

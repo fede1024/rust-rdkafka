@@ -18,6 +18,8 @@ bindgen \
     --raw-line "use libc::{FILE, sockaddr, c_int, c_void, c_char};" \
     --raw-line "use num_enum::TryFromPrimitive;" \
     --default-macro-constant-type "signed" \
+    --rust-edition 2021 \
+    --rust-target 1.74 \
     "bindings.h" -o "src/bindings.rs"
 
 # Derive TryFromPrimitive for rd_kafka_resp_err_t.

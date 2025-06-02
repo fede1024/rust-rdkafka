@@ -1,7 +1,7 @@
 use std::thread;
 use std::time::Duration;
 
-use clap::{value_t, App, Arg};
+use clap::{Arg, Command};
 use futures::stream::FuturesUnordered;
 use futures::{StreamExt, TryStreamExt};
 use log::info;
@@ -30,7 +30,7 @@ async fn record_owned_message_receipt(_msg: &OwnedMessage) {
 }
 
 // Emulates an expensive, synchronous computation.
-fn expensive_computation<'a>(msg: OwnedMessage) -> String {
+fn expensive_computation(msg: OwnedMessage) -> String {
     info!("Starting expensive computation on message {}", msg.offset());
     thread::sleep(Duration::from_millis(rand::random::<u64>() % 5000));
     info!(
@@ -120,61 +120,56 @@ async fn run_async_processor(
 
 #[tokio::main]
 async fn main() {
-    let matches = App::new("Async example")
+    let matches = Command::new("Async example")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or(""))
         .about("Asynchronous computation example")
         .arg(
-            Arg::with_name("brokers")
-                .short("b")
+            Arg::new("brokers")
+                .short('b')
                 .long("brokers")
                 .help("Broker list in kafka format")
-                .takes_value(true)
                 .default_value("localhost:9092"),
         )
         .arg(
-            Arg::with_name("group-id")
-                .short("g")
+            Arg::new("group-id")
+                .short('g')
                 .long("group-id")
                 .help("Consumer group id")
-                .takes_value(true)
                 .default_value("example_consumer_group_id"),
         )
         .arg(
-            Arg::with_name("log-conf")
+            Arg::new("log-conf")
                 .long("log-conf")
-                .help("Configure the logging format (example: 'rdkafka=trace')")
-                .takes_value(true),
+                .help("Configure the logging format (example: 'rdkafka=trace')"),
         )
         .arg(
-            Arg::with_name("input-topic")
+            Arg::new("input-topic")
                 .long("input-topic")
                 .help("Input topic")
-                .takes_value(true)
                 .required(true),
         )
         .arg(
-            Arg::with_name("output-topic")
+            Arg::new("output-topic")
                 .long("output-topic")
                 .help("Output topic")
-                .takes_value(true)
                 .required(true),
         )
         .arg(
-            Arg::with_name("num-workers")
+            Arg::new("num-workers")
                 .long("num-workers")
                 .help("Number of workers")
-                .takes_value(true)
+                .value_parser(clap::value_parser!(usize))
                 .default_value("1"),
         )
         .get_matches();
 
-    setup_logger(true, matches.value_of("log-conf"));
+    setup_logger(true, matches.get_one("log-conf"));
 
-    let brokers = matches.value_of("brokers").unwrap();
-    let group_id = matches.value_of("group-id").unwrap();
-    let input_topic = matches.value_of("input-topic").unwrap();
-    let output_topic = matches.value_of("output-topic").unwrap();
-    let num_workers = value_t!(matches, "num-workers", usize).unwrap();
+    let brokers = matches.get_one::<String>("brokers").unwrap();
+    let group_id = matches.get_one::<String>("group-id").unwrap();
+    let input_topic = matches.get_one::<String>("input-topic").unwrap();
+    let output_topic = matches.get_one::<String>("output-topic").unwrap();
+    let num_workers = *matches.get_one::<usize>("num-workers").unwrap();
 
     (0..num_workers)
         .map(|_| {
@@ -186,6 +181,6 @@ async fn main() {
             ))
         })
         .collect::<FuturesUnordered<_>>()
-        .for_each(|_| async { () })
+        .for_each(|_| async {})
         .await
 }

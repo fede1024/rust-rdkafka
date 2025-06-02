@@ -548,7 +548,7 @@ impl OwnedHeaders {
             rdsys::rd_kafka_header_add(
                 self.ptr(),
                 header.key.as_ptr() as *const c_char,
-                header.key.as_bytes().len() as isize,
+                header.key.len() as isize,
                 value_ptr,
                 value_len,
             )
@@ -809,7 +809,7 @@ impl ToBytes for String {
     }
 }
 
-impl<'a, T: ToBytes> ToBytes for &'a T {
+impl<T: ToBytes> ToBytes for &T {
     fn to_bytes(&self) -> &[u8] {
         (*self).to_bytes()
     }

@@ -416,7 +416,10 @@ impl<C: ClientContext> Client<C> {
                 let message = match CString::new(e.to_string()) {
                     Ok(message) => message,
                     Err(e) => {
-                        error!("error message generated while refreshing OAuth token has embedded null character: {}", e);
+                        error!(
+                            "error message generated while refreshing OAuth token has embedded null character: {}",
+                            e
+                        );
                         CString::new(
                             "error while refreshing OAuth token has embedded null character",
                         )

@@ -230,11 +230,12 @@ fn test_base_producer_queue_full() {
 #[test]
 fn test_base_producer_timeout() {
     let context = CollectingContext::new();
+    let bootstrap_server = get_bootstrap_server();
     let producer = base_producer_with_context(
         context.clone(),
         hashmap! {
             "message.timeout.ms" => "1000",
-            "bootstrap.servers" => "1.2.3.4"
+            "bootstrap.servers" => &bootstrap_server,
         },
     );
     let topic_name = rand_test_topic("test_base_producer_timeout");

@@ -1,6 +1,6 @@
 [package]
 name = "rdkafka-sys"
-version = "4.8.0+2.3.0"
+version = "4.9.0+2.10.0"
 authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 build = "build.rs"
 links = "rdkafka"
@@ -9,22 +9,22 @@ license = "MIT"
 description = "Native bindings to the librdkafka library"
 keywords = ["kafka", "rdkafka"]
 categories = ["external-ffi-bindings"]
-edition = "2018"
-rust-version = "1.70"
+edition = "2021"
+rust-version = "1.74"
 
 [dependencies]
 num_enum = "0.7.3"
-libc = "0.2.65"
-openssl-sys = { version = "0.9.48", optional = true }
-libz-sys = { version = "1.0.0", optional = true }
-curl-sys = { version = "0.4.55", optional = true }
-zstd-sys = { version = "2.0.6", optional = true }
-lz4-sys = { version = "1.8.3", optional = true }
-sasl2-sys = { version = "0.1.6", optional = true }
+libc = "0.2.172"
+openssl-sys = { version = "0.9.108", optional = true }
+libz-sys = { version = "1.1.22", optional = true }
+curl-sys = { version = "0.4.80", optional = true }
+zstd-sys = { version = "2.0.15", optional = true }
+lz4-sys = { version = "1.11.1", optional = true }
+sasl2-sys = { version = "0.1.22", optional = true }
 
 [build-dependencies]
-pkg-config = "0.3.9"
-cmake = { version = "0.1.0", optional = true }
+pkg-config = "0.3.32"
+cmake = { version = "0.1.54", optional = true }
 
 [lib]
 name = "rdkafka_sys"
