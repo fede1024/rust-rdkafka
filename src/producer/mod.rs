@@ -163,7 +163,7 @@ use std::sync::Arc;
 
 use crate::client::{Client, ClientContext};
 use crate::consumer::ConsumerGroupMetadata;
-use crate::error::KafkaResult;
+use crate::error::{KafkaError, KafkaResult};
 use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{IntoOpaque, Timeout};
 
@@ -200,6 +200,9 @@ pub trait ProducerContext<Part: Partitioner = NoCustomPartitioner>: ClientContex
     /// failed to). The `DeliveryOpaque` will be the one provided by the user
     /// when calling send.
     fn delivery(&self, delivery_result: &DeliveryResult<'_>, delivery_opaque: Self::DeliveryOpaque);
+
+    /// Error callback
+    fn error_callback(&self, error: KafkaError, reason: &str);
 
     /// This method is called when creating producer in order to optionally register custom partitioner.
     /// If custom partitioner is not used then `partitioner` configuration property is used (or its default).
@@ -264,6 +267,8 @@ impl ProducerContext<NoCustomPartitioner> for DefaultProducerContext {
     type DeliveryOpaque = ();
 
     fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {}
+
+    fn error_callback(&self, _: KafkaError, _: &str) {}
 }
 
 /// Common trait for all producers.

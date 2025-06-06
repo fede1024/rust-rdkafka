@@ -42,6 +42,10 @@ impl ProducerContext for PrintingContext {
     fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
         println!("Delivery: {:?} {:?}", delivery_result, delivery_opaque);
     }
+
+    fn error_callback(&self, error: KafkaError, reason: &str) {
+        println!("Error: {reason:?} {error:?}");
+    }
 }
 
 type TestProducerDeliveryResult = (OwnedMessage, Option<KafkaError>, usize);
@@ -99,6 +103,10 @@ impl<Part: Partitioner + Send + Sync> ProducerContext<Part> for CollectingContex
             None => None,
             Some(p) => Some(p),
         }
+    }
+
+    fn error_callback(&self, _: KafkaError, _: &str) {
+        unimplemented!()
     }
 }
 
@@ -340,6 +348,10 @@ impl ProducerContext for HeaderCheckContext {
         }
         (*self.ids.lock().unwrap()).insert(message_id);
     }
+
+    fn error_callback(&self, _: KafkaError, _: &str) {
+        unimplemented!()
+    }
 }
 
 #[test]
@@ -428,6 +440,10 @@ fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
         fn delivery(&self, _: &DeliveryResult, opaque: Self::DeliveryOpaque) {
             let mut shared_count = opaque.lock().unwrap();
             *shared_count += 1;
+        }
+
+        fn error_callback(&self, _: KafkaError, _: &str) {
+            unimplemented!()
         }
     }
 
