@@ -130,6 +130,10 @@ pub trait ConsumerContext: ClientContext + Sized {
     fn main_queue_min_poll_interval(&self) -> Timeout {
         Timeout::After(Duration::from_secs(1))
     }
+
+    /// Error callback
+    #[allow(unused_variables)]
+    fn error_callback(&self, error: KafkaError, reason: &str) {}
 }
 
 /// An inert [`ConsumerContext`] that can be used when no customizations are
