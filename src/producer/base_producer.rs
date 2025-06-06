@@ -70,7 +70,6 @@ use crate::topic_partition_list::TopicPartitionList;
 use crate::util::{Deadline, IntoOpaque, NativePtr, Timeout};
 
 pub use crate::message::DeliveryResult;
-use crate::ClientContext;
 
 use super::NoCustomPartitioner;
 
@@ -418,8 +417,7 @@ where
         let reason = unsafe {
             CStr::from_ptr(rdsys::rd_kafka_event_error_string(event.ptr())).to_string_lossy()
         };
-        <C as ClientContext>::error(self.context(), error.clone(), reason.trim());
-        <C as ProducerContext<Part>>::error_callback(self.context(), error, reason.trim());
+        self.context().error(error.clone(), reason.trim());
     }
 
     /// Returns a pointer to the native Kafka client.

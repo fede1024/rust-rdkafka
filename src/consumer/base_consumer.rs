@@ -255,7 +255,7 @@ where
             let reason = unsafe {
                 CStr::from_ptr(rdsys::rd_kafka_event_error_string(event.ptr())).to_string_lossy()
             };
-            self.context().error_callback(error.clone(), reason.trim());
+            self.context().error(error.clone(), reason.trim());
             Some(error)
         } else {
             None

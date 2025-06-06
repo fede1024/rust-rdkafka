@@ -201,10 +201,6 @@ where
         };
         let _ = tx.send(owned_delivery_result); // TODO: handle error
     }
-
-    fn error_callback(&self, error: KafkaError, reason: &str) {
-        C::error(&self.wrapped_context, error, reason);
-    }
 }
 
 /// A producer that returns a [`Future`] for every message being produced.
@@ -452,10 +448,6 @@ mod tests {
         type DeliveryOpaque = Box<i32>;
 
         fn delivery(&self, _: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {
-            unimplemented!()
-        }
-
-        fn error_callback(&self, _: KafkaError, _: &str) {
             unimplemented!()
         }
     }
