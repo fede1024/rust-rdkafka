@@ -161,6 +161,8 @@ pub enum KafkaError {
     MessageConsumptionFatal(RDKafkaErrorCode),
     /// Message production error.
     MessageProduction(RDKafkaErrorCode),
+    /// Message production failed with fatal error.
+    MessageProductionFatal(RDKafkaErrorCode),
     /// Metadata fetch error.
     MetadataFetch(RDKafkaErrorCode),
     /// No message was received.
@@ -225,6 +227,9 @@ impl fmt::Debug for KafkaError {
             KafkaError::MessageProduction(err) => {
                 write!(f, "KafkaError (Message production error: {})", err)
             }
+            KafkaError::MessageProductionFatal(err) => {
+                write!(f, "(Fatal) KafkaError (Message production error: {})", err)
+            }
             KafkaError::MetadataFetch(err) => {
                 write!(f, "KafkaError (Metadata fetch error: {})", err)
             }
@@ -274,6 +279,9 @@ impl fmt::Display for KafkaError {
                 write!(f, "(Fatal) Message consumption error: {}", err)
             }
             KafkaError::MessageProduction(err) => write!(f, "Message production error: {}", err),
+            KafkaError::MessageProductionFatal(err) => {
+                write!(f, "(Fatal) Message production error: {}", err)
+            }
             KafkaError::MetadataFetch(err) => write!(f, "Meta data fetch error: {}", err),
             KafkaError::NoMessageReceived => {
                 write!(f, "No message received within the given poll interval")
@@ -309,6 +317,7 @@ impl Error for KafkaError {
             KafkaError::MessageConsumption(err) => Some(err),
             KafkaError::MessageConsumptionFatal(err) => Some(err),
             KafkaError::MessageProduction(err) => Some(err),
+            KafkaError::MessageProductionFatal(err) => Some(err),
             KafkaError::MetadataFetch(err) => Some(err),
             KafkaError::NoMessageReceived => None,
             KafkaError::Nul(_) => None,
@@ -350,6 +359,7 @@ impl KafkaError {
             KafkaError::MessageConsumption(err) => Some(*err),
             KafkaError::MessageConsumptionFatal(err) => Some(*err),
             KafkaError::MessageProduction(err) => Some(*err),
+            KafkaError::MessageProductionFatal(err) => Some(*err),
             KafkaError::MetadataFetch(err) => Some(*err),
             KafkaError::NoMessageReceived => None,
             KafkaError::Nul(_) => None,
