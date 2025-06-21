@@ -2,7 +2,9 @@
 
 use std::collections::HashMap;
 use std::error::Error;
+use std::time::Duration;
 
+use log::info;
 use maplit::hashmap;
 
 use rdkafka::config::ClientConfig;
@@ -20,10 +22,12 @@ mod utils;
 fn create_consumer(
     config_overrides: Option<HashMap<&str, &str>>,
 ) -> Result<BaseConsumer, KafkaError> {
+    configure_logging_for_tests();
     consumer_config(&rand_test_group(), config_overrides).create()
 }
 
 fn create_producer() -> Result<BaseProducer, KafkaError> {
+    configure_logging_for_tests();
     let mut config = ClientConfig::new();
     config
         .set("bootstrap.servers", get_bootstrap_server())
@@ -103,8 +107,11 @@ async fn test_transaction_abort() -> Result<(), Box<dyn Error>> {
     }
 
     // Abort the transaction, but only after producing all messages.
-    producer.flush(Timeout::Never)?;
-    producer.abort_transaction(Timeout::Never)?;
+    info!("BEFORE FLUSH");
+    producer.flush(Duration::from_secs(20))?;
+    info!("AFTER FLUSH");
+    producer.abort_transaction(Duration::from_secs(20))?;
+    info!("AFTER ABORT");
 
     // Check that no records were produced in read committed mode, but that
     // the records are visible in read uncommitted mode.

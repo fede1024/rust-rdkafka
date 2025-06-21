@@ -26,6 +26,7 @@ fn create_config() -> ClientConfig {
 }
 
 fn create_admin_client() -> AdminClient<DefaultClientContext> {
+    configure_logging_for_tests();
     create_config()
         .create()
         .expect("admin client creation failed")
@@ -62,8 +63,9 @@ async fn create_consumer_group(consumer_group_name: &str) {
     consumer
         .fetch_metadata(None, Duration::from_secs(3))
         .expect("unable to fetch metadata");
-    consumer
-        .store_offset(topic_name, 0, -1)
+    (|| consumer.store_offset(topic_name, 0, -1))
+        .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
+        .call()
         .expect("store offset failed");
     consumer
         .commit_consumer_state(CommitMode::Sync)
@@ -371,9 +373,9 @@ async fn test_delete_records() {
         .expect("topic creation failed");
 
     // Ensure that the topic begins with low and high water marks of 0.
-    let (lo, hi) = producer
-        .client()
-        .fetch_watermarks(&topic, 0, timeout)
+    let (lo, hi) = (|| producer.client().fetch_watermarks(&topic, 0, timeout))
+        .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
+        .call()
         .unwrap();
     assert_eq!(lo, 0);
     assert_eq!(hi, 0);
