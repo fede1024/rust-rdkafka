@@ -93,6 +93,9 @@ external-lz4 = ["lz4-sys"]
 # Deprecated alias for the `external-lz4` feature.
 external_lz4 = ["external-lz4"]
 
+# Link against precompiled static build of librdkafka
+static-linking = []
+
 [package.metadata.docs.rs]
 # docs.rs doesn't allow writing to ~/.cargo/registry (reasonably), so we have to
 # use the CMake build for a proper out-of-tree build.

@@ -65,6 +65,7 @@ zstd = ["rdkafka-sys/zstd"]
 zstd-pkg-config = ["rdkafka-sys/zstd-pkg-config"]
 external-lz4 = ["rdkafka-sys/external-lz4"]
 external_lz4 = ["rdkafka-sys/external_lz4"]
+static-linking = ["rdkafka-sys/static-linking"]
 
 [package.metadata.docs.rs]
 # docs.rs doesn't allow writing to ~/.cargo/registry (reasonably), so we have to
