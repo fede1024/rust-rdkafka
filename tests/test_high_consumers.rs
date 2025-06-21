@@ -317,6 +317,19 @@ async fn test_consumer_commit_message() {
         (0, 12)
     );
 
+    assert_eq!(
+        consumer.get_watermark_offsets(&topic_name, 0).unwrap(),
+        (0, 10)
+    );
+    assert_eq!(
+        consumer.get_watermark_offsets(&topic_name, 1).unwrap(),
+        (0, 11)
+    );
+    assert_eq!(
+        consumer.get_watermark_offsets(&topic_name, 2).unwrap(),
+        (0, 12)
+    );
+
     let mut assignment = TopicPartitionList::new();
     assignment
         .add_partition_offset(&topic_name, 0, Offset::Stored)
@@ -399,6 +412,19 @@ async fn test_consumer_store_offset_commit() {
     );
     assert_eq!(
         consumer.fetch_watermarks(&topic_name, 2, timeout).unwrap(),
+        (0, 12)
+    );
+
+    assert_eq!(
+        consumer.get_watermark_offsets(&topic_name, 0).unwrap(),
+        (0, 10)
+    );
+    assert_eq!(
+        consumer.get_watermark_offsets(&topic_name, 1).unwrap(),
+        (0, 11)
+    );
+    assert_eq!(
+        consumer.get_watermark_offsets(&topic_name, 2).unwrap(),
         (0, 12)
     );
 
