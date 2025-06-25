@@ -75,6 +75,7 @@ jobs:
       max-parallel: 1
       matrix:
         include:
+          - kafka-version: 4.0
           - kafka-version: 3.9
           - kafka-version: 3.7
           - kafka-version: 3.6

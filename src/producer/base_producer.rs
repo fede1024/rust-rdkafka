@@ -519,7 +519,7 @@ where
                     if deadline.elapsed() {
                         return Err(KafkaError::Flush(to.into()));
                     }
-                    self.poll(deadline.remaining().min(Duration::from_millis(100)));
+                    self.poll(Duration::ZERO);
                 }
                 e => return Err(KafkaError::Flush(e.into())),
             };
