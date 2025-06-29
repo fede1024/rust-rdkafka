@@ -510,6 +510,9 @@ where
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         let deadline: Deadline = timeout.into().into();
         loop {
+            // When rd_kafka_flush is called and RD_KAFKA_EVENT_DR is enabled, it will
+            // simply check whether there are still events to be processed.
+            // https://github.com/confluentinc/librdkafka/blob/c024ac13daf98667de2b8724986e97f489644c15/src/rdkafka.c#L4542-L4551
             match unsafe { rdsys::rd_kafka_flush(self.native_ptr(), 0) } {
                 rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR_NO_ERROR => {
                     // Flush completed
@@ -519,7 +522,7 @@ where
                     if deadline.elapsed() {
                         return Err(KafkaError::Flush(to.into()));
                     }
-                    self.poll(Duration::ZERO);
+                    self.poll(deadline.remaining().min(Duration::from_millis(100)));
                 }
                 e => return Err(KafkaError::Flush(e.into())),
             };

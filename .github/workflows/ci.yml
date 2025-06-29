@@ -77,9 +77,8 @@ jobs:
         include:
           - kafka-version: 4.0
           - kafka-version: 3.9
+          - kafka-version: 3.8
           - kafka-version: 3.7
-          - kafka-version: 3.6
-          - kafka-version: 3.5
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: bitnami/kafka:${KAFKA_VERSION:-3.7}
+    image: bitnami/kafka:${KAFKA_VERSION:-4.0}
     environment:
       # Enable KRaft mode (combined broker and controller)
       - KAFKA_CFG_NODE_ID=0
