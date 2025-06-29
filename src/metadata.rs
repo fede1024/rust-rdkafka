@@ -1,6 +1,7 @@
 //! Cluster metadata.
 
 use std::ffi::CStr;
+use std::fmt;
 use std::slice;
 
 use rdkafka_sys as rdsys;
@@ -30,6 +31,16 @@ impl MetadataBroker {
     /// Returns the port of the broker.
     pub fn port(&self) -> i32 {
         self.0.port
+    }
+}
+
+impl fmt::Debug for MetadataBroker {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MetadataBroker")
+            .field("id", &self.id())
+            .field("host", &self.host())
+            .field("port", &self.port())
+            .finish()
     }
 }
 
@@ -69,6 +80,21 @@ impl MetadataPartition {
     }
 }
 
+impl fmt::Debug for MetadataPartition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_struct = f.debug_struct("MetadataPartition");
+        debug_struct.field("id", &self.id());
+        if let Some(err) = self.error() {
+            debug_struct.field("error", &err);
+        }
+        debug_struct
+            .field("leader", &self.leader())
+            .field("replicas", &self.replicas())
+            .field("isr", &self.isr()) // In-Sync Replicas
+            .finish()
+    }
+}
+
 /// Topic metadata information.
 pub struct MetadataTopic(RDKafkaMetadataTopic);
 
@@ -100,6 +126,18 @@ impl MetadataTopic {
         } else {
             None
         }
+    }
+}
+
+impl fmt::Debug for MetadataTopic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_struct = f.debug_struct("MetadataTopic");
+        debug_struct.field("name", &self.name());
+        if let Some(err) = self.error() {
+            debug_struct.field("error", &err);
+        }
+        debug_struct.field("partitions", &self.partitions());
+        debug_struct.finish()
     }
 }
 
@@ -156,6 +194,17 @@ impl Metadata {
                 self.0.topic_cnt as usize,
             )
         }
+    }
+}
+
+impl fmt::Debug for Metadata {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Metadata")
+            .field("orig_broker_name", &self.orig_broker_name())
+            .field("orig_broker_id", &self.orig_broker_id())
+            .field("brokers", &self.brokers())
+            .field("topics", &self.topics())
+            .finish()
     }
 }
 

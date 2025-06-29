@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::env::{self, VarError};
+use std::sync::Once;
 use std::time::Duration;
 
 use rand::distr::{Alphanumeric, SampleString};
@@ -107,7 +108,6 @@ where
     let producer = &ClientConfig::new()
         .set("bootstrap.servers", get_bootstrap_server().as_str())
         .set("statistics.interval.ms", "500")
-        .set("api.version.request", "true")
         .set("debug", "all")
         .set("message.timeout.ms", "30000")
         .create_with_context::<ProducerTestContext, FutureProducer<_>>(prod_context)
@@ -183,8 +183,6 @@ pub fn consumer_config(
     config.set("enable.partition.eof", "false");
     config.set("session.timeout.ms", "6000");
     config.set("enable.auto.commit", "false");
-    config.set("statistics.interval.ms", "500");
-    config.set("api.version.request", "true");
     config.set("debug", "all");
     config.set("auto.offset.reset", "earliest");
 
@@ -195,6 +193,14 @@ pub fn consumer_config(
     }
 
     config
+}
+
+static INIT: Once = Once::new();
+
+pub fn configure_logging_for_tests() {
+    INIT.call_once(|| {
+        env_logger::try_init().expect("Failed to initialize env_logger");
+    });
 }
 
 #[cfg(test)]

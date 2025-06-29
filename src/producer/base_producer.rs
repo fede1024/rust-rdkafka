@@ -507,23 +507,24 @@ where
 
     // As this library uses the rdkafka Event API, flush will not call rd_kafka_poll() but instead wait for
     // the librdkafka-handled message count to reach zero. Runs until value reaches zero or timeout.
+    // https://github.com/confluentinc/librdkafka/blob/c024ac13daf98667de2b8724986e97f489644c15/src/rdkafka.c#L4542-L4551
     fn flush<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<()> {
         let deadline: Deadline = timeout.into().into();
-        while self.in_flight_count() > 0 && !deadline.elapsed() {
-            let ret: RDKafkaRespErr = unsafe {
-                rdsys::rd_kafka_flush(self.native_ptr(), deadline.remaining_millis_i32())
-            };
-            if let Deadline::Never = &deadline {
-                self.poll(Timeout::After(Duration::ZERO));
-            } else {
-                self.poll(&deadline);
-            }
-
-            if ret.is_error() {
-                return Err(KafkaError::Flush(ret.into()));
+        loop {
+            match unsafe { rdsys::rd_kafka_flush(self.native_ptr(), 0) } {
+                rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR_NO_ERROR => {
+                    // Flush completed
+                    return Ok(());
+                }
+                to @ rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__TIMED_OUT => {
+                    if deadline.elapsed() {
+                        return Err(KafkaError::Flush(to.into()));
+                    }
+                    self.poll(deadline.remaining().min(Duration::from_millis(100)));
+                }
+                e => return Err(KafkaError::Flush(e.into())),
             };
         }
-        Ok(())
     }
 
     fn purge(&self, flags: PurgeConfig) {

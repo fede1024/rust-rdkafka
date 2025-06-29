@@ -1,4 +1,4 @@
-//! High-level consumers with a [`Stream`](futures_util::Stream) interface.
+//! High-level consumers with a [`Stream`] interface.
 
 use std::marker::PhantomData;
 use std::os::raw::c_void;
@@ -172,16 +172,16 @@ impl<'a, C: ConsumerContext> Stream for MessageStream<'a, C> {
     }
 }
 
-impl<'a, C: ConsumerContext> Drop for MessageStream<'a, C> {
+impl<C: ConsumerContext> Drop for MessageStream<'_, C> {
     fn drop(&mut self) {
         self.wakers.unregister(self.slot);
     }
 }
 
-/// A high-level consumer with a [`Stream`](futures_util::Stream) interface.
+/// A high-level consumer with a [`Stream`] interface.
 ///
 /// This consumer doesn't need to be polled explicitly. Extracting an item from
-/// the stream returned by the [`stream`](StreamConsumer::stream) will
+/// the stream returned by [`stream`](StreamConsumer::stream) will
 /// implicitly poll the underlying Kafka consumer.
 ///
 /// If you activate the consumer group protocol by calling

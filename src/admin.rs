@@ -224,7 +224,7 @@ impl<C: ClientContext> AdminClient<C> {
     /// The provided `offsets` is a topic partition list specifying which
     /// records to delete from a list of topic partitions. For each entry in the
     /// list, the messages at offsets before the specified offsets (exclusive)
-    /// in the specified partition will be deleted. Use offset [`Offset::End`]
+    /// in the specified partition will be deleted. Use offset [`crate::Offset::End`]
     /// to delete all records in the partition.
     ///
     /// Returns a topic partition list describing the result of the deletion. If

@@ -5,6 +5,7 @@ use std::error::Error;
 use std::ffi::CString;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
 use std::time::Duration;
 
 use maplit::hashmap;
@@ -161,6 +162,7 @@ fn base_producer_with_context<Part: Partitioner, C: ProducerContext<Part>>(
     context: C,
     config_overrides: HashMap<&str, &str>,
 ) -> BaseProducer<C, Part> {
+    configure_logging_for_tests();
     default_config(config_overrides)
         .create_with_context::<C, BaseProducer<_, Part>>(context)
         .unwrap()
@@ -181,6 +183,7 @@ where
     Part: Partitioner + Send + Sync + 'static,
     C: ProducerContext<Part>,
 {
+    configure_logging_for_tests();
     default_config(config_overrides)
         .create_with_context::<C, ThreadedProducer<_, _>>(context)
         .unwrap()
@@ -234,7 +237,7 @@ fn test_base_producer_timeout() {
     let producer = base_producer_with_context(
         context.clone(),
         hashmap! {
-            "message.timeout.ms" => "1000",
+            "message.timeout.ms" => "100",
             "bootstrap.servers" => &bootstrap_server,
         },
     );
@@ -250,10 +253,10 @@ fn test_base_producer_timeout() {
         })
         .filter(|r| r.is_ok())
         .count();
-
-    producer.flush(Duration::from_secs(10)).unwrap();
-
     assert_eq!(results_count, 10);
+
+    thread::sleep(Duration::from_secs(5)); // Make sure messages expire
+    producer.flush(Duration::from_secs(10)).unwrap();
 
     let delivery_results = context.results.lock().unwrap();
     let mut ids = HashSet::new();
@@ -419,9 +422,7 @@ fn test_threaded_producer_send() {
 #[test]
 fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
     struct OpaqueArcContext {}
-
     impl ClientContext for OpaqueArcContext {}
-
     impl ProducerContext for OpaqueArcContext {
         type DeliveryOpaque = Arc<Mutex<usize>>;
 
