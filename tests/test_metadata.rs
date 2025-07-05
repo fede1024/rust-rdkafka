@@ -20,7 +20,6 @@ fn create_consumer(group_id: &str) -> StreamConsumer {
         .set("client.id", "rdkafka_integration_test_client")
         .set("bootstrap.servers", get_bootstrap_server().as_str())
         .set("session.timeout.ms", "6000")
-        .set("api.version.request", "true")
         .set("debug", "all")
         .set("auto.offset.reset", "earliest")
         .create()

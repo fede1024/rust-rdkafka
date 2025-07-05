@@ -79,13 +79,13 @@ fn main() {
             println!("cargo:rustc-link-lib=static=rdkafka");
             println!("cargo:root={}", rdkafka_dir);
         } else {
-            eprintln!("Path to DEP_LIBRDKAFKA_STATIC_ROOT not set. Static linking failed. Exiting.");
+            eprintln!(
+                "Path to DEP_LIBRDKAFKA_STATIC_ROOT not set. Static linking failed. Exiting."
+            );
             process::exit(1);
         }
         eprintln!("librdkafka will be linked statically using prebuilt binaries");
-
-    }
-        else {
+    } else {
         // Ensure that we are in the right directory
         let rdkafkasys_root = Path::new("rdkafka-sys");
         if rdkafkasys_root.exists() {
@@ -226,9 +226,9 @@ fn build_librdkafka() {
         // Since we're not actually installing to /usr or /usr/local, there's no
         // harm to always using "lib" here.
         .define("CMAKE_INSTALL_LIBDIR", "lib")
-	// CMake 4.0.0 drops support for 3.2 compatibility, which is
-	// required by librdkafka 2.3.0.
-	.define("CMAKE_POLICY_VERSION_MINIMUM", "3.5");
+        // CMake 4.0.0 drops support for 3.2 compatibility, which is
+        // required by librdkafka 2.3.0.
+        .define("CMAKE_POLICY_VERSION_MINIMUM", "3.5");
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         config.define("WITH_ZLIB", "1");

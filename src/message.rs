@@ -320,7 +320,7 @@ unsafe impl KafkaDrop for RDKafkaMessage {
     const DROP: unsafe extern "C" fn(*mut Self) = no_op;
 }
 
-impl<'a> fmt::Debug for BorrowedMessage<'a> {
+impl fmt::Debug for BorrowedMessage<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -421,7 +421,7 @@ impl<'a> BorrowedMessage<'a> {
     }
 }
 
-impl<'a> Message for BorrowedMessage<'a> {
+impl Message for BorrowedMessage<'_> {
     type Headers = BorrowedHeaders;
 
     fn key(&self) -> Option<&[u8]> {
@@ -488,8 +488,8 @@ impl<'a> Message for BorrowedMessage<'a> {
     }
 }
 
-unsafe impl<'a> Send for BorrowedMessage<'a> {}
-unsafe impl<'a> Sync for BorrowedMessage<'a> {}
+unsafe impl Send for BorrowedMessage<'_> {}
+unsafe impl Sync for BorrowedMessage<'_> {}
 
 //
 // ********** OWNED MESSAGE **********

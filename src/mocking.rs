@@ -383,7 +383,7 @@ where
     }
 }
 
-impl<'c, C> Drop for MockCluster<'c, C>
+impl<C> Drop for MockCluster<'_, C>
 where
     C: ClientContext,
 {

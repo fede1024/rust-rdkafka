@@ -57,6 +57,7 @@ impl Deadline {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn remaining_millis_i32(&self) -> i32 {
         cmp::min(Deadline::MAX_FLUSH_DURATION, self.remaining()).as_millis() as i32
     }
@@ -430,6 +431,7 @@ pub type DefaultRuntime = ();
 #[cfg(all(not(feature = "tokio"), feature = "naive-runtime"))]
 pub type DefaultRuntime = NaiveRuntime;
 
+#[allow(rustdoc::broken_intra_doc_links)]
 /// The default [`AsyncRuntime`] used when one is not explicitly specified.
 ///
 /// This is defined to be the [`TokioRuntime`] when the `tokio` feature is
