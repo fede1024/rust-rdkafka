@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v4.9.0+2.10.0
 * Add cargo enforcement of MSRV of 1.74.
 * Bump librdkafka to v2.10.0.
 
