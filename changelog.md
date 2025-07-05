@@ -4,16 +4,30 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-* Update MSRV to 1.70
-* Remove testing for old Kafka versions (before 3.0). Add tests for 3.7.
-* Fix test dependency on docker compose.
-* Address wakeup races introduced by pivoting to the event API.
+None
+
+## 0.38.0 (2025-07-05)
+
 * Update `BaseProducer::poll` to not return early, and instead continue
   looping until the passed timeout is reached.
-* **Breaking change.** Change signature for `OwnedDeliveryResult`. The 
-`Ok` variant is now a `Delivery` struct, rather than a tuple. This allows
-or including `Timestamp` as a result field. It means that adding values 
-in the future will not require a breaking change.
+* **Breaking change.** Change signature for `OwnedDeliveryResult`. The
+  `Ok` variant is now a `Delivery` struct, rather than a tuple. This allows
+  or including `Timestamp` as a result field. It means that adding values
+  in the future will not require a breaking change.
+* Update `BaseProducer::flush` to correctly call `poll` internally, until
+  all messages have been processed.
+* Upgrade all library dependencies.
+* Add tests for Kafka versions up to 0.38.0.
+* Require a minimum of CMake 3.5 compatibility for CMake build ([#766])
+
+[#766]: https://github.com/fede1024/rust-rdkafka/pull/766
+
+## 0.37.0 (2024-11-25)
+
+* Update MSRV to 1.70
+* Fix test dependency on docker compose.
+* Address wakeup races introduced by pivoting to the event API.
+* Remove testing for old Kafka versions (before 3.0). Add tests for 3.7.
 
 ## 0.36.2 (2024-01-16)
 
