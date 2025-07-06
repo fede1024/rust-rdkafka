@@ -28,7 +28,7 @@ jobs:
       matrix:
         include:
           - os: macos-14.0
-          - os: windows-2019
+          - os: windows-2025
             features: cmake-build,libz-static,curl-static
             rdkafka-sys-features: cmake-build,libz-static,curl-static
           - os: ubuntu-24.04
