@@ -192,7 +192,7 @@ impl<C: ConsumerContext> Drop for MessageStream<'_, C> {
 /// the processing thread is wedged and leave the consumer groups.
 ///
 /// [KIP-62]: https://cwiki.apache.org/confluence/display/KAFKA/KIP-62%3A+Allow+consumer+to+send+heartbeats+from+a+background+thread
-#[must_use = "Consumer polling thread will stop immediately if unused"]
+#[must_use = "StreamConsumer does nothing unless .stream() is regularly polled"]
 pub struct StreamConsumer<C = DefaultConsumerContext, R = DefaultRuntime>
 where
     C: ConsumerContext,
