@@ -121,7 +121,7 @@
 //! processed exactly once.
 //!
 //! To learn more about using transactions in rust-rdkafka, see the
-//! [Transactions](producer-transactions) section of the producer documentation.
+//! [Transactions][producer-transactions] section of the producer documentation.
 //!
 //! ### Users
 //!
