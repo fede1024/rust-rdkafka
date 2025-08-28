@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr, CString};
 use std::future::Future;
+use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -232,20 +233,20 @@ impl<C: ClientContext> AdminClient<C> {
     /// will be set to the post-deletion low-water mark for that partition. If
     /// the operation failed for a partition, there will be an error for that
     /// partition's entry in the list.
-    pub fn delete_records(
-        &self,
-        offsets: &TopicPartitionList,
+    pub fn delete_records<'a>(
+        &'a self,
+        offsets: &TopicPartitionList<'a>,
         opts: &AdminOptions,
-    ) -> impl Future<Output = KafkaResult<TopicPartitionList>> {
+    ) -> impl Future<Output = KafkaResult<TopicPartitionList<'a>>> {
         match self.delete_records_inner(offsets, opts) {
-            Ok(rx) => Either::Left(DeleteRecordsFuture { rx }),
+            Ok(rx) => Either::Left(DeleteRecordsFuture { rx, _phantom: PhantomData }),
             Err(err) => Either::Right(future::err(err)),
         }
     }
 
-    fn delete_records_inner(
-        &self,
-        offsets: &TopicPartitionList,
+    fn delete_records_inner<'a>(
+        &'a self,
+        offsets: &TopicPartitionList<'a>,
         opts: &AdminOptions,
     ) -> KafkaResult<oneshot::Receiver<NativeEvent>> {
         let mut err_buf = ErrBuf::new();
@@ -1010,12 +1011,13 @@ unsafe impl KafkaDrop for RDKafkaDeleteRecords {
     const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_DeleteRecords_destroy;
 }
 
-struct DeleteRecordsFuture {
+struct DeleteRecordsFuture<'a> {
     rx: oneshot::Receiver<NativeEvent>,
+    _phantom: PhantomData<&'a ()>
 }
 
-impl Future for DeleteRecordsFuture {
-    type Output = KafkaResult<TopicPartitionList>;
+impl<'a> Future for DeleteRecordsFuture<'a> {
+    type Output = KafkaResult<TopicPartitionList<'a>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;

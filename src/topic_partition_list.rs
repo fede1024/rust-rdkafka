@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::marker::PhantomData;
 use std::slice;
 use std::str;
 
@@ -85,8 +86,8 @@ pub struct TopicPartitionListElem<'a> {
 
 impl<'a> TopicPartitionListElem<'a> {
     // _owner_list serves as a marker so that the lifetime isn't too long
-    fn from_ptr(
-        _owner_list: &'a TopicPartitionList,
+    fn from_ptr<'l: 'a>(
+        _owner_list: &'a TopicPartitionList<'l>,
         ptr: &'a mut RDKafkaTopicPartition,
     ) -> TopicPartitionListElem<'a> {
         TopicPartitionListElem { ptr }
@@ -177,8 +178,15 @@ impl fmt::Debug for TopicPartitionListElem<'_> {
 }
 
 /// A structure to store and manipulate a list of topics and partitions with optional offsets.
-pub struct TopicPartitionList {
+pub struct TopicPartitionList<'a> {
     ptr: NativePtr<RDKafkaTopicPartitionList>,
+    _consumer_lifetime: PhantomData<fn(&'a ()) -> ()>
+}
+
+impl Drop for TopicPartitionList<'_> {
+    fn drop(&mut self) {
+        ()
+    }
 }
 
 unsafe impl KafkaDrop for RDKafkaTopicPartitionList {
@@ -186,37 +194,38 @@ unsafe impl KafkaDrop for RDKafkaTopicPartitionList {
     const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_topic_partition_list_destroy;
 }
 
-impl Clone for TopicPartitionList {
+impl<'a> Clone for TopicPartitionList<'a> {
     fn clone(&self) -> Self {
         let new_tpl = unsafe { rdsys::rd_kafka_topic_partition_list_copy(self.ptr()) };
         unsafe { TopicPartitionList::from_ptr(new_tpl) }
     }
 }
 
-impl TopicPartitionList {
+impl<'a> TopicPartitionList<'a> {
     /// Creates a new empty list with default capacity.
-    pub fn new() -> TopicPartitionList {
+    pub fn new() -> TopicPartitionList<'a> {
         TopicPartitionList::with_capacity(5)
     }
 
     /// Creates a new empty list with the specified capacity.
-    pub fn with_capacity(capacity: usize) -> TopicPartitionList {
+    pub fn with_capacity(capacity: usize) -> TopicPartitionList<'a> {
         let ptr = unsafe { rdsys::rd_kafka_topic_partition_list_new(capacity as i32) };
         unsafe { TopicPartitionList::from_ptr(ptr) }
     }
 
     /// Transforms a pointer to the native librdkafka RDTopicPartitionList into a
     /// managed `TopicPartitionList` instance.
-    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList {
+    pub(crate) unsafe fn from_ptr(ptr: *mut RDKafkaTopicPartitionList) -> TopicPartitionList<'a> {
         TopicPartitionList {
             ptr: NativePtr::from_ptr(ptr).unwrap(),
+            _consumer_lifetime: PhantomData
         }
     }
 
     /// Given a topic map, generates a new `TopicPartitionList`.
     pub fn from_topic_map(
         topic_map: &HashMap<(String, i32), Offset>,
-    ) -> KafkaResult<TopicPartitionList> {
+    ) -> KafkaResult<TopicPartitionList<'a>> {
         let mut tpl = TopicPartitionList::with_capacity(topic_map.len());
         for ((topic_name, partition), offset) in topic_map {
             tpl.add_partition_offset(topic_name, *partition, *offset)?;
@@ -240,16 +249,16 @@ impl TopicPartitionList {
     }
 
     /// Adds a topic with unassigned partitions to the list.
-    pub fn add_topic_unassigned<'a>(&'a mut self, topic: &str) -> TopicPartitionListElem<'a> {
+    pub fn add_topic_unassigned<'b>(&'b mut self, topic: &str) -> TopicPartitionListElem<'b> where 'a : 'b {
         self.add_partition(topic, PARTITION_UNASSIGNED)
     }
 
     /// Adds a topic and partition to the list.
-    pub fn add_partition<'a>(
-        &'a mut self,
+    pub fn add_partition<'c: 'b, 'b>(
+        &'c mut self,
         topic: &str,
         partition: i32,
-    ) -> TopicPartitionListElem<'a> {
+    ) -> TopicPartitionListElem<'b> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let tp_ptr = unsafe {
             rdsys::rd_kafka_topic_partition_list_add(self.ptr(), topic_c.as_ptr(), partition)
@@ -310,11 +319,11 @@ impl TopicPartitionList {
     }
 
     /// Given a topic name and a partition number, returns the corresponding list element.
-    pub fn find_partition(
-        &self,
+    pub fn find_partition<'b> (
+        &'b self,
         topic: &str,
         partition: i32,
-    ) -> Option<TopicPartitionListElem<'_>> {
+    ) -> Option<TopicPartitionListElem<'b>> {
         let topic_c = CString::new(topic).expect("Topic name is not UTF-8");
         let elem_ptr = unsafe {
             rdsys::rd_kafka_topic_partition_list_find(self.ptr(), topic_c.as_ptr(), partition)
@@ -353,7 +362,7 @@ impl TopicPartitionList {
     }
 
     /// Returns all the elements of the list that belong to the specified topic.
-    pub fn elements_for_topic<'a>(&'a self, topic: &str) -> Vec<TopicPartitionListElem<'a>> {
+    pub fn elements_for_topic(&'a self, topic: &str) -> Vec<TopicPartitionListElem<'a>> {
         let mut vec = Vec::with_capacity(self.count());
         if self.count() == 0 {
             return vec;
@@ -377,8 +386,8 @@ impl TopicPartitionList {
     }
 }
 
-impl PartialEq for TopicPartitionList {
-    fn eq(&self, other: &TopicPartitionList) -> bool {
+impl<'a> PartialEq for TopicPartitionList<'a> {
+    fn eq<'b>(&self, other: &TopicPartitionList<'b>) -> bool {
         if self.count() != other.count() {
             return false;
         }
@@ -392,20 +401,20 @@ impl PartialEq for TopicPartitionList {
     }
 }
 
-impl Default for TopicPartitionList {
+impl<'a> Default for TopicPartitionList<'a> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl fmt::Debug for TopicPartitionList {
+impl<'a> fmt::Debug for TopicPartitionList<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.elements()).finish()
     }
 }
 
-unsafe impl Send for TopicPartitionList {}
-unsafe impl Sync for TopicPartitionList {}
+unsafe impl<'a> Send for TopicPartitionList<'a> {}
+unsafe impl<'a> Sync for TopicPartitionList<'a> {}
 
 #[cfg(test)]
 mod tests {

@@ -566,9 +566,9 @@ where
         }
     }
 
-    fn send_offsets_to_transaction<T: Into<Timeout>>(
+    fn send_offsets_to_transaction<'a, T: Into<Timeout>>(
         &self,
-        offsets: &TopicPartitionList,
+        offsets: &TopicPartitionList<'a>,
         cgm: &ConsumerGroupMetadata,
         timeout: T,
     ) -> KafkaResult<()> {
@@ -763,9 +763,9 @@ where
         self.producer.begin_transaction()
     }
 
-    fn send_offsets_to_transaction<T: Into<Timeout>>(
+    fn send_offsets_to_transaction<'a, T: Into<Timeout>>(
         &self,
-        offsets: &TopicPartitionList,
+        offsets: &TopicPartitionList<'a>,
         cgm: &ConsumerGroupMetadata,
         timeout: T,
     ) -> KafkaResult<()> {

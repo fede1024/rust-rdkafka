@@ -404,9 +404,9 @@ where
     }
 }
 
-impl<C> Consumer<C> for BaseConsumer<C>
+impl<'c, C> Consumer<'c, C> for BaseConsumer<C>
 where
-    C: ConsumerContext,
+    C: 'c + ConsumerContext,
 {
     fn client(&self) -> &Client<C> {
         &self.client
@@ -438,7 +438,7 @@ where
         unsafe { rdsys::rd_kafka_unsubscribe(self.client.native_ptr()) };
     }
 
-    fn assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+    fn assign(&self, assignment: &TopicPartitionList<'_>) -> KafkaResult<()> {
         let ret_code =
             unsafe { rdsys::rd_kafka_assign(self.client.native_ptr(), assignment.ptr()) };
         if ret_code.is_error() {
@@ -458,7 +458,7 @@ where
         Ok(())
     }
 
-    fn incremental_assign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+    fn incremental_assign(&'c self, assignment: &TopicPartitionList<'c>) -> KafkaResult<()> {
         let ret = unsafe {
             RDKafkaError::from_ptr(rdsys::rd_kafka_incremental_assign(
                 self.client.native_ptr(),
@@ -472,7 +472,7 @@ where
         Ok(())
     }
 
-    fn incremental_unassign(&self, assignment: &TopicPartitionList) -> KafkaResult<()> {
+    fn incremental_unassign(&'c self, assignment: &TopicPartitionList<'c>) -> KafkaResult<()> {
         let ret = unsafe {
             RDKafkaError::from_ptr(rdsys::rd_kafka_incremental_unassign(
                 self.client.native_ptr(),
@@ -508,10 +508,10 @@ where
     }
 
     fn seek_partitions<T: Into<Timeout>>(
-        &self,
-        topic_partition_list: TopicPartitionList,
+        &'c self,
+        topic_partition_list: TopicPartitionList<'c>,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList> {
+    ) -> KafkaResult<TopicPartitionList<'c>> {
         let ret = unsafe {
             RDKafkaError::from_ptr(rdsys::rd_kafka_seek_partitions(
                 self.client.native_ptr(),
@@ -528,7 +528,7 @@ where
 
     fn commit(
         &self,
-        topic_partition_list: &TopicPartitionList,
+        topic_partition_list: &TopicPartitionList<'_>,
         mode: CommitMode,
     ) -> KafkaResult<()> {
         let error = unsafe {
@@ -588,7 +588,7 @@ where
         }
     }
 
-    fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()> {
+    fn store_offsets(&'c self, tpl: &TopicPartitionList<'c>) -> KafkaResult<()> {
         let error = unsafe { rdsys::rd_kafka_offsets_store(self.client.native_ptr(), tpl.ptr()) };
         if error.is_error() {
             Err(KafkaError::StoreOffset(error.into()))
@@ -597,7 +597,7 @@ where
         }
     }
 
-    fn subscription(&self) -> KafkaResult<TopicPartitionList> {
+    fn subscription(&'c self) -> KafkaResult<TopicPartitionList<'c>> {
         let mut tpl_ptr = ptr::null_mut();
         let error = unsafe { rdsys::rd_kafka_subscription(self.client.native_ptr(), &mut tpl_ptr) };
 
@@ -608,7 +608,7 @@ where
         }
     }
 
-    fn assignment(&self) -> KafkaResult<TopicPartitionList> {
+    fn assignment(&'c self) -> KafkaResult<TopicPartitionList<'c>> {
         let mut tpl_ptr = ptr::null_mut();
         let error = unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
 
@@ -623,7 +623,7 @@ where
         unsafe { rdsys::rd_kafka_assignment_lost(self.client.native_ptr()) == 1 }
     }
 
-    fn committed<T: Into<Timeout>>(&self, timeout: T) -> KafkaResult<TopicPartitionList> {
+    fn committed<T: Into<Timeout>>(&'c self, timeout: T) -> KafkaResult<TopicPartitionList<'c>> {
         let mut tpl_ptr = ptr::null_mut();
         let assignment_error =
             unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
@@ -635,10 +635,10 @@ where
     }
 
     fn committed_offsets<T: Into<Timeout>>(
-        &self,
-        tpl: TopicPartitionList,
+        &'c self,
+        tpl: TopicPartitionList<'c>,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList> {
+    ) -> KafkaResult<TopicPartitionList<'c>> {
         let committed_error = unsafe {
             rdsys::rd_kafka_committed(
                 self.client.native_ptr(),
@@ -655,10 +655,10 @@ where
     }
 
     fn offsets_for_timestamp<T: Into<Timeout>>(
-        &self,
+        &'c self,
         timestamp: i64,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList> {
+    ) -> KafkaResult<TopicPartitionList<'c>> {
         let mut tpl_ptr = ptr::null_mut();
         let assignment_error =
             unsafe { rdsys::rd_kafka_assignment(self.client.native_ptr(), &mut tpl_ptr) };
@@ -677,10 +677,10 @@ where
     // `timestamps` is a `TopicPartitionList` with timestamps instead of
     // offsets.
     fn offsets_for_times<T: Into<Timeout>>(
-        &self,
-        timestamps: TopicPartitionList,
+        &'c self,
+        timestamps: TopicPartitionList<'c>,
         timeout: T,
-    ) -> KafkaResult<TopicPartitionList> {
+    ) -> KafkaResult<TopicPartitionList<'c>> {
         // This call will then put the offset in the offset field of this topic
         // partition list.
         let offsets_for_times_error = unsafe {
@@ -698,7 +698,7 @@ where
         }
     }
 
-    fn position(&self) -> KafkaResult<TopicPartitionList> {
+    fn position(&'c self) -> KafkaResult<TopicPartitionList<'c>> {
         let tpl = self.assignment()?;
         let error = unsafe { rdsys::rd_kafka_position(self.client.native_ptr(), tpl.ptr()) };
         if error.is_error() {
@@ -733,7 +733,7 @@ where
         self.client.fetch_group_list(group, timeout)
     }
 
-    fn pause(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+    fn pause(&'c self, partitions: &TopicPartitionList<'c>) -> KafkaResult<()> {
         let ret_code =
             unsafe { rdsys::rd_kafka_pause_partitions(self.client.native_ptr(), partitions.ptr()) };
         if ret_code.is_error() {
@@ -743,7 +743,7 @@ where
         Ok(())
     }
 
-    fn resume(&self, partitions: &TopicPartitionList) -> KafkaResult<()> {
+    fn resume(&'c self, partitions: &TopicPartitionList<'c>) -> KafkaResult<()> {
         let ret_code = unsafe {
             rdsys::rd_kafka_resume_partitions(self.client.native_ptr(), partitions.ptr())
         };
