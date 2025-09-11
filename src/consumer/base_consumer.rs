@@ -698,6 +698,27 @@ where
         }
     }
 
+    fn get_watermark_offsets(&self, topic: &str, partition: i32) -> KafkaResult<(i64, i64)> {
+        let mut low = -1;
+        let mut high = -1;
+        let topic_c = CString::new(topic.to_string())?;
+        let result = unsafe {
+            rdsys::rd_kafka_get_watermark_offsets(
+                self.client.native_ptr(),
+                topic_c.as_ptr(),
+                partition,
+                &mut low as *mut i64,
+                &mut high as *mut i64,
+            )
+        };
+
+        if result.is_error() {
+            Err(KafkaError::MetadataFetch(result.into()))
+        } else {
+            Ok((low, high))
+        }
+    }
+
     fn position(&self) -> KafkaResult<TopicPartitionList> {
         let tpl = self.assignment()?;
         let error = unsafe { rdsys::rd_kafka_position(self.client.native_ptr(), tpl.ptr()) };
