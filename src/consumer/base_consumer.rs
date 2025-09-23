@@ -713,7 +713,10 @@ where
         topic: Option<&str>,
         timeout: T,
     ) -> KafkaResult<Metadata> {
-        self.client.fetch_metadata(topic, timeout)
+        let to = timeout.into();
+        // force credential retrieval
+        self.client.poll_event(&self.queue, to);
+        self.client.fetch_metadata(topic, to)
     }
 
     fn fetch_watermarks<T: Into<Timeout>>(
