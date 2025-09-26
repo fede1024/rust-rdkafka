@@ -33,6 +33,22 @@ use super::Partitioner;
 // ********** FUTURE PRODUCER **********
 //
 
+///Default implementation for FutureProducerContext::delivery
+pub fn future_delivery_impl(
+    delivery_result: &DeliveryResult<'_>,
+    tx: oneshot::Sender<OwnedDeliveryResult>,
+) {
+    let owned_delivery_result = match *delivery_result {
+        Ok(ref message) => Ok(Delivery {
+            partition: message.partition(),
+            offset: message.offset(),
+            timestamp: message.timestamp(),
+        }),
+        Err((ref error, ref message)) => Err((error.clone(), message.detach())),
+    };
+    let _ = tx.send(owned_delivery_result); // TODO: handle error
+}
+
 /// A record for the future producer.
 ///
 /// Like [`BaseRecord`], but specific to the [`FutureProducer`]. The only
@@ -186,20 +202,9 @@ where
 {
     type DeliveryOpaque = Box<oneshot::Sender<OwnedDeliveryResult>>;
 
-    fn delivery(
-        &self,
-        delivery_result: &DeliveryResult<'_>,
-        tx: Box<oneshot::Sender<OwnedDeliveryResult>>,
-    ) {
-        let owned_delivery_result = match *delivery_result {
-            Ok(ref message) => Ok(Delivery {
-                partition: message.partition(),
-                offset: message.offset(),
-                timestamp: message.timestamp(),
-            }),
-            Err((ref error, ref message)) => Err((error.clone(), message.detach())),
-        };
-        let _ = tx.send(owned_delivery_result); // TODO: handle error
+    #[inline]
+    fn delivery(&self, delivery_result: &DeliveryResult<'_>, tx: Self::DeliveryOpaque) {
+        future_delivery_impl(delivery_result, *tx)
     }
 }
 
@@ -215,18 +220,21 @@ where
 /// underlying producer. The internal polling thread will be terminated when the
 /// `FutureProducer` goes out of scope.
 #[must_use = "Producer polling thread will stop immediately if unused"]
-pub struct FutureProducer<C = DefaultClientContext, R = DefaultRuntime, Part = NoCustomPartitioner>
-where
+pub struct FutureProducer<
+    C = FutureProducerContext<DefaultClientContext>,
+    R = DefaultRuntime,
+    Part = NoCustomPartitioner,
+> where
     Part: Partitioner,
-    C: ClientContext + 'static,
+    C: ProducerContext<Part> + 'static,
 {
-    producer: Arc<ThreadedProducer<FutureProducerContext<C>, Part>>,
+    producer: Arc<ThreadedProducer<C, Part>>,
     _runtime: PhantomData<R>,
 }
 
 impl<C, R> Clone for FutureProducer<C, R>
 where
-    C: ClientContext + 'static,
+    C: ProducerContext + 'static,
 {
     fn clone(&self) -> FutureProducer<C, R> {
         FutureProducer {
@@ -236,28 +244,30 @@ where
     }
 }
 
-impl<R> FromClientConfig for FutureProducer<DefaultClientContext, R>
+impl<R> FromClientConfig for FutureProducer<FutureProducerContext<DefaultClientContext>, R>
 where
     R: AsyncRuntime,
 {
-    fn from_config(config: &ClientConfig) -> KafkaResult<FutureProducer<DefaultClientContext, R>> {
-        FutureProducer::from_config_and_context(config, DefaultClientContext)
+    fn from_config(
+        config: &ClientConfig,
+    ) -> KafkaResult<FutureProducer<FutureProducerContext<DefaultClientContext>, R>> {
+        let context = FutureProducerContext {
+            wrapped_context: DefaultClientContext,
+        };
+        FutureProducer::from_config_and_context(config, context)
     }
 }
 
 impl<C, R> FromClientConfigAndContext<C> for FutureProducer<C, R>
 where
-    C: ClientContext + 'static,
+    C: ProducerContext + 'static,
     R: AsyncRuntime,
 {
     fn from_config_and_context(
         config: &ClientConfig,
         context: C,
     ) -> KafkaResult<FutureProducer<C, R>> {
-        let future_context = FutureProducerContext {
-            wrapped_context: context,
-        };
-        let threaded_producer = ThreadedProducer::from_config_and_context(config, future_context)?;
+        let threaded_producer = ThreadedProducer::from_config_and_context(config, context)?;
         Ok(FutureProducer {
             producer: Arc::new(threaded_producer),
             _runtime: PhantomData,
@@ -283,9 +293,26 @@ impl Future for DeliveryFuture {
     }
 }
 
-impl<C, R> FutureProducer<C, R>
+/// Creates `FutureProducer` with customized `ProducerContext`
+pub fn custom_future_producer<
+    P: Partitioner + Send + Sync + 'static,
+    C: ProducerContext<P, DeliveryOpaque = Box<oneshot::Sender<OwnedDeliveryResult>>> + 'static,
+    R: AsyncRuntime,
+>(
+    config: &ClientConfig,
+    context: C,
+) -> KafkaResult<FutureProducer<C, R, P>> {
+    let threaded_producer = ThreadedProducer::<C, P>::from_config_and_context(config, context)?;
+    Ok(FutureProducer {
+        producer: Arc::new(threaded_producer),
+        _runtime: PhantomData,
+    })
+}
+
+impl<C, R, Part> FutureProducer<C, R, Part>
 where
-    C: ClientContext + 'static,
+    Part: Partitioner,
+    C: ProducerContext<Part, DeliveryOpaque = Box<oneshot::Sender<OwnedDeliveryResult>>> + 'static,
     R: AsyncRuntime,
 {
     /// Sends a message to Kafka, returning the result of the send.
@@ -385,13 +412,13 @@ where
     }
 }
 
-impl<C, R, Part> Producer<FutureProducerContext<C>, Part> for FutureProducer<C, R, Part>
+impl<C, R, Part> Producer<C, Part> for FutureProducer<C, R, Part>
 where
-    C: ClientContext + 'static,
-    R: AsyncRuntime,
     Part: Partitioner,
+    C: ProducerContext<Part> + 'static,
+    R: AsyncRuntime,
 {
-    fn client(&self) -> &Client<FutureProducerContext<C>> {
+    fn client(&self) -> &Client<C> {
         self.producer.client()
     }
 
