@@ -37,6 +37,16 @@ use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::log::{log_enabled, DEBUG, INFO, WARN};
 use crate::util::{ErrBuf, KafkaDrop, NativePtr};
 
+const SENSITIVE_CONFIG_KEYS: &[&str] = &[
+    "sasl.password",
+    "ssl.key.password",
+    "ssl.keystore.password",
+    "ssl.truststore.password",
+    "sasl.oauthbearer.client.secret",
+];
+
+const SANITIZED_VALUE_PLACEHOLDER: &str = "[sanitized for safety]";
+
 /// The log levels supported by librdkafka.
 #[derive(Copy, Clone, Debug)]
 pub enum RDKafkaLogLevel {
@@ -192,19 +202,11 @@ pub struct ClientConfig {
 
 impl Debug for ClientConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let excluded_values: BTreeMap<&str, ()> = BTreeMap::from([
-            ("sasl.password", ()),
-            ("ssl.key.password", ()),
-            ("ssl.keystore.password", ()),
-            ("ssl.truststore.password", ()),
-            ("sasl.oauthbearer.client.secret", ()),
-        ]);
-
         let sanitized: BTreeMap<&str, &str> = self
             .conf_map
             .iter()
             .filter_map(|(key, value)| {
-                if excluded_values.contains_key(key.as_str()) {
+                if SENSITIVE_CONFIG_KEYS.contains(&key.as_str()) {
                     None
                 } else {
                     Some((key.as_str(), value.as_str()))
@@ -234,9 +236,21 @@ impl ClientConfig {
         }
     }
 
-    /// Gets a reference to the underlying config map
-    pub fn config_map(&self) -> &HashMap<String, String> {
-        &self.conf_map
+    /// Returns a sanitized view of the underlying config map.
+    ///
+    /// Sensitive keys have their values replaced with a placeholder string so they never appear in
+    /// clear text when inspected.
+    pub fn config_map(&self) -> BTreeMap<&str, &str> {
+        self.conf_map
+            .iter()
+            .map(|(key, value)| {
+                if SENSITIVE_CONFIG_KEYS.contains(&key.as_str()) {
+                    (key.as_str(), SANITIZED_VALUE_PLACEHOLDER)
+                } else {
+                    (key.as_str(), value.as_str())
+                }
+            })
+            .collect()
     }
 
     /// Gets the value of a parameter in the configuration.
