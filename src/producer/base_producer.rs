@@ -408,11 +408,16 @@ where
 
     fn handle_error_event(&self, event: NativePtr<RDKafkaEvent>) {
         let rdkafka_err = unsafe { rdsys::rd_kafka_event_error(event.ptr()) };
-        let error = KafkaError::Global(rdkafka_err.into());
+        let rdkafka_err_is_fatal = unsafe { rdsys::rd_kafka_event_error_is_fatal(event.ptr()) };
+        let error = if rdkafka_err_is_fatal != 0 {
+            KafkaError::MessageProductionFatal(rdkafka_err.into())
+        } else {
+            KafkaError::MessageProduction(rdkafka_err.into())
+        };
         let reason = unsafe {
             CStr::from_ptr(rdsys::rd_kafka_event_error_string(event.ptr())).to_string_lossy()
         };
-        self.context().error(error, reason.trim());
+        self.context().error(error.clone(), reason.trim());
     }
 
     /// Returns a pointer to the native Kafka client.
