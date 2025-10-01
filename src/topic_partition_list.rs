@@ -422,6 +422,17 @@ impl FromIterator<(String, i32, Offset)> for TopicPartitionList {
     }
 }
 
+impl FromIterator<((String, i32), Offset)> for TopicPartitionList {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = ((String, i32), Offset)>,
+    {
+        iter.into_iter()
+            .map(|((topic, partition), offset)| (topic, partition, offset))
+            .collect()
+    }
+}
+
 impl fmt::Debug for TopicPartitionList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.elements()).finish()
@@ -586,5 +597,21 @@ mod tests {
 
         let t2_0 = tpl.find_partition("t2", 0).unwrap();
         assert_eq!(t2_0.offset(), Offset::End);
+    }
+
+    #[test]
+    fn collect_topic_partition_list_pairs() {
+        let tpl: TopicPartitionList = vec![
+            (("t1".to_string(), 0), Offset::Beginning),
+            (("t1".to_string(), 1), Offset::Offset(7)),
+            (("t2".to_string(), 0), Offset::Stored),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(tpl.count(), 3);
+        assert_eq!(tpl.find_partition("t1", 0).unwrap().offset(), Offset::Beginning);
+        assert_eq!(tpl.find_partition("t1", 1).unwrap().offset(), Offset::Offset(7));
+        assert_eq!(tpl.find_partition("t2", 0).unwrap().offset(), Offset::Stored);
     }
 }
