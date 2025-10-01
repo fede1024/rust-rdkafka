@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::iter::FromIterator;
 use std::slice;
 use std::str;
 
@@ -398,6 +399,29 @@ impl Default for TopicPartitionList {
     }
 }
 
+impl FromIterator<(String, i32, Offset)> for TopicPartitionList {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = (String, i32, Offset)>,
+    {
+        let iter = iter.into_iter();
+        let (lower_bound, _) = iter.size_hint();
+        let mut tpl = TopicPartitionList::with_capacity(lower_bound);
+
+        for (topic, partition, offset) in iter {
+            let mut elem = tpl.add_partition(topic.as_str(), partition);
+            elem.set_offset(offset).unwrap_or_else(|err| {
+                panic!(
+                    "failed to set offset via collect() for {}:{} (offset: {:?}): {:?}",
+                    topic, partition, offset, err
+                );
+            });
+        }
+
+        tpl
+    }
+}
+
 impl fmt::Debug for TopicPartitionList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.elements()).finish()
@@ -540,5 +564,27 @@ mod tests {
 
         assert_eq!(topic_map, topic_map2);
         assert_eq!(tpl, tpl2);
+    }
+
+    #[test]
+    fn collect_topic_partition_list() {
+        let tpl: TopicPartitionList = vec![
+            ("t1".to_string(), 0, Offset::Beginning),
+            ("t1".to_string(), 1, Offset::Offset(42)),
+            ("t2".to_string(), 0, Offset::End),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(tpl.count(), 3);
+
+        let t1_0 = tpl.find_partition("t1", 0).unwrap();
+        assert_eq!(t1_0.offset(), Offset::Beginning);
+
+        let t1_1 = tpl.find_partition("t1", 1).unwrap();
+        assert_eq!(t1_1.offset(), Offset::Offset(42));
+
+        let t2_0 = tpl.find_partition("t2", 0).unwrap();
+        assert_eq!(t2_0.offset(), Offset::End);
     }
 }
