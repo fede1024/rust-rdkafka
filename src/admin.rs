@@ -48,10 +48,7 @@ impl<C: ClientContext> fmt::Debug for AdminClient<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut debug = f.debug_struct("AdminClient");
         debug.field("has_handle", &self.handle.is_some());
-        debug.field(
-            "stop_requested",
-            &self.should_stop.load(Ordering::Relaxed),
-        );
+        debug.field("stop_requested", &self.should_stop.load(Ordering::Relaxed));
         debug.finish()
     }
 }
