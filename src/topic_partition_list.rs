@@ -610,8 +610,17 @@ mod tests {
         .collect();
 
         assert_eq!(tpl.count(), 3);
-        assert_eq!(tpl.find_partition("t1", 0).unwrap().offset(), Offset::Beginning);
-        assert_eq!(tpl.find_partition("t1", 1).unwrap().offset(), Offset::Offset(7));
-        assert_eq!(tpl.find_partition("t2", 0).unwrap().offset(), Offset::Stored);
+        assert_eq!(
+            tpl.find_partition("t1", 0).unwrap().offset(),
+            Offset::Beginning
+        );
+        assert_eq!(
+            tpl.find_partition("t1", 1).unwrap().offset(),
+            Offset::Offset(7)
+        );
+        assert_eq!(
+            tpl.find_partition("t2", 0).unwrap().offset(),
+            Offset::Stored
+        );
     }
 }
