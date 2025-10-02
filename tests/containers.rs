@@ -1,4 +1,5 @@
 use anyhow::Context;
+use std::fmt::Debug;
 use testcontainers_modules::kafka::apache::Kafka;
 use testcontainers_modules::testcontainers::core::ContainerPort;
 use testcontainers_modules::testcontainers::runners::AsyncRunner;
@@ -6,6 +7,12 @@ use testcontainers_modules::testcontainers::ContainerAsync;
 
 pub struct KafkaContext {
     kafka_node: ContainerAsync<Kafka>,
+}
+
+impl Debug for KafkaContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KafkaContext").finish()
+    }
 }
 
 impl KafkaContext {
@@ -30,4 +37,25 @@ impl KafkaContext {
             .await?;
         Ok(format!("{}:{}", kafka_host.to_string(), kafka_port))
     }
+}
+
+#[tokio::test]
+pub async fn test_kafka_context_works() {
+    let kafka_context_result = KafkaContext::new().await;
+    let Ok(kafka_context) = kafka_context_result else {
+        panic!(
+            "Failed to get Kafka context: {}",
+            kafka_context_result.unwrap_err()
+        );
+    };
+
+    let bootstrap_servers_result = kafka_context.bootstrap_servers().await;
+    let Ok(bootstrap_servers) = bootstrap_servers_result else {
+        panic!(
+            "Failed to get bootstrap servers: {}",
+            bootstrap_servers_result.unwrap_err()
+        );
+    };
+
+    assert_ne!(bootstrap_servers.len(), 0, "Bootstrap servers empty");
 }
