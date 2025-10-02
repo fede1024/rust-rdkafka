@@ -15,6 +15,8 @@ use rdkafka::metadata::Metadata;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::{ClientConfig, Offset, TopicPartitionList};
 
+use crate::utils::logging::init_test_logger;
+use crate::utils::rand::{rand_test_group, rand_test_topic};
 use crate::utils::*;
 
 mod utils;
@@ -26,7 +28,7 @@ fn create_config() -> ClientConfig {
 }
 
 fn create_admin_client() -> AdminClient<DefaultClientContext> {
-    configure_logging_for_tests();
+    init_test_logger();
     create_config()
         .create()
         .expect("admin client creation failed")
