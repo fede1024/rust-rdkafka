@@ -22,8 +22,9 @@
 //!
 //! [librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::ffi::CString;
+use std::fmt::Debug;
 use std::iter::FromIterator;
 use std::os::raw::c_char;
 use std::ptr;
@@ -35,6 +36,16 @@ use crate::client::ClientContext;
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::log::{log_enabled, DEBUG, INFO, WARN};
 use crate::util::{ErrBuf, KafkaDrop, NativePtr};
+
+const SENSITIVE_CONFIG_KEYS: &[&str] = &[
+    "sasl.password",
+    "ssl.key.password",
+    "ssl.keystore.password",
+    "ssl.truststore.password",
+    "sasl.oauthbearer.client.secret",
+];
+
+const SANITIZED_VALUE_PLACEHOLDER: &str = "[sanitized for safety]";
 
 /// The log levels supported by librdkafka.
 #[derive(Copy, Clone, Debug)]
@@ -181,12 +192,33 @@ impl NativeClientConfig {
 }
 
 /// Client configuration.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ClientConfig {
     conf_map: HashMap<String, String>,
     /// The librdkafka logging level. Refer to [`RDKafkaLogLevel`] for the list
     /// of available levels.
     pub log_level: RDKafkaLogLevel,
+}
+
+impl Debug for ClientConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let sanitized: BTreeMap<&str, &str> = self
+            .conf_map
+            .iter()
+            .filter_map(|(key, value)| {
+                if SENSITIVE_CONFIG_KEYS.contains(&key.as_str()) {
+                    None
+                } else {
+                    Some((key.as_str(), value.as_str()))
+                }
+            })
+            .collect();
+
+        let mut debug_struct = f.debug_struct("ClientConfig");
+        debug_struct.field("log_level", &self.log_level);
+        debug_struct.field("conf_map", &sanitized);
+        debug_struct.finish()
+    }
 }
 
 impl Default for ClientConfig {
@@ -204,9 +236,21 @@ impl ClientConfig {
         }
     }
 
-    /// Gets a reference to the underlying config map
-    pub fn config_map(&self) -> &HashMap<String, String> {
-        &self.conf_map
+    /// Returns a sanitized view of the underlying config map.
+    ///
+    /// Sensitive keys have their values replaced with a placeholder string so they never appear in
+    /// clear text when inspected.
+    pub fn config_map(&self) -> BTreeMap<&str, &str> {
+        self.conf_map
+            .iter()
+            .map(|(key, value)| {
+                if SENSITIVE_CONFIG_KEYS.contains(&key.as_str()) {
+                    (key.as_str(), SANITIZED_VALUE_PLACEHOLDER)
+                } else {
+                    (key.as_str(), value.as_str())
+                }
+            })
+            .collect()
     }
 
     /// Gets the value of a parameter in the configuration.

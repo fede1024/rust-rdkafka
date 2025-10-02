@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr, CString};
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -41,6 +42,18 @@ pub struct AdminClient<C: ClientContext> {
     queue: Arc<NativeQueue>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
+}
+
+impl<C: ClientContext> fmt::Debug for AdminClient<C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug = f.debug_struct("AdminClient");
+        debug.field("has_handle", &self.handle.is_some());
+        debug.field(
+            "stop_requested",
+            &self.should_stop.load(Ordering::Relaxed),
+        );
+        debug.finish()
+    }
 }
 
 impl<C: ClientContext> AdminClient<C> {
