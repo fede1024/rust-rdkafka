@@ -2,6 +2,7 @@
 
 pub mod containers;
 pub mod logging;
+pub mod producer;
 pub mod rand;
 
 use std::collections::HashMap;
