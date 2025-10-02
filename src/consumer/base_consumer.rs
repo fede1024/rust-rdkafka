@@ -25,7 +25,7 @@ use crate::log::trace;
 use crate::message::{BorrowedMessage, Message};
 use crate::metadata::Metadata;
 use crate::topic_partition_list::{Offset, TopicPartitionList};
-use crate::util::{cstr_to_owned, NativePtr, Timeout};
+use crate::util::{cstr_to_owned, NativePtr, Timeout, TopicPartitionOffset};
 
 /// A low-level consumer that requires manual polling.
 ///
@@ -244,8 +244,18 @@ where
             if rdkafka_err == rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF {
                 let tp_ptr = unsafe { rdsys::rd_kafka_event_topic_partition(event.ptr()) };
                 let partition = unsafe { (*tp_ptr).partition };
+                let topic = unsafe {
+                    CStr::from_ptr((*tp_ptr).topic)
+                        .to_string_lossy()
+                        .into_owned()
+                };
+                let offset = unsafe { (*tp_ptr).offset };
                 unsafe { rdsys::rd_kafka_topic_partition_destroy(tp_ptr) };
-                Some(KafkaError::PartitionEOF(partition))
+                Some(KafkaError::PartitionEOF(TopicPartitionOffset{
+                    topic,
+                    partition,
+                    offset,
+                }))
             } else if unsafe { rdsys::rd_kafka_event_error_is_fatal(event.ptr()) } != 0 {
                 Some(KafkaError::MessageConsumptionFatal(rdkafka_err.into()))
             } else {
