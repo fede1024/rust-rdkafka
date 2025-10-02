@@ -13,7 +13,7 @@ use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::util::Timeout;
 use rdkafka::Timestamp;
 
-use crate::utils::*;
+use crate::utils::rand::*;
 
 mod utils;
 

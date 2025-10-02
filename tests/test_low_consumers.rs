@@ -13,6 +13,7 @@ use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::{current_time_millis, Timeout};
 use rdkafka::{ClientConfig, Message, Timestamp};
 
+use crate::utils::rand::*;
 use crate::utils::*;
 
 mod utils;

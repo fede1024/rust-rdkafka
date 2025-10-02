@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
+pub mod containers;
+pub mod logging;
+pub mod rand;
+
 use std::collections::HashMap;
 use std::env::{self, VarError};
-use std::sync::Once;
 use std::time::Duration;
 
-use rand::distr::{Alphanumeric, SampleString};
 use regex::Regex;
 
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
@@ -17,21 +19,6 @@ use rdkafka::message::ToBytes;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::statistics::Statistics;
 use rdkafka::TopicPartitionList;
-
-pub fn rand_test_topic(test_name: &str) -> String {
-    let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
-    format!("__{}_{}", test_name, id)
-}
-
-pub fn rand_test_group() -> String {
-    let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
-    format!("__test_{}", id)
-}
-
-pub fn rand_test_transactional_id() -> String {
-    let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
-    format!("__test_{}", id)
-}
 
 pub fn get_bootstrap_server() -> String {
     env::var("KAFKA_HOST").unwrap_or_else(|_| "localhost:9092".to_owned())
@@ -195,21 +182,13 @@ pub fn consumer_config(
     config
 }
 
-static INIT: Once = Once::new();
-
-pub fn configure_logging_for_tests() {
-    INIT.call_once(|| {
-        env_logger::try_init().expect("Failed to initialize env_logger");
-    });
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[tokio::test]
     async fn test_populate_topic() {
-        let topic_name = rand_test_topic("test_populate_topic");
+        let topic_name = rand::rand_test_topic("test_populate_topic");
         let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None).await;
 
         let total_messages = message_map

@@ -15,6 +15,8 @@ use rdkafka::producer::{BaseProducer, BaseRecord, Producer};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::Timeout;
 
+use crate::utils::logging::init_test_logger;
+use crate::utils::rand::*;
 use utils::*;
 
 mod utils;
@@ -22,12 +24,12 @@ mod utils;
 fn create_consumer(
     config_overrides: Option<HashMap<&str, &str>>,
 ) -> Result<BaseConsumer, KafkaError> {
-    configure_logging_for_tests();
+    init_test_logger();
     consumer_config(&rand_test_group(), config_overrides).create()
 }
 
 fn create_producer() -> Result<BaseProducer, KafkaError> {
-    configure_logging_for_tests();
+    init_test_logger();
     let mut config = ClientConfig::new();
     config
         .set("bootstrap.servers", get_bootstrap_server())
