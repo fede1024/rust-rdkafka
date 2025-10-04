@@ -73,7 +73,7 @@ fn main() {
                 process::exit(1);
             }
         }
-    } else if env::var("CARGO_FEATURE_STATIC_EXTERNAL").is_ok() {
+    } else if env::var("CARGO_FEATURE_STATIC_LINKING").is_ok() {
         if let Ok(rdkafka_dir) = env::var("DEP_LIBRDKAFKA_STATIC_ROOT") {
             println!("cargo:rustc-link-search=native={}/src", rdkafka_dir);
             println!("cargo:rustc-link-lib=static=rdkafka");
