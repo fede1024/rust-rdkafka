@@ -10,11 +10,15 @@ use rdkafka::admin::{
 };
 use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, DefaultConsumerContext};
-use rdkafka::error::{KafkaError, RDKafkaErrorCode};
+use rdkafka::error::{KafkaError, KafkaResult, RDKafkaErrorCode};
+use rdkafka::admin::{
+    group_description_result_key, ConsumerGroupState,
+};
 use rdkafka::metadata::Metadata;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::{ClientConfig, Offset, TopicPartitionList};
-
+use rdkafka::admin::{group_result_key, ListConsumerGroupOffsets};
+use rdkafka::admin::list_offsets_result_key;
 use crate::utils::*;
 
 mod utils;
@@ -32,8 +36,27 @@ fn create_admin_client() -> AdminClient<DefaultClientContext> {
         .expect("admin client creation failed")
 }
 
+async fn create_topics(topic_name_list: &[&str]) -> KafkaResult<()> {
+    let admin_client: AdminClient<DefaultClientContext> = create_admin_client();
+
+    let topic_list: Vec<_> = topic_name_list
+        .iter()
+        .map(|name| {
+            NewTopic::new(name, 1, TopicReplication::Fixed(1)).set("max.message.bytes", "1234")
+        })
+        .collect();
+
+    match admin_client
+        .create_topics(&topic_list, &AdminOptions::default())
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
 async fn create_consumer_group(consumer_group_name: &str) {
-    let admin_client = create_admin_client();
+    let admin_client: AdminClient<DefaultClientContext> = create_admin_client();
     let topic_name = &rand_test_topic(consumer_group_name);
     let consumer: BaseConsumer = create_config()
         .set("group.id", consumer_group_name)
@@ -628,3 +651,744 @@ async fn test_event_errors() {
         Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
     );
 }
+
+// Test the list offsets request
+#[tokio::test]
+async fn test_list_offsets() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+    // create a producer
+    let producer = create_config().create::<FutureProducer<_>>().unwrap();
+    let timeout = Some(Duration::from_secs(1));
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let name1 = rand_test_topic("test_list_offsets");
+    let name2 = rand_test_topic("test_list_offsets");
+
+    let make_record1 = || FutureRecord::<str, str>::to(&name1).payload("data");
+    let make_record2 = || FutureRecord::<str, str>::to(&name2).payload("data");
+
+    // Create a couple of topics
+    create_topics(&vec![name1.as_str(), name2.as_str()])
+        .await
+        .expect("Failed creating topics");
+
+    // Produce five messages to the topic.
+    for _ in 0..5 {
+        producer.send(make_record1(), timeout).await.unwrap();
+        producer.send(make_record2(), timeout).await.unwrap();
+    }
+
+    let mut tpl = TopicPartitionList::with_capacity(2);
+    tpl.add_partition_offset(&name1, 0, Offset::End)
+        .expect("Adding topic partition element list failed");
+    tpl.add_partition_offset(&name2, 0, Offset::End)
+        .expect("Adding topic partition element list failed");
+
+    let result = admin_client
+        .list_offsets(&tpl, &opts)
+        .await
+        .expect("list offsets failed");
+    eprintln!("result={:?}", result);
+
+    assert!(result
+        .iter()
+        .any(|topic| list_offsets_result_key(topic) == (name1.as_str(), 0)));
+    let topic_info1 = result
+        .iter()
+        .find(|topic| list_offsets_result_key(topic) == (name1.as_str(), 0))
+        .unwrap();
+    match &topic_info1 {
+        Ok(topic_partition) => assert_eq!(topic_partition.offset, Offset::Offset(5)),
+        Err(_) => assert!(false, "List offsets returned error"),
+    }
+
+    assert!(result
+        .iter()
+        .any(|topic| list_offsets_result_key(topic) == (name2.as_str(), 0)));
+    let topic_info2 = result
+        .iter()
+        .find(|topic| list_offsets_result_key(topic) == (name2.as_str(), 0))
+        .unwrap();
+    match &topic_info2 {
+        Ok(topic_partition) => assert_eq!(topic_partition.offset, Offset::Offset(5)),
+        Err(_) => assert!(false, "List offsets returned error"),
+    }
+}
+
+// Test the list offsets request. Case where one of the requested topics does
+// not exist.
+#[tokio::test]
+async fn test_list_offsets_one_does_not_exist() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+    // create a producer
+    let producer = create_config().create::<FutureProducer<_>>().unwrap();
+    let timeout = Some(Duration::from_secs(1));
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let name1 = rand_test_topic("test_list_offsets_one_does_not_exist");
+    let name2 = rand_test_topic("test_list_offsets_one_does_not_exist");
+
+    let make_record1 = || FutureRecord::<str, str>::to(&name1).payload("data");
+
+    // Create a couple of topics
+    create_topics(&vec![name1.as_str()])
+        .await
+        .expect("Failed creating topics");
+
+    // Produce five messages to the topic.
+    for _ in 0..5 {
+        producer.send(make_record1(), timeout).await.unwrap();
+    }
+
+    let mut tpl = TopicPartitionList::with_capacity(2);
+    tpl.add_partition_offset(&name1, 0, Offset::End)
+        .expect("Adding topic partition element list failed");
+    tpl.add_partition_offset(&name2, 0, Offset::End)
+        .expect("Adding topic partition element list failed");
+
+    let result = admin_client
+        .list_offsets(&tpl, &opts)
+        .await
+        .expect("list offsets failed");
+    eprintln!("result={:?}", result);
+
+    assert!(result
+        .iter()
+        .any(|topic| list_offsets_result_key(topic) == (name1.as_str(), 0)));
+    let topic_info1 = result
+        .iter()
+        .find(|topic| list_offsets_result_key(topic) == (name1.as_str(), 0))
+        .unwrap();
+    match &topic_info1 {
+        Ok(topic_partition) => assert_eq!(topic_partition.offset, Offset::Offset(5)),
+        Err(_) => assert!(false, "List offsets returned error"),
+    }
+
+    assert!(result
+        .iter()
+        .any(|topic| list_offsets_result_key(topic) == (name2.as_str(), 0)));
+    let topic_info2 = result
+        .iter()
+        .find(|topic| list_offsets_result_key(topic) == (name2.as_str(), 0))
+        .unwrap();
+    match &topic_info2 {
+        Ok(_) => assert!(false, "List offsets was expected to return error"),
+        Err(_) => {}
+    }
+}
+
+// Test the list offsets request
+// Check the case where the list provided is empty.
+#[tokio::test]
+async fn test_list_offsets_empty_list() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+    // create a producer
+    let producer = create_config().create::<FutureProducer<_>>().unwrap();
+    let timeout = Some(Duration::from_secs(1));
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let name1 = rand_test_topic("test_list_offsets_empty_list");
+
+    let make_record1 = || FutureRecord::<str, str>::to(&name1).payload("data");
+
+    // Create a couple of topics
+    create_topics(&vec![name1.as_str()])
+        .await
+        .expect("Failed creating topics");
+
+    // Produce five messages to the topic.
+    for _ in 0..5 {
+        producer.send(make_record1(), timeout).await.unwrap();
+    }
+
+    let tpl = TopicPartitionList::new();
+
+    let result = admin_client
+        .list_offsets(&tpl, &opts)
+        .await
+        .expect("list offsets failed");
+    eprintln!("result={:?}", result);
+
+    assert_eq!(result.len(), 0);
+}
+
+// Test the the describe consumer groups request
+#[tokio::test]
+async fn test_describe_groups() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+    // create a producer
+    let producer = create_config().create::<FutureProducer<_>>().unwrap();
+    let timeout = Some(Duration::from_secs(1));
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let group_name1 = rand_test_group();
+
+    let topic1 = rand_test_topic("test_describe_groups");
+    let topic2 = rand_test_topic("test_describe_groups");
+    let topic_list = vec![topic1.as_str(), topic2.as_str()];
+    let group_list = vec![group_name1.as_str()];
+
+    let make_record1 = || FutureRecord::<str, str>::to(&topic1).payload("data");
+    let make_record2 = || FutureRecord::<str, str>::to(&topic2).payload("data");
+
+    // Create the topics
+    create_topics(&topic_list)
+        .await
+        .expect("Failed creating topics");
+
+    // Produce five messages to the topic.
+    for _ in 0..5 {
+        producer.send(make_record1(), timeout).await.unwrap();
+        producer.send(make_record2(), timeout).await.unwrap();
+    }
+
+    {
+        let consumer: BaseConsumer = create_config()
+            .set("group.id", group_name1.as_str())
+            .set("auto.offset.reset", "earliest")
+            .set("auto.commit.enable", "true")
+            .create()
+            .expect("create consumer failed");
+
+        consumer
+            .subscribe(&topic_list)
+            .expect("subscribe topic failed");
+
+        // Consume some messages
+        for message in consumer.iter().take(3) {
+            match message {
+                Ok(_) => (),
+                Err(e) => panic!("Error receiving message: {:?}", e),
+            }
+        }
+
+        // Get the description.
+        let result = admin_client
+            .describe_consumer_groups(&group_list, &opts)
+            .await
+            .expect("describe_consumer_groups failed");
+
+        eprintln!("result: {:?}", result);
+        assert!(result
+            .iter()
+            .any(|description| group_description_result_key(description) == group_name1));
+        let group_description = result
+            .iter()
+            .find(|description| group_description_result_key(description) == group_name1)
+            .expect("Did not find the group we requested");
+        match group_description {
+            Ok(group_description) => assert_eq!(group_description.members.len(), 1),
+            Err(_) => assert!(false, "Failed describe consumer group"),
+        }
+    }
+
+    // Get the description again when the consumer has been recycled.
+
+    let result = admin_client
+        .describe_consumer_groups(&group_list, &opts)
+        .await
+        .expect("describe_consumer_groups failed");
+
+    eprintln!("result: {:?}", result);
+    assert!(result
+        .iter()
+        .any(|description| group_description_result_key(description) == group_name1));
+    let group_description = result
+        .iter()
+        .find(|description| group_description_result_key(description) == group_name1)
+        .expect("Did not find the group we requested");
+
+    match group_description {
+        Ok(group_description) => assert_eq!(group_description.members.len(), 0),
+        Err(_) => assert!(false, "Failed describe consumer group"),
+    }
+}
+
+// Test the describe_groups operation.
+// Request more than one group.
+#[tokio::test]
+async fn test_describe_groups_more_than_one_group() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let group_name1 = rand_test_group();
+    let group_name2 = rand_test_group();
+
+    create_consumer_group(&group_name1).await;
+    create_consumer_group(&group_name2).await;
+
+    let group_list = vec![group_name1.as_str(), group_name2.as_str()];
+
+    let result = admin_client
+        .describe_consumer_groups(&group_list, &opts)
+        .await
+        .expect("describe_consumer_groups failed");
+    eprintln!("result: {:?}", result);
+    assert!(result
+        .iter()
+        .any(|description| group_description_result_key(description) == group_name1));
+    assert!(result
+        .iter()
+        .any(|description| group_description_result_key(description) == group_name2));
+}
+
+// Test the describe_consumer_groups operation.
+// Request more than one group, but one of them does not exist.
+#[tokio::test]
+async fn test_describe_groups_one_does_not_exist() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let group_name1 = rand_test_group();
+    let group_name2 = rand_test_group();
+
+    create_consumer_group(&group_name1).await;
+
+    let group_list = vec![group_name1.as_str(), group_name2.as_str()];
+
+    let result = admin_client
+        .describe_consumer_groups(&group_list, &opts)
+        .await
+        .expect("describe_consumer_groups failed");
+    eprintln!("result: {:?}", result);
+    assert!(result
+        .iter()
+        .any(|description| if let Ok(description) = description {
+            description.group_id == group_name1 && description.state == ConsumerGroupState::Empty
+        } else {
+            false
+        }));
+    assert!(result
+        .iter()
+        .any(|description| if let Ok(description) = description {
+            description.group_id == group_name2 && description.state == ConsumerGroupState::Dead
+        } else {
+            false
+        }));
+}
+
+// Test the describe_consumer_groups operation.
+// The request is empty.
+#[tokio::test]
+async fn test_describe_groups_with_empty_array() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let group_name1 = rand_test_group();
+
+    create_consumer_group(&group_name1).await;
+
+    let group_list = vec![];
+
+    let result = admin_client
+        .describe_consumer_groups(&group_list, &opts)
+        .await;
+    assert!(result.is_err())
+}
+
+
+// Test the list_consumer_group_offsets operation
+#[tokio::test]
+async fn test_list_consumer_group_offsets() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+    // create a producer
+    let producer = create_config().create::<FutureProducer<_>>().unwrap();
+    let timeout = Some(Duration::from_secs(1));
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let group_name1 = rand_test_group();
+
+    let topic1 = rand_test_topic("test_describe_groups");
+    let topic2 = rand_test_topic("test_describe_groups");
+    let topic_list = vec![topic1.as_str(), topic2.as_str()];
+
+    let make_record1 = || FutureRecord::<str, str>::to(&topic1).payload("data");
+    let make_record2 = || FutureRecord::<str, str>::to(&topic2).payload("data");
+
+    let group_list = vec![ListConsumerGroupOffsets::from_group(group_name1.as_str())];
+
+    // Create the topics
+    create_topics(&topic_list)
+        .await
+        .expect("Failed creating topics");
+
+    // Produce five messages to the topic.
+    for _ in 0..5 {
+        producer.send(make_record1(), timeout).await.unwrap();
+        producer.send(make_record2(), timeout).await.unwrap();
+    }
+
+    {
+        let consumer: BaseConsumer = create_config()
+            .set("group.id", group_name1.as_str())
+            .set("auto.offset.reset", "earliest")
+            .set("auto.commit.enable", "true")
+            .create()
+            .expect("create consumer failed");
+
+        consumer
+            .subscribe(&topic_list)
+            .expect("subscribe topic failed");
+
+        // Consume some messages
+        for message in consumer.iter().take(6) {
+            match message {
+                Ok(_) => (),
+                Err(e) => panic!("Error receiving message: {:?}", e),
+            }
+        }
+        consumer.commit_consumer_state(CommitMode::Sync).unwrap();
+
+        // Get the offsets.
+        let result = admin_client
+            .list_consumer_group_offsets(&group_list, &opts)
+            .await
+            .expect("describe_consumer_groups failed");
+
+        eprintln!("result: {:?}", result);
+        assert!(result
+            .iter()
+            .any(|group_result| group_result_key(group_result) == group_name1));
+        let group_result = result
+            .iter()
+            .find(|group_result| group_result_key(group_result) == group_name1)
+            .expect("Did not find the group we requested");
+        match group_result {
+            Ok(group) => {
+                assert_eq!(group.group_id, group_name1);
+                assert!(group.topic_partitions.elements().iter().any(|tp| tp.topic() == topic1));
+                assert!(group.topic_partitions.elements().iter().any(|tp| tp.topic() == topic2));
+            }
+            Err(_) => assert!(false, "Failed describe consumer group"),
+        }
+
+    }
+
+    // Get the offsets.
+    let result = admin_client
+        .list_consumer_group_offsets(&group_list, &opts)
+        .await
+        .expect("describe_consumer_groups failed");
+
+    eprintln!("result: {:?}", result);
+    assert!(result
+        .iter()
+        .any(|group_result| group_result_key(group_result) == group_name1));
+    let group_result = result
+        .iter()
+        .find(|group_result| group_result_key(group_result) == group_name1)
+        .expect("Did not find the group we requested");
+    match group_result {
+        Ok(group) => {
+            assert_eq!(group.group_id, group_name1);
+            assert!(group.topic_partitions.elements().iter().any(|tp| tp.topic() == topic1));
+            assert!(group.topic_partitions.elements().iter().any(|tp| tp.topic() == topic2));
+        }
+        Err(_) => assert!(false, "Failed describe consumer group"),
+    }
+
+}
+
+// Test the list_consumer_group_offsets operation
+// The consumer does not have any topics assigned.
+#[tokio::test]
+async fn test_list_consumer_group_offsets_no_topics() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let group_name1 = rand_test_group();
+
+
+    let group_list = vec![ListConsumerGroupOffsets::from_group(group_name1.as_str())];
+
+    // Get the offsets.
+    let result = admin_client
+        .list_consumer_group_offsets(&group_list, &opts)
+        .await
+        .expect("describe_consumer_groups failed");
+
+    eprintln!("result: {:?}", result);
+    assert!(result
+        .iter()
+        .any(|group_result| group_result_key(group_result) == group_name1));
+    let group_result = result
+        .iter()
+        .find(|group_result| group_result_key(group_result) == group_name1)
+        .expect("Did not find the group we requested");
+    match group_result {
+        Ok(group) => {
+            assert_eq!(group.group_id, group_name1);
+            assert_eq!(group.topic_partitions.elements().len(), 0);
+        }
+        Err(_) => assert!(false, "Failed describe consumer group"),
+    }
+}
+
+// Test the list_consumer_group_offsets operation
+// Request information for more than one group.
+#[tokio::test]
+async fn test_list_consumer_group_offsets_more_than_one_group() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+    // create a producer
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let group_name1 = rand_test_group();
+    let group_name2 = rand_test_group();
+
+
+    let group_list = vec![
+        ListConsumerGroupOffsets::from_group(group_name1.as_str()),
+        ListConsumerGroupOffsets::from_group(group_name2.as_str()),
+    ];
+
+    // Get the offsets.
+    let result = admin_client
+        .list_consumer_group_offsets(&group_list, &opts)
+        .await;
+
+    // Fails because the API only supports one group at a time.
+    assert!(result.is_err());
+
+}
+
+// Test the list_consumer_group_offsets operation
+// Request information on a specific topic and partition.
+#[tokio::test]
+async fn test_list_consumer_group_offsets_one_existing_partition() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+    // create a producer
+    let producer = create_config().create::<FutureProducer<_>>().unwrap();
+    let timeout = Some(Duration::from_secs(1));
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let group_name1 = rand_test_group();
+
+    let topic1 = rand_test_topic("test_describe_groups");
+    let topic2 = rand_test_topic("test_describe_groups");
+    let topic_list = vec![topic1.as_str(), topic2.as_str()];
+
+    let make_record1 = || FutureRecord::<str, str>::to(&topic1).payload("data");
+    let make_record2 = || FutureRecord::<str, str>::to(&topic2).payload("data");
+
+    let mut request_tpl = TopicPartitionList::new();
+    request_tpl.add_partition(topic1.as_str(), 0);
+
+    let group_list = vec![ListConsumerGroupOffsets::new(group_name1.as_str(), request_tpl)];
+
+    // Create the topics
+    create_topics(&topic_list)
+        .await
+        .expect("Failed creating topics");
+
+    // Produce five messages to the topic.
+    for _ in 0..5 {
+        producer.send(make_record1(), timeout).await.unwrap();
+        producer.send(make_record2(), timeout).await.unwrap();
+    }
+
+    {
+        let consumer: BaseConsumer = create_config()
+            .set("group.id", group_name1.as_str())
+            .set("auto.offset.reset", "earliest")
+            .set("auto.commit.enable", "true")
+            .create()
+            .expect("create consumer failed");
+
+        consumer
+            .subscribe(&topic_list)
+            .expect("subscribe topic failed");
+
+        // Consume some messages
+        for message in consumer.iter().take(6) {
+            match message {
+                Ok(_) => (),
+                Err(e) => panic!("Error receiving message: {:?}", e),
+            }
+        }
+        consumer.commit_consumer_state(CommitMode::Sync).unwrap();
+
+        // Get the offsets.
+        let result = admin_client
+            .list_consumer_group_offsets(&group_list, &opts)
+            .await
+            .expect("describe_consumer_groups failed");
+
+        eprintln!("result: {:?}", result);
+        assert!(result
+            .iter()
+            .any(|group_result| group_result_key(group_result) == group_name1));
+        let group_result = result
+            .iter()
+            .find(|group_result| group_result_key(group_result) == group_name1)
+            .expect("Did not find the group we requested");
+        match group_result {
+            Ok(group) => {
+                assert_eq!(group.group_id, group_name1);
+                assert!(group.topic_partitions.elements().iter().any(|tp| tp.topic() == topic1));
+                assert_eq!(group.topic_partitions.elements().len(), 1);
+            }
+            Err(_) => assert!(false, "Failed describe consumer group"),
+        }
+
+    }
+
+    // Get the offsets.
+    let result = admin_client
+        .list_consumer_group_offsets(&group_list, &opts)
+        .await
+        .expect("describe_consumer_groups failed");
+
+    eprintln!("result: {:?}", result);
+    assert!(result
+        .iter()
+        .any(|group_result| group_result_key(group_result) == group_name1));
+    let group_result = result
+        .iter()
+        .find(|group_result| group_result_key(group_result) == group_name1)
+        .expect("Did not find the group we requested");
+    match group_result {
+        Ok(group) => {
+            assert_eq!(group.group_id, group_name1);
+            assert!(group.topic_partitions.elements().iter().any(|tp| tp.topic() == topic1));
+            assert_eq!(group.topic_partitions.elements().len(), 1);
+        }
+        Err(_) => assert!(false, "Failed describe consumer group"),
+    }
+
+}
+
+// Test the list_consumer_group_offsets operation
+// Request information on a specific topic and partition, but the
+// topic does not have that partition.
+#[tokio::test]
+async fn test_list_consumer_group_offsets_one_non_existing_partition() {
+    // create the admin client.
+    let admin_client = create_admin_client();
+    // create a producer
+    let producer = create_config().create::<FutureProducer<_>>().unwrap();
+    let timeout = Some(Duration::from_secs(1));
+
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let group_name1 = rand_test_group();
+
+    let topic1 = rand_test_topic("test_describe_groups");
+    let topic2 = rand_test_topic("test_describe_groups");
+    let topic_list = vec![topic1.as_str(), topic2.as_str()];
+
+    let make_record1 = || FutureRecord::<str, str>::to(&topic1).payload("data");
+    let make_record2 = || FutureRecord::<str, str>::to(&topic2).payload("data");
+
+    let mut request_tpl = TopicPartitionList::new();
+    request_tpl.add_partition(topic1.as_str(), 10);
+
+    let group_list = vec![ListConsumerGroupOffsets::new(group_name1.as_str(), request_tpl)];
+
+    // Create the topics
+    create_topics(&topic_list)
+        .await
+        .expect("Failed creating topics");
+
+    // Produce five messages to the topic.
+    for _ in 0..5 {
+        producer.send(make_record1(), timeout).await.unwrap();
+        producer.send(make_record2(), timeout).await.unwrap();
+    }
+
+    {
+        let consumer: BaseConsumer = create_config()
+            .set("group.id", group_name1.as_str())
+            .set("auto.offset.reset", "earliest")
+            .set("auto.commit.enable", "true")
+            .create()
+            .expect("create consumer failed");
+
+        consumer
+            .subscribe(&topic_list)
+            .expect("subscribe topic failed");
+
+        // Consume some messages
+        for message in consumer.iter().take(6) {
+            match message {
+                Ok(_) => (),
+                Err(e) => panic!("Error receiving message: {:?}", e),
+            }
+        }
+        consumer.commit_consumer_state(CommitMode::Sync).unwrap();
+
+        // Get the offsets.
+        let result = admin_client
+            .list_consumer_group_offsets(&group_list, &opts)
+            .await
+            .expect("describe_consumer_groups failed");
+
+        eprintln!("result: {:?}", result);
+        assert!(result
+            .iter()
+            .any(|group_result| group_result_key(group_result) == group_name1));
+        let group_result = result
+            .iter()
+            .find(|group_result| group_result_key(group_result) == group_name1)
+            .expect("Did not find the group we requested");
+        match group_result {
+            Ok(group) => {
+                assert_eq!(group.group_id, group_name1);
+                let elements = group.topic_partitions.elements();
+                //
+                // For an inexistent partition, the API returns success with an invalid offset.
+                //
+                assert!(elements.iter().any(|tp| tp.topic() == topic1));
+                assert_eq!(elements.len(), 1);
+                let element = elements.iter().find(|tp| tp.topic() == topic1 && tp.partition()==10).unwrap();
+                assert_eq!(element.offset(), Offset::Invalid);
+            }
+            Err(_) => assert!(false, "Failed describe consumer group"),
+        }
+
+    }
+
+    // Get the offsets.
+    let result = admin_client
+        .list_consumer_group_offsets(&group_list, &opts)
+        .await
+        .expect("describe_consumer_groups failed");
+
+    eprintln!("result: {:?}", result);
+    assert!(result
+        .iter()
+        .any(|group_result| group_result_key(group_result) == group_name1));
+    let group_result = result
+        .iter()
+        .find(|group_result| group_result_key(group_result) == group_name1)
+        .expect("Did not find the group we requested");
+    match group_result {
+        Ok(group) => {
+            assert_eq!(group.group_id, group_name1);
+            assert!(group.topic_partitions.elements().iter().any(|tp| tp.topic() == topic1));
+            assert_eq!(group.topic_partitions.elements().len(), 1);
+        }
+        Err(_) => assert!(false, "Failed describe consumer group"),
+    }
+
+}
+
