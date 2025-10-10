@@ -1,9 +1,11 @@
 use anyhow::Context;
 use std::fmt::Debug;
+use std::sync::Arc;
 use testcontainers_modules::kafka::apache::Kafka;
 use testcontainers_modules::testcontainers::core::ContainerPort;
 use testcontainers_modules::testcontainers::runners::AsyncRunner;
 use testcontainers_modules::testcontainers::ContainerAsync;
+use tokio::sync::OnceCell;
 
 pub struct KafkaContext {
     kafka_node: ContainerAsync<Kafka>,
@@ -16,13 +18,21 @@ impl Debug for KafkaContext {
 }
 
 impl KafkaContext {
-    pub async fn new() -> anyhow::Result<Self> {
-        let kafka_node = Kafka::default()
-            .start()
-            .await
-            .context("Failed to start Kafka")?;
+    pub async fn shared() -> anyhow::Result<Arc<Self>> {
+        static INSTANCE: OnceCell<Arc<KafkaContext>> = OnceCell::const_new();
 
-        Ok(Self { kafka_node })
+        INSTANCE
+            .get_or_try_init(|| async {
+                let kafka_node = Kafka::default()
+                    .start()
+                    .await
+                    .context("Failed to start Kafka")?;
+
+                Ok::<Arc<KafkaContext>, anyhow::Error>(Arc::new(KafkaContext { kafka_node }))
+            })
+            .await
+            .context("Failed to initialize Kafka shared instance")
+            .map(Arc::clone)
     }
 
     pub async fn bootstrap_servers(&self) -> anyhow::Result<String> {
@@ -41,7 +51,7 @@ impl KafkaContext {
 
 #[tokio::test]
 pub async fn test_kafka_context_works() {
-    let kafka_context_result = KafkaContext::new().await;
+    let kafka_context_result = KafkaContext::shared().await;
     let Ok(kafka_context) = kafka_context_result else {
         panic!(
             "Failed to get Kafka context: {}",

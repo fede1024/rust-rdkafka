@@ -1,6 +1,7 @@
 //! Low-level consumers.
 
 use std::ffi::{CStr, CString};
+use std::fmt;
 use std::mem::ManuallyDrop;
 use std::os::raw::c_void;
 use std::ptr;
@@ -39,6 +40,20 @@ where
     queue: NativeQueue,
     group_id: Option<String>,
     nonempty_callback: Option<Box<Box<dyn Fn() + Send + Sync>>>,
+}
+
+impl<C> fmt::Debug for BaseConsumer<C>
+where
+    C: ConsumerContext,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("BaseConsumer")
+            .field("native_ptr", &self.client.native_ptr())
+            .field("queue", &self.queue)
+            .field("group_id", &self.group_id)
+            .field("has_nonempty_callback", &self.nonempty_callback.is_some())
+            .finish()
+    }
 }
 
 impl FromClientConfig for BaseConsumer {

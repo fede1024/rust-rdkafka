@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+pub mod consumer;
 pub mod containers;
 pub mod logging;
 pub mod producer;
