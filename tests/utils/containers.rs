@@ -9,6 +9,7 @@ use tokio::sync::OnceCell;
 
 pub struct KafkaContext {
     kafka_node: ContainerAsync<Kafka>,
+    pub bootstrap_servers: String,
 }
 
 impl Debug for KafkaContext {
@@ -22,31 +23,31 @@ impl KafkaContext {
         static INSTANCE: OnceCell<Arc<KafkaContext>> = OnceCell::const_new();
 
         INSTANCE
-            .get_or_try_init(|| async {
-                let kafka_node = Kafka::default()
-                    .start()
-                    .await
-                    .context("Failed to start Kafka")?;
-
-                Ok::<Arc<KafkaContext>, anyhow::Error>(Arc::new(KafkaContext { kafka_node }))
-            })
+            .get_or_try_init(init)
             .await
             .context("Failed to initialize Kafka shared instance")
             .map(Arc::clone)
     }
+}
 
-    pub async fn bootstrap_servers(&self) -> anyhow::Result<String> {
-        let kafka_host = self
-            .kafka_node
-            .get_host()
-            .await
-            .context("Failed to get Kafka host")?;
-        let kafka_port = self
-            .kafka_node
-            .get_host_port_ipv4(ContainerPort::Tcp(9092))
-            .await?;
-        Ok(format!("{}:{}", kafka_host.to_string(), kafka_port))
-    }
+async fn init() -> anyhow::Result<Arc<KafkaContext>> {
+    let kafka_node = Kafka::default()
+        .start()
+        .await
+        .context("Failed to start Kafka")?;
+
+    let kafka_host = kafka_node
+        .get_host()
+        .await
+        .context("Failed to get Kafka host")?;
+    let kafka_port = kafka_node
+        .get_host_port_ipv4(ContainerPort::Tcp(9092))
+        .await?;
+
+    Ok::<Arc<KafkaContext>, anyhow::Error>(Arc::new(KafkaContext {
+        kafka_node,
+        bootstrap_servers: format!("{}:{}", kafka_host, kafka_port),
+    }))
 }
 
 #[tokio::test]
@@ -59,13 +60,9 @@ pub async fn test_kafka_context_works() {
         );
     };
 
-    let bootstrap_servers_result = kafka_context.bootstrap_servers().await;
-    let Ok(bootstrap_servers) = bootstrap_servers_result else {
-        panic!(
-            "Failed to get bootstrap servers: {}",
-            bootstrap_servers_result.unwrap_err()
-        );
-    };
-
-    assert_ne!(bootstrap_servers.len(), 0, "Bootstrap servers empty");
+    assert_ne!(
+        kafka_context.bootstrap_servers.len(),
+        0,
+        "Bootstrap servers empty"
+    );
 }
