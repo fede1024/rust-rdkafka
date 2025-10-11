@@ -555,3 +555,43 @@ async fn test_invalid_consumer_position() {
         Err(KafkaError::MetadataFetch(RDKafkaErrorCode::UnknownGroup))
     );
 }
+
+#[tokio::test]
+async fn test_partition_eof_error_details() {
+    let _r = env_logger::try_init();
+    let topic_name = rand_test_topic("test_partition_eof_error_details");
+    let message_count = 5;
+    populate_topic(&topic_name, message_count, &value_fn, &key_fn, Some(0), None).await;
+    
+    let mut config_overrides = HashMap::new();
+    config_overrides.insert("enable.partition.eof", "true");
+    let consumer = create_base_consumer(&rand_test_group(), Some(config_overrides));
+    
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning).unwrap();
+    consumer.assign(&tpl).unwrap();
+    
+    for i in 0..message_count {
+        match consumer.poll(Timeout::from(Duration::from_secs(5))) {
+            Some(Ok(message)) => {
+                assert_eq!(message.offset(), i as i64);
+                assert_eq!(message.partition(), 0);
+                assert_eq!(message.topic(), topic_name);
+            }
+            Some(Err(e)) => panic!("Error receiving message: {:?}", e),
+            None => panic!("No message received within timeout"),
+        }
+    }
+
+    // The next poll should return a PartitionEOF error with detailed information
+    match consumer.poll(Timeout::from(Duration::from_secs(5))) {
+        Some(Err(KafkaError::PartitionEOF(tpo))) => {
+            assert_eq!(tpo.topic, topic_name);
+            assert_eq!(tpo.partition, 0);
+            assert_eq!(tpo.offset, message_count as i64);
+        }
+        Some(Ok(_)) => panic!("Expected PartitionEOF error, got message"),
+        Some(Err(e)) => panic!("Expected PartitionEOF error, got: {:?}", e),
+        None => panic!("No message or error received within timeout"),
+    }
+}
