@@ -4,12 +4,13 @@ use std::sync::Arc;
 use testcontainers_modules::kafka::apache::Kafka;
 use testcontainers_modules::testcontainers::core::ContainerPort;
 use testcontainers_modules::testcontainers::runners::AsyncRunner;
-use testcontainers_modules::testcontainers::ContainerAsync;
+use testcontainers_modules::testcontainers::{ContainerAsync, Image};
 use tokio::sync::OnceCell;
 
 pub struct KafkaContext {
     kafka_node: ContainerAsync<Kafka>,
     pub bootstrap_servers: String,
+    pub version: String,
 }
 
 impl Debug for KafkaContext {
@@ -49,11 +50,13 @@ impl KafkaContext {
 }
 
 async fn init() -> anyhow::Result<Arc<KafkaContext>> {
-    let kafka_node = Kafka::default()
+    let kafka_container = Kafka::default();
+    let kafka_version = kafka_container.tag().to_string();
+
+    let kafka_node = kafka_container
         .start()
         .await
         .context("Failed to start Kafka")?;
-
     let kafka_host = kafka_node
         .get_host()
         .await
@@ -65,6 +68,7 @@ async fn init() -> anyhow::Result<Arc<KafkaContext>> {
     Ok::<Arc<KafkaContext>, anyhow::Error>(Arc::new(KafkaContext {
         kafka_node,
         bootstrap_servers: format!("{}:{}", kafka_host, kafka_port),
+        version: kafka_version,
     }))
 }
 

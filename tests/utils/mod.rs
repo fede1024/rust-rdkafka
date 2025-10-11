@@ -8,11 +8,12 @@ pub mod producer;
 pub mod rand;
 
 use std::collections::HashMap;
-use std::env::{self, VarError};
+use std::env::{self};
 use std::time::Duration;
 
 use regex::Regex;
 
+use crate::utils::containers::KafkaContext;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::client::ClientContext;
 use rdkafka::config::ClientConfig;
@@ -27,29 +28,19 @@ pub fn get_bootstrap_server() -> String {
     env::var("KAFKA_HOST").unwrap_or_else(|_| "localhost:9092".to_owned())
 }
 
-pub fn get_broker_version() -> KafkaVersion {
-    // librdkafka doesn't expose this directly, sadly.
-    match env::var("KAFKA_VERSION") {
-        Ok(v) => {
-            let regex = Regex::new(r"^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?$").unwrap();
-            match regex.captures(&v) {
-                Some(captures) => {
-                    let extract = |i| {
-                        captures
-                            .get(i)
-                            .map(|m| m.as_str().parse().unwrap())
-                            .unwrap_or(0)
-                    };
-                    KafkaVersion(extract(1), extract(2), extract(3), extract(4))
-                }
-                None => panic!("KAFKA_VERSION env var was not in expected [n[.n[.n[.n]]]] format"),
-            }
+pub fn get_broker_version(kafka_context: &KafkaContext) -> KafkaVersion {
+    let regex = Regex::new(r"^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?$").unwrap();
+    match regex.captures(&kafka_context.version) {
+        Some(captures) => {
+            let extract = |i| {
+                captures
+                    .get(i)
+                    .map(|m| m.as_str().parse().unwrap())
+                    .unwrap_or(0)
+            };
+            KafkaVersion(extract(1), extract(2), extract(3), extract(4))
         }
-        Err(VarError::NotUnicode(_)) => {
-            panic!("KAFKA_VERSION env var contained non-unicode characters")
-        }
-        // If the environment variable is unset, assume we're running the latest version.
-        Err(VarError::NotPresent) => KafkaVersion(u32::MAX, u32::MAX, u32::MAX, u32::MAX),
+        None => panic!("KAFKA_VERSION env var was not in expected [n[.n[.n[.n]]]] format"),
     }
 }
 

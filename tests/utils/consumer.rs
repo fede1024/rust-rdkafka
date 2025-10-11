@@ -1,15 +1,27 @@
 use crate::utils::consumer;
 use crate::utils::rand::rand_test_group;
-use anyhow::Context;
+use anyhow::{bail, Context};
+use backon::{BlockingRetryable, ExponentialBuilder};
 use rdkafka::config::FromClientConfig;
 use rdkafka::consumer::{BaseConsumer, Consumer};
 use rdkafka::message::BorrowedMessage;
+use rdkafka::metadata::Metadata;
 use rdkafka::ClientConfig;
 use std::time::Duration;
 
-pub async fn create_consumer(
+pub async fn create_subscribed_base_consumer(
     bootstrap_servers: &str,
     test_topic: &str,
+) -> anyhow::Result<BaseConsumer> {
+    let unsubscribed_base_consumer = create_unsubscribed_base_consumer(bootstrap_servers).await?;
+    unsubscribed_base_consumer
+        .subscribe(&[test_topic])
+        .context("Failed to subscribe to topic")?;
+    Ok(unsubscribed_base_consumer)
+}
+
+pub async fn create_unsubscribed_base_consumer(
+    bootstrap_servers: &str,
 ) -> anyhow::Result<BaseConsumer> {
     let mut consumer_client_config = ClientConfig::default();
     consumer_client_config.set("group.id", rand_test_group());
@@ -21,29 +33,7 @@ pub async fn create_consumer(
     consumer_client_config.set("debug", "all");
     consumer_client_config.set("auto.offset.reset", "earliest");
 
-    let base_consumer_result =
-        consumer::create_subscribed_base(consumer_client_config, &[&test_topic]).await;
-    let Ok(base_consumer) = base_consumer_result else {
-        panic!(
-            "could not create base consumer: {}",
-            base_consumer_result.unwrap_err()
-        )
-    };
-
-    Ok(base_consumer)
-}
-
-pub async fn create_subscribed_base(
-    client_config: ClientConfig,
-    topics: &[&str],
-) -> anyhow::Result<BaseConsumer> {
-    let base_consumer =
-        BaseConsumer::from_config(&client_config).context("Failed to create consumer")?;
-    base_consumer
-        .subscribe(topics)
-        .context("Failed to subscribe to topic")?;
-
-    Ok(base_consumer)
+    BaseConsumer::from_config(&consumer_client_config).context("Failed to create consumer")
 }
 
 pub async fn poll_x_times_for_messages(
@@ -68,4 +58,43 @@ pub async fn poll_x_times_for_messages(
     }
 
     Ok(borrowed_messages)
+}
+
+pub fn fetch_consumer_metadata(consumer: &BaseConsumer, topic: &str) -> anyhow::Result<Metadata> {
+    let timeout = Some(Duration::from_secs(1));
+
+    (|| {
+        let metadata = consumer
+            .fetch_metadata(Some(topic), timeout)
+            .context("Failed to fetch metadata")?;
+        if metadata.topics().is_empty() {
+            bail!("metadata fetch returned no topics".to_string())
+        }
+        let topic = &metadata.topics()[0];
+        if topic.partitions().is_empty() {
+            bail!("metadata fetch returned a topic with no partitions".to_string())
+        }
+        Ok(metadata)
+    })
+    .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
+    .call()
+}
+
+pub fn verify_topic_deleted(consumer: &BaseConsumer, topic: &str) -> anyhow::Result<()> {
+    let timeout = Some(Duration::from_secs(1));
+
+    (|| {
+        // Asking about the topic specifically will recreate it (under the
+        // default Kafka configuration, at least) so we have to ask for the list
+        // of all topics and search through it.
+        let metadata = consumer
+            .fetch_metadata(None, timeout)
+            .context("Failed to fetch metadata")?;
+        if metadata.topics().iter().any(|t| t.name() == topic) {
+            bail!(format!("topic {} still exists", topic))
+        }
+        Ok(())
+    })
+    .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
+    .call()
 }

@@ -1,5 +1,5 @@
 use crate::utils::admin::{create_admin_client, create_topic};
-use crate::utils::consumer::{create_consumer, poll_x_times_for_messages};
+use crate::utils::consumer::{create_subscribed_base_consumer, poll_x_times_for_messages};
 use crate::utils::containers::KafkaContext;
 use crate::utils::logging::init_test_logger;
 use crate::utils::producer::{create_producer, send_record};
@@ -38,7 +38,8 @@ pub async fn test_basic_produce() {
         );
     }
 
-    let consumer_result = create_consumer(&kafka_context.bootstrap_servers, &test_topic_name).await;
+    let consumer_result =
+        create_subscribed_base_consumer(&kafka_context.bootstrap_servers, &test_topic_name).await;
     let Ok(consumer) = consumer_result else {
         panic!(
             "could not create consumer: {}",
