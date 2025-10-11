@@ -17,6 +17,7 @@ use rdkafka::util::current_time_millis;
 use rdkafka::{Message, Timestamp};
 use rdkafka_sys::types::RDKafkaConfRes;
 
+use crate::utils::rand::*;
 use crate::utils::*;
 
 mod utils;
@@ -46,7 +47,7 @@ where
 #[tokio::test]
 async fn test_invalid_max_poll_interval() {
     let res: Result<StreamConsumer, _> = consumer_config(
-        &rand_test_group(),
+        &crate::utils::rand::rand_test_group(),
         Some(hashmap! { "max.poll.interval.ms" => "-1" }),
     )
     .create();

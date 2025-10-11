@@ -21,6 +21,8 @@ use rdkafka::types::RDKafkaRespErr;
 use rdkafka::util::current_time_millis;
 use rdkafka::{ClientContext, Statistics};
 
+use crate::utils::logging::init_test_logger;
+use crate::utils::rand::*;
 use crate::utils::*;
 
 mod utils;
@@ -162,7 +164,7 @@ fn base_producer_with_context<Part: Partitioner, C: ProducerContext<Part>>(
     context: C,
     config_overrides: HashMap<&str, &str>,
 ) -> BaseProducer<C, Part> {
-    configure_logging_for_tests();
+    init_test_logger();
     default_config(config_overrides)
         .create_with_context::<C, BaseProducer<_, Part>>(context)
         .unwrap()
@@ -183,7 +185,7 @@ where
     Part: Partitioner + Send + Sync + 'static,
     C: ProducerContext<Part>,
 {
-    configure_logging_for_tests();
+    init_test_logger();
     default_config(config_overrides)
         .create_with_context::<C, ThreadedProducer<_, _>>(context)
         .unwrap()

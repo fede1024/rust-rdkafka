@@ -42,6 +42,7 @@
 //! should wait and try again.
 
 use std::ffi::{CStr, CString};
+use std::fmt;
 use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::c_void;
@@ -338,6 +339,19 @@ where
     client: Client<C>,
     queue: NativeQueue,
     _partitioner: PhantomData<Part>,
+}
+
+impl<C, Part> fmt::Debug for BaseProducer<C, Part>
+where
+    Part: Partitioner,
+    C: ProducerContext<Part>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("BaseProducer")
+            .field("native_ptr", &self.native_ptr())
+            .field("queue", &self.queue)
+            .finish()
+    }
 }
 
 impl<C, Part> BaseProducer<C, Part>

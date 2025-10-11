@@ -42,6 +42,8 @@ rand = "0.9.1"
 regex = "1.11.1"
 smol = "2.0.2"
 tokio = { version = "1.18", features = ["macros", "rt-multi-thread", "time"] }
+testcontainers-modules = { version = "0.13.0", features = ["kafka"] }
+anyhow = { version = "1.0.100" }
 
 # These features are re-exports of the features that the rdkafka-sys crate
 # provides. See the rdkafka-sys documentation for details.

@@ -9,6 +9,7 @@ use rdkafka::topic_partition_list::TopicPartitionList;
 
 use rdkafka_sys::types::RDKafkaConfRes;
 
+use crate::utils::rand::*;
 use crate::utils::*;
 
 mod utils;
