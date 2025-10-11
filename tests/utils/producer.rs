@@ -1,6 +1,6 @@
-use anyhow::Context;
+use anyhow::{bail, Context};
 use rdkafka::config::FromClientConfig;
-use rdkafka::producer::{BaseProducer, Producer};
+use rdkafka::producer::{BaseProducer, BaseRecord, Producer};
 use rdkafka::util::Timeout;
 use rdkafka::ClientConfig;
 use std::time::Duration;
@@ -27,6 +27,21 @@ pub fn create_base_producer(config: &ClientConfig) -> anyhow::Result<BaseProduce
         )
     };
     Ok(base_producer)
+}
+
+pub async fn send_record(
+    producer: &BaseProducer,
+    record: BaseRecord<'_, [u8; 4], str>,
+) -> anyhow::Result<()> {
+    let send_result = producer.send(record);
+    if send_result.is_err() {
+        bail!("could not produce record: {:?}", send_result.unwrap_err());
+    }
+    if poll_and_flush(&producer).is_err() {
+        bail!("could not poll and flush base producer")
+    };
+
+    Ok(())
 }
 
 pub fn poll_and_flush(base_producer: &BaseProducer) -> anyhow::Result<()> {

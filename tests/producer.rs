@@ -2,7 +2,7 @@ use crate::utils::admin::{create_admin_client, create_topic};
 use crate::utils::consumer::{create_consumer, poll_x_times_for_messages};
 use crate::utils::containers::KafkaContext;
 use crate::utils::logging::init_test_logger;
-use crate::utils::producer::{create_producer, poll_and_flush};
+use crate::utils::producer::{create_producer, send_record};
 use crate::utils::rand::rand_test_topic;
 use rdkafka::producer::BaseRecord;
 use rdkafka::Message;
@@ -57,13 +57,9 @@ pub async fn test_basic_produce() {
     let record = BaseRecord::to(&test_topic_name) // destination topic
         .key(&[1, 2, 3, 4]) // message key
         .payload("content"); // message payload
-
-    let send_result = base_producer.send(record);
-    if send_result.is_err() {
-        panic!("could not produce record: {:?}", send_result.unwrap_err());
-    }
-    if poll_and_flush(&base_producer).is_err() {
-        panic!("could not poll and flush base producer")
+    let send_record_result = send_record(&base_producer, record).await;
+    if send_record_result.is_err() {
+        panic!("could not send record: {}", send_record_result.unwrap_err());
     }
 
     let messages_result = poll_x_times_for_messages(&consumer, 10).await;
