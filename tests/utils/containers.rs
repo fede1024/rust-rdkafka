@@ -28,6 +28,24 @@ impl KafkaContext {
             .context("Failed to initialize Kafka shared instance")
             .map(Arc::clone)
     }
+
+    pub async fn std_out(&self) -> anyhow::Result<String> {
+        let std_out_byte_vec = self
+            .kafka_node
+            .stdout_to_vec()
+            .await
+            .context("Failed to get stdout")?;
+        Ok(String::from_utf8(std_out_byte_vec)?)
+    }
+
+    pub async fn std_err(&self) -> anyhow::Result<String> {
+        let std_err_byte_vec = self
+            .kafka_node
+            .stderr_to_vec()
+            .await
+            .context("Failed to get stderr")?;
+        Ok(String::from_utf8(std_err_byte_vec)?)
+    }
 }
 
 async fn init() -> anyhow::Result<Arc<KafkaContext>> {

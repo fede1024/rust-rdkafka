@@ -16,7 +16,6 @@ use rdkafka::{ClientConfig, Message, Timestamp};
 use crate::utils::rand::*;
 use crate::utils::*;
 
-mod admin;
 mod utils;
 
 fn create_base_consumer(

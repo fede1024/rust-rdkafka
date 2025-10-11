@@ -2,7 +2,7 @@ use rand::distr::{Alphanumeric, SampleString};
 
 pub fn rand_test_topic(test_name: &str) -> String {
     let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
-    format!("__{}_{}", test_name, id)
+    format!("{}_{}", test_name, id)
 }
 
 pub fn rand_test_group() -> String {

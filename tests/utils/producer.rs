@@ -1,6 +1,22 @@
+use anyhow::Context;
 use rdkafka::config::FromClientConfig;
-use rdkafka::producer::BaseProducer;
+use rdkafka::producer::{BaseProducer, Producer};
+use rdkafka::util::Timeout;
 use rdkafka::ClientConfig;
+use std::time::Duration;
+
+pub async fn create_producer(bootstrap_servers: &str) -> anyhow::Result<BaseProducer> {
+    let mut producer_client_config = ClientConfig::default();
+    producer_client_config.set("bootstrap.servers", bootstrap_servers);
+    let base_producer_result = create_base_producer(&producer_client_config);
+    let Ok(base_producer) = base_producer_result else {
+        panic!(
+            "could not create based_producer: {}",
+            base_producer_result.unwrap_err()
+        );
+    };
+    Ok(base_producer)
+}
 
 pub fn create_base_producer(config: &ClientConfig) -> anyhow::Result<BaseProducer> {
     let base_producer_result = BaseProducer::from_config(config);
@@ -10,6 +26,14 @@ pub fn create_base_producer(config: &ClientConfig) -> anyhow::Result<BaseProduce
             base_producer_result.unwrap_err()
         )
     };
-
     Ok(base_producer)
+}
+
+pub fn poll_and_flush(base_producer: &BaseProducer) -> anyhow::Result<()> {
+    for _ in 0..5 {
+        base_producer.poll(Duration::from_millis(100));
+    }
+    base_producer
+        .flush(Timeout::After(Duration::from_secs(10)))
+        .context("flush failed")
 }
