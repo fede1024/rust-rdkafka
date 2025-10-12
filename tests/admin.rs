@@ -5,8 +5,8 @@ use crate::utils::rand::rand_test_topic;
 use crate::utils::{get_broker_version, KafkaVersion};
 use backon::{BlockingRetryable, ExponentialBuilder};
 use rdkafka::admin::{
-    AdminOptions, ConfigEntry, ConfigSource, NewPartitions, NewTopic, ResourceSpecifier,
-    TopicReplication,
+    AdminOptions, AlterConfig, ConfigEntry, ConfigSource, NewPartitions, NewTopic,
+    OwnedResourceSpecifier, ResourceSpecifier, TopicReplication,
 };
 use rdkafka::error::KafkaError;
 use rdkafka::producer::{FutureRecord, Producer};
@@ -540,4 +540,86 @@ async fn test_delete_records() {
         .unwrap();
     assert_eq!(lo, 5);
     assert_eq!(hi, 5);
+}
+
+#[tokio::test]
+async fn test_configs() {
+    init_test_logger();
+
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    // Create admin client
+    let admin_client = utils::admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create admin client");
+    let opts = AdminOptions::new();
+    let broker = ResourceSpecifier::Broker(utils::BROKER_ID);
+
+    let res = admin_client
+        .describe_configs(&[broker], &opts)
+        .await
+        .expect("describe configs failed");
+    let config = &res[0].as_ref().expect("describe configs failed");
+    let orig_val = config
+        .get("log.flush.interval.messages")
+        .expect("original config entry missing")
+        .value
+        .as_ref()
+        .expect("original value missing");
+
+    let config = AlterConfig::new(broker).set("log.flush.interval.messages", "1234");
+    let res = admin_client
+        .alter_configs(&[config], &opts)
+        .await
+        .expect("alter configs failed");
+    assert_eq!(res, &[Ok(OwnedResourceSpecifier::Broker(utils::BROKER_ID))]);
+
+    let mut tries = 0;
+    loop {
+        let res = admin_client
+            .describe_configs(&[broker], &opts)
+            .await
+            .expect("describe configs failed");
+        let config = &res[0].as_ref().expect("describe configs failed");
+        let entry = config.get("log.flush.interval.messages");
+        let expected_entry = if get_broker_version(&kafka_context) < KafkaVersion(1, 1, 0, 0) {
+            // Pre-1.1, the AlterConfig operation will silently fail, and the
+            // config will remain unchanged, which I guess is worth testing.
+            ConfigEntry {
+                name: "log.flush.interval.messages".into(),
+                value: Some(orig_val.clone()),
+                source: ConfigSource::Default,
+                is_read_only: true,
+                is_default: true,
+                is_sensitive: false,
+            }
+        } else {
+            ConfigEntry {
+                name: "log.flush.interval.messages".into(),
+                value: Some("1234".into()),
+                source: ConfigSource::DynamicBroker,
+                is_read_only: false,
+                is_default: false,
+                is_sensitive: false,
+            }
+        };
+        if entry == Some(&expected_entry) {
+            break;
+        } else if tries >= 5 {
+            panic!("{:?} != {:?}", entry, Some(&expected_entry));
+        } else {
+            tries += 1;
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    }
+
+    let config = AlterConfig::new(broker).set("log.flush.interval.ms", orig_val);
+    let res = admin_client
+        .alter_configs(&[config], &opts)
+        .await
+        .expect("alter configs failed");
+    assert_eq!(res, &[Ok(OwnedResourceSpecifier::Broker(utils::BROKER_ID))]);
 }
