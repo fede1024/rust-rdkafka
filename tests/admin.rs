@@ -14,6 +14,7 @@ use std::time::Duration;
 #[path = "utils/mod.rs"]
 mod utils;
 
+/// Validates thast topics can be properly created.
 #[tokio::test]
 pub async fn test_topic_creation() {
     init_test_logger();
@@ -46,28 +47,8 @@ pub async fn test_topic_creation() {
     };
 }
 
-#[tokio::test]
-async fn test_topics() {
-    init_test_logger();
-
-    // Get Kafka container context.
-    let kafka_context = KafkaContext::shared()
-        .await
-        .expect("could not create kafka context");
-
-    // Create admin client
-    let admin_client = utils::admin::create_admin_client(&kafka_context.bootstrap_servers)
-        .await
-        .expect("could not create admin client");
-    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
-
-    // Create consumer client
-    let consumer_client =
-        utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers)
-            .await
-            .expect("could not create consumer client");
-}
-
+/// Verify that topics are created as specified, and that they can later
+/// be deleted.
 #[tokio::test]
 pub async fn test_topic_create_and_delete() {
     // Get Kafka container context.
