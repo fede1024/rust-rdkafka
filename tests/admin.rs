@@ -9,6 +9,7 @@ use rdkafka::admin::{
 };
 use rdkafka::error::KafkaError;
 use std::time::Duration;
+use rdkafka_sys::RDKafkaErrorCode;
 
 #[path = "utils/mod.rs"]
 mod utils;
@@ -66,43 +67,6 @@ async fn test_topics() {
             .await
             .expect("could not create consumer client");
 
-    // // Verify that incorrect replication configurations are ignored when
-    // // creating partitions.
-    // {
-    //     let name = rand_test_topic("test_topics");
-    //     let topic = NewTopic::new(&name, 1, TopicReplication::Fixed(1));
-    //
-    //     let res = admin_client
-    //         .create_topics(vec![&topic], &opts)
-    //         .await
-    //         .expect("topic creation failed");
-    //     assert_eq!(res, &[Ok(name.clone())]);
-    //     let _ = fetch_metadata(&name);
-    //
-    //     // This partition specification is obviously garbage, and so trips
-    //     // a client-side error.
-    //     let partitions = NewPartitions::new(&name, 2).assign(&[&[0], &[0], &[0]]);
-    //     let res = admin_client.create_partitions(&[partitions], &opts).await;
-    //     assert_eq!(
-    //         res,
-    //         Err(KafkaError::AdminOpCreation(format!(
-    //             "partition assignment for topic '{}' assigns 3 partition(s), \
-    //              which is more than the requested total number of partitions (2)",
-    //             name
-    //         )))
-    //     );
-    //
-    //     // Only the server knows that this partition specification is garbage.
-    //     let partitions = NewPartitions::new(&name, 2).assign(&[&[0], &[0]]);
-    //     let res = admin_client
-    //         .create_partitions(&[partitions], &opts)
-    //         .await
-    //         .expect("partition creation failed");
-    //     assert_eq!(
-    //         res,
-    //         &[Err((name, RDKafkaErrorCode::InvalidReplicaAssignment))],
-    //     );
-    // }
     //
     // // Verify that deleting a non-existent topic fails.
     // {
@@ -324,7 +288,7 @@ pub async fn test_topic_create_and_delete() {
 /// Verify that incorrect replication configurations are ignored when
 /// creating topics.
 #[tokio::test]
-pub async fn test_incorect_replication_factors_are_ignored() {
+pub async fn test_incorrect_replication_factors_are_ignored_when_creating_topics() {
     // Get Kafka container context.
     let kafka_context_result = KafkaContext::shared().await;
     let Ok(kafka_context) = kafka_context_result else {
@@ -359,4 +323,68 @@ pub async fn test_incorect_replication_factors_are_ignored() {
         )),
         res,
     )
+}
+
+/// Verify that incorrect replication configurations are ignored when
+/// creating partitions.
+#[tokio::test]
+pub async fn test_incorrect_replication_factors_are_ignored_when_creating_partitions() {
+    // Get Kafka container context.
+    let kafka_context_result = KafkaContext::shared().await;
+    let Ok(kafka_context) = kafka_context_result else {
+        panic!(
+            "could not create kafka context: {}",
+            kafka_context_result.unwrap_err()
+        );
+    };
+
+    let admin_client_result =
+        utils::admin::create_admin_client(&kafka_context.bootstrap_servers).await;
+    let Ok(admin_client) = admin_client_result else {
+        panic!(
+            "could not create admin client: {}",
+            admin_client_result.unwrap_err()
+        );
+    };
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    // Create consumer client
+    let consumer_client =
+        utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers)
+            .await
+            .expect("could not create consumer client");
+
+    let name = rand_test_topic("test_topics");
+    let topic = NewTopic::new(&name, 1, TopicReplication::Fixed(1));
+
+    let res = admin_client
+        .create_topics(vec![&topic], &opts)
+        .await
+        .expect("topic creation failed");
+    assert_eq!(res, &[Ok(name.clone())]);
+    let _ = utils::consumer::fetch_consumer_metadata(&consumer_client, &name);
+
+    // This partition specification is obviously garbage, and so trips
+    // a client-side error.
+    let partitions = NewPartitions::new(&name, 2).assign(&[&[0], &[0], &[0]]);
+    let res = admin_client.create_partitions(&[partitions], &opts).await;
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOpCreation(format!(
+            "partition assignment for topic '{}' assigns 3 partition(s), \
+                 which is more than the requested total number of partitions (2)",
+            name
+        )))
+    );
+
+    // Only the server knows that this partition specification is garbage.
+    let partitions = NewPartitions::new(&name, 2).assign(&[&[0], &[0]]);
+    let res = admin_client
+        .create_partitions(&[partitions], &opts)
+        .await
+        .expect("partition creation failed");
+    assert_eq!(
+        res,
+        &[Err((name, RDKafkaErrorCode::InvalidReplicaAssignment))],
+    );
 }

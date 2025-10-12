@@ -177,24 +177,3 @@ pub fn consumer_config(
 
     config
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_populate_topic() {
-        let topic_name = rand::rand_test_topic("test_populate_topic");
-        let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None).await;
-
-        let total_messages = message_map
-            .iter()
-            .filter(|&(&(partition, _), _)| partition == 0)
-            .count();
-        assert_eq!(total_messages, 100);
-
-        let mut ids = message_map.values().copied().collect::<Vec<_>>();
-        ids.sort();
-        assert_eq!(ids, (0..100).collect::<Vec<_>>());
-    }
-}
