@@ -3,11 +3,14 @@ use crate::utils::containers::KafkaContext;
 use crate::utils::logging::init_test_logger;
 use crate::utils::rand::rand_test_topic;
 use crate::utils::{get_broker_version, KafkaVersion};
+use backon::{BlockingRetryable, ExponentialBuilder};
 use rdkafka::admin::{
     AdminOptions, ConfigEntry, ConfigSource, NewPartitions, NewTopic, ResourceSpecifier,
     TopicReplication,
 };
 use rdkafka::error::KafkaError;
+use rdkafka::producer::{FutureRecord, Producer};
+use rdkafka::{Offset, TopicPartitionList};
 use rdkafka_sys::RDKafkaErrorCode;
 use std::time::Duration;
 
@@ -51,6 +54,8 @@ pub async fn test_topic_creation() {
 /// be deleted.
 #[tokio::test]
 pub async fn test_topic_create_and_delete() {
+    init_test_logger();
+
     // Get Kafka container context.
     let kafka_context = KafkaContext::shared()
         .await
@@ -207,6 +212,8 @@ pub async fn test_topic_create_and_delete() {
 /// creating topics.
 #[tokio::test]
 pub async fn test_incorrect_replication_factors_are_ignored_when_creating_topics() {
+    init_test_logger();
+
     // Get Kafka container context.
     let kafka_context_result = KafkaContext::shared().await;
     let Ok(kafka_context) = kafka_context_result else {
@@ -215,7 +222,6 @@ pub async fn test_incorrect_replication_factors_are_ignored_when_creating_topics
             kafka_context_result.unwrap_err()
         );
     };
-    let test_topic_name = rand_test_topic("testing-topic");
 
     let admin_client_result =
         utils::admin::create_admin_client(&kafka_context.bootstrap_servers).await;
@@ -247,6 +253,8 @@ pub async fn test_incorrect_replication_factors_are_ignored_when_creating_topics
 /// creating partitions.
 #[tokio::test]
 pub async fn test_incorrect_replication_factors_are_ignored_when_creating_partitions() {
+    init_test_logger();
+
     // Get Kafka container context.
     let kafka_context_result = KafkaContext::shared().await;
     let Ok(kafka_context) = kafka_context_result else {
@@ -310,6 +318,8 @@ pub async fn test_incorrect_replication_factors_are_ignored_when_creating_partit
 /// Verify that deleting a non-existent topic fails.
 #[tokio::test]
 pub async fn test_delete_nonexistent_topics() {
+    init_test_logger();
+
     // Get Kafka container context.
     let kafka_context = KafkaContext::shared()
         .await
@@ -336,6 +346,8 @@ pub async fn test_delete_nonexistent_topics() {
 /// failing operators.
 #[tokio::test]
 pub async fn test_mixed_success_results() {
+    init_test_logger();
+
     // Get Kafka container context.
     let kafka_context = KafkaContext::shared()
         .await
@@ -400,4 +412,132 @@ pub async fn test_mixed_success_results() {
             Err((name1.clone(), RDKafkaErrorCode::UnknownTopicOrPartition))
         ]
     );
+}
+
+/// Test the admin client's delete records functionality.
+#[tokio::test]
+async fn test_delete_records() {
+    init_test_logger();
+
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    // Create admin client
+    let admin_client = utils::admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create admin client");
+
+    // Create producer client
+    let producer_client =
+        utils::producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+            .await
+            .expect("could not create producer_client");
+
+    let timeout = Some(Duration::from_secs(1));
+    let opts = AdminOptions::new().operation_timeout(timeout);
+    let topic = rand_test_topic("test_delete_records");
+    let make_record = || FutureRecord::<str, str>::to(&topic).payload("data");
+
+    // Create a topic with a single partition.
+    admin_client
+        .create_topics(
+            &[NewTopic::new(&topic, 1, TopicReplication::Fixed(1))],
+            &opts,
+        )
+        .await
+        .expect("topic creation failed");
+
+    // Ensure that the topic begins with low and high water marks of 0.
+    let (lo, hi) = (|| {
+        producer_client
+            .client()
+            .fetch_watermarks(&topic, 0, timeout)
+    })
+    .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
+    .call()
+    .unwrap();
+    assert_eq!(lo, 0);
+    assert_eq!(hi, 0);
+
+    // Produce five messages to the topic.
+    for _ in 0..5 {
+        producer_client.send(make_record(), timeout).await.unwrap();
+    }
+
+    // Ensure that the high water mark has advanced to 5.
+    let (lo, hi) = producer_client
+        .client()
+        .fetch_watermarks(&topic, 0, timeout)
+        .unwrap();
+    assert_eq!(lo, 0);
+    assert_eq!(hi, 5);
+
+    // Delete the record at offset 0.
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic, 0, Offset::Offset(1))
+        .unwrap();
+    let res_tpl = admin_client.delete_records(&tpl, &opts).await.unwrap();
+    assert_eq!(res_tpl.count(), 1);
+    assert_eq!(res_tpl.elements()[0].topic(), topic);
+    assert_eq!(res_tpl.elements()[0].partition(), 0);
+    assert_eq!(res_tpl.elements()[0].offset(), Offset::Offset(1));
+    assert_eq!(res_tpl.elements()[0].error(), Ok(()));
+
+    // Ensure that the low water mark has advanced to 1.
+    let (lo, hi) = producer_client
+        .client()
+        .fetch_watermarks(&topic, 0, timeout)
+        .unwrap();
+    assert_eq!(lo, 1);
+    assert_eq!(hi, 5);
+
+    // Delete the record at offset 1 and also include an invalid partition in
+    // the request. The invalid partition should not cause the request to fail,
+    // but we should be able to see the per-partition error in the returned
+    // topic partition list.
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic, 0, Offset::Offset(2))
+        .unwrap();
+    tpl.add_partition_offset(&topic, 1, Offset::Offset(1))
+        .unwrap();
+    let res_tpl = admin_client.delete_records(&tpl, &opts).await.unwrap();
+    assert_eq!(res_tpl.count(), 2);
+    assert_eq!(res_tpl.elements()[0].topic(), topic);
+    assert_eq!(res_tpl.elements()[0].partition(), 0);
+    assert_eq!(res_tpl.elements()[0].offset(), Offset::Offset(2));
+    assert_eq!(res_tpl.elements()[0].error(), Ok(()));
+    assert_eq!(res_tpl.elements()[1].topic(), topic);
+    assert_eq!(res_tpl.elements()[1].partition(), 1);
+    assert_eq!(
+        res_tpl.elements()[1].error(),
+        Err(KafkaError::OffsetFetch(RDKafkaErrorCode::UnknownPartition))
+    );
+
+    // Ensure that the low water mark has advanced to 2.
+    let (lo, hi) = producer_client
+        .client()
+        .fetch_watermarks(&topic, 0, timeout)
+        .unwrap();
+    assert_eq!(lo, 2);
+    assert_eq!(hi, 5);
+
+    // Delete all records up to offset 5.
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic, 0, Offset::End).unwrap();
+    let res_tpl = admin_client.delete_records(&tpl, &opts).await.unwrap();
+    assert_eq!(res_tpl.count(), 1);
+    assert_eq!(res_tpl.elements()[0].topic(), topic);
+    assert_eq!(res_tpl.elements()[0].partition(), 0);
+    assert_eq!(res_tpl.elements()[0].offset(), Offset::Offset(5));
+    assert_eq!(res_tpl.elements()[0].error(), Ok(()));
+
+    // Ensure that the low water mark has advanced to 5.
+    let (lo, hi) = producer_client
+        .client()
+        .fetch_watermarks(&topic, 0, timeout)
+        .unwrap();
+    assert_eq!(lo, 5);
+    assert_eq!(hi, 5);
 }
