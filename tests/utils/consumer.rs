@@ -1,4 +1,3 @@
-use crate::utils::consumer;
 use crate::utils::rand::rand_test_group;
 use anyhow::{bail, Context};
 use backon::{BlockingRetryable, ExponentialBuilder};

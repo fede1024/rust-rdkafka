@@ -8,8 +8,8 @@ use rdkafka::admin::{
     TopicReplication,
 };
 use rdkafka::error::KafkaError;
-use std::time::Duration;
 use rdkafka_sys::RDKafkaErrorCode;
+use std::time::Duration;
 
 #[path = "utils/mod.rs"]
 mod utils;
@@ -66,69 +66,6 @@ async fn test_topics() {
         utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers)
             .await
             .expect("could not create consumer client");
-
-    //
-    // // Verify that deleting a non-existent topic fails.
-    // {
-    //     let name = rand_test_topic("test_topics");
-    //     let res = admin_client
-    //         .delete_topics(&[&name], &opts)
-    //         .await
-    //         .expect("delete topics failed");
-    //     assert_eq!(
-    //         res,
-    //         &[Err((name, RDKafkaErrorCode::UnknownTopicOrPartition))]
-    //     );
-    // }
-    //
-    // // Verify that mixed-success operations properly report the successful and
-    // // failing operators.
-    // {
-    //     let name1 = rand_test_topic("test_topics");
-    //     let name2 = rand_test_topic("test_topics");
-    //
-    //     let topic1 = NewTopic::new(&name1, 1, TopicReplication::Fixed(1));
-    //     let topic2 = NewTopic::new(&name2, 1, TopicReplication::Fixed(1));
-    //
-    //     let res = admin_client
-    //         .create_topics(vec![&topic1], &opts)
-    //         .await
-    //         .expect("topic creation failed");
-    //     assert_eq!(res, &[Ok(name1.clone())]);
-    //     let _ = fetch_metadata(&name1);
-    //
-    //     let res = admin_client
-    //         .create_topics(vec![&topic1, &topic2], &opts)
-    //         .await
-    //         .expect("topic creation failed");
-    //     assert_eq!(
-    //         res,
-    //         &[
-    //             Err((name1.clone(), RDKafkaErrorCode::TopicAlreadyExists)),
-    //             Ok(name2.clone())
-    //         ]
-    //     );
-    //     let _ = fetch_metadata(&name2);
-    //
-    //     let res = admin_client
-    //         .delete_topics(&[&name1], &opts)
-    //         .await
-    //         .expect("topic deletion failed");
-    //     assert_eq!(res, &[Ok(name1.clone())]);
-    //     verify_delete(&name1);
-    //
-    //     let res = admin_client
-    //         .delete_topics(&[&name2, &name1], &opts)
-    //         .await
-    //         .expect("topic deletion failed");
-    //     assert_eq!(
-    //         res,
-    //         &[
-    //             Ok(name2.clone()),
-    //             Err((name1.clone(), RDKafkaErrorCode::UnknownTopicOrPartition))
-    //         ]
-    //     );
-    // }
 }
 
 #[tokio::test]
@@ -386,5 +323,100 @@ pub async fn test_incorrect_replication_factors_are_ignored_when_creating_partit
     assert_eq!(
         res,
         &[Err((name, RDKafkaErrorCode::InvalidReplicaAssignment))],
+    );
+}
+
+/// Verify that deleting a non-existent topic fails.
+#[tokio::test]
+pub async fn test_delete_nonexistent_topics() {
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    // Create admin client
+    let admin_client = utils::admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create admin client");
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let name = rand_test_topic("test_topics");
+    let res = admin_client
+        .delete_topics(&[&name], &opts)
+        .await
+        .expect("delete topics failed");
+    assert_eq!(
+        res,
+        &[Err((name, RDKafkaErrorCode::UnknownTopicOrPartition))]
+    );
+}
+
+/// Verify that mixed-success operations properly report the successful and
+/// failing operators.
+#[tokio::test]
+pub async fn test_mixed_success_results() {
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    // Create admin client
+    let admin_client = utils::admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create admin client");
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    // Create consumer client
+    let consumer_client =
+        utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers)
+            .await
+            .expect("could not create consumer client");
+
+    let name1 = rand_test_topic("test_topics");
+    let name2 = rand_test_topic("test_topics");
+
+    let topic1 = NewTopic::new(&name1, 1, TopicReplication::Fixed(1));
+    let topic2 = NewTopic::new(&name2, 1, TopicReplication::Fixed(1));
+
+    let res = admin_client
+        .create_topics(vec![&topic1], &opts)
+        .await
+        .expect("topic creation failed");
+    assert_eq!(res, &[Ok(name1.clone())]);
+    let _ = utils::consumer::fetch_consumer_metadata(&consumer_client, &name1)
+        .expect(&format!("could not fetch consumer metadata for {}", name1));
+
+    let res = admin_client
+        .create_topics(vec![&topic1, &topic2], &opts)
+        .await
+        .expect("topic creation failed");
+    assert_eq!(
+        res,
+        &[
+            Err((name1.clone(), RDKafkaErrorCode::TopicAlreadyExists)),
+            Ok(name2.clone())
+        ]
+    );
+    let _ = utils::consumer::fetch_consumer_metadata(&consumer_client, &name2)
+        .expect(&format!("could not fetch consumer metadata for {}", name2));
+
+    let res = admin_client
+        .delete_topics(&[&name1], &opts)
+        .await
+        .expect("topic deletion failed");
+    assert_eq!(res, &[Ok(name1.clone())]);
+    utils::consumer::verify_topic_deleted(&consumer_client, &name1)
+        .expect(&format!("could not verify topic \"{}\" was deleted", name1));
+
+    let res = admin_client
+        .delete_topics(&[&name2, &name1], &opts)
+        .await
+        .expect("topic deletion failed");
+    assert_eq!(
+        res,
+        &[
+            Ok(name2.clone()),
+            Err((name1.clone(), RDKafkaErrorCode::UnknownTopicOrPartition))
+        ]
     );
 }
