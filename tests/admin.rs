@@ -7,6 +7,7 @@ use rdkafka::admin::{
     AdminOptions, ConfigEntry, ConfigSource, NewPartitions, NewTopic, ResourceSpecifier,
     TopicReplication,
 };
+use rdkafka::error::KafkaError;
 use std::time::Duration;
 
 #[path = "utils/mod.rs"]
@@ -65,21 +66,6 @@ async fn test_topics() {
             .await
             .expect("could not create consumer client");
 
-    // // Verify that incorrect replication configurations are ignored when
-    // // creating topics.
-    // {
-    //     let topic = NewTopic::new("ignored", 1, TopicReplication::Variable(&[&[0], &[0]]));
-    //     let res = admin_client.create_topics(&[topic], &opts).await;
-    //     assert_eq!(
-    //         Err(KafkaError::AdminOpCreation(
-    //             "replication configuration for topic 'ignored' assigns 2 partition(s), \
-    //              which does not match the specified number of partitions (1)"
-    //                 .into()
-    //         )),
-    //         res,
-    //     )
-    // }
-    //
     // // Verify that incorrect replication configurations are ignored when
     // // creating partitions.
     // {
@@ -207,7 +193,11 @@ pub async fn test_topic_create_and_delete() {
     let topic2 = NewTopic {
         name: &topic_name_2,
         num_partitions: 3,
-        replication: TopicReplication::Variable(&[&[1], &[1], &[1]]),
+        replication: TopicReplication::Variable(&[
+            &[utils::BROKER_ID],
+            &[utils::BROKER_ID],
+            &[utils::BROKER_ID],
+        ]),
         config: Vec::new(),
     };
 
@@ -329,4 +319,44 @@ pub async fn test_topic_create_and_delete() {
         .expect(&format!("could not delete topic for {}", &topic_name_1));
     utils::consumer::verify_topic_deleted(&consumer_client, &topic_name_2)
         .expect(&format!("could not delete topic for {}", &topic_name_2));
+}
+
+/// Verify that incorrect replication configurations are ignored when
+/// creating topics.
+#[tokio::test]
+pub async fn test_incorect_replication_factors_are_ignored() {
+    // Get Kafka container context.
+    let kafka_context_result = KafkaContext::shared().await;
+    let Ok(kafka_context) = kafka_context_result else {
+        panic!(
+            "could not create kafka context: {}",
+            kafka_context_result.unwrap_err()
+        );
+    };
+    let test_topic_name = rand_test_topic("testing-topic");
+
+    let admin_client_result =
+        utils::admin::create_admin_client(&kafka_context.bootstrap_servers).await;
+    let Ok(admin_client) = admin_client_result else {
+        panic!(
+            "could not create admin client: {}",
+            admin_client_result.unwrap_err()
+        );
+    };
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    let topic = NewTopic::new(
+        "ignored",
+        1,
+        TopicReplication::Variable(&[&[utils::BROKER_ID], &[utils::BROKER_ID]]),
+    );
+    let res = admin_client.create_topics(&[topic], &opts).await;
+    assert_eq!(
+        Err(KafkaError::AdminOpCreation(
+            "replication configuration for topic 'ignored' assigns 2 partition(s), \
+                 which does not match the specified number of partitions (1)"
+                .into()
+        )),
+        res,
+    )
 }
