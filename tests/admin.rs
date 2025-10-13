@@ -4,15 +4,13 @@ use crate::utils::logging::init_test_logger;
 use crate::utils::rand::{rand_test_group, rand_test_topic};
 use crate::utils::{get_broker_version, KafkaVersion};
 use backon::{BlockingRetryable, ExponentialBuilder};
-use rdkafka::admin::{
-    AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult, NewPartitions, NewTopic,
-    OwnedResourceSpecifier, ResourceSpecifier, TopicReplication,
-};
+use rdkafka::admin::{AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult, NewPartitions, NewTopic, OwnedResourceSpecifier, ResourceSpecifier, TopicReplication};
 use rdkafka::error::KafkaError;
 use rdkafka::producer::{FutureRecord, Producer};
-use rdkafka::{Offset, TopicPartitionList};
+use rdkafka::{ClientConfig, Offset, TopicPartitionList};
 use rdkafka_sys::RDKafkaErrorCode;
 use std::time::Duration;
+use rdkafka::client::DefaultClientContext;
 
 #[path = "utils/mod.rs"]
 mod utils;
@@ -624,18 +622,48 @@ async fn test_configs() {
     assert_eq!(res, &[Ok(OwnedResourceSpecifier::Broker(utils::BROKER_ID))]);
 }
 
+/// Tests whether each admin operation properly reports an error if the entire
+/// request fails. The original implementations failed to check this, resulting
+/// in confusing situations where a failed admin request would return Ok([]).
 #[tokio::test]
-async fn test_groups() {
-    init_test_logger();
+async fn test_event_errors() {
+    // Configure an admin client to target a Kafka server that doesn't exist,
+    // then set an impossible timeout. This will ensure that every request fails
+    // with an OperationTimedOut error, assuming, of course, that the request
+    // passes client-side validation.
+    let admin_client = ClientConfig::new()
+        .set("bootstrap.servers", "noexist")
+        .create::<AdminClient<DefaultClientContext>>()
+        .expect("admin client creation failed");
+    let opts = AdminOptions::new().request_timeout(Some(Duration::from_nanos(1)));
 
-    // Get Kafka container context.
-    let kafka_context = KafkaContext::shared()
-        .await
-        .expect("could not create kafka context");
+    let res = admin_client.create_topics(&[], &opts).await;
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
+    );
 
-    // Create admin client
-    let admin_client = utils::admin::create_admin_client(&kafka_context.bootstrap_servers)
-        .await
-        .expect("could not create admin client");
-    let opts = AdminOptions::new();
+    let res = admin_client.create_partitions(&[], &opts).await;
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
+    );
+
+    let res = admin_client.delete_topics(&[], &opts).await;
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
+    );
+
+    let res = admin_client.describe_configs(&[], &opts).await;
+    assert_eq!(
+        res.err(),
+        Some(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
+    );
+
+    let res = admin_client.alter_configs(&[], &opts).await;
+    assert_eq!(
+        res,
+        Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
+    );
 }

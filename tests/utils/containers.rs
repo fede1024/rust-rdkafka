@@ -4,7 +4,7 @@ use std::sync::Arc;
 use testcontainers_modules::kafka::apache::Kafka;
 use testcontainers_modules::testcontainers::core::ContainerPort;
 use testcontainers_modules::testcontainers::runners::AsyncRunner;
-use testcontainers_modules::testcontainers::{ContainerAsync, Image};
+use testcontainers_modules::testcontainers::{ContainerAsync, Image, ImageExt};
 use tokio::sync::OnceCell;
 
 pub struct KafkaContext {
