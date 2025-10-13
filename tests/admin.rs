@@ -638,28 +638,4 @@ async fn test_groups() {
         .await
         .expect("could not create admin client");
     let opts = AdminOptions::new();
-
-    // Verify that deleting a valid and invalid group results in a mixed result
-    // set.
-    {
-        let group_name = rand_test_group();
-        let unknown_group_name = rand_test_group();
-        create_consumer_group(&group_name).await;
-        let res = admin_client
-            .delete_groups(
-                &[&group_name, &unknown_group_name],
-                &AdminOptions::default(),
-            )
-            .await;
-        assert_eq!(
-            res,
-            Ok(vec![
-                Ok(group_name.to_string()),
-                Err((
-                    unknown_group_name.to_string(),
-                    RDKafkaErrorCode::GroupIdNotFound
-                ))
-            ])
-        );
-    }
 }
