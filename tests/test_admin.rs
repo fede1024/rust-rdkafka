@@ -119,56 +119,6 @@ fn verify_delete(topic: &str) {
     .unwrap()
 }
 
-#[tokio::test]
-async fn test_groups() {
-    let admin_client = create_admin_client();
-
-    // Verify that a valid group can be deleted.
-    {
-        let group_name = rand_test_group();
-        create_consumer_group(&group_name).await;
-        let res = admin_client
-            .delete_groups(&[&group_name], &AdminOptions::default())
-            .await;
-        assert_eq!(res, Ok(vec![Ok(group_name.to_string())]));
-    }
-
-    // Verify that attempting to delete an unknown group returns a "group not
-    // found" error.
-    {
-        let unknown_group_name = rand_test_group();
-        let res = admin_client
-            .delete_groups(&[&unknown_group_name], &AdminOptions::default())
-            .await;
-        let expected: GroupResult = Err((unknown_group_name, RDKafkaErrorCode::GroupIdNotFound));
-        assert_eq!(res, Ok(vec![expected]));
-    }
-
-    // Verify that deleting a valid and invalid group results in a mixed result
-    // set.
-    {
-        let group_name = rand_test_group();
-        let unknown_group_name = rand_test_group();
-        create_consumer_group(&group_name).await;
-        let res = admin_client
-            .delete_groups(
-                &[&group_name, &unknown_group_name],
-                &AdminOptions::default(),
-            )
-            .await;
-        assert_eq!(
-            res,
-            Ok(vec![
-                Ok(group_name.to_string()),
-                Err((
-                    unknown_group_name.to_string(),
-                    RDKafkaErrorCode::GroupIdNotFound
-                ))
-            ])
-        );
-    }
-}
-
 // Tests whether each admin operation properly reports an error if the entire
 // request fails. The original implementations failed to check this, resulting
 // in confusing situations where a failed admin request would return Ok([]).

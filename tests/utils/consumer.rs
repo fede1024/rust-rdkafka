@@ -2,17 +2,19 @@ use crate::utils::rand::rand_test_group;
 use anyhow::{bail, Context};
 use backon::{BlockingRetryable, ExponentialBuilder};
 use rdkafka::config::FromClientConfig;
-use rdkafka::consumer::{BaseConsumer, Consumer};
+use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer};
 use rdkafka::message::BorrowedMessage;
 use rdkafka::metadata::Metadata;
-use rdkafka::ClientConfig;
+use rdkafka::{ClientConfig, TopicPartitionList};
 use std::time::Duration;
 
 pub async fn create_subscribed_base_consumer(
     bootstrap_servers: &str,
+    consumer_group_option: Option<&str>,
     test_topic: &str,
 ) -> anyhow::Result<BaseConsumer> {
-    let unsubscribed_base_consumer = create_unsubscribed_base_consumer(bootstrap_servers).await?;
+    let unsubscribed_base_consumer =
+        create_unsubscribed_base_consumer(bootstrap_servers, consumer_group_option).await?;
     unsubscribed_base_consumer
         .subscribe(&[test_topic])
         .context("Failed to subscribe to topic")?;
@@ -21,9 +23,14 @@ pub async fn create_subscribed_base_consumer(
 
 pub async fn create_unsubscribed_base_consumer(
     bootstrap_servers: &str,
+    consumer_group_option: Option<&str>,
 ) -> anyhow::Result<BaseConsumer> {
+    let consumer_group_name = match consumer_group_option {
+        Some(consumer_group_name) => consumer_group_name,
+        None => &rand_test_group(),
+    };
     let mut consumer_client_config = ClientConfig::default();
-    consumer_client_config.set("group.id", rand_test_group());
+    consumer_client_config.set("group.id", consumer_group_name);
     consumer_client_config.set("client.id", "rdkafka_integration_test_client");
     consumer_client_config.set("bootstrap.servers", bootstrap_servers);
     consumer_client_config.set("enable.partition.eof", "false");
@@ -96,4 +103,28 @@ pub fn verify_topic_deleted(consumer: &BaseConsumer, topic: &str) -> anyhow::Res
     })
     .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
     .call()
+}
+
+pub async fn create_consumer_group_on_topic(
+    consumer_client: &BaseConsumer,
+    topic_name: &str,
+) -> anyhow::Result<()> {
+    let topic_partition_list = {
+        let mut lst = TopicPartitionList::new();
+        lst.add_partition(topic_name, 0);
+        lst
+    };
+    consumer_client
+        .assign(&topic_partition_list)
+        .context("assign topic partition list failed")?;
+    consumer_client
+        .fetch_metadata(None, Duration::from_secs(3))
+        .context("unable to fetch metadata")?;
+    (|| consumer_client.store_offset(topic_name, 0, -1))
+        .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
+        .call()
+        .context("store offset failed")?;
+    consumer_client
+        .commit_consumer_state(CommitMode::Sync)
+        .context("commit the consumer state failed")
 }

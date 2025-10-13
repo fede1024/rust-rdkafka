@@ -1,11 +1,11 @@
 use crate::utils::admin::create_topic;
 use crate::utils::containers::KafkaContext;
 use crate::utils::logging::init_test_logger;
-use crate::utils::rand::rand_test_topic;
+use crate::utils::rand::{rand_test_group, rand_test_topic};
 use crate::utils::{get_broker_version, KafkaVersion};
 use backon::{BlockingRetryable, ExponentialBuilder};
 use rdkafka::admin::{
-    AdminOptions, AlterConfig, ConfigEntry, ConfigSource, NewPartitions, NewTopic,
+    AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult, NewPartitions, NewTopic,
     OwnedResourceSpecifier, ResourceSpecifier, TopicReplication,
 };
 use rdkafka::error::KafkaError;
@@ -69,7 +69,7 @@ pub async fn test_topic_create_and_delete() {
 
     // Create consumer client
     let consumer_client =
-        utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers)
+        utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers, None)
             .await
             .expect("could not create consumer client");
 
@@ -276,7 +276,7 @@ pub async fn test_incorrect_replication_factors_are_ignored_when_creating_partit
 
     // Create consumer client
     let consumer_client =
-        utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers)
+        utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers, None)
             .await
             .expect("could not create consumer client");
 
@@ -361,7 +361,7 @@ pub async fn test_mixed_success_results() {
 
     // Create consumer client
     let consumer_client =
-        utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers)
+        utils::consumer::create_unsubscribed_base_consumer(&kafka_context.bootstrap_servers, None)
             .await
             .expect("could not create consumer client");
 
@@ -622,4 +622,44 @@ async fn test_configs() {
         .await
         .expect("alter configs failed");
     assert_eq!(res, &[Ok(OwnedResourceSpecifier::Broker(utils::BROKER_ID))]);
+}
+
+#[tokio::test]
+async fn test_groups() {
+    init_test_logger();
+
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    // Create admin client
+    let admin_client = utils::admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create admin client");
+    let opts = AdminOptions::new();
+
+    // Verify that deleting a valid and invalid group results in a mixed result
+    // set.
+    {
+        let group_name = rand_test_group();
+        let unknown_group_name = rand_test_group();
+        create_consumer_group(&group_name).await;
+        let res = admin_client
+            .delete_groups(
+                &[&group_name, &unknown_group_name],
+                &AdminOptions::default(),
+            )
+            .await;
+        assert_eq!(
+            res,
+            Ok(vec![
+                Ok(group_name.to_string()),
+                Err((
+                    unknown_group_name.to_string(),
+                    RDKafkaErrorCode::GroupIdNotFound
+                ))
+            ])
+        );
+    }
 }

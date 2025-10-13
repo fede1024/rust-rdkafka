@@ -39,7 +39,8 @@ pub async fn test_basic_produce() {
     }
 
     let consumer_result =
-        create_subscribed_base_consumer(&kafka_context.bootstrap_servers, &test_topic_name).await;
+        create_subscribed_base_consumer(&kafka_context.bootstrap_servers, None, &test_topic_name)
+            .await;
     let Ok(consumer) = consumer_result else {
         panic!(
             "could not create consumer: {}",
