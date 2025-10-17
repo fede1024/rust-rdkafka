@@ -17,7 +17,7 @@ pub async fn create_topic(
     topic_name: &'_ str,
 ) -> anyhow::Result<String> {
     let topic_results = admin_client
-        .create_topics(&new_topic_vec(&topic_name), &AdminOptions::default())
+        .create_topics(&new_topic_vec(&topic_name, None), &AdminOptions::default())
         .await
         .context("error creating topics")?;
     for topic_result in topic_results {
@@ -28,7 +28,7 @@ pub async fn create_topic(
     Ok(topic_name.to_string())
 }
 
-pub fn new_topic_vec(topic_name: &'_ str) -> Vec<NewTopic<'_>> {
-    let new_topic = NewTopic::new(&topic_name, 1, TopicReplication::Fixed(1));
+pub fn new_topic_vec(topic_name: &'_ str, num_partitions: Option<i32>) -> Vec<NewTopic<'_>> {
+    let new_topic = NewTopic::new(&topic_name, num_partitions.unwrap_or(1), TopicReplication::Fixed(1));
     vec![new_topic]
 }

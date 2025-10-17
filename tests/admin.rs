@@ -4,13 +4,16 @@ use crate::utils::logging::init_test_logger;
 use crate::utils::rand::{rand_test_group, rand_test_topic};
 use crate::utils::{get_broker_version, KafkaVersion};
 use backon::{BlockingRetryable, ExponentialBuilder};
-use rdkafka::admin::{AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult, NewPartitions, NewTopic, OwnedResourceSpecifier, ResourceSpecifier, TopicReplication};
+use rdkafka::admin::{
+    AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult, NewPartitions,
+    NewTopic, OwnedResourceSpecifier, ResourceSpecifier, TopicReplication,
+};
+use rdkafka::client::DefaultClientContext;
 use rdkafka::error::KafkaError;
 use rdkafka::producer::{FutureRecord, Producer};
 use rdkafka::{ClientConfig, Offset, TopicPartitionList};
 use rdkafka_sys::RDKafkaErrorCode;
 use std::time::Duration;
-use rdkafka::client::DefaultClientContext;
 
 #[path = "utils/mod.rs"]
 mod utils;

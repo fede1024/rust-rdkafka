@@ -6,6 +6,7 @@ pub mod containers;
 pub mod logging;
 pub mod producer;
 pub mod rand;
+pub mod topics;
 
 use std::collections::HashMap;
 use std::env::{self};
