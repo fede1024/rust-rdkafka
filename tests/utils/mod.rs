@@ -129,6 +129,75 @@ where
     message_map
 }
 
+pub async fn produce_messages_with_timestamp(
+    producer: &FutureProducer,
+    topic_name: &str,
+    count: usize,
+    partition: i32,
+    timestamp: i64,
+) -> HashMap<(i32, i64), i32> {
+    produce_messages(
+        producer,
+        topic_name,
+        count,
+        Some(partition),
+        Some(timestamp),
+    )
+    .await
+}
+
+pub async fn produce_messages_to_partition(
+    producer: &FutureProducer,
+    topic_name: &str,
+    count: usize,
+    partition: i32,
+) -> HashMap<(i32, i64), i32> {
+    produce_messages(producer, topic_name, count, Some(partition), None).await
+}
+
+pub async fn produce_messages(
+    producer: &FutureProducer,
+    topic_name: &str,
+    count: usize,
+    partition: Option<i32>,
+    timestamp: Option<i64>,
+) -> HashMap<(i32, i64), i32> {
+    let mut inflight = Vec::with_capacity(count);
+
+    for idx in 0..count {
+        let id = idx as i32;
+        let payload = value_fn(id);
+        let key = key_fn(id);
+        let mut record = FutureRecord::to(topic_name).payload(&payload).key(&key);
+        if let Some(partition) = partition {
+            record = record.partition(partition);
+        }
+        if let Some(timestamp) = timestamp {
+            record = record.timestamp(timestamp);
+        }
+        let delivery_future = producer
+            .send_result(record)
+            .expect("failed to enqueue message");
+        inflight.push((id, payload, key, delivery_future));
+    }
+
+    let mut message_map = HashMap::new();
+
+    for (id, _payload, _key, delivery_future) in inflight {
+        match delivery_future
+            .await
+            .expect("producer unexpectedly dropped")
+        {
+            Ok(delivery) => {
+                message_map.insert((delivery.partition, delivery.offset), id);
+            }
+            Err((error, _message)) => panic!("Delivery failed: {}", error),
+        };
+    }
+
+    message_map
+}
+
 pub fn value_fn(id: i32) -> String {
     format!("Message {}", id)
 }

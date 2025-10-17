@@ -29,6 +29,10 @@ pub async fn create_topic(
 }
 
 pub fn new_topic_vec(topic_name: &'_ str, num_partitions: Option<i32>) -> Vec<NewTopic<'_>> {
-    let new_topic = NewTopic::new(&topic_name, num_partitions.unwrap_or(1), TopicReplication::Fixed(1));
+    let new_topic = NewTopic::new(
+        &topic_name,
+        num_partitions.unwrap_or(1),
+        TopicReplication::Fixed(1),
+    );
     vec![new_topic]
 }
