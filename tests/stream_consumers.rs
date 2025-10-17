@@ -335,45 +335,88 @@ async fn test_produce_consume_base_unassign() {
     assert_eq!(assignments.count(), 0);
 }
 
-// #[tokio::test(flavor = "multi_thread")]
-// async fn test_produce_consume_base_incremental_assign_and_unassign() {
-//     let _r = env_logger::try_init();
-//
-//     let topic_name = rand_test_topic("test_produce_consume_base_incremental_assign_and_unassign");
-//     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
-//     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None).await;
-//     populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None).await;
-//     let consumer = create_stream_consumer(&rand_test_group(), None);
-//
-//     // Adding a simple partition
-//     let mut tpl = TopicPartitionList::new();
-//     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
-//         .unwrap();
-//     consumer.incremental_assign(&tpl).unwrap();
-//     let mut assignments = consumer.assignment().unwrap();
-//     assert_eq!(assignments.count(), 1);
-//
-//     // Adding another partition
-//     let mut tpl = TopicPartitionList::new();
-//     tpl.add_partition_offset(&topic_name, 1, Offset::Beginning)
-//         .unwrap();
-//     consumer.incremental_assign(&tpl).unwrap();
-//     assignments = consumer.assignment().unwrap();
-//     assert_eq!(assignments.count(), 2);
-//
-//     // Removing one partition
-//     consumer.incremental_unassign(&tpl).unwrap();
-//     assignments = consumer.assignment().unwrap();
-//     assert_eq!(assignments.count(), 1);
-//
-//     // unassigning an non assigned partition should fail
-//     let err = consumer.incremental_unassign(&tpl);
-//
-//     assert_eq!(
-//         err,
-//         Err(KafkaError::Subscription("_INVALID_ARG".to_string()))
-//     )
-// }
+#[tokio::test(flavor = "multi_thread")]
+async fn test_produce_consume_base_incremental_assign_and_unassign() {
+    init_test_logger();
+
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    let topic_name = rand_test_topic("test_produce_consume_base_incremental_assign_and_unassign");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client.create_topics(&new_topic_vec(&topic_name, Some(3)), &AdminOptions::default()).await.expect("could not create topics");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+
+    let consumer = utils::consumer::stream_consumer::create_stream_consumer(
+        &kafka_context.bootstrap_servers,
+        Some(&rand_test_group()),
+    )
+        .await
+        .expect("could not create stream consumer");
+
+    let num_of_messages_to_send = 10usize;
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(0),
+    )
+        .await
+        .expect("Could not populate topic using Future producer");
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(1),
+    )
+        .await
+        .expect("Could not populate topic using Future producer");
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(2),
+    )
+        .await
+        .expect("Could not populate topic using Future producer");
+
+
+    // Adding a simple partition
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
+        .unwrap();
+    consumer.incremental_assign(&tpl).unwrap();
+    let mut assignments = consumer.assignment().unwrap();
+    assert_eq!(assignments.count(), 1);
+
+    // Adding another partition
+    let mut tpl = TopicPartitionList::new();
+    tpl.add_partition_offset(&topic_name, 1, Offset::Beginning)
+        .unwrap();
+    consumer.incremental_assign(&tpl).unwrap();
+    assignments = consumer.assignment().unwrap();
+    assert_eq!(assignments.count(), 2);
+
+    // Removing one partition
+    consumer.incremental_unassign(&tpl).unwrap();
+    assignments = consumer.assignment().unwrap();
+    assert_eq!(assignments.count(), 1);
+
+    // unassigning an non assigned partition should fail
+    let err = consumer.incremental_unassign(&tpl);
+
+    assert_eq!(
+        err,
+        Err(KafkaError::Subscription("_INVALID_ARG".to_string()))
+    )
+}
 //
 // // All produced messages should be consumed.
 // #[tokio::test(flavor = "multi_thread")]
