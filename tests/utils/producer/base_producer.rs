@@ -1,6 +1,8 @@
 use anyhow::{bail, Context};
-use rdkafka::config::FromClientConfig;
-use rdkafka::producer::{BaseProducer, BaseRecord, Producer};
+use rdkafka::config::{FromClientConfig, FromClientConfigAndContext};
+use rdkafka::producer::{
+    BaseProducer, BaseRecord, Partitioner, Producer, ProducerContext, ThreadedProducer,
+};
 use rdkafka::util::Timeout;
 use rdkafka::ClientConfig;
 use std::time::Duration;
@@ -27,6 +29,48 @@ pub fn create_base_producer(config: &ClientConfig) -> anyhow::Result<BaseProduce
         )
     };
     Ok(base_producer)
+}
+
+pub fn create_base_producer_with_context<C, Part>(
+    bootstrap_servers: &str,
+    context: C,
+    config_overrides: &[(&str, &str)],
+) -> anyhow::Result<BaseProducer<C, Part>>
+where
+    C: ProducerContext<Part>,
+    Part: Partitioner,
+{
+    let mut producer_client_config = ClientConfig::default();
+    producer_client_config.set("bootstrap.servers", bootstrap_servers);
+    producer_client_config.set("message.timeout.ms", "5000");
+
+    for (key, value) in config_overrides {
+        producer_client_config.set(*key, *value);
+    }
+
+    BaseProducer::from_config_and_context(&producer_client_config, context)
+        .context("error creating base producer with context")
+}
+
+pub fn create_threaded_producer_with_context<C, Part>(
+    bootstrap_servers: &str,
+    context: C,
+    config_overrides: &[(&str, &str)],
+) -> anyhow::Result<ThreadedProducer<C, Part>>
+where
+    C: ProducerContext<Part>,
+    Part: Partitioner + Send + Sync + 'static,
+{
+    let mut producer_client_config = ClientConfig::default();
+    producer_client_config.set("bootstrap.servers", bootstrap_servers);
+    producer_client_config.set("message.timeout.ms", "5000");
+
+    for (key, value) in config_overrides {
+        producer_client_config.set(*key, *value);
+    }
+
+    ThreadedProducer::from_config_and_context(&producer_client_config, context)
+        .context("error creating threaded producer with context")
 }
 
 pub async fn send_record(

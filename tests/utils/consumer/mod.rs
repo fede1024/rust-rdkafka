@@ -1,6 +1,7 @@
 pub mod stream_consumer;
 
 use crate::utils::rand::rand_test_group;
+use crate::utils::ConsumerTestContext;
 use anyhow::{bail, Context};
 use backon::{BlockingRetryable, ExponentialBuilder};
 use rdkafka::config::FromClientConfig;
@@ -42,6 +43,34 @@ pub async fn create_unsubscribed_base_consumer(
     consumer_client_config.set("auto.offset.reset", "earliest");
 
     BaseConsumer::from_config(&consumer_client_config).context("Failed to create consumer")
+}
+
+pub fn create_base_consumer(
+    bootstrap_servers: &str,
+    consumer_group: &str,
+    config_overrides: Option<&[(&str, &str)]>,
+) -> anyhow::Result<BaseConsumer<ConsumerTestContext>> {
+    let mut consumer_client_config = ClientConfig::default();
+    consumer_client_config.set("group.id", consumer_group);
+    consumer_client_config.set("client.id", "rdkafka_integration_test_client");
+    consumer_client_config.set("bootstrap.servers", bootstrap_servers);
+    consumer_client_config.set("enable.partition.eof", "false");
+    consumer_client_config.set("session.timeout.ms", "6000");
+    consumer_client_config.set("enable.auto.commit", "false");
+    consumer_client_config.set("debug", "all");
+    consumer_client_config.set("auto.offset.reset", "earliest");
+
+    if let Some(overrides) = config_overrides {
+        for (key, value) in overrides {
+            consumer_client_config.set(*key, *value);
+        }
+    }
+
+    consumer_client_config
+        .create_with_context::<ConsumerTestContext, BaseConsumer<ConsumerTestContext>>(
+            ConsumerTestContext { _n: 64 },
+        )
+        .context("Failed to create consumer with context")
 }
 
 pub async fn poll_x_times_for_messages(

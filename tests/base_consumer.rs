@@ -7,39 +7,56 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use rdkafka::admin::AdminOptions;
 use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext};
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::{current_time_millis, Timeout};
 use rdkafka::{ClientConfig, Message, Timestamp};
 
+use crate::utils::admin;
+use crate::utils::containers::KafkaContext;
+use crate::utils::logging::init_test_logger;
+use crate::utils::producer;
 use crate::utils::rand::*;
 use crate::utils::*;
 
 mod utils;
 
-fn create_base_consumer(
-    group_id: &str,
-    config_overrides: Option<HashMap<&str, &str>>,
-) -> BaseConsumer<ConsumerTestContext> {
-    consumer_config(group_id, config_overrides)
-        .create_with_context(ConsumerTestContext { _n: 64 })
-        .expect("Consumer creation failed")
-}
-
 // Seeking should allow replaying messages and skipping messages.
 #[tokio::test]
 async fn test_produce_consume_seek() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_produce_consume_seek");
-    populate_topic(&topic_name, 5, &value_fn, &key_fn, Some(0), None).await;
-    let consumer = create_base_consumer(&rand_test_group(), None);
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(1)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+    produce_messages_to_partition(&producer, &topic_name, 5, 0).await;
+
+    let group_id = rand_test_group();
+    let consumer =
+        utils::consumer::create_base_consumer(&kafka_context.bootstrap_servers, &group_id, None)
+            .expect("could not create base consumer");
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     for (i, message) in consumer.iter().take(3).enumerate() {
         match message {
-            Ok(message) => assert_eq!(dbg!(message.offset()), i as i64),
+            Ok(message) => assert_eq!(message.offset(), i as i64),
             Err(e) => panic!("Error receiving message: {:?}", e),
         }
     }
@@ -95,12 +112,31 @@ async fn test_produce_consume_seek() {
 // Seeking should allow replaying messages and skipping messages.
 #[tokio::test]
 async fn test_produce_consume_seek_partitions() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_produce_consume_seek_partitions");
-    populate_topic(&topic_name, 30, &value_fn, &key_fn, None, None).await;
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+    produce_messages(&producer, &topic_name, 30, None, None).await;
 
-    let consumer = create_base_consumer(&rand_test_group(), None);
+    let group_id = rand_test_group();
+    let consumer =
+        utils::consumer::create_base_consumer(&kafka_context.bootstrap_servers, &group_id, None)
+            .expect("could not create base consumer");
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let mut partition_offset_map = HashMap::new();
@@ -156,12 +192,33 @@ async fn test_produce_consume_seek_partitions() {
 // All produced messages should be consumed.
 #[tokio::test]
 async fn test_produce_consume_iter() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let start_time = current_time_millis();
     let topic_name = rand_test_topic("test_produce_consume_iter");
-    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
-    let consumer = create_base_consumer(&rand_test_group(), None);
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+    let message_map = produce_messages(&producer, &topic_name, 100, None, None).await;
+
+    let group_id = rand_test_group();
+    let consumer =
+        utils::consumer::create_base_consumer(&kafka_context.bootstrap_servers, &group_id, None)
+            .expect("could not create base consumer");
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     for message in consumer.iter().take(100) {
@@ -195,20 +252,30 @@ async fn test_pause_resume_consumer_iter() {
     const MESSAGE_COUNT: i32 = 300;
     const MESSAGES_PER_PAUSE: i32 = MESSAGE_COUNT / PAUSE_COUNT;
 
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_pause_resume_consumer_iter");
-    populate_topic(
-        &topic_name,
-        MESSAGE_COUNT,
-        &value_fn,
-        &key_fn,
-        Some(0),
-        None,
-    )
-    .await;
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(1)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+    produce_messages_to_partition(&producer, &topic_name, MESSAGE_COUNT as usize, 0).await;
     let group_id = rand_test_group();
-    let consumer = create_base_consumer(&group_id, None);
+    let consumer =
+        utils::consumer::create_base_consumer(&kafka_context.bootstrap_servers, &group_id, None)
+            .expect("could not create base consumer");
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     for _ in 0..PAUSE_COUNT {
@@ -236,17 +303,41 @@ async fn test_pause_resume_consumer_iter() {
 
 #[tokio::test]
 async fn test_consume_partition_order() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_consume_partition_order");
-    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(0), None).await;
-    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(1), None).await;
-    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(2), None).await;
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+    produce_messages_to_partition(&producer, &topic_name, 4, 0).await;
+    produce_messages_to_partition(&producer, &topic_name, 4, 1).await;
+    produce_messages_to_partition(&producer, &topic_name, 4, 2).await;
 
     // Using partition queues should allow us to consume the partitions
     // in a round-robin fashion.
     {
-        let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
+        let group_id = rand_test_group();
+        let consumer = Arc::new(
+            utils::consumer::create_base_consumer(
+                &kafka_context.bootstrap_servers,
+                &group_id,
+                None,
+            )
+            .expect("could not create base consumer"),
+        );
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
             .unwrap();
@@ -274,7 +365,15 @@ async fn test_consume_partition_order() {
     // When not all partitions have been split into separate queues, the
     // unsplit partitions should still be accessible via the main queue.
     {
-        let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
+        let group_id = rand_test_group();
+        let consumer = Arc::new(
+            utils::consumer::create_base_consumer(
+                &kafka_context.bootstrap_servers,
+                &group_id,
+                None,
+            )
+            .expect("could not create base consumer"),
+        );
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
             .unwrap();
@@ -334,7 +433,15 @@ async fn test_consume_partition_order() {
     // should be continuously polled to serve callbacks, but it should not panic
     // or result in memory unsafety, etc.
     {
-        let consumer = Arc::new(create_base_consumer(&rand_test_group(), None));
+        let group_id = rand_test_group();
+        let consumer = Arc::new(
+            utils::consumer::create_base_consumer(
+                &kafka_context.bootstrap_servers,
+                &group_id,
+                None,
+            )
+            .expect("could not create base consumer"),
+        );
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
             .unwrap();
@@ -356,15 +463,28 @@ async fn test_consume_partition_order() {
 
 #[tokio::test]
 async fn test_produce_consume_message_queue_nonempty_callback() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_produce_consume_message_queue_nonempty_callback");
 
-    create_topic(&topic_name, 1).await;
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(1)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
 
-    let consumer: BaseConsumer<_> = consumer_config(&rand_test_group(), None)
-        .create_with_context(ConsumerTestContext { _n: 64 })
-        .expect("Consumer creation failed");
+    let group_id = rand_test_group();
+    let consumer =
+        utils::consumer::create_base_consumer(&kafka_context.bootstrap_servers, &group_id, None)
+            .expect("could not create base consumer");
     let consumer = Arc::new(consumer);
 
     let mut tpl = TopicPartitionList::new();
@@ -410,7 +530,10 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     assert!(queue.poll(Duration::from_secs(0)).is_none());
 
     // Populate the topic, and expect a wakeup notifying us of the new messages.
-    populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None).await;
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+    produce_messages(&producer, &topic_name, 2, None, None).await;
     wait_for_wakeups(1);
 
     // Read one of the messages.
@@ -418,7 +541,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
 
     // Add more messages to the topic. Expect no additional wakeups, as the
     // queue is not fully drained, for 1s.
-    populate_topic(&topic_name, 2, &value_fn, &key_fn, None, None).await;
+    produce_messages(&producer, &topic_name, 2, None, None).await;
     thread::sleep(Duration::from_secs(1));
     assert_eq!(wakeups.load(Ordering::SeqCst), 1);
 
@@ -432,7 +555,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
     assert_eq!(wakeups.load(Ordering::SeqCst), 1);
 
     // Add another message, and expect a wakeup.
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None).await;
+    produce_messages(&producer, &topic_name, 1, None, None).await;
     wait_for_wakeups(2);
 
     // Expect no additional wakeups for 1s.
@@ -441,7 +564,7 @@ async fn test_produce_consume_message_queue_nonempty_callback() {
 
     // Disable the queue and add another message.
     queue.set_nonempty_callback(|| ());
-    populate_topic(&topic_name, 1, &value_fn, &key_fn, None, None).await;
+    produce_messages(&producer, &topic_name, 1, None, None).await;
 
     // Expect no additional wakeups for 1s.
     thread::sleep(Duration::from_secs(1));
