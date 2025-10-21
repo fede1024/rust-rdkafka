@@ -1,4 +1,4 @@
-use rdkafka::{Offset, TopicPartitionList};
+use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 
 /// Test topic partition list API and wrappers.
 

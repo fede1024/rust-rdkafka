@@ -1,6 +1,6 @@
 //! Test data production using low level producers.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::error::Error;
 use std::ffi::CString;
 use std::sync::Arc;
@@ -8,9 +8,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
-use maplit::hashmap;
-
-use rdkafka::config::ClientConfig;
+use rdkafka::admin::AdminOptions;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::message::{Header, Headers, Message, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::{
@@ -21,7 +19,11 @@ use rdkafka::types::RDKafkaRespErr;
 use rdkafka::util::current_time_millis;
 use rdkafka::{ClientContext, Statistics};
 
-use crate::utils::*;
+use crate::utils::admin;
+use crate::utils::containers::KafkaContext;
+use crate::utils::logging::init_test_logger;
+use crate::utils::producer::base_producer as base_producer_utils;
+use crate::utils::rand::*;
 
 mod utils;
 
@@ -142,59 +144,33 @@ impl Partitioner for PanicPartitioner {
     }
 }
 
-fn default_config(config_overrides: HashMap<&str, &str>) -> ClientConfig {
-    let mut config = ClientConfig::new();
-    config
-        .set("bootstrap.servers", get_bootstrap_server())
-        .set("message.timeout.ms", "5000");
-
-    for (key, value) in config_overrides {
-        config.set(key, value);
-    }
-    config
-}
-
-fn base_producer(config_overrides: HashMap<&str, &str>) -> BaseProducer<PrintingContext> {
-    base_producer_with_context(PrintingContext { _n: 123 }, config_overrides)
-}
-
-fn base_producer_with_context<Part: Partitioner, C: ProducerContext<Part>>(
-    context: C,
-    config_overrides: HashMap<&str, &str>,
-) -> BaseProducer<C, Part> {
-    configure_logging_for_tests();
-    default_config(config_overrides)
-        .create_with_context::<C, BaseProducer<_, Part>>(context)
-        .unwrap()
-}
-
-#[allow(dead_code)]
-fn threaded_producer(
-    config_overrides: HashMap<&str, &str>,
-) -> ThreadedProducer<PrintingContext, NoCustomPartitioner> {
-    threaded_producer_with_context(PrintingContext { _n: 123 }, config_overrides)
-}
-
-fn threaded_producer_with_context<Part, C>(
-    context: C,
-    config_overrides: HashMap<&str, &str>,
-) -> ThreadedProducer<C, Part>
-where
-    Part: Partitioner + Send + Sync + 'static,
-    C: ProducerContext<Part>,
-{
-    configure_logging_for_tests();
-    default_config(config_overrides)
-        .create_with_context::<C, ThreadedProducer<_, _>>(context)
-        .unwrap()
-}
-
 // TESTS
 
-#[test]
-fn test_base_producer_queue_full() {
-    let producer = base_producer(hashmap! { "queue.buffering.max.messages" => "10" });
+#[tokio::test(flavor = "multi_thread")]
+async fn test_base_producer_queue_full() {
+    init_test_logger();
+
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_base_producer_queue_full");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(1)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = base_producer_utils::create_base_producer_with_context(
+        &kafka_context.bootstrap_servers,
+        PrintingContext { _n: 123 },
+        &[("queue.buffering.max.messages", "10")],
+    )
+    .expect("failed to create base producer");
 
     let results = (0..30)
         .map(|id| {
@@ -230,18 +206,33 @@ fn test_base_producer_queue_full() {
     assert_eq!(errors, 20);
 }
 
-#[test]
-fn test_base_producer_timeout() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_base_producer_timeout() {
+    init_test_logger();
+
     let context = CollectingContext::new();
-    let bootstrap_server = get_bootstrap_server();
-    let producer = base_producer_with_context(
-        context.clone(),
-        hashmap! {
-            "message.timeout.ms" => "100",
-            "bootstrap.servers" => &bootstrap_server,
-        },
-    );
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_base_producer_timeout");
+
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(1)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = base_producer_utils::create_base_producer_with_context(
+        &kafka_context.bootstrap_servers,
+        context.clone(),
+        &[("message.timeout.ms", "100")],
+    )
+    .expect("failed to create base producer");
 
     let results_count = (0..10)
         .map(|id| {
@@ -345,14 +336,35 @@ impl ProducerContext for HeaderCheckContext {
     }
 }
 
-#[test]
-fn test_base_producer_headers() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_base_producer_headers() {
+    init_test_logger();
+
     let ids_set = Arc::new(Mutex::new(HashSet::new()));
     let context = HeaderCheckContext {
         ids: ids_set.clone(),
     };
-    let producer = base_producer_with_context(context, HashMap::new());
     let topic_name = rand_test_topic("test_base_producer_headers");
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(1)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = base_producer_utils::create_base_producer_with_context(
+        &kafka_context.bootstrap_servers,
+        context,
+        &[],
+    )
+    .expect("failed to create base producer");
 
     let results_count = (0..10)
         .map(|id| {
@@ -389,11 +401,32 @@ fn test_base_producer_headers() {
     assert_eq!((*ids_set.lock().unwrap()).len(), 10);
 }
 
-#[test]
-fn test_threaded_producer_send() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_threaded_producer_send() {
+    init_test_logger();
+
     let context = CollectingContext::new();
-    let producer = threaded_producer_with_context(context.clone(), HashMap::new());
     let topic_name = rand_test_topic("test_threaded_producer_send");
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(1)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = base_producer_utils::create_threaded_producer_with_context(
+        &kafka_context.bootstrap_servers,
+        context.clone(),
+        &[],
+    )
+    .expect("failed to create threaded producer");
 
     let results_count = (0..10)
         .map(|id| {
@@ -419,8 +452,10 @@ fn test_threaded_producer_send() {
     }
 }
 
-#[test]
-fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
+    init_test_logger();
+
     struct OpaqueArcContext {}
     impl ClientContext for OpaqueArcContext {}
     impl ProducerContext for OpaqueArcContext {
@@ -434,8 +469,27 @@ fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
 
     let shared_count = Arc::new(Mutex::new(0));
     let context = OpaqueArcContext {};
-    let producer = base_producer_with_context(context, HashMap::new());
     let topic_name = rand_test_topic("test_base_producer_opaque_arc");
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(1)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = base_producer_utils::create_base_producer_with_context(
+        &kafka_context.bootstrap_servers,
+        context,
+        &[],
+    )
+    .expect("failed to create base producer");
 
     let results_count = (0..10)
         .map(|_| {
@@ -452,9 +506,19 @@ fn test_base_producer_opaque_arc() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-#[test]
-fn test_fatal_errors() {
-    let producer = base_producer(HashMap::new());
+#[tokio::test(flavor = "multi_thread")]
+async fn test_fatal_errors() {
+    init_test_logger();
+
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let producer = base_producer_utils::create_base_producer_with_context(
+        &kafka_context.bootstrap_servers,
+        PrintingContext { _n: 123 },
+        &[],
+    )
+    .expect("failed to create base producer");
 
     assert_eq!(producer.client().fatal_error(), None);
 
@@ -476,23 +540,38 @@ fn test_fatal_errors() {
     )
 }
 
-#[test]
-fn test_register_custom_partitioner_linger_non_zero_key_null() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_register_custom_partitioner_linger_non_zero_key_null() {
     // Custom partitioner is not used when sticky.partitioning.linger.ms > 0 and key is null.
     // https://github.com/confluentinc/librdkafka/blob/081fd972fa97f88a1e6d9a69fc893865ffbb561a/src/rdkafka_msg.c#L1192-L1196
+    init_test_logger();
+
     let context = CollectingContext::new_with_custom_partitioner(PanicPartitioner {});
-    let mut config_overrides = HashMap::new();
-    config_overrides.insert("sticky.partitioning.linger.ms", "10");
-    let producer = base_producer_with_context(context.clone(), config_overrides);
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let topic_name = rand_test_topic("test_register_custom_partitioner_linger_non_zero_key_null");
+
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = base_producer_utils::create_base_producer_with_context(
+        &kafka_context.bootstrap_servers,
+        context.clone(),
+        &[("sticky.partitioning.linger.ms", "10")],
+    )
+    .expect("failed to create base producer");
 
     producer
-        .send(
-            BaseRecord::<(), str, usize>::with_opaque_to(
-                &rand_test_topic("test_register_custom_partitioner_linger_non_zero_key_null"),
-                0,
-            )
-            .payload(""),
-        )
+        .send(BaseRecord::<(), str, usize>::with_opaque_to(&topic_name, 0).payload(""))
         .unwrap();
     producer.flush(Duration::from_secs(10)).unwrap();
 
@@ -505,11 +584,32 @@ fn test_register_custom_partitioner_linger_non_zero_key_null() {
     }
 }
 
-#[test]
-fn test_custom_partitioner_base_producer() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_custom_partitioner_base_producer() {
+    init_test_logger();
+
     let context = CollectingContext::new_with_custom_partitioner(FixedPartitioner::new(2));
-    let producer = base_producer_with_context(context.clone(), HashMap::new());
     let topic_name = rand_test_topic("test_custom_partitioner_base_producer");
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = base_producer_utils::create_base_producer_with_context(
+        &kafka_context.bootstrap_servers,
+        context.clone(),
+        &[],
+    )
+    .expect("failed to create base producer");
 
     let results_count = (0..10)
         .map(|id| {
@@ -533,11 +633,32 @@ fn test_custom_partitioner_base_producer() {
     }
 }
 
-#[test]
-fn test_custom_partitioner_threaded_producer() {
+#[tokio::test(flavor = "multi_thread")]
+async fn test_custom_partitioner_threaded_producer() {
+    init_test_logger();
+
     let context = CollectingContext::new_with_custom_partitioner(FixedPartitioner::new(2));
-    let producer = threaded_producer_with_context(context.clone(), HashMap::new());
     let topic_name = rand_test_topic("test_custom_partitioner_threaded_producer");
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = base_producer_utils::create_threaded_producer_with_context(
+        &kafka_context.bootstrap_servers,
+        context.clone(),
+        &[],
+    )
+    .expect("failed to create threaded producer");
 
     let results_count = (0..10)
         .map(|id| {

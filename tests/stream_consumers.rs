@@ -1,15 +1,16 @@
 //! Test data consumption using high level consumers.
 
-use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 
+use anyhow::Context;
 use futures::future;
 use futures::stream::StreamExt;
 use maplit::hashmap;
 use rdkafka_sys::RDKafkaErrorCode;
 use tokio::time::{self, Duration};
 
+use rdkafka::admin::AdminOptions;
 use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext, StreamConsumer};
 use rdkafka::error::KafkaError;
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
@@ -17,36 +18,18 @@ use rdkafka::util::current_time_millis;
 use rdkafka::{Message, Timestamp};
 use rdkafka_sys::types::RDKafkaConfRes;
 
+use crate::utils::admin::new_topic_vec;
+use crate::utils::containers::KafkaContext;
+use crate::utils::logging::init_test_logger;
+use crate::utils::rand::*;
 use crate::utils::*;
 
 mod utils;
 
-// Create stream consumer for tests
-fn create_stream_consumer(
-    group_id: &str,
-    config_overrides: Option<HashMap<&str, &str>>,
-) -> StreamConsumer<ConsumerTestContext> {
-    let cons_context = ConsumerTestContext { _n: 64 };
-    create_stream_consumer_with_context(group_id, config_overrides, cons_context)
-}
-
-fn create_stream_consumer_with_context<C>(
-    group_id: &str,
-    config_overrides: Option<HashMap<&str, &str>>,
-    context: C,
-) -> StreamConsumer<C>
-where
-    C: ConsumerContext + 'static,
-{
-    consumer_config(group_id, config_overrides)
-        .create_with_context(context)
-        .expect("Consumer creation failed")
-}
-
 #[tokio::test]
 async fn test_invalid_max_poll_interval() {
     let res: Result<StreamConsumer, _> = consumer_config(
-        &rand_test_group(),
+        &crate::utils::rand::rand_test_group(),
         Some(hashmap! { "max.poll.interval.ms" => "-1" }),
     )
     .create();
@@ -70,27 +53,52 @@ async fn test_invalid_max_poll_interval() {
 // All produced messages should be consumed.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_base() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+
+    let num_of_messages_to_send = 100usize;
     let start_time = current_time_millis();
     let topic_name = rand_test_topic("test_produce_consume_base");
-    let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
-    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+    let message_map = topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        None,
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+    // let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
+    let consumer = utils::consumer::stream_consumer::create_stream_consumer(
+        &kafka_context.bootstrap_servers,
+        Some(&rand_test_group()),
+    )
+    .await
+    .expect("could not create stream consumer");
+    consumer
+        .subscribe(&[topic_name.as_str()])
+        .expect("could not subscribe to kafka topic");
 
-    let _consumer_future = consumer
+    consumer
         .stream()
-        .take(100)
+        .take(num_of_messages_to_send)
         .for_each(|message| {
             match message {
                 Ok(m) => {
                     let id = message_map[&(m.partition(), m.offset())];
                     match m.timestamp() {
                         Timestamp::CreateTime(timestamp) => assert!(timestamp >= start_time),
-                        _ => panic!("Expected createtime for message timestamp"),
+                        _ => panic!("Expected create time for message timestamp"),
                     };
-                    assert_eq!(m.payload_view::<str>().unwrap().unwrap(), value_fn(id));
-                    assert_eq!(m.key_view::<str>().unwrap().unwrap(), key_fn(id));
+                    assert_eq!(m.payload_view::<str>().unwrap().unwrap(), id.to_string());
+                    assert_eq!(m.key_view::<str>().unwrap().unwrap(), id.to_string());
                     assert_eq!(m.topic(), topic_name.as_str());
                 }
                 Err(e) => panic!("Error receiving message: {:?}", e),
@@ -106,13 +114,39 @@ async fn test_produce_consume_base() {
 /// waker slot.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_base_concurrent() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+
+    let num_of_messages_to_send = 100usize;
     let topic_name = rand_test_topic("test_produce_consume_base_concurrent");
-    populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
-
-    let consumer = Arc::new(create_stream_consumer(&rand_test_group(), None));
-    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        None,
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+    // let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, None, None).await;
+    let consumer = Arc::new(
+        consumer::stream_consumer::create_stream_consumer(
+            &kafka_context.bootstrap_servers,
+            Some(&rand_test_group()),
+        )
+        .await
+        .expect("could not create stream consumer"),
+    );
+    consumer
+        .subscribe(&[topic_name.as_str()])
+        .expect("could not subscribe to kafka topic");
 
     let mk_task = || {
         let consumer = consumer.clone();
@@ -136,13 +170,61 @@ async fn test_produce_consume_base_concurrent() {
 // All produced messages should be consumed.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_base_assign() {
-    let _r = env_logger::try_init();
+    init_test_logger();
+
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
 
     let topic_name = rand_test_topic("test_produce_consume_base_assign");
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None).await;
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topics");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+
+    let num_of_messages_to_send = 10usize;
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(0),
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(1),
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(2),
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+
+    let consumer = utils::consumer::stream_consumer::create_stream_consumer(
+        &kafka_context.bootstrap_servers,
+        Some(&rand_test_group()),
+    )
+    .await
+    .expect("could not create stream consumer");
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
         .unwrap();
@@ -171,13 +253,62 @@ async fn test_produce_consume_base_assign() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_base_unassign() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
-    let topic_name = rand_test_topic("test_produce_consume_base_unassign");
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None).await;
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+
+    let topic_name = rand_test_topic("test_produce_consume_base_assign");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topics");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+
+    let consumer = utils::consumer::stream_consumer::create_stream_consumer(
+        &kafka_context.bootstrap_servers,
+        Some(&rand_test_group()),
+    )
+    .await
+    .expect("could not create stream consumer");
+
+    let num_of_messages_to_send = 10usize;
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(0),
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(1),
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(2),
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+
     let mut tpl = TopicPartitionList::new();
     tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
         .unwrap();
@@ -196,13 +327,61 @@ async fn test_produce_consume_base_unassign() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_base_incremental_assign_and_unassign() {
-    let _r = env_logger::try_init();
+    init_test_logger();
+
+    // Get Kafka container context.
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
 
     let topic_name = rand_test_topic("test_produce_consume_base_incremental_assign_and_unassign");
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(1), None).await;
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(2), None).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topics");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+
+    let consumer = utils::consumer::stream_consumer::create_stream_consumer(
+        &kafka_context.bootstrap_servers,
+        Some(&rand_test_group()),
+    )
+    .await
+    .expect("could not create stream consumer");
+
+    let num_of_messages_to_send = 10usize;
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(0),
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(1),
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
+    topics::populate_topic_using_future_producer(
+        &producer,
+        &topic_name,
+        num_of_messages_to_send,
+        Some(2),
+    )
+    .await
+    .expect("Could not populate topic using Future producer");
 
     // Adding a simple partition
     let mut tpl = TopicPartitionList::new();
@@ -237,12 +416,25 @@ async fn test_produce_consume_base_incremental_assign_and_unassign() {
 // All produced messages should be consumed.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_produce_consume_with_timestamp() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_produce_consume_with_timestamp");
-    let message_map =
-        populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), Some(1111)).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+
+    let message_map = produce_messages_with_timestamp(&producer, &topic_name, 100, 0, 1111).await;
+
+    let consumer = utils::consumer::stream_consumer::create_stream_consumer(
+        &kafka_context.bootstrap_servers,
+        Some(&rand_test_group()),
+    )
+    .await
+    .expect("could not create stream consumer");
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
@@ -262,7 +454,7 @@ async fn test_produce_consume_with_timestamp() {
         })
         .await;
 
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), Some(999_999)).await;
+    let _ = produce_messages_with_timestamp(&producer, &topic_name, 10, 0, 999_999).await;
 
     // Lookup the offsets
     let tpl = consumer
@@ -278,13 +470,39 @@ async fn test_produce_consume_with_timestamp() {
 // TODO: add check that commit cb gets called correctly
 #[tokio::test(flavor = "multi_thread")]
 async fn test_consumer_commit_message() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_consumer_commit_message");
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
-    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None).await;
-    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None).await;
-    let consumer = create_stream_consumer(&rand_test_group(), None);
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topics");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+
+    let _ = produce_messages_to_partition(&producer, &topic_name, 10, 0).await;
+    let _ = produce_messages_to_partition(&producer, &topic_name, 11, 1).await;
+    let _ = produce_messages_to_partition(&producer, &topic_name, 12, 2).await;
+
+    let group_name = rand_test_group();
+    let consumer = utils::consumer::stream_consumer::create_stream_consumer_with_options(
+        &kafka_context.bootstrap_servers,
+        &group_name,
+        &[],
+    )
+    .await
+    .expect("could not create stream consumer");
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
@@ -356,16 +574,42 @@ async fn test_consumer_commit_message() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_consumer_store_offset_commit() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_consumer_store_offset_commit");
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, Some(0), None).await;
-    populate_topic(&topic_name, 11, &value_fn, &key_fn, Some(1), None).await;
-    populate_topic(&topic_name, 12, &value_fn, &key_fn, Some(2), None).await;
-    let mut config = HashMap::new();
-    config.insert("enable.auto.offset.store", "false");
-    config.insert("enable.partition.eof", "true");
-    let consumer = create_stream_consumer(&rand_test_group(), Some(config));
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topics");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+
+    let _ = produce_messages_to_partition(&producer, &topic_name, 10, 0).await;
+    let _ = produce_messages_to_partition(&producer, &topic_name, 11, 1).await;
+    let _ = produce_messages_to_partition(&producer, &topic_name, 12, 2).await;
+
+    let group_name = rand_test_group();
+    let consumer = utils::consumer::stream_consumer::create_stream_consumer_with_options(
+        &kafka_context.bootstrap_servers,
+        &group_name,
+        &[
+            ("enable.auto.offset.store", "false"),
+            ("enable.partition.eof", "true"),
+        ],
+    )
+    .await
+    .expect("could not create stream consumer");
     consumer.subscribe(&[topic_name.as_str()]).unwrap();
 
     let _consumer_future = consumer
@@ -441,21 +685,42 @@ async fn test_consumer_store_offset_commit() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_consumer_commit_metadata() -> Result<(), Box<dyn Error>> {
-    let _ = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_consumer_commit_metadata");
     let group_name = rand_test_group();
-    populate_topic(&topic_name, 10, &value_fn, &key_fn, None, None).await;
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topics");
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+    let _ = produce_messages_to_partition(&producer, &topic_name, 4, 0).await;
+    let _ = produce_messages_to_partition(&producer, &topic_name, 4, 1).await;
+    let _ = produce_messages_to_partition(&producer, &topic_name, 4, 2).await;
 
     let create_consumer = || async {
-        // Disable auto-commit so we can manually drive the commits.
-        let mut config = HashMap::new();
-        config.insert("enable.auto.commit", "false");
-        let consumer = create_stream_consumer(&group_name, Some(config));
+        let consumer = utils::consumer::stream_consumer::create_stream_consumer_with_options(
+            &kafka_context.bootstrap_servers,
+            &group_name,
+            &[],
+        )
+        .await
+        .context("failed to create stream consumer")?;
 
-        // Subscribe to the topic and wait for at least one message, which
-        // ensures that the consumer group has been joined and such.
-        consumer.subscribe(&[topic_name.as_str()])?;
+        consumer
+            .subscribe(&[topic_name.as_str()])
+            .context("failed to subscribe to topic")?;
         let _ = consumer.stream().next().await;
 
         Ok::<_, Box<dyn Error>>(consumer)
@@ -496,17 +761,42 @@ async fn test_consumer_commit_metadata() -> Result<(), Box<dyn Error>> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_consume_partition_order() {
-    let _r = env_logger::try_init();
+    init_test_logger();
 
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_consume_partition_order");
-    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(0), None).await;
-    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(1), None).await;
-    populate_topic(&topic_name, 4, &value_fn, &key_fn, Some(2), None).await;
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create admin client");
+    admin_client
+        .create_topics(
+            &new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topics");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
+    let _ = produce_messages_to_partition(&producer, &topic_name, 4, 0).await;
+    let _ = produce_messages_to_partition(&producer, &topic_name, 4, 1).await;
+    let _ = produce_messages_to_partition(&producer, &topic_name, 4, 2).await;
 
     // Using partition queues should allow us to consume the partitions
     // in a round-robin fashion.
     {
-        let consumer = Arc::new(create_stream_consumer(&rand_test_group(), None));
+        let consumer = Arc::new(
+            utils::consumer::stream_consumer::create_stream_consumer_with_options(
+                &kafka_context.bootstrap_servers,
+                &rand_test_group(),
+                &[],
+            )
+            .await
+            .expect("could not create stream consumer"),
+        );
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
             .unwrap();
@@ -535,7 +825,15 @@ async fn test_consume_partition_order() {
     // When not all partitions have been split into separate queues, the
     // unsplit partitions should still be accessible via the main queue.
     {
-        let consumer = Arc::new(create_stream_consumer(&rand_test_group(), None));
+        let consumer = Arc::new(
+            utils::consumer::stream_consumer::create_stream_consumer_with_options(
+                &kafka_context.bootstrap_servers,
+                &rand_test_group(),
+                &[],
+            )
+            .await
+            .expect("could not create stream consumer"),
+        );
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
             .unwrap();
@@ -599,7 +897,15 @@ async fn test_consume_partition_order() {
     // should be continuously polled to serve callbacks, but it should not panic
     // or result in memory unsafety, etc.
     {
-        let consumer = Arc::new(create_stream_consumer(&rand_test_group(), None));
+        let consumer = Arc::new(
+            utils::consumer::stream_consumer::create_stream_consumer_with_options(
+                &kafka_context.bootstrap_servers,
+                &rand_test_group(),
+                &[],
+            )
+            .await
+            .expect("could not create stream consumer"),
+        );
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(&topic_name, 0, Offset::Beginning)
             .unwrap();

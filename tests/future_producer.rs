@@ -1,10 +1,10 @@
 //! Test data production using high level producers.
 
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use futures::stream::{FuturesUnordered, StreamExt};
 
+use rdkafka::admin::AdminOptions;
 use rdkafka::client::DefaultClientContext;
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
@@ -13,25 +13,36 @@ use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::util::Timeout;
 use rdkafka::Timestamp;
 
-use crate::utils::*;
+use crate::utils::admin;
+use crate::utils::containers::KafkaContext;
+use crate::utils::logging::init_test_logger;
+use crate::utils::producer;
+use crate::utils::rand::*;
 
 mod utils;
 
-fn future_producer(config_overrides: HashMap<&str, &str>) -> FutureProducer<DefaultClientContext> {
-    let mut config = ClientConfig::new();
-    config
-        .set("bootstrap.servers", "localhost")
-        .set("message.timeout.ms", "5000");
-    for (key, value) in config_overrides {
-        config.set(key, value);
-    }
-    config.create().expect("Failed to create producer")
-}
-
 #[tokio::test]
 async fn test_future_producer_send() {
-    let producer = future_producer(HashMap::new());
+    init_test_logger();
+
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
     let topic_name = rand_test_topic("test_future_producer_send");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
 
     let results: FuturesUnordered<_> = (0..10)
         .map(|_| {
@@ -57,11 +68,14 @@ async fn test_future_producer_send_full() {
     // Connect to a nonexistent Kafka broker with a long message timeout and a
     // tiny producer queue, so we can fill up the queue for a while by sending a
     // single message.
-    let mut config = HashMap::new();
-    config.insert("bootstrap.servers", "");
-    config.insert("message.timeout.ms", "5000");
-    config.insert("queue.buffering.max.messages", "1");
-    let producer = &future_producer(config);
+    let mut config = ClientConfig::new();
+    config
+        .set("bootstrap.servers", "")
+        .set("message.timeout.ms", "5000")
+        .set("queue.buffering.max.messages", "1");
+    let producer: FutureProducer<DefaultClientContext> =
+        config.create().expect("Failed to create producer");
+    let producer = &producer;
     let topic_name = &rand_test_topic("test_future_producer_send_full");
 
     // Fill up the queue.
@@ -97,10 +111,29 @@ async fn test_future_producer_send_full() {
 
 #[tokio::test]
 async fn test_future_producer_send_fail() {
-    let producer = future_producer(HashMap::new());
+    init_test_logger();
+
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let topic_name = rand_test_topic("test_future_producer_send_fail");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create admin client");
+    admin_client
+        .create_topics(
+            &admin::new_topic_vec(&topic_name, Some(3)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("Could not create Future producer");
 
     let future = producer.send(
-        FutureRecord::to("topic")
+        FutureRecord::to(&topic_name)
             .payload("payload")
             .key("key")
             .partition(100) // Fail
@@ -128,7 +161,7 @@ async fn test_future_producer_send_fail() {
                 kafka_error.to_string(),
                 "Message production error: UnknownPartition (Local: Unknown partition)"
             );
-            assert_eq!(owned_message.topic(), "topic");
+            assert_eq!(owned_message.topic(), topic_name.as_str());
             let headers = owned_message.headers().unwrap();
             assert_eq!(headers.count(), 3);
             assert_eq!(

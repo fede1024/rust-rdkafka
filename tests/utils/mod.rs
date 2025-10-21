@@ -1,13 +1,20 @@
 #![allow(dead_code)]
 
+pub mod admin;
+pub mod consumer;
+pub mod containers;
+pub mod logging;
+pub mod producer;
+pub mod rand;
+pub mod topics;
+
 use std::collections::HashMap;
-use std::env::{self, VarError};
-use std::sync::Once;
+use std::env::{self};
 use std::time::Duration;
 
-use rand::distr::{Alphanumeric, SampleString};
 use regex::Regex;
 
+use crate::utils::containers::KafkaContext;
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::client::ClientContext;
 use rdkafka::config::ClientConfig;
@@ -18,48 +25,25 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::statistics::Statistics;
 use rdkafka::TopicPartitionList;
 
-pub fn rand_test_topic(test_name: &str) -> String {
-    let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
-    format!("__{}_{}", test_name, id)
-}
-
-pub fn rand_test_group() -> String {
-    let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
-    format!("__test_{}", id)
-}
-
-pub fn rand_test_transactional_id() -> String {
-    let id = Alphanumeric.sample_string(&mut rand::rng(), 10);
-    format!("__test_{}", id)
-}
+pub const BROKER_ID: i32 = 1;
 
 pub fn get_bootstrap_server() -> String {
     env::var("KAFKA_HOST").unwrap_or_else(|_| "localhost:9092".to_owned())
 }
 
-pub fn get_broker_version() -> KafkaVersion {
-    // librdkafka doesn't expose this directly, sadly.
-    match env::var("KAFKA_VERSION") {
-        Ok(v) => {
-            let regex = Regex::new(r"^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?$").unwrap();
-            match regex.captures(&v) {
-                Some(captures) => {
-                    let extract = |i| {
-                        captures
-                            .get(i)
-                            .map(|m| m.as_str().parse().unwrap())
-                            .unwrap_or(0)
-                    };
-                    KafkaVersion(extract(1), extract(2), extract(3), extract(4))
-                }
-                None => panic!("KAFKA_VERSION env var was not in expected [n[.n[.n[.n]]]] format"),
-            }
+pub fn get_broker_version(kafka_context: &KafkaContext) -> KafkaVersion {
+    let regex = Regex::new(r"^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?$").unwrap();
+    match regex.captures(&kafka_context.version) {
+        Some(captures) => {
+            let extract = |i| {
+                captures
+                    .get(i)
+                    .map(|m| m.as_str().parse().unwrap())
+                    .unwrap_or(0)
+            };
+            KafkaVersion(extract(1), extract(2), extract(3), extract(4))
         }
-        Err(VarError::NotUnicode(_)) => {
-            panic!("KAFKA_VERSION env var contained non-unicode characters")
-        }
-        // If the environment variable is unset, assume we're running the latest version.
-        Err(VarError::NotPresent) => KafkaVersion(u32::MAX, u32::MAX, u32::MAX, u32::MAX),
+        None => panic!("KAFKA_VERSION env var was not in expected [n[.n[.n[.n]]]] format"),
     }
 }
 
@@ -145,6 +129,75 @@ where
     message_map
 }
 
+pub async fn produce_messages_with_timestamp(
+    producer: &FutureProducer,
+    topic_name: &str,
+    count: usize,
+    partition: i32,
+    timestamp: i64,
+) -> HashMap<(i32, i64), i32> {
+    produce_messages(
+        producer,
+        topic_name,
+        count,
+        Some(partition),
+        Some(timestamp),
+    )
+    .await
+}
+
+pub async fn produce_messages_to_partition(
+    producer: &FutureProducer,
+    topic_name: &str,
+    count: usize,
+    partition: i32,
+) -> HashMap<(i32, i64), i32> {
+    produce_messages(producer, topic_name, count, Some(partition), None).await
+}
+
+pub async fn produce_messages(
+    producer: &FutureProducer,
+    topic_name: &str,
+    count: usize,
+    partition: Option<i32>,
+    timestamp: Option<i64>,
+) -> HashMap<(i32, i64), i32> {
+    let mut inflight = Vec::with_capacity(count);
+
+    for idx in 0..count {
+        let id = idx as i32;
+        let payload = value_fn(id);
+        let key = key_fn(id);
+        let mut record = FutureRecord::to(topic_name).payload(&payload).key(&key);
+        if let Some(partition) = partition {
+            record = record.partition(partition);
+        }
+        if let Some(timestamp) = timestamp {
+            record = record.timestamp(timestamp);
+        }
+        let delivery_future = producer
+            .send_result(record)
+            .expect("failed to enqueue message");
+        inflight.push((id, payload, key, delivery_future));
+    }
+
+    let mut message_map = HashMap::new();
+
+    for (id, _payload, _key, delivery_future) in inflight {
+        match delivery_future
+            .await
+            .expect("producer unexpectedly dropped")
+        {
+            Ok(delivery) => {
+                message_map.insert((delivery.partition, delivery.offset), id);
+            }
+            Err((error, _message)) => panic!("Delivery failed: {}", error),
+        };
+    }
+
+    message_map
+}
+
 pub fn value_fn(id: i32) -> String {
     format!("Message {}", id)
 }
@@ -193,33 +246,4 @@ pub fn consumer_config(
     }
 
     config
-}
-
-static INIT: Once = Once::new();
-
-pub fn configure_logging_for_tests() {
-    INIT.call_once(|| {
-        env_logger::try_init().expect("Failed to initialize env_logger");
-    });
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_populate_topic() {
-        let topic_name = rand_test_topic("test_populate_topic");
-        let message_map = populate_topic(&topic_name, 100, &value_fn, &key_fn, Some(0), None).await;
-
-        let total_messages = message_map
-            .iter()
-            .filter(|&(&(partition, _), _)| partition == 0)
-            .count();
-        assert_eq!(total_messages, 100);
-
-        let mut ids = message_map.values().copied().collect::<Vec<_>>();
-        ids.sort();
-        assert_eq!(ids, (0..100).collect::<Vec<_>>());
-    }
 }
