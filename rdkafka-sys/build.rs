@@ -276,6 +276,17 @@ fn build_librdkafka() {
         env::set_var("CMAKE_LIBRARY_PATH", cmake_library_paths.join(";"));
     }
 
+    // When building with `CMAKE_BUILD_TYPE=Release/MinSizeRel/RelWithDebInfo`, cmake automatically
+    // sets `-DNDEBUG` flags. This breaks librdkafka, which uses asserts for runtime error checking
+    // (confluentinc/librdkafka#5099). We unset `NDEBUG` by manually overwriting the cmake's
+    // `C_FLAGS` variables.
+    config.define("CMAKE_C_FLAGS_RELEASE", "-O3 -UNDEBUG");
+    config.define("CMAKE_CXX_FLAGS_RELEASE", "-O3 -UNDEBUG");
+    config.define("CMAKE_C_FLAGS_MINSIZEREL", "-O3 -UNDEBUG");
+    config.define("CMAKE_CXX_FLAGS_MINSIZEREL", "-O3 -UNDEBUG");
+    config.define("CMAKE_C_FLAGS_RELWITHDEBINFO", "-O3 -UNDEBUG");
+    config.define("CMAKE_CXX_FLAGS_RELWITHDEBINFO", "-O3 -UNDEBUG");
+
     println!("Configuring and compiling librdkafka");
     let dst = config.build();
 
