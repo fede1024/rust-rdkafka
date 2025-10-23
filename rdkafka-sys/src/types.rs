@@ -96,6 +96,39 @@ pub type RDKafkaTopicResult = bindings::rd_kafka_topic_result_t;
 /// Native rdkafka group result.
 pub type RDKafkaGroupResult = bindings::rd_kafka_group_result_t;
 
+/// Native rdkafka list offsets result.
+pub type RDKafkaListOffsetsResult = bindings::rd_kafka_ListOffsets_result_t;
+
+/// Native rdkafka list offsets info returned.
+pub type RDKafkaListOffsetsResultInfo = bindings::rd_kafka_ListOffsetsResultInfo_t;
+
+/// Native result of the Describe Consumer Group operation.
+pub type RDKafkaDescribeConsumerGroupsResult = bindings::rd_kafka_DescribeConsumerGroups_result_t;
+
+/// Native description of a Consumer Group.
+pub type RDKafkaConsumerGroupDescription = bindings::rd_kafka_ConsumerGroupDescription_t;
+
+/// Native ACL Operation enum.
+pub type RDKafkaAclOperation = bindings::rd_kafka_AclOperation_t;
+
+/// Native Consumer Group State enum.
+pub type RDKafkaConsumerGroupState = bindings::rd_kafka_consumer_group_state_t;
+
+/// Native Node data.
+pub type RDKafkaNode = bindings::rd_kafka_Node_t;
+
+/// Native Consumer Group Type enum.
+pub type RDKafkaConsumerGroupType = bindings::rd_kafka_consumer_group_type_t;
+
+/// Native Member Description data.
+pub type RDKafkaMemberDescription = bindings::rd_kafka_MemberDescription_t;
+
+/// Native Member Assignment data.
+pub type RDKafkaMemberAssignment = bindings::rd_kafka_MemberAssignment_t;
+
+/// Native information provided by the List Consumer Group Offsets operation.
+pub type RDKafkaListConsumerGroupOffsets = bindings::rd_kafka_ListConsumerGroupOffsets_t;
+
 /// Native rdkafka mock cluster.
 pub type RDKafkaMockCluster = bindings::rd_kafka_mock_cluster_t;
 
