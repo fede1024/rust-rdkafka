@@ -37,6 +37,28 @@ pub(crate) enum Deadline {
     Never,
 }
 
+/// Represents the coordinates of a kafka record
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct TopicPartitionOffset{
+    /// The name of the Kafka topic.
+    pub topic: String,
+    /// The partition within the Kafka topic.
+    pub partition: i32,
+    /// The offset within the specified Kafka partition.
+    pub offset: i64,
+}
+
+
+impl fmt::Display for TopicPartitionOffset {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Topic: {}, Partition: {}, Offset: {}",
+            self.topic, self.partition, self.offset
+        )
+    }
+}
+
 impl Deadline {
     // librdkafka's flush api requires an i32 millisecond timeout
     const MAX_FLUSH_DURATION: Duration = Duration::from_millis(i32::MAX as u64);
