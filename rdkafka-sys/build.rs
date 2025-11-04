@@ -229,9 +229,13 @@ fn build_librdkafka() {
             config.cxxflag("-DCURL_STATICLIB");
             config.cflag(format!("-I{}/include", curl_root));
             config.cxxflag(format!("-I{}/include", curl_root));
+
+            config.define("WITH_OAUTHBEARER_OIDC", "1");
         }
     } else {
         config.define("WITH_CURL", "0");
+        // requires curl
+        config.define("WITH_OAUTHBEARER_OIDC", "0");
     }
 
     if env::var("CARGO_FEATURE_SSL").is_ok() {
