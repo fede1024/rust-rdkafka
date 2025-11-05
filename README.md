@@ -139,6 +139,7 @@ Here are some of the projects using rust-rdkafka:
 - [kafka-benchmark]: a high performance benchmarking tool for Kafka.
 - [callysto]: Stream processing framework in Rust.
 - [bytewax]: Python stream processing framework using Timely Dataflow.
+- [kafka-mock-gen] easy to use mock data producer allowing stress broker
 
 *If you are using rust-rdkafka, please let us know!*
 
@@ -272,6 +273,7 @@ logging framework.
 [rdkafka-sys-known-issues]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#known-issues
 [smol]: https://docs.rs/smol
 [Tokio]: https://tokio.rs/
+[kafka-mock-gen]: https://github.com/tomaszkubacki/kafka-mock-gen
 
 ## rdkafka-sys
 
