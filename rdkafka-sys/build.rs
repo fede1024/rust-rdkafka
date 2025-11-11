@@ -144,7 +144,7 @@ fn build_librdkafka() {
         configure_flags.push("--disable-zlib".into());
     }
 
-    if env::var("CARGO_FEATURE_CURL").is_ok() {
+    if env::var("CARGO_FEATURE_CURL").is_ok() || env::var("CARGO_FEATURE_CURL_STATIC").is_ok() {
         // There is no --enable-curl option, but it is enabled by default.
         if let Ok(curl_root) = env::var("DEP_CURL_ROOT") {
             cflags.push("-DCURLSTATIC_LIB".to_string());
@@ -240,7 +240,7 @@ fn build_librdkafka() {
         config.define("WITH_ZLIB", "0");
     }
 
-    if env::var("CARGO_FEATURE_CURL").is_ok() {
+    if env::var("CARGO_FEATURE_CURL").is_ok() || env::var("CARGO_FEATURE_CURL_STATIC").is_ok() {
         config.define("WITH_CURL", "1");
         config.register_dep("curl");
         if let Ok(curl_root) = env::var("DEP_CURL_ROOT") {
