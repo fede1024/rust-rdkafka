@@ -287,6 +287,13 @@ fn build_librdkafka() {
             config.cxxflag(format!("-I{}/include", sasl2_root));
             config.cflag(format!("-L{}/lib", sasl2_root));
             config.cxxflag(format!("-L{}/lib", sasl2_root));
+
+            //FIXME: Update librdkafka to use find_package for finding sasl2 instead of pkg-config
+            let pkgconfig_path = format!("{}/../sasl2", sasl2_root);
+            let existing = env::var("PKG_CONFIG_PATH").unwrap_or_default();
+            let new_pkg_config_path = format!("{}:{}", pkgconfig_path, existing);
+            println!("Setting PKG_CONFIG_PATH to {}", new_pkg_config_path);
+            env::set_var("PKG_CONFIG_PATH", new_pkg_config_path);
         }
     } else {
         config.define("WITH_SASL", "0");
