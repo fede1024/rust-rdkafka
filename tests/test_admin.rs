@@ -1,12 +1,14 @@
 //! Test administrative commands using the admin API.
 
+use std::collections::HashSet;
 use std::time::Duration;
 
 use backon::{BlockingRetryable, ExponentialBuilder};
 
 use rdkafka::admin::{
-    AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult, NewPartitions,
-    NewTopic, OwnedResourceSpecifier, ResourceSpecifier, TopicReplication,
+    AdminClient, AdminOptions, AlterConfig, ConfigEntry, ConfigSource, GroupResult,
+    ListConsumerGroupOffsets, NewPartitions, NewTopic, OwnedResourceSpecifier, ResourceSpecifier,
+    TopicReplication,
 };
 use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, DefaultConsumerContext};
@@ -459,6 +461,471 @@ async fn test_delete_records() {
         .unwrap();
     assert_eq!(lo, 5);
     assert_eq!(hi, 5);
+}
+
+#[tokio::test]
+async fn test_list_consumer_group_offsets() {
+    let admin_client = create_admin_client();
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    // Test 1: Fetch offsets for an existing consumer group
+    {
+        let group = rand_test_group();
+        create_consumer_group(&group).await;
+
+        let results = admin_client
+            .list_consumer_group_offsets(&[ListConsumerGroupOffsets::new(&group)], &opts)
+            .await
+            .expect("list consumer group offsets failed");
+
+        assert_eq!(results.len(), 1);
+        match &results[0] {
+            Ok((name, tpl)) => {
+                assert_eq!(name, &group);
+                assert!(tpl.count() > 0, "expected at least one partition");
+                for elem in tpl.elements() {
+                    elem.error().expect("partition should not have an error");
+                    // Verify we can access topic, partition, and offset
+                    assert!(!elem.topic().is_empty(), "topic name should not be empty");
+                    assert!(elem.partition() >= 0, "partition should be non-negative");
+                }
+            }
+            Err((name, err)) => {
+                panic!("failed to fetch offsets for {name}: {err:?}");
+            }
+        }
+    }
+
+    // Test 2: Fetch offsets for a non-existent group should return an error
+    {
+        let unknown_group = rand_test_group();
+        let results = admin_client
+            .list_consumer_group_offsets(
+                &[ListConsumerGroupOffsets::new(&unknown_group)],
+                &opts,
+            )
+            .await
+            .expect("list consumer group offsets failed");
+
+        assert_eq!(results.len(), 1);
+        match &results[0] {
+            Ok((name, _)) => {
+                panic!("expected error for unknown group {name}, but got success");
+            }
+            Err((name, err)) => {
+                assert_eq!(name, &unknown_group);
+                assert_eq!(*err, RDKafkaErrorCode::GroupIdNotFound);
+            }
+        }
+    }
+
+    // Test 3: Fetch offsets with partition filtering
+    {
+        let group = rand_test_group();
+        create_consumer_group(&group).await;
+
+        // Create a topic partition list for filtering
+        let mut filter_tpl = TopicPartitionList::new();
+        // Note: We need to know the topic name from create_consumer_group
+        // For this test, we'll fetch all offsets first, then filter
+        let all_results = admin_client
+            .list_consumer_group_offsets(&[ListConsumerGroupOffsets::new(&group)], &opts)
+            .await
+            .expect("list consumer group offsets failed");
+
+        if let Ok((_, tpl)) = &all_results[0] {
+            if tpl.count() > 0 {
+                let first_elem = &tpl.elements()[0];
+                filter_tpl.add_partition(first_elem.topic(), first_elem.partition());
+
+                let filtered_results = admin_client
+                    .list_consumer_group_offsets(
+                        &[ListConsumerGroupOffsets::new(&group).partitions(&filter_tpl)],
+                        &opts,
+                    )
+                    .await
+                    .expect("list consumer group offsets failed");
+
+                assert_eq!(filtered_results.len(), 1);
+                match &filtered_results[0] {
+                    Ok((name, filtered_tpl)) => {
+                        assert_eq!(name, &group);
+                        assert_eq!(
+                            filtered_tpl.count(),
+                            1,
+                            "filtered result should contain exactly one partition"
+                        );
+                        let elem = &filtered_tpl.elements()[0];
+                        assert_eq!(elem.topic(), first_elem.topic());
+                        assert_eq!(elem.partition(), first_elem.partition());
+                    }
+                    Err((name, err)) => {
+                        panic!("failed to fetch filtered offsets for {name}: {err:?}");
+                    }
+                }
+            }
+        }
+    }
+
+    // Test 4: Fetch offsets for multiple groups at once
+    {
+        let group1 = rand_test_group();
+        let group2 = rand_test_group();
+        create_consumer_group(&group1).await;
+        create_consumer_group(&group2).await;
+
+        let results = admin_client
+            .list_consumer_group_offsets(
+                &[
+                    ListConsumerGroupOffsets::new(&group1),
+                    ListConsumerGroupOffsets::new(&group2),
+                ],
+                &opts,
+            )
+            .await
+            .expect("list consumer group offsets failed");
+
+        assert_eq!(results.len(), 2);
+        for result in &results {
+            match result {
+                Ok((name, tpl)) => {
+                    assert!(
+                        name == &group1 || name == &group2,
+                        "group name should match one of the requested groups"
+                    );
+                    assert!(tpl.count() > 0, "expected at least one partition");
+                }
+                Err((name, err)) => {
+                    panic!("failed to fetch offsets for {name}: {err:?}");
+                }
+            }
+        }
+    }
+
+    // Test 5: Verify offset values are valid (not Invalid)
+    {
+        let group = rand_test_group();
+        create_consumer_group(&group).await;
+
+        let results = admin_client
+            .list_consumer_group_offsets(&[ListConsumerGroupOffsets::new(&group)], &opts)
+            .await
+            .expect("list consumer group offsets failed");
+
+        match &results[0] {
+            Ok((_, tpl)) => {
+                for elem in tpl.elements() {
+                    let offset = elem.offset();
+                    // The offset should not be Invalid for a committed offset
+                    assert_ne!(
+                        offset,
+                        Offset::Invalid,
+                        "offset should not be Invalid for committed offsets"
+                    );
+                }
+            }
+            Err((name, err)) => {
+                panic!("failed to fetch offsets for {name}: {err:?}");
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_list_consumer_group_offsets_with_commits() {
+    let admin_client = create_admin_client();
+    let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+    // Create a topic with multiple partitions
+    let topic_name = rand_test_topic("test_commits_and_fetch");
+    admin_client
+        .create_topics(
+            &[NewTopic {
+                name: &topic_name,
+                num_partitions: 3,
+                replication: TopicReplication::Fixed(1),
+                config: vec![],
+            }],
+            &opts,
+        )
+        .await
+        .expect("topic creation failed");
+
+    // Wait for topic to be available
+    let consumer_for_metadata: BaseConsumer = create_config()
+        .create()
+        .expect("create consumer failed");
+    (|| {
+        consumer_for_metadata
+            .fetch_metadata(Some(&topic_name), Duration::from_secs(3))
+            .map_err(|e| e.to_string())
+    })
+    .retry(ExponentialBuilder::default().with_max_delay(Duration::from_secs(5)))
+    .call()
+    .unwrap();
+
+    // Test 1: Commit offsets for a single group and verify they can be fetched
+    {
+        let group1 = rand_test_group();
+        let consumer1: BaseConsumer = create_config()
+            .set("group.id", &group1)
+            .create()
+            .expect("create consumer failed");
+
+        // Assign all partitions
+        let mut assignment = TopicPartitionList::new();
+        assignment.add_partition(&topic_name, 0);
+        assignment.add_partition(&topic_name, 1);
+        assignment.add_partition(&topic_name, 2);
+        consumer1
+            .assign(&assignment)
+            .expect("assign failed");
+
+        // Commit specific offsets for each partition
+        consumer1
+            .store_offset(&topic_name, 0, 100)
+            .expect("store offset failed");
+        consumer1
+            .store_offset(&topic_name, 1, 200)
+            .expect("store offset failed");
+        consumer1
+            .store_offset(&topic_name, 2, 300)
+            .expect("store offset failed");
+
+        // Commit the offsets
+        consumer1
+            .commit_consumer_state(CommitMode::Sync)
+            .expect("commit failed");
+
+        // Fetch the offsets using the admin API
+        let results = admin_client
+            .list_consumer_group_offsets(&[ListConsumerGroupOffsets::new(&group1)], &opts)
+            .await
+            .expect("list consumer group offsets failed");
+
+        assert_eq!(results.len(), 1);
+        match &results[0] {
+            Ok((name, tpl)) => {
+                assert_eq!(name, &group1);
+                assert_eq!(tpl.count(), 3, "expected 3 partitions");
+
+                // Verify each partition has the correct offset
+                let mut found_partitions = HashSet::new();
+                for elem in tpl.elements() {
+                    assert_eq!(elem.topic(), topic_name);
+                    elem.error().expect("partition should not have an error");
+                    found_partitions.insert(elem.partition());
+
+                    match elem.offset() {
+                        Offset::Offset(offset) => {
+                            match elem.partition() {
+                                0 => assert_eq!(offset, 100, "partition 0 should have offset 100"),
+                                1 => assert_eq!(offset, 200, "partition 1 should have offset 200"),
+                                2 => assert_eq!(offset, 300, "partition 2 should have offset 300"),
+                                _ => panic!("unexpected partition {}", elem.partition()),
+                            }
+                        }
+                        other => panic!(
+                            "expected Offset::Offset, got {:?} for partition {}",
+                            other,
+                            elem.partition()
+                        ),
+                    }
+                }
+                assert_eq!(
+                    found_partitions.len(),
+                    3,
+                    "should have found all 3 partitions"
+                );
+            }
+            Err((name, err)) => {
+                panic!("failed to fetch offsets for {name}: {err:?}");
+            }
+        }
+    }
+
+    // Test 2: Commit offsets for multiple groups and verify all can be fetched
+    {
+        let group2 = rand_test_group();
+        let group3 = rand_test_group();
+
+        // Commit offsets for group2
+        let consumer2: BaseConsumer = create_config()
+            .set("group.id", &group2)
+            .create()
+            .expect("create consumer failed");
+        let mut assignment2 = TopicPartitionList::new();
+        assignment2.add_partition(&topic_name, 0);
+        assignment2.add_partition(&topic_name, 1);
+        consumer2.assign(&assignment2).expect("assign failed");
+        consumer2
+            .store_offset(&topic_name, 0, 500)
+            .expect("store offset failed");
+        consumer2
+            .store_offset(&topic_name, 1, 600)
+            .expect("store offset failed");
+        consumer2
+            .commit_consumer_state(CommitMode::Sync)
+            .expect("commit failed");
+
+        // Commit offsets for group3
+        let consumer3: BaseConsumer = create_config()
+            .set("group.id", &group3)
+            .create()
+            .expect("create consumer failed");
+        let mut assignment3 = TopicPartitionList::new();
+        assignment3.add_partition(&topic_name, 2);
+        consumer3.assign(&assignment3).expect("assign failed");
+        consumer3
+            .store_offset(&topic_name, 2, 700)
+            .expect("store offset failed");
+        consumer3
+            .commit_consumer_state(CommitMode::Sync)
+            .expect("commit failed");
+
+        // Fetch offsets for both groups
+        let results = admin_client
+            .list_consumer_group_offsets(
+                &[
+                    ListConsumerGroupOffsets::new(&group2),
+                    ListConsumerGroupOffsets::new(&group3),
+                ],
+                &opts,
+            )
+            .await
+            .expect("list consumer group offsets failed");
+
+        assert_eq!(results.len(), 2);
+
+        // Verify group2 offsets
+        let group2_result = results
+            .iter()
+            .find(|r| match r {
+                Ok((name, _)) => name == &group2,
+                Err((name, _)) => name == &group2,
+            })
+            .expect("should find group2 result");
+        match group2_result {
+            Ok((name, tpl)) => {
+                assert_eq!(name, &group2);
+                assert_eq!(tpl.count(), 2, "group2 should have 2 partitions");
+                for elem in tpl.elements() {
+                    match elem.partition() {
+                        0 => {
+                            if let Offset::Offset(offset) = elem.offset() {
+                                assert_eq!(offset, 500, "group2 partition 0 should have offset 500");
+                            } else {
+                                panic!("expected Offset::Offset for group2 partition 0");
+                            }
+                        }
+                        1 => {
+                            if let Offset::Offset(offset) = elem.offset() {
+                                assert_eq!(offset, 600, "group2 partition 1 should have offset 600");
+                            } else {
+                                panic!("expected Offset::Offset for group2 partition 1");
+                            }
+                        }
+                        _ => panic!("unexpected partition in group2"),
+                    }
+                }
+            }
+            Err((name, err)) => {
+                panic!("failed to fetch offsets for {name}: {err:?}");
+            }
+        }
+
+        // Verify group3 offsets
+        let group3_result = results
+            .iter()
+            .find(|r| match r {
+                Ok((name, _)) => name == &group3,
+                Err((name, _)) => name == &group3,
+            })
+            .expect("should find group3 result");
+        match group3_result {
+            Ok((name, tpl)) => {
+                assert_eq!(name, &group3);
+                assert_eq!(tpl.count(), 1, "group3 should have 1 partition");
+                let elem = &tpl.elements()[0];
+                assert_eq!(elem.partition(), 2);
+                if let Offset::Offset(offset) = elem.offset() {
+                    assert_eq!(offset, 700, "group3 partition 2 should have offset 700");
+                } else {
+                    panic!("expected Offset::Offset for group3 partition 2");
+                }
+            }
+            Err((name, err)) => {
+                panic!("failed to fetch offsets for {name}: {err:?}");
+            }
+        }
+    }
+
+    // Test 3: Update committed offsets and verify the new values are fetched
+    {
+        let group4 = rand_test_group();
+        let consumer4: BaseConsumer = create_config()
+            .set("group.id", &group4)
+            .create()
+            .expect("create consumer failed");
+
+        let mut assignment = TopicPartitionList::new();
+        assignment.add_partition(&topic_name, 0);
+        consumer4.assign(&assignment).expect("assign failed");
+
+        // Commit initial offset
+        consumer4
+            .store_offset(&topic_name, 0, 1000)
+            .expect("store offset failed");
+        consumer4
+            .commit_consumer_state(CommitMode::Sync)
+            .expect("commit failed");
+
+        // Verify initial offset
+        let results = admin_client
+            .list_consumer_group_offsets(&[ListConsumerGroupOffsets::new(&group4)], &opts)
+            .await
+            .expect("list consumer group offsets failed");
+        match &results[0] {
+            Ok((_, tpl)) => {
+                let elem = &tpl.elements()[0];
+                if let Offset::Offset(offset) = elem.offset() {
+                    assert_eq!(offset, 1000, "initial offset should be 1000");
+                } else {
+                    panic!("expected Offset::Offset");
+                }
+            }
+            Err((name, err)) => {
+                panic!("failed to fetch offsets for {name}: {err:?}");
+            }
+        }
+
+        // Update the offset
+        consumer4
+            .store_offset(&topic_name, 0, 2000)
+            .expect("store offset failed");
+        consumer4
+            .commit_consumer_state(CommitMode::Sync)
+            .expect("commit failed");
+
+        // Verify updated offset
+        let results = admin_client
+            .list_consumer_group_offsets(&[ListConsumerGroupOffsets::new(&group4)], &opts)
+            .await
+            .expect("list consumer group offsets failed");
+        match &results[0] {
+            Ok((_, tpl)) => {
+                let elem = &tpl.elements()[0];
+                if let Offset::Offset(offset) = elem.offset() {
+                    assert_eq!(offset, 2000, "updated offset should be 2000");
+                } else {
+                    panic!("expected Offset::Offset");
+                }
+            }
+            Err((name, err)) => {
+                panic!("failed to fetch offsets for {name}: {err:?}");
+            }
+        }
+    }
 }
 
 #[tokio::test]

@@ -9,6 +9,7 @@ use std::ffi::{c_void, CStr, CString};
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
+use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::task::{Context, Poll};
@@ -178,6 +179,41 @@ impl<C: ClientContext> AdminClient<C> {
                 native_opts.ptr(),
                 self.queue.ptr(),
             )
+        }
+        Ok(rx)
+    }
+
+    /// Lists offsets for the requested consumer groups.
+    pub fn list_consumer_group_offsets<'a>(
+        &self,
+        groups: &[ListConsumerGroupOffsets<'a>],
+        opts: &AdminOptions,
+    ) -> impl Future<Output = KafkaResult<Vec<GroupOffsetsResult>>> {
+        match self.list_consumer_group_offsets_inner(groups, opts) {
+            Ok(rx) => Either::Left(ListConsumerGroupOffsetsFuture { rx }),
+            Err(err) => Either::Right(future::err(err)),
+        }
+    }
+
+    fn list_consumer_group_offsets_inner<'a>(
+        &self,
+        groups: &[ListConsumerGroupOffsets<'a>],
+        opts: &AdminOptions,
+    ) -> KafkaResult<oneshot::Receiver<NativeEvent>> {
+        let mut native_groups = Vec::new();
+        for group in groups {
+            native_groups.push(group.to_native()?);
+        }
+        let mut err_buf = ErrBuf::new();
+        let (native_opts, rx) = opts.to_native(self.client.native_ptr(), &mut err_buf)?;
+        unsafe {
+            rdsys::rd_kafka_ListConsumerGroupOffsets(
+                self.client.native_ptr(),
+                native_groups.as_c_array(),
+                native_groups.len(),
+                native_opts.ptr(),
+                self.queue.ptr(),
+            );
         }
         Ok(rx)
     }
@@ -663,6 +699,9 @@ fn build_topic_results(topics: *const *const RDKafkaTopicResult, n: usize) -> Ve
 /// The result of a DeleteGroup operation.
 pub type GroupResult = Result<String, (String, RDKafkaErrorCode)>;
 
+/// The result of a `ListConsumerGroupOffsets` operation.
+pub type GroupOffsetsResult = Result<(String, TopicPartitionList), (String, RDKafkaErrorCode)>;
+
 fn build_group_results(groups: *const *const RDKafkaGroupResult, n: usize) -> Vec<GroupResult> {
     let mut out = Vec::with_capacity(n);
     for i in 0..n {
@@ -676,6 +715,34 @@ fn build_group_results(groups: *const *const RDKafkaGroupResult, n: usize) -> Ve
             out.push(Err((name, err.into())));
         } else {
             out.push(Ok(name));
+        }
+    }
+    out
+}
+
+fn build_group_offsets_results(
+    groups: *const *const RDKafkaGroupResult,
+    n: usize,
+) -> Vec<GroupOffsetsResult> {
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        let group = unsafe { *groups.add(i) };
+        let name = unsafe { cstr_to_owned(rdsys::rd_kafka_group_result_name(group)) };
+        let err = unsafe {
+            let err = rdsys::rd_kafka_group_result_error(group);
+            rdsys::rd_kafka_error_code(err)
+        };
+        if err.is_error() {
+            out.push(Err((name, err.into())));
+        } else {
+            let partitions_ptr = unsafe { rdsys::rd_kafka_group_result_partitions(group) };
+            let tpl = if partitions_ptr.is_null() {
+                TopicPartitionList::new()
+            } else {
+                let tpl_ptr = unsafe { rdsys::rd_kafka_topic_partition_list_copy(partitions_ptr) };
+                unsafe { TopicPartitionList::from_ptr(tpl_ptr) }
+            };
+            out.push(Ok((name, tpl)));
         }
     }
     out
@@ -892,6 +959,86 @@ impl Future for DeleteGroupsFuture {
         let mut n = 0;
         let groups = unsafe { rdsys::rd_kafka_DeleteGroups_result_groups(res, &mut n) };
         Poll::Ready(Ok(build_group_results(groups, n)))
+    }
+}
+
+//
+// List consumer group offsets handling
+//
+
+/// Options for listing consumer group offsets.
+#[derive(Debug)]
+pub struct ListConsumerGroupOffsets<'a> {
+    group_id: &'a str,
+    partitions: Option<&'a TopicPartitionList>,
+}
+
+impl<'a> ListConsumerGroupOffsets<'a> {
+    /// Creates a new request for the provided `group_id`.
+    pub fn new(group_id: &'a str) -> Self {
+        Self {
+            group_id,
+            partitions: None,
+        }
+    }
+
+    /// Limits the request to the provided partition list.
+    ///
+    /// Omitting this filter requests offsets for all partitions in the group.
+    pub fn partitions(mut self, partitions: &'a TopicPartitionList) -> Self {
+        self.partitions = Some(partitions);
+        self
+    }
+
+    fn to_native(&self) -> KafkaResult<NativeListConsumerGroupOffsets> {
+        let group_id = CString::new(self.group_id)?;
+        let partitions_ptr = self
+            .partitions
+            .map(|tpl| tpl.ptr() as *const RDKafkaTopicPartitionList)
+            .unwrap_or(ptr::null());
+        unsafe {
+            NativeListConsumerGroupOffsets::from_ptr(rdsys::rd_kafka_ListConsumerGroupOffsets_new(
+                group_id.as_ptr(),
+                partitions_ptr,
+            ))
+        }
+        .ok_or_else(|| {
+            KafkaError::AdminOpCreation(format!(
+                "rd_kafka_ListConsumerGroupOffsets_new returned null for group '{}'",
+                self.group_id
+            ))
+        })
+    }
+}
+
+type NativeListConsumerGroupOffsets = NativePtr<RDKafkaListConsumerGroupOffsets>;
+
+unsafe impl KafkaDrop for RDKafkaListConsumerGroupOffsets {
+    const TYPE: &'static str = "list consumer group offsets";
+    const DROP: unsafe extern "C" fn(*mut Self) = rdsys::rd_kafka_ListConsumerGroupOffsets_destroy;
+}
+
+struct ListConsumerGroupOffsetsFuture {
+    rx: oneshot::Receiver<NativeEvent>,
+}
+
+impl Future for ListConsumerGroupOffsetsFuture {
+    type Output = KafkaResult<Vec<GroupOffsetsResult>>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let event = ready!(self.rx.poll_unpin(cx)).map_err(|_| KafkaError::Canceled)?;
+        event.check_error()?;
+        let res = unsafe { rdsys::rd_kafka_event_ListConsumerGroupOffsets_result(event.ptr()) };
+        if res.is_null() {
+            let typ = unsafe { rdsys::rd_kafka_event_type(event.ptr()) };
+            return Poll::Ready(Err(KafkaError::AdminOpCreation(format!(
+                "list consumer group offsets request received response of incorrect type ({})",
+                typ
+            ))));
+        }
+        let mut n = 0;
+        let groups = unsafe { rdsys::rd_kafka_ListConsumerGroupOffsets_result_groups(res, &mut n) };
+        Poll::Ready(Ok(build_group_offsets_results(groups, n)))
     }
 }
 

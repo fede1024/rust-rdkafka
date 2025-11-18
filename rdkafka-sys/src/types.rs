@@ -75,6 +75,9 @@ pub type RDKafkaDeleteTopic = bindings::rd_kafka_DeleteTopic_t;
 /// Native rdkafka delete group object.
 pub type RDKafkaDeleteGroup = bindings::rd_kafka_DeleteGroup_t;
 
+/// Native rdkafka list consumer group offsets object.
+pub type RDKafkaListConsumerGroupOffsets = bindings::rd_kafka_ListConsumerGroupOffsets_t;
+
 /// Native rdkafka new partitions object.
 pub type RDKafkaNewPartitions = bindings::rd_kafka_NewPartitions_t;
 
