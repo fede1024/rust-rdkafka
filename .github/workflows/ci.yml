@@ -7,7 +7,7 @@ on:
     branches: [master]
 
 env:
-  rust_version: 1.74
+  rust_version: 1.85
 
 jobs:
   lint:
@@ -88,6 +88,8 @@ jobs:
           toolchain: ${{ env.rust_version }}
       # - run: sudo apt-get update
       # - run: sudo apt-get install -qy valgrind  # Valgrind currently disabled in testing
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y libcurl4-openssl-dev
       - run: ./test_suite.sh
         env:
           KAFKA_VERSION: ${{ matrix.kafka-version }}
