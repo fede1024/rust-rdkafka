@@ -223,6 +223,7 @@ where
         let poll_interval = {
             let millis: u64 = native_config
                 .get("max.poll.interval.ms")?
+                .trim_end_matches(char::from(0))
                 .parse()
                 .expect("librdkafka validated config value is valid u64");
             Duration::from_millis(millis)
