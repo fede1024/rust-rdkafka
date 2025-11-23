@@ -75,7 +75,11 @@ fn main() {
         }
     } else if env::var("CARGO_FEATURE_STATIC_EXTERNAL").is_ok() {
         if let Ok(rdkafka_dir) = env::var("DEP_LIBRDKAFKA_STATIC_ROOT") {
-            println!("cargo:rustc-link-search=native={}/src", rdkafka_dir);
+            let rdkafka = PathBuf::from(&rdkafka_dir);
+            println!(
+                "cargo:rustc-link-search=native={}",
+                rdkafka.parent().unwrap().display()
+            );
             println!("cargo:rustc-link-lib=static=rdkafka");
             println!("cargo:root={}", rdkafka_dir);
         } else {
