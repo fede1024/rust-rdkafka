@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: bitnami/kafka:${KAFKA_VERSION:-4.0}
+    image: bitnamilegacy/kafka:${KAFKA_VERSION:-4.0}
     environment:
       # Enable KRaft mode (combined broker and controller)
       - KAFKA_CFG_NODE_ID=0
@@ -11,7 +11,7 @@ services:
       - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@localhost:9093
-      
+
       # Bitnami defaults
       - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1

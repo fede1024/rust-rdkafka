@@ -1,5 +1,8 @@
 # Changelog
 
+## vNEXT+2.12.1 (2025-11-05)
+* Bump librdkafka to v2.12.1.
+
 ## v4.9.0+2.10.0
 * Add cargo enforcement of MSRV of 1.74.
 * Bump librdkafka to v2.10.0.
