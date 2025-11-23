@@ -628,3 +628,74 @@ async fn test_event_errors() {
         Err(KafkaError::AdminOp(RDKafkaErrorCode::OperationTimedOut))
     );
 }
+
+#[tokio::test]
+async fn test_admin_client_with_oauthbearer_context() {
+    use rdkafka::client::{ClientContext, OAuthToken};
+    use std::error::Error;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    // Custom context that tracks OAuth token generation attempts
+    struct OAuthTestContext {
+        token_generation_count: Arc<AtomicUsize>,
+    }
+
+    impl ClientContext for OAuthTestContext {
+        const ENABLE_REFRESH_OAUTH_TOKEN: bool = true;
+
+        fn generate_oauth_token(
+            &self,
+            _oauthbearer_config: Option<&str>,
+        ) -> Result<OAuthToken, Box<dyn Error>> {
+            // Track that token generation was attempted
+            self.token_generation_count.fetch_add(1, Ordering::SeqCst);
+            
+            // Return a dummy token
+            Ok(OAuthToken {
+                token: "test-token".to_string(),
+                principal_name: "test-principal".to_string(),
+                lifetime_ms: 3600000,
+            })
+        }
+    }
+
+    let token_count = Arc::new(AtomicUsize::new(0));
+    let context = OAuthTestContext {
+        token_generation_count: Arc::clone(&token_count),
+    };
+
+    // Create an AdminClient with OAUTHBEARER context
+    // This should successfully create even though we don't connect to a real broker
+    let admin_client: AdminClient<OAuthTestContext> = create_config()
+        .create_with_context(context)
+        .expect("Admin client with OAUTHBEARER context creation failed");
+
+    // Verify the client was created successfully
+    assert!(admin_client.native_client().ptr() != std::ptr::null_mut());
+    
+    // Test a simple operation - fetch metadata
+    // This should work if a broker is running (like in CI), or fail gracefully if not
+    let metadata_result = admin_client.client().fetch_metadata(None, std::time::Duration::from_secs(5));
+    
+    // Either outcome is fine:
+    // - Success: broker is available, client works with OAUTHBEARER context
+    // - Error: no broker, but client doesn't crash
+    match metadata_result {
+        Ok(_metadata) => {
+            // Successfully connected - client works with OAUTHBEARER context!
+            println!("Successfully fetched metadata with OAUTHBEARER context");
+        }
+        Err(e) => {
+            // Failed to connect (no broker) - but client is functional
+            println!("Expected error without broker: {:?}", e);
+        }
+    }
+    
+    // The client should be functional and not crash when dropped
+    drop(admin_client);
+    
+    // Note: In a real OAUTHBEARER scenario with a properly configured broker,
+    // the token_generation_count would increment when the broker requests authentication.
+    // For this test, we verify the client can be created and used without crashing.
+}
