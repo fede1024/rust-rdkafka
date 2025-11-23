@@ -132,7 +132,7 @@ fn build_librdkafka() {
         configure_flags.push("--enable-gssapi".into());
         if let Ok(sasl2_root) = env::var("DEP_SASL2_ROOT") {
             cflags.push(format!("-I{}/include", sasl2_root));
-            ldflags.push(format!("-L{}/build", sasl2_root));
+            ldflags.push(format!("-L{}/lib", sasl2_root));
         }
     } else {
         configure_flags.push("--disable-gssapi".into());
@@ -142,7 +142,7 @@ fn build_librdkafka() {
         // There is no --enable-zlib option, but it is enabled by default.
         if let Ok(z_root) = env::var("DEP_Z_ROOT") {
             cflags.push(format!("-I{}/include", z_root));
-            ldflags.push(format!("-L{}/build", z_root));
+            ldflags.push(format!("-L{}/lib", z_root));
         }
     } else {
         configure_flags.push("--disable-zlib".into());
@@ -238,7 +238,7 @@ fn build_librdkafka() {
         config.define("WITH_ZLIB", "1");
         config.register_dep("z");
         if let Ok(z_root) = env::var("DEP_Z_ROOT") {
-            cmake_library_paths.push(format!("{}/build", z_root));
+            cmake_library_paths.push(format!("{}/lib", z_root));
         }
     } else {
         config.define("WITH_ZLIB", "0");
@@ -281,8 +281,19 @@ fn build_librdkafka() {
         config.define("WITH_SASL", "1");
         config.register_dep("sasl2");
         if let Ok(sasl2_root) = env::var("DEP_SASL2_ROOT") {
+            cmake_library_paths.push(format!("{}/lib", sasl2_root));
+
             config.cflag(format!("-I{}/include", sasl2_root));
             config.cxxflag(format!("-I{}/include", sasl2_root));
+            config.cflag(format!("-L{}/lib", sasl2_root));
+            config.cxxflag(format!("-L{}/lib", sasl2_root));
+
+            //FIXME: Update librdkafka to use find_package for finding sasl2 instead of pkg-config
+            let pkgconfig_path = format!("{}/../sasl2", sasl2_root);
+            let existing = env::var("PKG_CONFIG_PATH").unwrap_or_default();
+            let new_pkg_config_path = format!("{}:{}", pkgconfig_path, existing);
+            println!("Setting PKG_CONFIG_PATH to {}", new_pkg_config_path);
+            env::set_var("PKG_CONFIG_PATH", new_pkg_config_path);
         }
     } else {
         config.define("WITH_SASL", "0");
