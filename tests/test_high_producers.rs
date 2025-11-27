@@ -5,7 +5,6 @@ use std::time::{Duration, Instant};
 
 use futures::stream::{FuturesUnordered, StreamExt};
 
-use rdkafka::client::DefaultClientContext;
 use rdkafka::config::ClientConfig;
 use rdkafka::error::{KafkaError, RDKafkaErrorCode};
 use rdkafka::message::{Header, Headers, Message, OwnedHeaders};
@@ -17,7 +16,7 @@ use crate::utils::*;
 
 mod utils;
 
-fn future_producer(config_overrides: HashMap<&str, &str>) -> FutureProducer<DefaultClientContext> {
+fn future_producer(config_overrides: HashMap<&str, &str>) -> FutureProducer {
     let mut config = ClientConfig::new();
     config
         .set("bootstrap.servers", "localhost")
