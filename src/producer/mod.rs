@@ -130,7 +130,7 @@
 //!   producer queue. Default: 100000.
 //! - `queue.buffering.max.kbytes`: Maximum total message size sum allowed on
 //!   the producer queue. This property has higher priority than
-//!   queue.buffering.max.messages. Default: 4000000.
+//!   queue.buffering.max.messages. Default: 1048576.
 //! - `queue.buffering.max.ms`: Delay in milliseconds to wait for messages in
 //!   the producer queue to accumulate before sending a request to the brokers.
 //!   A higher value allows larger and more effective (less overhead, improved
