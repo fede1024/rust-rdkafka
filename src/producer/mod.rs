@@ -39,7 +39,7 @@
 //! Buffering is done automatically by librdkafka. When `send` is called, the
 //! message is enqueued internally and once enough messages have been enqueued,
 //! or when enough time has passed, they will be sent to Kafka as a single
-//! batch. You can control the behavior of the buffer by configuring the the
+//! batch. You can control the behavior of the buffer by configuring the
 //! `queue.buffering.max.*` parameters listed below.
 //!
 //! ## `rust-rdkafka` producers
