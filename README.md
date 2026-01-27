@@ -158,6 +158,7 @@ your executable. To compile librdkafka you'll need:
 * the GNU toolchain
 * GNU `make`
 * `pthreads`
+* `libcurl-dev`: e.g. `libcurl4-openssl-dev` on ubuntu
 * `zlib`: optional, but included by default (feature: `libz`)
 * `cmake`: optional, *not* included by default (feature: `cmake-build`)
 * `libssl-dev`: optional, *not* included by default (feature: `ssl`)
