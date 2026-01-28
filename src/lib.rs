@@ -287,6 +287,9 @@ pub mod producer;
 pub mod statistics;
 pub mod topic_partition_list;
 pub mod util;
+mod list_offsets_result_info;
+mod group_description;
+mod list_consumer_group_offsets;
 
 // Re-exports.
 pub use crate::client::ClientContext;
