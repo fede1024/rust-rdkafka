@@ -14,7 +14,8 @@ use rdkafka::config::ClientConfig;
 use rdkafka::consumer::ConsumerContext;
 use rdkafka::error::KafkaResult;
 use rdkafka::message::ToBytes;
-use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::producer::future_producer::{future_delivery_impl, OwnedDeliveryResult};
+use rdkafka::producer::{FutureProducer, FutureRecord, ProducerContext};
 use rdkafka::statistics::Statistics;
 use rdkafka::TopicPartitionList;
 
@@ -72,6 +73,18 @@ pub struct ProducerTestContext {
 
 impl ClientContext for ProducerTestContext {
     fn stats(&self, _: Statistics) {} // Don't print stats
+}
+
+impl ProducerContext for ProducerTestContext {
+    type DeliveryOpaque = Box<futures_channel::oneshot::Sender<OwnedDeliveryResult>>;
+
+    fn delivery(
+        &self,
+        delivery_result: &rdkafka::message::DeliveryResult<'_>,
+        delivery_opaque: Self::DeliveryOpaque,
+    ) {
+        future_delivery_impl(delivery_result, *delivery_opaque);
+    }
 }
 
 pub async fn create_topic(name: &str, partitions: i32) {
