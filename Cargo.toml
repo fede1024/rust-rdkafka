@@ -38,7 +38,7 @@ env_logger = "0.11.8"
 futures = "0.3.31"
 hdrhistogram = "7.0.0"
 maplit = "1.0.2"
-rand = "0.9.1"
+rand = "0.9.3"
 regex = "1.11.1"
 smol = "2.0.2"
 tokio = { version = "1.18", features = ["macros", "rt-multi-thread", "time"] }
