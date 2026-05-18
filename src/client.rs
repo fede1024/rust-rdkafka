@@ -268,6 +268,7 @@ impl<C: ClientContext> Client<C> {
         trace!("Create new librdkafka client {:p}", client_ptr);
 
         if client_ptr.is_null() {
+            drop(native_config);
             return Err(KafkaError::ClientCreation(err_buf.to_string()));
         }
 
