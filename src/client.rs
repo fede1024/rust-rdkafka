@@ -19,7 +19,7 @@ use std::ptr;
 use std::string::ToString;
 use std::sync::Arc;
 
-use libc::c_void;
+use libc::{addrinfo, c_void};
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
@@ -58,6 +58,38 @@ pub trait ClientContext: Send + Sync {
     /// mechanism.
     fn enable_refresh_oauth_token(&self) -> bool {
         false
+    }
+
+    /// Whether to handle resolution of broker addresses with [`ClientContext::resolve`]
+    /// and [`ClientContext::free_resolved`].
+    ///
+    /// If disabled, librdkafka's default resolver is used instead.
+    fn enable_resolve(&self) -> bool {
+        false
+    }
+
+    /// Resolves the given DNS name.
+    ///
+    /// Override with an appropriate implementation when you need custom DNS resolution.
+    /// For this method to be called, you must
+    /// also change [`ClientContext::enable_resolve`] to return true.
+    fn resolve(
+        &self,
+        _node: Option<&CStr>,
+        _service: Option<&CStr>,
+        _hints: Option<&resolve::addrinfo>,
+    ) -> Result<*mut resolve::addrinfo, i32> {
+        error!("default ClientContext::resolve implementation must be overriden");
+        Err(libc::EAI_FAIL)
+    }
+
+    /// Frees [`addrinfo`] instance previously acquired through [`Self::resolve`].
+    ///
+    /// This method does not return any result.
+    /// See [librdkafka docs](https://docs.confluent.io/platform/current/clients/librdkafka/html/rdkafka_8h.html#a12bbaef85d4168572eea006c5ce0d2eb)
+    /// for reference.
+    fn free_resolved(&self, _addrinfo: *mut resolve::addrinfo) {
+        error!("default ClientContext::free_resolved implementation must be overriden");
     }
 
     /// Receives log lines from librdkafka.
@@ -122,7 +154,7 @@ pub trait ClientContext: Send + Sync {
     ///
     /// Override with an appropriate implementation when using the `OAUTHBEARER`
     /// SASL authentication mechanism. For this method to be called, you must
-    /// also set [`ClientContext::ENABLE_REFRESH_OAUTH_TOKEN`] to true.
+    /// also change [`ClientContext::enable_refresh_oauth_token`] to return true.
     ///
     /// The `fmt::Display` implementation of the returned error must not
     /// generate a message with an embedded null character.
@@ -142,6 +174,16 @@ pub trait ClientContext: Send + Sync {
     // future.
 }
 
+/// Re-exports from [`libc`] of types required to implement the [`ClientContext::resolve`]/[`ClientContext::free_resolved`]
+/// methods.
+pub mod resolve {
+    pub use libc::addrinfo;
+    pub use libc::c_char;
+    pub use libc::c_int;
+    pub use libc::sockaddr;
+    pub use libc::socklen_t;
+}
+
 /// An empty [`ClientContext`] that can be used when no customizations are
 /// needed.
 ///
@@ -150,6 +192,42 @@ pub trait ClientContext: Send + Sync {
 pub struct DefaultClientContext;
 
 impl ClientContext for DefaultClientContext {}
+
+/// Native callback that wraps [`ClientContext::resolve`] and [`ClientContext::free_resolved`].
+///
+/// Passed to the [`rdsys::rd_kafka_conf_set_resolve_cb`]
+/// when [`ClientContext::enable_resolve`] returns true.
+///
+/// If `node`, `service`, and `hints` are all NULL,
+/// it means that librdkafka wants us to free the [`addrinfo`] list.
+unsafe extern "C" fn native_resolve_cb<C: ClientContext>(
+    node: *const c_char,
+    service: *const c_char,
+    hints: *const addrinfo,
+    res: *mut *mut addrinfo,
+    opaque: *mut c_void,
+) -> i32 {
+    let context = opaque.cast::<C>().as_ref().unwrap_unchecked();
+
+    if node.is_null() && service.is_null() && hints.is_null() {
+        if res.as_ref().is_some_and(|res| !res.is_null()) {
+            context.free_resolved(*res);
+        }
+        0
+    } else {
+        match context.resolve(
+            (!node.is_null()).then(|| CStr::from_ptr(node)),
+            (!service.is_null()).then(|| CStr::from_ptr(service)),
+            hints.as_ref(),
+        ) {
+            Ok(addrinfo) => {
+                *res = addrinfo;
+                0
+            }
+            Err(error) => error,
+        }
+    }
+}
 
 //
 // ********** CLIENT **********
@@ -256,6 +334,14 @@ impl<C: ClientContext> Client<C> {
                 Arc::as_ptr(&context) as *mut c_void,
             )
         };
+        if context.enable_resolve() {
+            unsafe {
+                rdsys::rd_kafka_conf_set_resolve_cb(
+                    native_config.ptr(),
+                    Some(native_resolve_cb::<C>),
+                )
+            };
+        }
         native_config.set("log.queue", "true")?;
 
         let client_ptr = unsafe {

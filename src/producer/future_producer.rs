@@ -4,8 +4,10 @@
 // TODO: extend docs
 
 use std::error::Error;
+use std::ffi::CStr;
 use std::future::Future;
 use std::marker::PhantomData;
+use std::os::raw::c_char;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
@@ -13,6 +15,7 @@ use std::time::{Duration, Instant};
 
 use futures_channel::oneshot;
 use futures_util::FutureExt;
+use libc::addrinfo;
 
 use crate::client::{Client, ClientContext, DefaultClientContext, OAuthToken};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext, RDKafkaLogLevel};
@@ -154,6 +157,23 @@ pub type OwnedDeliveryResult = Result<Delivery, (KafkaError, OwnedMessage)>;
 impl<C: ClientContext + 'static> ClientContext for FutureProducerContext<C> {
     fn enable_refresh_oauth_token(&self) -> bool {
         self.wrapped_context.enable_refresh_oauth_token()
+    }
+
+    fn enable_resolve(&self) -> bool {
+        self.wrapped_context.enable_resolve()
+    }
+
+    fn resolve(
+        &self,
+        node: Option<&CStr>,
+        service: Option<&CStr>,
+        hints: Option<&addrinfo>,
+    ) -> Result<*mut addrinfo, i32> {
+        self.wrapped_context.resolve(node, service, hints)
+    }
+
+    fn free_resolved(&self, addrinfo: *mut addrinfo) {
+        self.wrapped_context.free_resolved(addrinfo)
     }
 
     fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
