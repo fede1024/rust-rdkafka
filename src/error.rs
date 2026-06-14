@@ -187,6 +187,11 @@ pub enum KafkaError {
     Transaction(RDKafkaError),
     /// Mock Cluster error
     MockCluster(RDKafkaErrorCode),
+    /// An API surface exists in rust-rdkafka but is not yet backed by the
+    /// underlying librdkafka build. Returned today by the KIP-932 share
+    /// consumer stubs; see
+    /// <https://github.com/confluentinc/librdkafka/issues/5441>.
+    Unsupported(&'static str),
 }
 
 impl fmt::Debug for KafkaError {
@@ -248,6 +253,7 @@ impl fmt::Debug for KafkaError {
             }
             KafkaError::Transaction(err) => write!(f, "KafkaError (Transaction error: {})", err),
             KafkaError::MockCluster(err) => write!(f, "KafkaError (Mock cluster error: {})", err),
+            KafkaError::Unsupported(reason) => write!(f, "KafkaError (Unsupported: {})", reason),
         }
     }
 }
@@ -289,6 +295,7 @@ impl fmt::Display for KafkaError {
             KafkaError::Subscription(err) => write!(f, "Subscription error: {}", err),
             KafkaError::Transaction(err) => write!(f, "Transaction error: {}", err),
             KafkaError::MockCluster(err) => write!(f, "Mock cluster error: {}", err),
+            KafkaError::Unsupported(reason) => write!(f, "Unsupported: {}", reason),
         }
     }
 }
@@ -322,6 +329,7 @@ impl Error for KafkaError {
             KafkaError::Subscription(_) => None,
             KafkaError::Transaction(err) => Some(err),
             KafkaError::MockCluster(err) => Some(err),
+            KafkaError::Unsupported(_) => None,
         }
     }
 }
@@ -363,6 +371,7 @@ impl KafkaError {
             KafkaError::Subscription(_) => None,
             KafkaError::Transaction(err) => Some(err.code()),
             KafkaError::MockCluster(err) => Some(*err),
+            KafkaError::Unsupported(_) => None,
         }
     }
 }

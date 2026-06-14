@@ -19,11 +19,22 @@ use crate::util::{KafkaDrop, NativePtr, Timeout};
 pub mod base_consumer;
 pub mod stream_consumer;
 
+#[cfg(feature = "kip-932")]
+pub mod share;
+
 // Re-exports.
 #[doc(inline)]
 pub use self::base_consumer::BaseConsumer;
 #[doc(inline)]
 pub use self::stream_consumer::{MessageStream, StreamConsumer};
+
+#[cfg(feature = "kip-932")]
+#[doc(inline)]
+pub use self::share::{
+    AcknowledgeType, AcknowledgementCommitResult, AcknowledgementMode, AutoOffsetReset,
+    BaseShareConsumer, DefaultShareConsumerContext, IsolationLevel, ShareConsumer,
+    ShareConsumerConfig, ShareConsumerContext, ShareConsumerRecords, ShareRecord,
+};
 
 /// Rebalance information.
 #[derive(Clone, Debug)]
