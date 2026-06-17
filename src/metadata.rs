@@ -11,6 +11,7 @@ use crate::error::IsError;
 use crate::util::{KafkaDrop, NativePtr};
 
 /// Broker metadata information.
+#[repr(transparent)]
 pub struct MetadataBroker(RDKafkaMetadataBroker);
 
 impl MetadataBroker {
@@ -45,6 +46,7 @@ impl fmt::Debug for MetadataBroker {
 }
 
 /// Partition metadata information.
+#[repr(transparent)]
 pub struct MetadataPartition(RDKafkaMetadataPartition);
 
 impl MetadataPartition {
@@ -96,6 +98,7 @@ impl fmt::Debug for MetadataPartition {
 }
 
 /// Topic metadata information.
+#[repr(transparent)]
 pub struct MetadataTopic(RDKafkaMetadataTopic);
 
 impl MetadataTopic {
