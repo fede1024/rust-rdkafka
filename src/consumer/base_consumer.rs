@@ -728,6 +728,9 @@ where
         topic: Option<&str>,
         timeout: T,
     ) -> KafkaResult<Metadata> {
+        // force credential retrieval w/o wait time
+        self.client
+            .poll_event(&self.queue, Timeout::After(Duration::ZERO));
         self.client.fetch_metadata(topic, timeout)
     }
 
