@@ -257,7 +257,6 @@ impl<C: ClientContext> Client<C> {
         native_config.set("log.queue", "true")?;
 
         let client_ptr = unsafe {
-            let native_config = ManuallyDrop::new(native_config);
             rdsys::rd_kafka_new(
                 rd_kafka_type,
                 native_config.ptr(),
@@ -270,6 +269,9 @@ impl<C: ClientContext> Client<C> {
         if client_ptr.is_null() {
             return Err(KafkaError::ClientCreation(err_buf.to_string()));
         }
+
+        // Let Rust drop `native_config` on failure and only `forget` after `rd_kafka_new` succeeds
+        std::mem::forget(native_config);
 
         let ret = unsafe {
             rdsys::rd_kafka_set_log_queue(client_ptr, rdsys::rd_kafka_queue_get_main(client_ptr))
