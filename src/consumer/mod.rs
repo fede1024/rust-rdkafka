@@ -300,17 +300,20 @@ where
     /// from the message and adds 1 to the offset of the message.
     fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()>;
 
-    /// Stores offset to be used on the next (auto)commit. When
+    /// Stores offset `offset` + 1 to be used on the next (auto)commit. When
     /// using this `enable.auto.offset.store` should be set to `false` in the
     /// config.
     fn store_offset(&self, topic: &str, partition: i32, offset: i64) -> KafkaResult<()>;
 
     /// Like [`Consumer::store_offset`], but the offset to store is derived from
-    /// the provided message.
+    /// the provided message: the message's offset + 1.
     fn store_offset_from_message(&self, message: &BorrowedMessage<'_>) -> KafkaResult<()>;
 
     /// Store offsets to be used on the next (auto)commit. When using this
     /// `enable.auto.offset.store` should be set to `false` in the config.
+    ///
+    /// Unlike [`Consumer::store_offset`], the offsets are stored as is; they
+    /// will NOT be + 1.
     fn store_offsets(&self, tpl: &TopicPartitionList) -> KafkaResult<()>;
 
     /// Returns the current topic subscription.
