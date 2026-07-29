@@ -26,7 +26,7 @@ use rdkafka_sys::types::*;
 use crate::admin::NativeEvent;
 use crate::config::{ClientConfig, NativeClientConfig, RDKafkaLogLevel};
 use crate::consumer::RebalanceProtocol;
-use crate::error::{IsError, KafkaError, KafkaResult};
+use crate::error::{IsError, KafkaError, KafkaResult, RDKafkaError};
 use crate::groups::GroupList;
 use crate::log::{debug, error, info, trace, warn};
 use crate::metadata::Metadata;
@@ -562,6 +562,34 @@ impl<C: ClientContext> Client<C> {
         MockCluster::from_client(self)
     }
 
+    /// Sets SASL credentials for the client.
+    ///
+    /// This function sets or resets the SASL username and password credentials
+    /// used for authentication with the SASL PLAIN and SCRAM mechanisms. The
+    /// new credentials will be used the next time this client needs to
+    /// authenticate to a broker. Existing broker connections that were made
+    /// with the old credentials will not be disconnected.
+    pub fn sasl_set_credentials(
+        &self,
+        username: &str,
+        password: &str,
+    ) -> KafkaResult<()> {
+        let username_c = CString::new(username)?;
+        let password_c = CString::new(password)?;
+        let ret = unsafe {
+            RDKafkaError::from_ptr(rdsys::rd_kafka_sasl_set_credentials(
+                self.native_ptr(),
+                username_c.as_ptr(),
+                password_c.as_ptr(),
+            ))
+        };
+        if ret.is_error() {
+            Err(KafkaError::Global(ret.code()))
+        } else {
+            Ok(())
+        }
+    }
+
     /// Returns a NativeTopic from the current client. The NativeTopic shouldn't outlive the client
     /// it was generated from.
     pub(crate) fn native_topic(&self, topic: &str) -> KafkaResult<NativeTopic> {
@@ -655,5 +683,55 @@ mod tests {
         )
         .unwrap();
         assert!(!client.native_ptr().is_null());
+    }
+
+    #[test]
+    fn test_sasl_set_credentials() {
+        let config = ClientConfig::new();
+        let native_config = config.create_native_config().unwrap();
+        let client = Client::new(
+            &config,
+            native_config,
+            RDKafkaType::RD_KAFKA_PRODUCER,
+            DefaultClientContext,
+        )
+        .unwrap();
+
+        // Should succeed without panic on a valid client (even without SASL configured,
+        // librdkafka accepts the call and stores the credentials).
+        let result = client.sasl_set_credentials("user", "pass");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_sasl_set_credentials_nul_in_username() {
+        let config = ClientConfig::new();
+        let native_config = config.create_native_config().unwrap();
+        let client = Client::new(
+            &config,
+            native_config,
+            RDKafkaType::RD_KAFKA_PRODUCER,
+            DefaultClientContext,
+        )
+        .unwrap();
+
+        let result = client.sasl_set_credentials("user\0name", "pass");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_sasl_set_credentials_nul_in_password() {
+        let config = ClientConfig::new();
+        let native_config = config.create_native_config().unwrap();
+        let client = Client::new(
+            &config,
+            native_config,
+            RDKafkaType::RD_KAFKA_PRODUCER,
+            DefaultClientContext,
+        )
+        .unwrap();
+
+        let result = client.sasl_set_credentials("user", "pass\0word");
+        assert!(result.is_err());
     }
 }
