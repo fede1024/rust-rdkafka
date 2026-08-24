@@ -112,6 +112,10 @@ fn build_librdkafka() {
     if let Ok(var) = env::var("CFLAGS") {
         cflags.push(var);
     }
+    if cfg!(target_os = "illumos") {
+        cflags.push("-D__EXTENSIONS__".into());
+        cflags.push("-D_POSIX_PTHREAD_SEMANTICS".into());
+    }
 
     let mut ldflags = Vec::new();
     if let Ok(var) = env::var("LDFLAGS") {
@@ -233,6 +237,13 @@ fn build_librdkafka() {
         // CMake 4.0.0 drops support for 3.2 compatibility, which is
         // required by librdkafka 2.3.0.
         .define("CMAKE_POLICY_VERSION_MINIMUM", "3.5");
+
+    if cfg!(target_os = "illumos") {
+        config.cflag("-D__EXTENSIONS__");
+        config.cxxflag("-D__EXTENSIONS__");
+        config.cflag("-D_POSIX_PTHREAD_SEMANTICS");
+        config.cxxflag("-D_POSIX_PTHREAD_SEMANTICS");
+    }
 
     if env::var("CARGO_FEATURE_LIBZ").is_ok() {
         config.define("WITH_ZLIB", "1");

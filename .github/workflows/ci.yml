@@ -46,6 +46,35 @@ jobs:
       - run: cargo build --all-targets --verbose --features "${{ matrix.features }}"
       - run: cd rdkafka-sys && cargo test --features "${{ matrix.rdkafka-sys-features }}"
 
+  check-omnios:
+    name: x86_64-unknown-illumos (stable, OmniOS r151054)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check on OmniOS r151054
+        uses: vmactions/omnios-vm@v1
+        with:
+          release: r151054
+          usesh: true
+          copyback: false
+          cache-after-prepare: true
+          prepare: |
+            pkg install --accept build-essential curl
+            curl --proto '=https' --tlsv1.2 -sSf \
+                https://sh.rustup.rs -o /tmp/rustup-init.sh
+            sh /tmp/rustup-init.sh \
+                -y --profile minimal --default-toolchain stable
+          run: |
+            . "$HOME/.cargo/env"
+            rustup --version
+            rustc --version
+            cargo --version
+            gcc --version
+            gmake --version
+            cargo build --all-targets --verbose
+            cd rdkafka-sys && cargo test
+
   # Use the `minimal-versions` resolver to ensure we're not claiming to support
   # an older version of a dependency than we actually do.
   check-minimal-versions:
