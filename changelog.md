@@ -4,7 +4,7 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-None
+* Disable the `zstd-sys` `bindgen` feature when building with `zstd`.
 
 ## 0.39.0 (2026-01-25)
 

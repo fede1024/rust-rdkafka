@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+* Disable the `zstd-sys` `bindgen` feature. Default `zstd-sys` features
+  except `bindgen` are still enabled (`legacy`, `zdict_builder`).
+
 ## v4.10.0+2.12.1 (2026-01-25)
 * Bump librdkafka to v2.12.1.
 * Fix build script for musl builds that require SASL ([#818])

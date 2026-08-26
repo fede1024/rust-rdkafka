@@ -18,7 +18,8 @@ libc = "0.2.172"
 openssl-sys = { version = "0.9.108", optional = true }
 libz-sys = { version = "1.1.22", optional = true }
 curl-sys = { version = "0.4.80", optional = true }
-zstd-sys = { version = "2.0.15", optional = true }
+# Default zstd-sys features excluding bindgen.
+zstd-sys = { version = "2.0.15", optional = true, default-features = false, features = ["legacy", "zdict_builder"] }
 lz4-sys = { version = "1.11.1", optional = true }
 sasl2-sys = { version = "0.1.22", optional = true }
 
