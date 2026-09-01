@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
 use std::env;
 use std::ffi::OsStr;
-#[cfg(feature = "cmake-build")]
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
@@ -40,6 +39,16 @@ where
 }
 
 fn main() {
+    let ssl_backend = SslBackend::selected();
+    if ssl_backend.is_some_and(SslBackend::is_aws_lc)
+        && env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok()
+    {
+        panic!(
+            "the `aws-lc` feature only applies when building bundled \
+             librdkafka; it cannot be combined with `dynamic-linking`"
+        );
+    }
+
     if env::var("CARGO_FEATURE_DYNAMIC_LINKING").is_ok() {
         eprintln!("librdkafka will be linked dynamically");
 
@@ -96,16 +105,142 @@ fn main() {
             run_command_or_fail("../", "git", &["submodule", "update", "--init"]);
         }
         eprintln!("Building and linking librdkafka statically");
-        build_librdkafka();
+        build_librdkafka(ssl_backend);
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SslBackend {
+    OpenSsl,
+    AwsLc,
+}
+
+impl SslBackend {
+    fn selected() -> Option<Self> {
+        let enabled = [
+            ("CARGO_FEATURE_SSL", Self::OpenSsl),
+            ("CARGO_FEATURE_AWS_LC", Self::AwsLc),
+        ]
+        .into_iter()
+        .filter_map(|(feature, backend)| env::var_os(feature).map(|_| backend))
+        .collect::<Vec<_>>();
+
+        assert!(
+            enabled.len() <= 1,
+            "the `ssl` and `aws-lc` features select different TLS backends \
+             and are mutually exclusive"
+        );
+        enabled.into_iter().next()
+    }
+
+    fn is_aws_lc(self) -> bool {
+        matches!(self, Self::AwsLc)
+    }
+}
+
+struct AwsLc {
+    include: PathBuf,
+    libcrypto: PathBuf,
+    libssl: PathBuf,
+    link_kind: String,
+}
+
+impl AwsLc {
+    fn from_env(backend: SslBackend) -> Self {
+        assert!(backend.is_aws_lc());
+        let metadata_prefix = match backend {
+            SslBackend::AwsLc => "DEP_AWS_LC_",
+            SslBackend::OpenSsl => unreachable!(),
+        };
+        let include_var = env::vars_os()
+            .map(|(name, _)| name.to_string_lossy().into_owned())
+            .find(|name| name.starts_with(metadata_prefix) && name.ends_with("_INCLUDE"))
+            .unwrap_or_else(|| panic!("AWS-LC sys crate did not export its include directory"));
+        let prefix = include_var
+            .strip_suffix("INCLUDE")
+            .expect("AWS-LC include metadata has an invalid name");
+        let get = |suffix: &str| {
+            env::var_os(format!("{prefix}{suffix}"))
+                .unwrap_or_else(|| panic!("AWS-LC sys crate did not export {suffix}"))
+        };
+
+        let result = Self {
+            include: PathBuf::from(get("INCLUDE")),
+            libcrypto: PathBuf::from(get("LIBCRYPTO_PATH")),
+            libssl: PathBuf::from(get("LIBSSL_PATH")),
+            link_kind: get("LINK_KIND").to_string_lossy().into_owned(),
+        };
+        assert!(
+            result.include.is_dir(),
+            "AWS-LC include directory does not exist: {}",
+            result.include.display()
+        );
+        assert!(
+            result.libcrypto.is_file(),
+            "AWS-LC libcrypto does not exist: {}",
+            result.libcrypto.display()
+        );
+        assert!(
+            result.libssl.is_file(),
+            "AWS-LC libssl does not exist: {}",
+            result.libssl.display()
+        );
+        assert!(
+            matches!(result.link_kind.as_str(), "static" | "dylib"),
+            "AWS-LC sys crate exported unsupported link kind: {}",
+            result.link_kind
+        );
+        result
+    }
+
+    #[cfg(not(feature = "cmake-build"))]
+    fn stage_openssl_library_names(&self) -> PathBuf {
+        let stage = PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR missing"))
+            .join("aws-lc-openssl-names");
+        fs::create_dir_all(&stage).expect("failed to create AWS-LC staging directory");
+        self.stage_library(&self.libcrypto, &stage, "crypto");
+        self.stage_library(&self.libssl, &stage, "ssl");
+        stage
+    }
+
+    #[cfg(not(feature = "cmake-build"))]
+    fn stage_library(&self, source: &Path, stage: &Path, openssl_name: &str) {
+        let source_name = source
+            .file_name()
+            .and_then(OsStr::to_str)
+            .expect("AWS-LC library filename is not valid UTF-8");
+        let staged_name = if source_name.ends_with(".dll.a") {
+            format!("lib{openssl_name}.dll.a")
+        } else if let Some(index) = source_name.find(".so") {
+            format!("lib{openssl_name}{}", &source_name[index..])
+        } else {
+            match source.extension().and_then(OsStr::to_str) {
+                Some("a") => format!("lib{openssl_name}.a"),
+                Some("dylib") => format!("lib{openssl_name}.dylib"),
+                Some("lib") => format!("{openssl_name}.lib"),
+                extension => panic!(
+                    "unsupported AWS-LC library extension {extension:?}: {}",
+                    source.display()
+                ),
+            }
+        };
+        fs::copy(source, stage.join(staged_name)).unwrap_or_else(|error| {
+            panic!(
+                "failed to stage AWS-LC library {}: {error}",
+                source.display()
+            )
+        });
     }
 }
 
 fn needs_curl() -> bool {
-    env::var("CARGO_FEATURE_CURL").is_ok() || env::var("CARGO_FEATURE_CURL_STATIC").is_ok()
+    env::var("CARGO_FEATURE_CURL").is_ok()
+        || env::var("CARGO_FEATURE_CURL_RUSTLS").is_ok()
+        || env::var("CARGO_FEATURE_CURL_STATIC").is_ok()
 }
 
 #[cfg(not(feature = "cmake-build"))]
-fn build_librdkafka() {
+fn build_librdkafka(ssl_backend: Option<SslBackend>) {
     let mut configure_flags: Vec<String> = Vec::new();
 
     let mut cflags = Vec::new();
@@ -118,11 +253,16 @@ fn build_librdkafka() {
         ldflags.push(var);
     }
 
-    if env::var("CARGO_FEATURE_SSL").is_ok() {
+    if let Some(backend) = ssl_backend {
         configure_flags.push("--enable-ssl".into());
-        if let Ok(openssl_root) = env::var("DEP_OPENSSL_ROOT") {
-            cflags.push(format!("-I{}/include", openssl_root));
-            ldflags.push(format!("-L{}/lib", openssl_root));
+        if backend.is_aws_lc() {
+            let aws_lc = AwsLc::from_env(backend);
+            let lib_dir = aws_lc.stage_openssl_library_names();
+            cflags.push(format!("-I{}", aws_lc.include.display()));
+            ldflags.push(format!("-L{}", lib_dir.display()));
+        } else if let Ok(openssl_root) = env::var("DEP_OPENSSL_ROOT") {
+            cflags.push(format!("-I{openssl_root}/include"));
+            ldflags.push(format!("-L{openssl_root}/lib"));
         }
     } else {
         configure_flags.push("--disable-ssl".into());
@@ -217,7 +357,7 @@ fn build_librdkafka() {
 }
 
 #[cfg(feature = "cmake-build")]
-fn build_librdkafka() {
+fn build_librdkafka(ssl_backend: Option<SslBackend>) {
     let mut config = cmake::Config::new("librdkafka");
     let mut cmake_library_paths = vec![];
 
@@ -268,11 +408,26 @@ fn build_librdkafka() {
         config.define("WITH_CURL", "0");
     }
 
-    if env::var("CARGO_FEATURE_SSL").is_ok() {
+    if let Some(backend) = ssl_backend {
         config.define("WITH_SSL", "1");
         config.define("WITH_SASL_SCRAM", "1");
         config.define("WITH_SASL_OAUTHBEARER", "1");
-        config.register_dep("openssl");
+        if backend.is_aws_lc() {
+            let aws_lc = AwsLc::from_env(backend);
+            config.define(
+                "OPENSSL_USE_STATIC_LIBS",
+                if aws_lc.link_kind == "static" {
+                    "1"
+                } else {
+                    "0"
+                },
+            );
+            config.define("OPENSSL_INCLUDE_DIR", &aws_lc.include);
+            config.define("OPENSSL_SSL_LIBRARY", &aws_lc.libssl);
+            config.define("OPENSSL_CRYPTO_LIBRARY", &aws_lc.libcrypto);
+        } else {
+            config.register_dep("openssl");
+        }
     } else {
         config.define("WITH_SSL", "0");
     }
