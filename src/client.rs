@@ -271,9 +271,8 @@ impl<C: ClientContext> Client<C> {
             return Err(KafkaError::ClientCreation(err_buf.to_string()));
         }
 
-        let ret = unsafe {
-            rdsys::rd_kafka_set_log_queue(client_ptr, rdsys::rd_kafka_queue_get_main(client_ptr))
-        };
+        let ret = unsafe { rdsys::rd_kafka_set_log_queue(client_ptr, ptr::null_mut()) };
+
         if ret.is_error() {
             return Err(KafkaError::Global(ret.into()));
         }
