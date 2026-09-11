@@ -474,6 +474,62 @@ async fn test_produce_consume_with_timestamp() {
     assert_eq!(tp.error(), Ok(()));
 }
 
+// `get_watermark_offsets` reads the local librdkafka cache rather than querying
+// the broker. Consuming a message populates the cached high watermark. The low
+// watermark may remain invalid unless statistics are enabled.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_consumer_get_watermark_offsets() {
+    init_test_logger();
+
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let topic_name = rand_test_topic("test_consumer_get_watermark_offsets");
+    let admin_client = admin::create_admin_client(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create admin client");
+    admin_client
+        .create_topics(
+            &new_topic_vec(&topic_name, Some(1)),
+            &AdminOptions::default(),
+        )
+        .await
+        .expect("could not create topic");
+
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create future producer");
+    produce_messages_to_partition(&producer, &topic_name, 10, 0).await;
+
+    let consumer = utils::consumer::stream_consumer::create_stream_consumer(
+        &kafka_context.bootstrap_servers,
+        Some(&rand_test_group()),
+    )
+    .await
+    .expect("could not create stream consumer");
+
+    let (_, queried_high) = consumer
+        .fetch_watermarks(&topic_name, 0, Duration::from_secs(10))
+        .expect("could not fetch watermarks");
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+    consumer
+        .stream()
+        .take(10)
+        .for_each(|message| {
+            if let Err(error) = message {
+                panic!("could not consume message: {error}");
+            }
+            future::ready(())
+        })
+        .await;
+
+    let (cached_low, cached_high) = consumer
+        .get_watermark_offsets(&topic_name, 0)
+        .expect("could not get cached watermarks");
+    assert_eq!(cached_high, queried_high);
+    assert!(cached_low < cached_high);
+}
+
 // TODO: add check that commit cb gets called correctly
 #[tokio::test(flavor = "multi_thread")]
 async fn test_consumer_commit_message() {
