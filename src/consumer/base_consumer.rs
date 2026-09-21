@@ -417,6 +417,31 @@ where
         }
         self.nonempty_callback = Some(f);
     }
+
+    fn commit_offsets(
+        &self,
+        offsets: *const RDKafkaTopicPartitionList,
+        mode: CommitMode,
+    ) -> KafkaResult<()> {
+        let error = unsafe {
+            match mode {
+                CommitMode::Sync => rdsys::rd_kafka_commit(self.client.native_ptr(), offsets, 0),
+                // The event API requires an explicit reply queue for manual async commits.
+                CommitMode::Async => rdsys::rd_kafka_commit_queue(
+                    self.client.native_ptr(),
+                    offsets,
+                    self.queue.ptr(),
+                    None,
+                    ptr::null_mut(),
+                ),
+            }
+        };
+        if error.is_error() {
+            Err(KafkaError::ConsumerCommit(error.into()))
+        } else {
+            Ok(())
+        }
+    }
 }
 
 impl<C> Consumer<C> for BaseConsumer<C>
@@ -546,39 +571,40 @@ where
         topic_partition_list: &TopicPartitionList,
         mode: CommitMode,
     ) -> KafkaResult<()> {
-        let error = unsafe {
-            rdsys::rd_kafka_commit(
-                self.client.native_ptr(),
-                topic_partition_list.ptr(),
-                mode as i32,
-            )
-        };
-        if error.is_error() {
-            Err(KafkaError::ConsumerCommit(error.into()))
-        } else {
-            Ok(())
-        }
+        self.commit_offsets(topic_partition_list.ptr(), mode)
     }
 
     fn commit_consumer_state(&self, mode: CommitMode) -> KafkaResult<()> {
-        let error = unsafe {
-            rdsys::rd_kafka_commit(self.client.native_ptr(), ptr::null_mut(), mode as i32)
-        };
-        if error.is_error() {
-            Err(KafkaError::ConsumerCommit(error.into()))
-        } else {
-            Ok(())
-        }
+        self.commit_offsets(ptr::null_mut(), mode)
     }
 
     fn commit_message(&self, message: &BorrowedMessage<'_>, mode: CommitMode) -> KafkaResult<()> {
-        let error = unsafe {
-            rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), mode as i32)
-        };
-        if error.is_error() {
-            Err(KafkaError::ConsumerCommit(error.into()))
-        } else {
-            Ok(())
+        match mode {
+            CommitMode::Sync => {
+                let error = unsafe {
+                    rdsys::rd_kafka_commit_message(self.client.native_ptr(), message.ptr(), 0)
+                };
+                if error.is_error() {
+                    Err(KafkaError::ConsumerCommit(error.into()))
+                } else {
+                    Ok(())
+                }
+            }
+            CommitMode::Async => {
+                // Match rd_kafka_commit_message(): errored messages are invalid commit inputs.
+                if unsafe { (*message.ptr()).err }.is_error() {
+                    return Err(KafkaError::ConsumerCommit(
+                        RDKafkaErrorCode::InvalidArgument,
+                    ));
+                }
+                let mut offsets = TopicPartitionList::with_capacity(1);
+                offsets.add_partition_offset(
+                    message.topic(),
+                    message.partition(),
+                    Offset::Offset(message.offset() + 1),
+                )?;
+                self.commit_offsets(offsets.ptr(), mode)
+            }
         }
     }
 
