@@ -1,23 +1,28 @@
 //! Test data consumption using high level consumers.
 
 use std::error::Error;
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
 
 use anyhow::Context;
 use futures::future;
 use futures::stream::StreamExt;
 use maplit::hashmap;
-use rdkafka_sys::RDKafkaErrorCode;
+use rdkafka_sys::{RDKafkaApiKey, RDKafkaErrorCode, RDKafkaRespErr};
 use tokio::time::{self, Duration};
 
 use rdkafka::admin::AdminOptions;
-use rdkafka::consumer::{CommitMode, Consumer, RebalanceProtocol, StreamConsumer};
-use rdkafka::error::KafkaError;
+use rdkafka::client::ClientContext;
+use rdkafka::consumer::{
+    BaseConsumer, CommitMode, Consumer, ConsumerContext, RebalanceProtocol, StreamConsumer,
+};
+use rdkafka::error::{KafkaError, KafkaResult};
 use rdkafka::message::{Header, Headers, OwnedHeaders};
-use rdkafka::producer::FutureRecord;
+use rdkafka::producer::{
+    BaseProducer, BaseRecord, DeliveryResult, FutureRecord, Producer, ProducerContext,
+};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::util::current_time_millis;
-use rdkafka::{Message, Timestamp};
+use rdkafka::{ClientConfig, Message, Timestamp};
 use rdkafka_sys::types::RDKafkaConfRes;
 
 use crate::utils::admin::new_topic_vec;
@@ -27,6 +32,126 @@ use crate::utils::rand::*;
 use crate::utils::*;
 
 mod utils;
+
+type CommitCallback = (KafkaResult<()>, TopicPartitionList);
+
+struct CommitCallbackContext(mpsc::Sender<CommitCallback>);
+
+impl ClientContext for CommitCallbackContext {}
+
+impl ConsumerContext for CommitCallbackContext {
+    fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {
+        self.0
+            .send((result, offsets.clone()))
+            .expect("commit callback receiver unexpectedly dropped");
+    }
+}
+
+struct ErroredDeliveryCommitContext {
+    consumer: Arc<BaseConsumer>,
+    sender: mpsc::Sender<(KafkaResult<()>, KafkaResult<()>)>,
+}
+
+impl ClientContext for ErroredDeliveryCommitContext {}
+
+impl ProducerContext for ErroredDeliveryCommitContext {
+    type DeliveryOpaque = ();
+
+    fn delivery(&self, delivery_result: &DeliveryResult<'_>, _: Self::DeliveryOpaque) {
+        let Err((_, message)) = delivery_result else {
+            panic!("expected message delivery to fail");
+        };
+        self.sender
+            .send((
+                self.consumer.commit_message(message, CommitMode::Sync),
+                self.consumer.commit_message(message, CommitMode::Async),
+            ))
+            .expect("commit result receiver unexpectedly dropped");
+    }
+}
+
+fn offsets_for(topic: &str, offset: i64) -> TopicPartitionList {
+    let mut offsets = TopicPartitionList::new();
+    offsets
+        .add_partition_offset(topic, 0, Offset::Offset(offset))
+        .unwrap();
+    offsets
+}
+
+async fn receive_commit_callback(
+    consumer: &StreamConsumer<CommitCallbackContext>,
+    receiver: &mpsc::Receiver<CommitCallback>,
+) -> CommitCallback {
+    time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Ok(callback) = receiver.try_recv() {
+                return callback;
+            }
+            let _ = time::timeout(Duration::from_millis(100), consumer.recv()).await;
+        }
+    })
+    .await
+    .expect("timed out waiting for commit callback")
+}
+
+async fn assert_commit_callback(
+    consumer: &StreamConsumer<CommitCallbackContext>,
+    receiver: &mpsc::Receiver<CommitCallback>,
+    expected_result: KafkaResult<()>,
+    expected_offsets: &TopicPartitionList,
+) {
+    let (result, offsets) = receive_commit_callback(consumer, receiver).await;
+    assert_eq!(result, expected_result);
+    assert_eq!(&offsets, expected_offsets);
+    assert!(
+        time::timeout(
+            Duration::from_millis(250),
+            receive_commit_callback(consumer, receiver)
+        )
+        .await
+        .is_err(),
+        "received an unexpected duplicate commit callback"
+    );
+}
+
+#[test]
+fn test_commit_message_rejects_errored_delivery() {
+    let consumer = Arc::new(
+        ClientConfig::new()
+            .set("bootstrap.servers", "127.0.0.1:1")
+            .set("group.id", rand_test_group())
+            .create::<BaseConsumer>()
+            .expect("could not create base consumer"),
+    );
+    let (sender, receiver) = mpsc::channel();
+    let producer: BaseProducer<ErroredDeliveryCommitContext> = ClientConfig::new()
+        .set("bootstrap.servers", "127.0.0.1:1")
+        .set("message.timeout.ms", "100")
+        .set("queue.buffering.max.ms", "0")
+        .create_with_context(ErroredDeliveryCommitContext { consumer, sender })
+        .expect("could not create base producer");
+
+    producer
+        .send(
+            BaseRecord::with_opaque_to("test_commit_message_rejects_errored_delivery", ())
+                .partition(0)
+                .payload("payload")
+                .key("key"),
+        )
+        .expect("could not enqueue message");
+    producer
+        .flush(Duration::from_secs(5))
+        .expect("could not flush producer");
+
+    let (sync_result, async_result) = receiver
+        .recv_timeout(Duration::from_secs(1))
+        .expect("timed out waiting for failed delivery");
+    let expected = Err(KafkaError::ConsumerCommit(
+        RDKafkaErrorCode::InvalidArgument,
+    ));
+    assert_eq!(sync_result, expected);
+    assert_eq!(async_result, expected);
+}
 
 #[tokio::test]
 async fn test_invalid_max_poll_interval() {
@@ -474,7 +599,136 @@ async fn test_produce_consume_with_timestamp() {
     assert_eq!(tp.error(), Ok(()));
 }
 
-// TODO: add check that commit cb gets called correctly
+#[tokio::test(flavor = "multi_thread")]
+async fn test_consumer_async_commit_callbacks() {
+    let (sender, receiver) = mpsc::channel();
+    let consumer: StreamConsumer<CommitCallbackContext> = ClientConfig::new()
+        .set("group.id", rand_test_group())
+        .set("enable.auto.commit", "false")
+        .set("enable.auto.offset.store", "false")
+        .set("auto.offset.reset", "earliest")
+        .set("test.mock.num.brokers", "1")
+        .create_with_context(CommitCallbackContext(sender))
+        .expect("could not create mock stream consumer");
+
+    let mock_cluster = consumer
+        .client()
+        .mock_cluster()
+        .expect("mock cluster was not created");
+    let topic_name = rand_test_topic("test_consumer_async_commit_callbacks");
+    mock_cluster.create_topic(&topic_name, 1, 1).unwrap();
+    let producer = producer::future_producer::create_producer(&mock_cluster.bootstrap_servers())
+        .await
+        .expect("could not create mock future producer");
+    produce_messages_to_partition(&producer, &topic_name, 1, 0).await;
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+    let message = time::timeout(Duration::from_secs(10), consumer.recv())
+        .await
+        .expect("timed out waiting for mock message")
+        .expect("could not consume mock message");
+
+    let expected_offsets = offsets_for(&topic_name, 1);
+    consumer
+        .commit(&expected_offsets, CommitMode::Async)
+        .unwrap();
+    assert_commit_callback(&consumer, &receiver, Ok(()), &expected_offsets).await;
+
+    consumer
+        .commit_message(&message, CommitMode::Async)
+        .unwrap();
+    assert_commit_callback(&consumer, &receiver, Ok(()), &expected_offsets).await;
+
+    let fail_next_commit = || {
+        mock_cluster.request_errors(
+            RDKafkaApiKey::OffsetCommit,
+            &[RDKafkaRespErr::RD_KAFKA_RESP_ERR_GROUP_AUTHORIZATION_FAILED],
+        )
+    };
+    let commit_error = || {
+        Err(KafkaError::ConsumerCommit(
+            RDKafkaErrorCode::GroupAuthorizationFailed,
+        ))
+    };
+
+    fail_next_commit();
+    consumer
+        .commit(&expected_offsets, CommitMode::Async)
+        .unwrap();
+    assert_commit_callback(&consumer, &receiver, commit_error(), &expected_offsets).await;
+
+    fail_next_commit();
+    consumer
+        .commit_message(&message, CommitMode::Async)
+        .unwrap();
+    assert_commit_callback(&consumer, &receiver, commit_error(), &expected_offsets).await;
+
+    consumer.commit_consumer_state(CommitMode::Async).unwrap();
+    let no_offset = Err(KafkaError::ConsumerCommit(RDKafkaErrorCode::NoOffset));
+    let mut invalid_offsets = TopicPartitionList::new();
+    invalid_offsets
+        .add_partition_offset(&topic_name, 0, Offset::Invalid)
+        .unwrap();
+    assert_commit_callback(&consumer, &receiver, no_offset, &invalid_offsets).await;
+
+    let (sender, receiver) = mpsc::channel();
+    let consumer: StreamConsumer<CommitCallbackContext> = ClientConfig::new()
+        .create_with_context(CommitCallbackContext(sender))
+        .expect("could not create stream consumer without a group ID");
+    let offsets = offsets_for("test", 1);
+
+    assert!(matches!(
+        consumer.commit(&offsets, CommitMode::Async),
+        Err(KafkaError::ConsumerCommit(RDKafkaErrorCode::UnknownGroup))
+    ));
+    assert!(matches!(
+        consumer.commit_message(&message, CommitMode::Async),
+        Err(KafkaError::ConsumerCommit(RDKafkaErrorCode::UnknownGroup))
+    ));
+    assert!(matches!(
+        consumer.commit_consumer_state(CommitMode::Async),
+        Err(KafkaError::ConsumerCommit(RDKafkaErrorCode::UnknownGroup))
+    ));
+    assert!(matches!(
+        receiver.try_recv(),
+        Err(mpsc::TryRecvError::Empty)
+    ));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_consumer_async_commit_state_callback() {
+    let kafka_context = KafkaContext::shared()
+        .await
+        .expect("could not create kafka context");
+    let topic_name = rand_test_topic("test_consumer_async_commit_state_callback");
+    let producer = producer::future_producer::create_producer(&kafka_context.bootstrap_servers)
+        .await
+        .expect("could not create future producer");
+    produce_messages_to_partition(&producer, &topic_name, 1, 0).await;
+
+    let (sender, receiver) = mpsc::channel();
+    let consumer: StreamConsumer<CommitCallbackContext> = consumer_config(
+        &kafka_context.bootstrap_servers,
+        &rand_test_group(),
+        Some(hashmap! {
+            "broker.address.family" => "v4",
+            "enable.auto.offset.store" => "false",
+        }),
+    )
+    .create_with_context(CommitCallbackContext(sender))
+    .expect("could not create stream consumer");
+    consumer.subscribe(&[topic_name.as_str()]).unwrap();
+
+    let message = time::timeout(Duration::from_secs(10), consumer.recv())
+        .await
+        .expect("timed out waiting for message")
+        .expect("could not consume message");
+    consumer.store_offset_from_message(&message).unwrap();
+    consumer.commit_consumer_state(CommitMode::Async).unwrap();
+
+    let expected_offsets = offsets_for(&topic_name, 1);
+    assert_commit_callback(&consumer, &receiver, Ok(()), &expected_offsets).await;
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_consumer_commit_message() {
     init_test_logger();
