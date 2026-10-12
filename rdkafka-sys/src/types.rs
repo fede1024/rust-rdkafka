@@ -462,6 +462,8 @@ pub enum RDKafkaErrorCode {
     PrincipalDeserializationFailure = 97,
     /// Unknown Topic Id
     UnknownTopicId = 100,
+    /// The log's topic ID did not match the topic ID in the request.
+    InconsistentTopicId = 103,
     /// The member epoch is fenced by the group coordinator
     FencedMemberEpoch = 110,
     /// The instance ID is still used by another member in the consumer group
@@ -470,15 +472,53 @@ pub enum RDKafkaErrorCode {
     UnsupportedAssignor = 112,
     /// The member epoch is stale
     StaleMemberEpoch = 113,
+    /// The request was sent to an endpoint of the wrong type.
+    MismatchedEndpointType = 114,
+    /// This endpoint type is not supported yet.
+    UnsupportedEndpointType = 115,
+    /// This controller ID is not known.
+    UnknownControllerId = 116,
     /// Client sent a push telemetry request with an invalid or outdated
     /// subscription ID.
     UnknownSubscriptionId = 117,
     /// Client sent a push telemetry request larger than the maximum size
     /// the broker will accept.
     TelemetryTooLarge = 118,
+    /// The controller has considered the broker registration to be
+    /// invalid.
+    InvalidRegistration = 119,
+    /// The server encountered an error with the transaction. The client
+    /// can abort the transaction to continue using this transactional ID.
+    TransactionAbortable = 120,
+    /// The record state is invalid. The acknowledgement of delivery could
+    /// not be completed.
+    InvalidRecordState = 121,
+    /// The share session was not found.
+    ShareSessionNotFound = 122,
+    /// The share session epoch is invalid.
+    InvalidShareSessionEpoch = 123,
+    /// The share coordinator rejected the request because the share-group
+    /// state epoch did not match.
+    FencedStateEpoch = 124,
+    /// The voter key doesn't match the receiving replica's key.
+    InvalidVoterKey = 125,
+    /// The voter is already part of the set of voters.
+    DuplicateVoter = 126,
+    /// The voter is not part of the set of voters.
+    VoterNotFound = 127,
+    /// The regular expression is not valid.
+    InvalidRegularExpression = 128,
     /// Client metadata is stale,
     /// client should rebootstrap to obtain new metadata.
     RebootstrapRequired = 129,
+    /// The supplied topology is invalid.
+    StreamsInvalidTopology = 130,
+    /// The supplied topology epoch is invalid.
+    StreamsInvalidTopologyEpoch = 131,
+    /// The supplied topology epoch is outdated.
+    StreamsTopologyFenced = 132,
+    /// The limit of share sessions has been reached.
+    ShareSessionLimitReached = 133,
     #[doc(hidden)]
     EndAll,
 }
