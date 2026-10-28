@@ -569,11 +569,7 @@ impl<C: ClientContext> Client<C> {
     /// new credentials will be used the next time this client needs to
     /// authenticate to a broker. Existing broker connections that were made
     /// with the old credentials will not be disconnected.
-    pub fn sasl_set_credentials(
-        &self,
-        username: &str,
-        password: &str,
-    ) -> KafkaResult<()> {
+    pub fn sasl_set_credentials(&self, username: &str, password: &str) -> KafkaResult<()> {
         let username_c = CString::new(username)?;
         let password_c = CString::new(password)?;
         let ret = unsafe {
