@@ -530,6 +530,64 @@ async fn test_fatal_errors() {
     )
 }
 
+#[derive(Clone, Default)]
+struct ErrorCollectingContext {
+    errors: Arc<Mutex<Vec<(KafkaError, String)>>>,
+}
+
+impl ClientContext for ErrorCollectingContext {
+    fn error(&self, error: KafkaError, reason: &str) {
+        self.errors
+            .lock()
+            .unwrap()
+            .push((error, reason.to_string()));
+    }
+}
+
+impl ProducerContext for ErrorCollectingContext {
+    type DeliveryOpaque = ();
+
+    fn delivery(&self, _: &DeliveryResult, _: Self::DeliveryOpaque) {}
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_base_producer_error_reported_once() {
+    init_test_logger();
+
+    // No broker is needed: the error event is raised locally.
+    let context = ErrorCollectingContext::default();
+    let producer =
+        base_producer_utils::create_base_producer_with_context("127.0.0.1:1", context.clone(), &[])
+            .expect("failed to create base producer");
+
+    let msg = CString::new("fake error").unwrap();
+    unsafe {
+        rdkafka_sys::rd_kafka_test_fatal_error(
+            producer.client().native_ptr(),
+            RDKafkaRespErr::RD_KAFKA_RESP_ERR_OUT_OF_ORDER_SEQUENCE_NUMBER,
+            msg.as_ptr(),
+        );
+    }
+    producer.poll(Duration::from_millis(500));
+
+    // Ignore connection errors caused by the unreachable broker.
+    let errors: Vec<_> = context
+        .errors
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|(_, reason)| reason == "test_fatal_error: fake error")
+        .cloned()
+        .collect();
+    assert_eq!(
+        errors,
+        vec![(
+            KafkaError::Global(RDKafkaErrorCode::OutOfOrderSequenceNumber),
+            "test_fatal_error: fake error".to_string()
+        )]
+    );
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_register_custom_partitioner_linger_non_zero_key_null() {
     // Custom partitioner is not used when sticky.partitioning.linger.ms > 0 and key is null.
