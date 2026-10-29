@@ -4,7 +4,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-None
+* Spawn the periodic fallback wakeup for queues created via
+  `StreamConsumer::split_partition_queue` too. Previously only the main queue
+  had it, so a lost edge-triggered wakeup could stall a single partition's
+  stream indefinitely while other partitions kept consuming (#665).
 
 ## 0.39.0 (2026-01-25)
 
