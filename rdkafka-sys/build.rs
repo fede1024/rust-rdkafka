@@ -201,6 +201,8 @@ fn build_librdkafka() {
     if let Some(makeflags) = env::var_os("CARGO_MAKEFLAGS") {
         env::set_var("MAKEFLAGS", makeflags);
     }
+    // Only the static C library is linked; `make libs` would also build the
+    // shared library and librdkafka++.
     run_command_or_fail(
         &out_dir,
         if cfg!(target_os = "freebsd") {
@@ -208,7 +210,7 @@ fn build_librdkafka() {
         } else {
             "make"
         },
-        &["libs"],
+        &["-C", "src", "librdkafka.a"],
     );
 
     println!("cargo:rustc-link-search=native={}/src", out_dir);
