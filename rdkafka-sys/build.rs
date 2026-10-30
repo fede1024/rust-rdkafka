@@ -4,7 +4,7 @@ use std::ffi::OsStr;
 #[cfg(feature = "cmake-build")]
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{self, Command};
+use std::process::{self, Command, Stdio};
 
 fn run_command_or_fail<P, S>(dir: &str, cmd: P, args: &[S])
 where
@@ -104,6 +104,48 @@ fn needs_curl() -> bool {
     env::var("CARGO_FEATURE_CURL").is_ok() || env::var("CARGO_FEATURE_CURL_STATIC").is_ok()
 }
 
+// Paths that pass through Makefile.config and a compiler flag unquoted.
+#[cfg(not(feature = "cmake-build"))]
+fn is_plain_path(path: &str) -> bool {
+    path.chars()
+        .all(|c| c.is_ascii_alphanumeric() || "/._+-".contains(c))
+}
+
+// Probes the compiler that mklove's configure selects: $CC, else gcc, clang, cc.
+#[cfg(not(feature = "cmake-build"))]
+fn cc_supports_flag(flag: &str) -> bool {
+    let cc = env::var("CC").ok().filter(|cc| !cc.trim().is_empty());
+    let candidates = cc
+        .into_iter()
+        .chain(["gcc", "clang", "cc"].map(String::from));
+    for cc in candidates {
+        let mut words = cc.split_whitespace();
+        let Some(program) = words.next() else {
+            continue;
+        };
+        let args: Vec<&str> = words.collect();
+        let runs = Command::new(program)
+            .args(&args)
+            .arg("--version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success());
+        if !runs {
+            continue;
+        }
+        return Command::new(program)
+            .args(&args)
+            .args(["-Werror", flag, "-x", "c", "-c", "-o", "/dev/null", "-"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success());
+    }
+    false
+}
+
 #[cfg(not(feature = "cmake-build"))]
 fn build_librdkafka() {
     let mut configure_flags: Vec<String> = Vec::new();
@@ -178,10 +220,36 @@ fn build_librdkafka() {
         configure_flags.push("--disable-lz4-ext".into());
     }
 
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR missing");
+
+    // Debug info records the directory each object was compiled in and the
+    // include directories of dependencies built by other -sys crates.
+    if let Ok(dir) = Path::new(&out_dir).canonicalize() {
+        if let Some(dir) = dir.to_str() {
+            let flag = format!("-ffile-prefix-map={}=.", dir);
+            if is_plain_path(dir) && cc_supports_flag(&flag) {
+                cflags.push(flag);
+                for var in [
+                    "DEP_OPENSSL_ROOT",
+                    "DEP_SASL2_ROOT",
+                    "DEP_Z_ROOT",
+                    "DEP_CURL_ROOT",
+                    "DEP_ZSTD_ROOT",
+                    "DEP_LZ4_ROOT",
+                ] {
+                    match env::var(var) {
+                        Ok(root) if is_plain_path(&root) => {
+                            cflags.push(format!("-ffile-prefix-map={}={}", root, var))
+                        }
+                        _ => (),
+                    }
+                }
+            }
+        }
+    }
+
     env::set_var("CFLAGS", cflags.join(" "));
     env::set_var("LDFLAGS", ldflags.join(" "));
-
-    let out_dir = env::var("OUT_DIR").expect("OUT_DIR missing");
 
     if !Path::new(&out_dir).join("LICENSE").exists() {
         // We're not allowed to build in-tree directly, as ~/.cargo/registry is
