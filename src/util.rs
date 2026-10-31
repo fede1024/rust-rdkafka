@@ -78,9 +78,14 @@ pub enum Timeout {
 
 impl Timeout {
     /// Converts a timeout to Kafka's expected representation.
+    ///
+    /// A partial millisecond rounds up, never down. A timeout of 0 ms makes
+    /// librdkafka return at once, so a truncated remainder turns the last
+    /// millisecond of a polling loop (`BaseProducer::poll`, `BaseConsumer::poll`)
+    /// into a busy loop until the deadline passes.
     pub(crate) fn as_millis(&self) -> i32 {
         match self {
-            Timeout::After(d) => d.as_millis() as i32,
+            Timeout::After(d) => d.as_nanos().div_ceil(1_000_000) as i32,
             Timeout::Never => -1,
         }
     }
@@ -510,5 +515,18 @@ mod tests {
         let rdk_version = unsafe { rdsys::rd_kafka_version() };
         let (version_int, _) = get_rdkafka_version();
         assert_eq!(rdk_version, version_int);
+    }
+
+    #[test]
+    fn test_timeout_as_millis_rounds_up_partial_millis() {
+        assert_eq!(Timeout::After(Duration::ZERO).as_millis(), 0);
+        assert_eq!(Timeout::After(Duration::from_nanos(1)).as_millis(), 1);
+        assert_eq!(Timeout::After(Duration::from_micros(300)).as_millis(), 1);
+        assert_eq!(Timeout::After(Duration::from_millis(100)).as_millis(), 100);
+        assert_eq!(
+            Timeout::After(Duration::from_nanos(100_000_001)).as_millis(),
+            101
+        );
+        assert_eq!(Timeout::Never.as_millis(), -1);
     }
 }
