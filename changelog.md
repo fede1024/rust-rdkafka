@@ -4,7 +4,12 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-None
+* **Breaking change:** `KafkaError::PartitionEOF` now carries a
+  `TopicPartitionOffset` (topic, partition, and offset) instead of only the
+  partition `i32`, providing full context when a partition reaches EOF
+  ([#784]).
+
+[#784]: https://github.com/fede1024/rust-rdkafka/pull/784
 
 ## 0.39.0 (2026-01-25)
 

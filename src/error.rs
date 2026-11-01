@@ -9,7 +9,7 @@ use std::sync::Arc;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::util::{KafkaDrop, NativePtr};
+use crate::util::{KafkaDrop, NativePtr, TopicPartitionOffset};
 
 // Re-export rdkafka error code
 pub use rdsys::types::RDKafkaErrorCode;
@@ -170,7 +170,7 @@ pub enum KafkaError {
     /// Offset fetch failed.
     OffsetFetch(RDKafkaErrorCode),
     /// End of partition reached.
-    PartitionEOF(i32),
+    PartitionEOF(TopicPartitionOffset),
     /// Pause/Resume failed.
     PauseResume(String),
     /// Rebalance failed.
