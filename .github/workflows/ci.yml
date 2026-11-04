@@ -21,7 +21,11 @@ jobs:
       - run: cargo fmt -- --check
       - run: cargo clippy -- -Dwarnings
       - run: cargo clippy --tests -- -Dwarnings
+      - run: cargo clippy --features kip-932 -- -Dwarnings
+      - run: cargo clippy --features kip-932 --tests -- -Dwarnings
       - run: cargo test --doc
+      - run: cargo test --features kip-932 --lib consumer::share
+      - run: cargo test --features kip-932 --test test_share_consumer
 
   check:
     strategy:
@@ -33,6 +37,8 @@ jobs:
             rdkafka-sys-features: cmake-build,libz-static,curl-static
           - os: ubuntu-24.04
             features: tracing
+          - os: ubuntu-24.04
+            features: kip-932
           - os: ubuntu-24.04
             features: cmake-build,ssl-vendored,gssapi-vendored,libz-static,curl-static,zstd
             rdkafka-sys-features: cmake-build,ssl-vendored,gssapi-vendored,libz-static,curl-static,zstd

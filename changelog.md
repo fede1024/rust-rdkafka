@@ -4,7 +4,19 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-None
+* Add scaffolding for the KIP-932 (Queues for Kafka) share consumer
+  surface behind a new `kip-932` cargo feature (off by default). The
+  Rust types (`ShareConsumer`, `BaseShareConsumer`, `ShareConsumerConfig`,
+  `AcknowledgeType`, `ShareConsumerContext`, `ShareConsumerRecords`,
+  `ShareRecord`) compile and the configuration builder emits the
+  canonical librdkafka property keys, but runtime methods return the
+  new `KafkaError::Unsupported` variant until librdkafka ships the
+  public share consumer C API (tracking
+  [confluentinc/librdkafka#5441](https://github.com/confluentinc/librdkafka/issues/5441)).
+* Add `KafkaError::Unsupported(&'static str)` for surfaces that exist
+  in rust-rdkafka but are not backed by the underlying librdkafka
+  build. `KafkaError` is `#[non_exhaustive]` so this is not a breaking
+  change for callers using a wildcard arm.
 
 ## 0.39.0 (2026-01-25)
 

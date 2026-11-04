@@ -68,9 +68,14 @@ zstd-pkg-config = ["rdkafka-sys/zstd-pkg-config"]
 external-lz4 = ["rdkafka-sys/external-lz4"]
 external_lz4 = ["rdkafka-sys/external_lz4"]
 static-linking = ["rdkafka-sys/static-linking"]
+# Opt in to the KIP-932 (Queues for Kafka) share consumer surface. The Rust
+# types ship now so downstream crates can compile against the API shape, but
+# runtime methods return `KafkaError::Unsupported` until librdkafka exposes
+# the public share consumer C API (tracking confluentinc/librdkafka#5441).
+kip-932 = []
 
 [package.metadata.docs.rs]
 # docs.rs doesn't allow writing to ~/.cargo/registry (reasonably), so we have to
 # use the CMake build for a proper out-of-tree build.
-features = ["cmake-build", "naive-runtime", "tracing", "tokio"]
+features = ["cmake-build", "naive-runtime", "tracing", "tokio", "kip-932"]
 rustdoc-args = ["--cfg", "docsrs"]
