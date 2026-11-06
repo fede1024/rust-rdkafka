@@ -1,5 +1,16 @@
 # Changelog
 
+## vNEXT+2.16.0 (2026-10-12)
+* Bump librdkafka to v2.16.0.
+* Add the `RDKafkaErrorCode` variants that librdkafka added since v2.12.1:
+  `InconsistentTopicId`, `MismatchedEndpointType`,
+  `UnsupportedEndpointType`, `UnknownControllerId`, `InvalidRegistration`,
+  `TransactionAbortable`, `InvalidRecordState`, `ShareSessionNotFound`,
+  `InvalidShareSessionEpoch`, `FencedStateEpoch`, `InvalidVoterKey`,
+  `DuplicateVoter`, `VoterNotFound`, `InvalidRegularExpression`,
+  `StreamsInvalidTopology`, `StreamsInvalidTopologyEpoch`,
+  `StreamsTopologyFenced`, and `ShareSessionLimitReached`.
+
 ## v4.10.0+2.12.1 (2026-01-25)
 * Bump librdkafka to v2.12.1.
 * Fix build script for musl builds that require SASL ([#818])

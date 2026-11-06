@@ -3,7 +3,7 @@
 use libc::{c_char, c_int, c_void, sockaddr, FILE};
 use num_enum::TryFromPrimitive;
 
-pub const RD_KAFKA_VERSION: i32 = 34341375;
+pub const RD_KAFKA_VERSION: i32 = 34603263;
 pub const RD_KAFKA_DEBUG_CONTEXTS : & [u8 ; 138] = b"all,generic,broker,topic,metadata,feature,queue,msg,protocol,cgrp,security,fetch,interceptor,plugin,consumer,admin,eos,mock,assignor,conf\0" ;
 pub const RD_KAFKA_DESTROY_F_NO_CONSUMER_CLOSE: i32 = 8;
 pub const RD_KAFKA_OFFSET_BEGINNING: i32 = -2;
@@ -156,6 +156,12 @@ pub struct rd_kafka_topic_partition_result_s {
     _unused: [u8; 0],
 }
 pub type rd_kafka_topic_partition_result_t = rd_kafka_topic_partition_result_s;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_share_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_share_t = rd_kafka_share_s;
 #[repr(i32)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, TryFromPrimitive)]
 pub enum rd_kafka_resp_err_t {
@@ -324,14 +330,32 @@ pub enum rd_kafka_resp_err_t {
     RD_KAFKA_RESP_ERR_FEATURE_UPDATE_FAILED = 96,
     RD_KAFKA_RESP_ERR_PRINCIPAL_DESERIALIZATION_FAILURE = 97,
     RD_KAFKA_RESP_ERR_UNKNOWN_TOPIC_ID = 100,
+    RD_KAFKA_RESP_ERR_INCONSISTENT_TOPIC_ID = 103,
     RD_KAFKA_RESP_ERR_FENCED_MEMBER_EPOCH = 110,
     RD_KAFKA_RESP_ERR_UNRELEASED_INSTANCE_ID = 111,
     RD_KAFKA_RESP_ERR_UNSUPPORTED_ASSIGNOR = 112,
     RD_KAFKA_RESP_ERR_STALE_MEMBER_EPOCH = 113,
+    RD_KAFKA_RESP_ERR_MISMATCHED_ENDPOINT_TYPE = 114,
+    RD_KAFKA_RESP_ERR_UNSUPPORTED_ENDPOINT_TYPE = 115,
+    RD_KAFKA_RESP_ERR_UNKNOWN_CONTROLLER_ID = 116,
     RD_KAFKA_RESP_ERR_UNKNOWN_SUBSCRIPTION_ID = 117,
     RD_KAFKA_RESP_ERR_TELEMETRY_TOO_LARGE = 118,
+    RD_KAFKA_RESP_ERR_INVALID_REGISTRATION = 119,
+    RD_KAFKA_RESP_ERR_TRANSACTION_ABORTABLE = 120,
+    RD_KAFKA_RESP_ERR_INVALID_RECORD_STATE = 121,
+    RD_KAFKA_RESP_ERR_SHARE_SESSION_NOT_FOUND = 122,
+    RD_KAFKA_RESP_ERR_INVALID_SHARE_SESSION_EPOCH = 123,
+    RD_KAFKA_RESP_ERR_FENCED_STATE_EPOCH = 124,
+    RD_KAFKA_RESP_ERR_INVALID_VOTER_KEY = 125,
+    RD_KAFKA_RESP_ERR_DUPLICATE_VOTER = 126,
+    RD_KAFKA_RESP_ERR_VOTER_NOT_FOUND = 127,
+    RD_KAFKA_RESP_ERR_INVALID_REGULAR_EXPRESSION = 128,
     RD_KAFKA_RESP_ERR_REBOOTSTRAP_REQUIRED = 129,
-    RD_KAFKA_RESP_ERR_END_ALL = 130,
+    RD_KAFKA_RESP_ERR_STREAMS_INVALID_TOPOLOGY = 130,
+    RD_KAFKA_RESP_ERR_STREAMS_INVALID_TOPOLOGY_EPOCH = 131,
+    RD_KAFKA_RESP_ERR_STREAMS_TOPOLOGY_FENCED = 132,
+    RD_KAFKA_RESP_ERR_SHARE_SESSION_LIMIT_REACHED = 133,
+    RD_KAFKA_RESP_ERR_END_ALL = 134,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -615,6 +639,24 @@ pub struct rd_kafka_message_s {
     pub _private: *mut c_void,
 }
 pub type rd_kafka_message_t = rd_kafka_message_s;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_messages_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_messages_t = rd_kafka_messages_s;
+extern "C" {
+    pub fn rd_kafka_messages_count(messages: *const rd_kafka_messages_t) -> usize;
+}
+extern "C" {
+    pub fn rd_kafka_messages_get(
+        messages: *const rd_kafka_messages_t,
+        index: usize,
+    ) -> *mut rd_kafka_message_t;
+}
+extern "C" {
+    pub fn rd_kafka_messages_destroy(messages: *mut rd_kafka_messages_t);
+}
 extern "C" {
     pub fn rd_kafka_message_destroy(rkmessage: *mut rd_kafka_message_t);
 }
@@ -669,6 +711,9 @@ extern "C" {
 }
 extern "C" {
     pub fn rd_kafka_message_leader_epoch(rkmessage: *const rd_kafka_message_t) -> i32;
+}
+extern "C" {
+    pub fn rd_kafka_message_delivery_count(rkmessage: *const rd_kafka_message_t) -> i16;
 }
 extern "C" {
     pub fn rd_kafka_Uuid_base64str(uuid: *const rd_kafka_Uuid_t) -> *const c_char;
@@ -1149,6 +1194,27 @@ extern "C" {
     pub fn rd_kafka_destroy_flags(rk: *mut rd_kafka_t, flags: c_int);
 }
 extern "C" {
+    pub fn rd_kafka_share_queue_get_sasl(rkshare: *mut rd_kafka_share_t) -> *mut rd_kafka_queue_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_oauthbearer_set_token(
+        rkshare: *mut rd_kafka_share_t,
+        token_value: *const c_char,
+        md_lifetime_ms: i64,
+        md_principal_name: *const c_char,
+        extensions: *mut *const c_char,
+        extension_size: usize,
+        errstr: *mut c_char,
+        errstr_size: usize,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_oauthbearer_set_token_failure(
+        rkshare: *mut rd_kafka_share_t,
+        errstr: *const c_char,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
     pub fn rd_kafka_name(rk: *const rd_kafka_t) -> *const c_char;
 }
 extern "C" {
@@ -1593,6 +1659,171 @@ extern "C" {
 }
 extern "C" {
     pub fn rd_kafka_purge(rk: *mut rd_kafka_t, purge_flags: c_int) -> rd_kafka_resp_err_t;
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum rd_kafka_share_AcknowledgeType_s {
+    RD_KAFKA_SHARE_ACKNOWLEDGE_TYPE_ACCEPT = 1,
+    RD_KAFKA_SHARE_ACKNOWLEDGE_TYPE_RELEASE = 2,
+    RD_KAFKA_SHARE_ACKNOWLEDGE_TYPE_REJECT = 3,
+}
+pub use self::rd_kafka_share_AcknowledgeType_s as rd_kafka_share_AcknowledgeType_t;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_share_partition_offsets_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_share_partition_offsets_t = rd_kafka_share_partition_offsets_s;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct rd_kafka_share_partition_offsets_list_s {
+    _unused: [u8; 0],
+}
+pub type rd_kafka_share_partition_offsets_list_t = rd_kafka_share_partition_offsets_list_s;
+extern "C" {
+    pub fn rd_kafka_share_partition_offsets_list_count(
+        list: *const rd_kafka_share_partition_offsets_list_t,
+    ) -> usize;
+}
+extern "C" {
+    pub fn rd_kafka_share_partition_offsets_list_get(
+        list: *const rd_kafka_share_partition_offsets_list_t,
+        index: usize,
+    ) -> *const rd_kafka_share_partition_offsets_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_partition_offsets_list_destroy(
+        list: *mut rd_kafka_share_partition_offsets_list_t,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_share_partition_offsets_partition(
+        partition_offsets: *const rd_kafka_share_partition_offsets_t,
+    ) -> *const rd_kafka_topic_partition_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_partition_offsets_offsets(
+        partition_offsets: *const rd_kafka_share_partition_offsets_t,
+    ) -> *const i64;
+}
+extern "C" {
+    pub fn rd_kafka_share_partition_offsets_offsets_cnt(
+        partition_offsets: *const rd_kafka_share_partition_offsets_t,
+    ) -> usize;
+}
+extern "C" {
+    pub fn rd_kafka_share_consumer_new(
+        conf: *mut rd_kafka_conf_t,
+        errstr: *mut c_char,
+        errstr_size: usize,
+    ) -> *mut rd_kafka_share_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_set_acknowledgement_commit_cb(
+        rkshare: *mut rd_kafka_share_t,
+        share_acknowledgement_commit_cb: Option<
+            unsafe extern "C" fn(
+                rkshare: *mut rd_kafka_share_t,
+                partitions: *mut rd_kafka_share_partition_offsets_list_t,
+                err: rd_kafka_resp_err_t,
+                opaque: *mut c_void,
+            ),
+        >,
+        opaque: *mut c_void,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_subscribe(
+        rkshare: *mut rd_kafka_share_t,
+        topics: *const rd_kafka_topic_partition_list_t,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_unsubscribe(rkshare: *mut rd_kafka_share_t) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_subscription(
+        rkshare: *mut rd_kafka_share_t,
+        topics: *mut *mut rd_kafka_topic_partition_list_t,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_poll(
+        rkshare: *mut rd_kafka_share_t,
+        timeout_ms: c_int,
+        rkmessages: *mut *mut rd_kafka_messages_t,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_acknowledge(
+        rkshare: *mut rd_kafka_share_t,
+        rkmessage: *const rd_kafka_message_t,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_acknowledge_type(
+        rkshare: *mut rd_kafka_share_t,
+        rkmessage: *const rd_kafka_message_t,
+        type_: rd_kafka_share_AcknowledgeType_t,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_acknowledge_offset(
+        rkshare: *mut rd_kafka_share_t,
+        topic: *const c_char,
+        partition: i32,
+        offset: i64,
+        type_: rd_kafka_share_AcknowledgeType_t,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_commit_async(rkshare: *mut rd_kafka_share_t) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_commit_sync(
+        rkshare: *mut rd_kafka_share_t,
+        timeout_ms: c_int,
+        partitions: *mut *mut rd_kafka_topic_partition_list_t,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_consumer_close(rkshare: *mut rd_kafka_share_t) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_consumer_close_queue(
+        rkshare: *mut rd_kafka_share_t,
+        rkqu: *mut rd_kafka_queue_t,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_consumer_closed(rkshare: *mut rd_kafka_share_t) -> c_int;
+}
+extern "C" {
+    pub fn rd_kafka_share_destroy(rkshare: *mut rd_kafka_share_t) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_destroy_flags(
+        rkshare: *mut rd_kafka_share_t,
+        flags: c_int,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_set_log_queue(
+        rkshare: *mut rd_kafka_share_t,
+        rkqu: *mut rd_kafka_queue_t,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_sasl_background_callbacks_enable(
+        rkshare: *mut rd_kafka_share_t,
+    ) -> *mut rd_kafka_error_t;
+}
+extern "C" {
+    pub fn rd_kafka_share_sasl_set_credentials(
+        rkshare: *mut rd_kafka_share_t,
+        username: *const c_char,
+        password: *const c_char,
+    ) -> *mut rd_kafka_error_t;
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -3690,6 +3921,12 @@ extern "C" {
     );
 }
 extern "C" {
+    pub fn rd_kafka_mock_set_controller_id(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        controller_id: i32,
+    );
+}
+extern "C" {
     pub fn rd_kafka_mock_broker_push_request_error_rtts(
         mcluster: *mut rd_kafka_mock_cluster_t,
         broker_id: i32,
@@ -3707,6 +3944,16 @@ extern "C" {
     ) -> rd_kafka_resp_err_t;
 }
 extern "C" {
+    pub fn rd_kafka_mock_partition_push_request_errors(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        topic: *const c_char,
+        partition: i32,
+        ApiKey: i16,
+        cnt: usize,
+        ...
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
     pub fn rd_kafka_mock_topic_set_error(
         mcluster: *mut rd_kafka_mock_cluster_t,
         topic: *const c_char,
@@ -3719,6 +3966,20 @@ extern "C" {
         topic: *const c_char,
         partition_cnt: c_int,
         replication_factor: c_int,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_mock_topic_delete(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        topic: *const c_char,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_mock_partition_delete_records(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        topic: *const c_char,
+        partition: i32,
+        before_offset: i64,
     ) -> rd_kafka_resp_err_t;
 }
 extern "C" {
@@ -3792,6 +4053,12 @@ extern "C" {
 extern "C" {
     pub fn rd_kafka_mock_broker_decommission(
         cluster: *mut rd_kafka_mock_cluster_t,
+        broker_id: i32,
+    ) -> rd_kafka_resp_err_t;
+}
+extern "C" {
+    pub fn rd_kafka_mock_broker_remove_from_metadata(
+        mcluster: *mut rd_kafka_mock_cluster_t,
         broker_id: i32,
     ) -> rd_kafka_resp_err_t;
 }
@@ -3906,4 +4173,75 @@ extern "C" {
         mcluster: *mut rd_kafka_mock_cluster_t,
         group_consumer_heartbeat_interval_ms: c_int,
     );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_set_session_timeout(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        session_timeout_ms: c_int,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_set_heartbeat_interval(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        heartbeat_interval_ms: c_int,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_set_max_delivery_attempts(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        max_attempts: c_int,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_set_record_lock_duration(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        lock_duration_ms: c_int,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_set_isolation_level(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        level: c_int,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_set_max_size(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        max_size: c_int,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_set_max_fetch_sessions(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        max_fetch_sessions: c_int,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_set_max_record_locks(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        max_record_locks: c_int,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_set_auto_offset_reset(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        auto_offset_reset: c_int,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_target_assignment(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        group_id: *const c_char,
+        member_ids: *mut *const c_char,
+        assignments: *mut *mut rd_kafka_topic_partition_list_t,
+        member_cnt: usize,
+    );
+}
+extern "C" {
+    pub fn rd_kafka_mock_sharegroup_get_member_ids(
+        mcluster: *mut rd_kafka_mock_cluster_t,
+        group_id: *const c_char,
+        member_ids_out: *mut *mut *mut c_char,
+        member_cnt_out: *mut usize,
+    ) -> rd_kafka_resp_err_t;
 }
