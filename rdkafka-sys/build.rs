@@ -123,6 +123,27 @@ fn build_librdkafka() {
         if let Ok(openssl_root) = env::var("DEP_OPENSSL_ROOT") {
             cflags.push(format!("-I{}/include", openssl_root));
             ldflags.push(format!("-L{}/lib", openssl_root));
+        } else if let Ok(openssl_include) = env::var("DEP_OPENSSL_INCLUDE") {
+            // openssl-sys only exports a root for vendored builds. For a system
+            // OpenSSL, build against the installation it links, or librdkafka's
+            // configure may pick another installed version (e.g. Homebrew
+            // openssl@3 headers while openssl-sys links openssl@4).
+            cflags.push(format!("-I{}", openssl_include));
+            if let Some(prefix) = Path::new(&openssl_include).parent() {
+                let lib = prefix.join("lib");
+                if lib.is_dir() {
+                    ldflags.push(format!("-L{}", lib.display()));
+                }
+                let pkgconfig = lib.join("pkgconfig");
+                if pkgconfig.is_dir() {
+                    let mut paths = vec![pkgconfig];
+                    if let Some(existing) = env::var_os("PKG_CONFIG_PATH") {
+                        paths.extend(env::split_paths(&existing));
+                    }
+                    let joined = env::join_paths(paths).expect("invalid PKG_CONFIG_PATH");
+                    env::set_var("PKG_CONFIG_PATH", joined);
+                }
+            }
         }
     } else {
         configure_flags.push("--disable-ssl".into());
