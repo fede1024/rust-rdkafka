@@ -4,7 +4,10 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
-None
+* Round a partial millisecond of a timeout up, not down, when passing it to
+  librdkafka. A remainder below 1 ms became 0 ms, so `BaseProducer::poll` and
+  `BaseConsumer::poll` busy-looped through the last millisecond of every call.
+  An idle `ThreadedProducer` or `FutureProducer` cost about 1% of a CPU core.
 
 ## 0.39.0 (2026-01-25)
 
