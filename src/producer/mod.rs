@@ -145,7 +145,7 @@
 //!   request: 0=Broker does not send any response/ack to client, 1=Only the
 //!   leader broker will need to ack the message, -1 or all=broker will block
 //!   until message is committed by all in sync replicas (ISRs) or broker's
-//!   in.sync.replicas setting before sending response. Default: 1.
+//!   in.sync.replicas setting before sending response. Default: -1.
 //! - `request.timeout.ms`: The ack timeout of the producer request in
 //!   milliseconds. This value is only enforced by the broker and relies on
 //!   request.required.acks being != 0. Default: 5000.
