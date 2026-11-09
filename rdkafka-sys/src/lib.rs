@@ -54,6 +54,9 @@
 //!     OpenSSL library is dynamically linked, but static linking of the version
 //!     bundled with the [openssl-sys] crate can be requested with the
 //!     `ssl-vendored` feature.
+//!   * The **`aws-lc`** feature enables SSL support using the AWS-LC source
+//!     build provided by [aws-lc-sys]. The `ssl` and `aws-lc` TLS backend
+//!     features are mutually exclusive.
 //!   * The **`gssapi`** feature enables SASL GSSAPI support with Cyrus
 //!     libsasl2. By default the system's libsasl2 is dynamically linked, but
 //!     static linking of the version bundled with the [sasl2-sys] crate can be
@@ -81,6 +84,7 @@
 //!
 //! [`build.rs`]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/build.rs
 //! [Apache Kafka]: https://kafka.apache.org
+//! [aws-lc-sys]: https://crates.io/crates/aws-lc-sys
 //! [CMake]: https://cmake.org
 //! [libz-sys]: https://crates.io/crates/libz-sys
 //! [curl-sys]: https://crates.io/crates/curl-sys
@@ -94,13 +98,20 @@
 #[cfg(feature = "openssl-sys")]
 extern crate openssl_sys;
 
+#[cfg(feature = "aws-lc")]
+extern crate aws_lc_sys;
+
 #[cfg(feature = "sasl2-sys")]
 extern crate sasl2_sys;
 
 #[cfg(feature = "libz-sys")]
 extern crate libz_sys;
 
-#[cfg(any(feature = "curl-sys", feature = "curl-static"))]
+#[cfg(any(
+    feature = "curl",
+    feature = "curl-rustls",
+    feature = "curl-static"
+))]
 extern crate curl_sys;
 
 #[cfg(feature = "zstd-sys")]
