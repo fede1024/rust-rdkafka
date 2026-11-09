@@ -271,9 +271,14 @@ impl<C: ClientContext> Client<C> {
             return Err(KafkaError::ClientCreation(err_buf.to_string()));
         }
 
-        let ret = unsafe {
-            rdsys::rd_kafka_set_log_queue(client_ptr, rdsys::rd_kafka_queue_get_main(client_ptr))
+        // if null pointer is return, meaning that `calloc` returns a null pointer, abort is expected.
+        // see [`rdkafka::client::Client::main_queue`]
+        let main_queue = unsafe {
+            NativeQueue::from_ptr(rdsys::rd_kafka_queue_get_main(client_ptr))
+                .expect("main queue must not be null")
         };
+        let ret = unsafe { rdsys::rd_kafka_set_log_queue(client_ptr, main_queue.ptr()) };
+
         if ret.is_error() {
             return Err(KafkaError::Global(ret.into()));
         }
