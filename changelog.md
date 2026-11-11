@@ -4,6 +4,8 @@ See also the [rdkafka-sys changelog](rdkafka-sys/changelog.md).
 
 ## Unreleased
 
+* Fix `AdminClient` OAUTHBEARER authentication by servicing token-refresh
+  events on its polling thread. Custom admin contexts now require `'static`.
 * Round a partial millisecond of a timeout up, not down, when passing it to
   librdkafka. A remainder below 1 ms became 0 ms, so `BaseProducer::poll` and
   `BaseConsumer::poll` busy-looped through the last millisecond of every call.

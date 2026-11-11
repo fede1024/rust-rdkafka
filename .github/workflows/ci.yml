@@ -44,6 +44,8 @@ jobs:
         with:
           toolchain: ${{ env.rust_version }}
       - run: cargo build --all-targets --verbose --features "${{ matrix.features }}"
+      - if: contains(matrix.features, 'ssl')
+        run: cargo test --lib --features "${{ matrix.features }}"
       - run: cd rdkafka-sys && cargo test --features "${{ matrix.rdkafka-sys-features }}"
 
   # Use the `minimal-versions` resolver to ensure we're not claiming to support

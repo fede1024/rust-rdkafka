@@ -9,6 +9,7 @@ use std::ffi::{c_void, CStr, CString};
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
+use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::task::{Context, Poll};
@@ -22,7 +23,7 @@ use futures_util::ready;
 use rdkafka_sys as rdsys;
 use rdkafka_sys::types::*;
 
-use crate::client::{Client, ClientContext, DefaultClientContext, NativeQueue};
+use crate::client::{Client, ClientContext, DefaultClientContext, EventPollResult, NativeQueue};
 use crate::config::{ClientConfig, FromClientConfig, FromClientConfigAndContext};
 use crate::error::{IsError, KafkaError, KafkaResult};
 use crate::log::{trace, warn};
@@ -38,7 +39,7 @@ use crate::TopicPartitionList;
 /// `AdminClient` provides programmatic access to managing a Kafka cluster,
 /// notably manipulating topics, partitions, and configuration paramaters.
 pub struct AdminClient<C: ClientContext> {
-    client: Client<C>,
+    client: Arc<Client<C>>,
     queue: Arc<NativeQueue>,
     should_stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
@@ -399,23 +400,34 @@ impl FromClientConfig for AdminClient<DefaultClientContext> {
     }
 }
 
-impl<C: ClientContext> FromClientConfigAndContext<C> for AdminClient<C> {
+impl<C: ClientContext + 'static> FromClientConfigAndContext<C> for AdminClient<C> {
     fn from_config_and_context(config: &ClientConfig, context: C) -> KafkaResult<AdminClient<C>> {
         let native_config = config.create_native_config()?;
+        if C::ENABLE_REFRESH_OAUTH_TOKEN {
+            unsafe {
+                rdsys::rd_kafka_conf_set_events(
+                    native_config.ptr(),
+                    rdsys::RD_KAFKA_EVENT_OAUTHBEARER_TOKEN_REFRESH,
+                )
+            };
+        }
         // librdkafka only provides consumer and producer types. We follow the
         // example of the Python bindings in choosing to pretend to be a
         // producer, as producer clients are allegedly more lightweight. [0]
         //
         // [0]: https://github.com/confluentinc/confluent-kafka-python/blob/bfb07dfbca47c256c840aaace83d3fe26c587360/confluent_kafka/src/Admin.c#L1492-L1493
-        let client = Client::new(
+        let client = Arc::new(Client::new(
             config,
             native_config,
             RDKafkaType::RD_KAFKA_PRODUCER,
             context,
-        )?;
+        )?);
         let queue = Arc::new(client.new_native_queue());
+        // librdkafka posts logs and OAUTHBEARER token refreshes to the main
+        // queue, which nothing else polls for an admin client.
+        unsafe { rdsys::rd_kafka_queue_forward(client.main_queue().ptr(), queue.ptr()) };
         let should_stop = Arc::new(AtomicBool::new(false));
-        let handle = start_poll_thread(queue.clone(), should_stop.clone());
+        let handle = start_poll_thread(client.clone(), queue.clone(), should_stop.clone());
         Ok(AdminClient {
             client,
             queue,
@@ -429,6 +441,8 @@ impl<C: ClientContext> Drop for AdminClient<C> {
     fn drop(&mut self) {
         trace!("Stopping polling");
         self.should_stop.store(true, Ordering::Relaxed);
+        // Stop forwarding callbacks so the admin queue can drain during shutdown.
+        unsafe { rdsys::rd_kafka_queue_forward(self.client.main_queue().ptr(), ptr::null_mut()) };
         trace!("Waiting for polling thread termination");
         match self.handle.take().unwrap().join() {
             Ok(()) => trace!("Polling stopped"),
@@ -437,24 +451,35 @@ impl<C: ClientContext> Drop for AdminClient<C> {
     }
 }
 
-fn start_poll_thread(queue: Arc<NativeQueue>, should_stop: Arc<AtomicBool>) -> JoinHandle<()> {
+fn start_poll_thread<C: ClientContext + 'static>(
+    client: Arc<Client<C>>,
+    queue: Arc<NativeQueue>,
+    should_stop: Arc<AtomicBool>,
+) -> JoinHandle<()> {
     thread::Builder::new()
         .name("admin client polling thread".into())
         .spawn(move || {
             trace!("Admin polling thread loop started");
             loop {
-                let event = queue.poll(Duration::from_millis(100));
-                if event.is_null() {
-                    if should_stop.load(Ordering::Relaxed) {
-                        // We received nothing and the thread should stop, so
-                        // break the loop.
-                        break;
+                let event = match client.poll_event(&queue, Duration::from_millis(100)) {
+                    EventPollResult::Event(event) => event,
+                    EventPollResult::EventConsumed => continue,
+                    EventPollResult::None => {
+                        if should_stop.load(Ordering::Relaxed) {
+                            // We received nothing and the thread should stop, so
+                            // break the loop.
+                            break;
+                        }
+                        continue;
                     }
+                };
+                // Only an admin result carries the sender of its request; any
+                // other event forwarded from the main queue has a null opaque.
+                let opaque = unsafe { rdsys::rd_kafka_event_opaque(event.ptr()) };
+                if opaque.is_null() {
                     continue;
                 }
-                let event = unsafe { NativeEvent::from_ptr(event).unwrap() };
-                let tx: Box<oneshot::Sender<NativeEvent>> =
-                    unsafe { IntoOpaque::from_ptr(rdsys::rd_kafka_event_opaque(event.ptr())) };
+                let tx: Box<oneshot::Sender<NativeEvent>> = unsafe { IntoOpaque::from_ptr(opaque) };
                 let _ = tx.send(event);
             }
             trace!("Admin polling thread loop terminated");
@@ -1349,5 +1374,88 @@ impl Future for AlterConfigsFuture {
             out.push(Ok(specifier));
         }
         Poll::Ready(Ok(out))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::mpsc;
+
+    use super::*;
+
+    // OAUTHBEARER needs librdkafka built with OpenSSL.
+    #[cfg(any(feature = "ssl", feature = "ssl-vendored"))]
+    mod oauthbearer {
+        use std::error::Error;
+
+        use super::*;
+        use crate::client::OAuthToken;
+
+        struct TokenGenerator(mpsc::Sender<()>);
+
+        impl ClientContext for TokenGenerator {
+            const ENABLE_REFRESH_OAUTH_TOKEN: bool = true;
+
+            fn generate_oauth_token(
+                &self,
+                _config: Option<&str>,
+            ) -> Result<OAuthToken, Box<dyn Error>> {
+                let _ = self.0.send(());
+                Err("this test issues no token".into())
+            }
+        }
+
+        #[test]
+        fn test_oauthbearer_token_refresh() {
+            let (called, calls) = mpsc::channel();
+            let _admin: AdminClient<TokenGenerator> = ClientConfig::new()
+                .set("bootstrap.servers", "127.0.0.1:1")
+                .set("security.protocol", "SASL_PLAINTEXT")
+                .set("sasl.mechanism", "OAUTHBEARER")
+                .create_with_context(TokenGenerator(called))
+                .unwrap();
+            // librdkafka requests a token as the client starts, before it connects.
+            calls
+                .recv_timeout(Duration::from_secs(10))
+                .expect("the token was never requested");
+        }
+    }
+
+    struct SlowStats {
+        keep_busy: Arc<AtomicBool>,
+        called: mpsc::Sender<()>,
+    }
+
+    impl ClientContext for SlowStats {
+        fn stats_raw(&self, _statistics: &[u8]) {
+            let _ = self.called.send(());
+            if self.keep_busy.load(Ordering::Relaxed) {
+                thread::sleep(Duration::from_millis(200));
+            }
+        }
+    }
+
+    #[test]
+    fn test_drop_with_continuous_stats() {
+        let keep_busy = Arc::new(AtomicBool::new(true));
+        let (called, calls) = mpsc::channel();
+        let admin: AdminClient<SlowStats> = ClientConfig::new()
+            .set("statistics.interval.ms", "100")
+            .create_with_context(SlowStats {
+                keep_busy: keep_busy.clone(),
+                called,
+            })
+            .unwrap();
+        calls.recv_timeout(Duration::from_secs(10)).unwrap();
+
+        let (finished, completion) = mpsc::channel();
+        let drop_thread = thread::spawn(move || {
+            drop(admin);
+            finished.send(()).unwrap();
+        });
+        let result = completion.recv_timeout(Duration::from_secs(3));
+        keep_busy.store(false, Ordering::Relaxed);
+        drop_thread.join().unwrap();
+        result.expect("admin shutdown was starved by statistics events");
     }
 }
