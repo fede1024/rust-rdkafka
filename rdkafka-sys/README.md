@@ -61,6 +61,9 @@ flags you would pass to `configure` if you were compiling manually).
     OpenSSL library is dynamically linked, but static linking of the version
     bundled with the [openssl-sys] crate can be requested with the
     `ssl-vendored` feature.
+  * The **`aws-lc`** feature enables SSL support using the AWS-LC source build
+    provided by [aws-lc-sys]. The `ssl` and `aws-lc` TLS backend features are
+    mutually exclusive.
   * The **`gssapi`** feature enables SASL GSSAPI support with Cyrus
     libsasl2. By default the system's libsasl2 is dynamically linked, but
     static linking of the version bundled with the [sasl2-sys] crate can be
@@ -88,6 +91,7 @@ process is defined in [`build.rs`].
 
 [`build.rs`]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/build.rs
 [Apache Kafka]: https://kafka.apache.org
+[aws-lc-sys]: https://crates.io/crates/aws-lc-sys
 [CMake]: https://cmake.org
 [libz-sys]: https://crates.io/crates/libz-sys
 [curl-sys]: https://crates.io/crates/curl-sys

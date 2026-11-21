@@ -168,6 +168,11 @@ your executable. To compile librdkafka you'll need:
 Note that using the CMake build system, via the `cmake-build` feature, is
 encouraged if you can take the dependency on CMake.
 
+OpenSSL remains the backend selected by the existing `ssl` and
+`ssl-vendored` features. Alternatively, enable `aws-lc` to compile librdkafka
+against the AWS-LC build provided by `aws-lc-sys`. The `ssl` and `aws-lc` TLS
+backend choices are mutually exclusive.
+
 By default a submodule with the librdkafka sources pinned to a specific
 commit will be used to compile and statically link the library. The
 `dynamic-linking` feature can be used to instead dynamically link rdkafka to
