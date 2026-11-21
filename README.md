@@ -129,18 +129,6 @@ processed exactly once.
 To learn more about using transactions in rust-rdkafka, see the
 [Transactions][producer-transactions] section of the producer documentation.
 
-### Users
-
-Here are some of the projects using rust-rdkafka:
-
-- [kafka-view]: a web interface for Kafka clusters.
-- [kafka-benchmark]: a high performance benchmarking tool for Kafka.
-- [callysto]: Stream processing framework in Rust.
-- [bytewax]: Python stream processing framework using Timely Dataflow.
-- [kafka-mock-gen] easy to use mock data producer allowing stress broker
-
-*If you are using rust-rdkafka, please let us know!*
-
 ## Installation
 
 Add this to your `Cargo.toml`:
@@ -258,12 +246,9 @@ logging framework.
 [runtime-smol]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_smol.rs
 [runtime-async-std]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_async_std.rs
 [broker-compat]: https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility
-[bytewax]: https://github.com/bytewax/bytewax
-[callysto]: https://github.com/vertexclique/callysto
 [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
 [futures]: https://github.com/rust-lang/futures-rs
 [kafka-benchmark]: https://github.com/fede1024/kafka-benchmark
-[kafka-view]: https://github.com/fede1024/kafka-view
 [librdkafka]: https://github.com/edenhill/librdkafka
 [librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 [message delivery semantics]: https://kafka.apache.org/0101/documentation.html#semantics
@@ -272,7 +257,6 @@ logging framework.
 [rdkafka-sys-known-issues]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#known-issues
 [smol]: https://docs.rs/smol
 [Tokio]: https://tokio.rs/
-[kafka-mock-gen]: https://github.com/tomaszkubacki/kafka-mock-gen
 
 ## rdkafka-sys
 
