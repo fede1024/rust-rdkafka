@@ -14,7 +14,6 @@ bundles librdkafka v2.16.0 via `rdkafka-sys`.
 
 ### Documentation
 
-- [Current master branch](https://fede1024.github.io/rust-rdkafka/)
 - [Latest release](https://docs.rs/rdkafka/)
 - [Changelog](https://github.com/fede1024/rust-rdkafka/blob/master/changelog.md)
 
@@ -40,25 +39,6 @@ The main features provided at the moment are:
 - Exactly-once semantics (EOS) via idempotent and transactional producers
   and read-committed consumers.
 
-### One million messages per second
-
-`rust-rdkafka` is designed to be easy and safe to use thanks to the
-abstraction layer written in Rust, while at the same time being extremely
-fast thanks to the librdkafka C library.
-
-Here are some benchmark results using the [`BaseProducer`],
-sending data to a single Kafka 0.11 process running in localhost (default
-configuration, 3 partitions). Hardware: Dell laptop, with Intel Core
-i7-4712HQ @ 2.30GHz.
-
-- Scenario: produce 5 million messages, 10 bytes each, wait for all of them to be acked
-  - 1045413 messages/s, 9.970 MB/s  (average over 5 runs)
-
-- Scenario: produce 100000 messages, 10 KB each, wait for all of them to be acked
-  - 24623 messages/s, 234.826 MB/s  (average over 5 runs)
-
-For more numbers, check out the [kafka-benchmark] project.
-
 ### Client types
 
 `rust-rdkafka` provides low level and high level consumers and producers.
@@ -83,9 +63,6 @@ High level:
 
 For more information about consumers and producers, refer to their
 module-level documentation.
-
-*Warning*: the library is under active development and the APIs are likely
-to change.
 
 ### Asynchronous data processing with Tokio
 
@@ -164,9 +141,9 @@ the system's version of librdkafka. Example:
 rdkafka = { version = "0.40", features = ["dynamic-linking"] }
 ```
 
-If you'd like to compile librdkafka statically yourself, then use
-that, you can use `static-linking` while supplying `DEP_LIBRDKAFKA_STATIC_ROOT`
-with path to where librdkafka was built.
+If you'd like to compile librdkafka statically yourself, you can use
+`static-linking` while supplying `DEP_LIBRDKAFKA_STATIC_ROOT` with the path
+to where librdkafka was built.
 
 For a full listing of features, consult the [rdkafka-sys crate's
 documentation][rdkafka-sys-features]. All of rdkafka-sys features are
@@ -245,30 +222,22 @@ logging framework.
 [at-least-once delivery example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/at_least_once.rs
 [runtime-smol]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_smol.rs
 [runtime-async-std]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_async_std.rs
-[broker-compat]: https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility
+[broker-compat]: https://github.com/confluentinc/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility
 [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
 [futures]: https://github.com/rust-lang/futures-rs
-[kafka-benchmark]: https://github.com/fede1024/kafka-benchmark
-[librdkafka]: https://github.com/edenhill/librdkafka
-[librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-[message delivery semantics]: https://kafka.apache.org/0101/documentation.html#semantics
+[librdkafka]: https://github.com/confluentinc/librdkafka
+[librdkafka-config]: https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md
+[message delivery semantics]: https://kafka.apache.org/documentation/#semantics
 [producer-transactions]: https://docs.rs/rdkafka/*/rdkafka/producer/#transactions
 [rdkafka-sys-features]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#features
-[rdkafka-sys-known-issues]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#known-issues
-[smol]: https://docs.rs/smol
 [Tokio]: https://tokio.rs/
 
 ## rdkafka-sys
 
 See [rdkafka-sys](https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys).
 
-## Contributors
-
-Thanks to:
-* Thijs Cadier - [thijsc](https://github.com/thijsc)
-
 ## Alternatives
 
 * [kafka-rust]: a pure Rust implementation of the Kafka client.
 
-[kafka-rust]: https://github.com/spicavigo/kafka-rust
+[kafka-rust]: https://github.com/kafka-rust/kafka-rust

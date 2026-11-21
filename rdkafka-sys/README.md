@@ -1,6 +1,6 @@
 # rdkafka-sys
 
-Low level bindings to [librdkafka](https://github.com/edenhill/librdkafka),
+Low level bindings to [librdkafka](https://github.com/confluentinc/librdkafka),
 a C library for the [Apache Kafka] protocol with producer, consumer, and
 admin clients.
 
@@ -42,7 +42,7 @@ The **`dynamic-linking`** feature can be used to link rdkafka to a locally
 installed version of librdkafka: if the feature is enabled, the build script
 will use `pkg-config` to check the version of the library installed in the
 system, and it will configure the compiler to dynamically link against it.
-The system version of librdkafka must exactly match the version of
+The system version of librdkafka must be at least the version of
 librdkafka bundled with this crate.
 
 The **`static-linking`** feature can be used to link rdkafka to a locally
