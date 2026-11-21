@@ -2,21 +2,18 @@
 
 [![crates.io](https://img.shields.io/crates/v/rdkafka.svg)](https://crates.io/crates/rdkafka)
 [![docs.rs](https://docs.rs/rdkafka/badge.svg)](https://docs.rs/rdkafka/)
-[![Build Status](https://travis-ci.org/fede1024/rust-rdkafka.svg?branch=master)](https://travis-ci.org/fede1024/rust-rdkafka)
-[![coverate](https://codecov.io/gh/fede1024/rust-rdkafka/graphs/badge.svg?branch=master)](https://codecov.io/gh/fede1024/rust-rdkafka/)
-[![Join the chat at https://gitter.im/rust-rdkafka/Lobby](https://badges.gitter.im/rust-rdkafka/Lobby.svg)](https://gitter.im/rust-rdkafka/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![CI](https://github.com/fede1024/rust-rdkafka/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/fede1024/rust-rdkafka/actions/workflows/ci.yml)
 
 A fully asynchronous, [futures]-enabled [Apache Kafka] client
 library for Rust based on [librdkafka].
 
 ## The library
 
-`rust-rdkafka` provides a safe Rust interface to librdkafka. This version
-is compatible with librdkafka v1.9.2+.
+`rust-rdkafka` provides a safe Rust interface to librdkafka. By default it
+bundles librdkafka v2.16.0 via `rdkafka-sys`.
 
 ### Documentation
 
-- [Current master branch](https://fede1024.github.io/rust-rdkafka/)
 - [Latest release](https://docs.rs/rdkafka/)
 - [Changelog](https://github.com/fede1024/rust-rdkafka/blob/master/changelog.md)
 
@@ -42,25 +39,6 @@ The main features provided at the moment are:
 - Exactly-once semantics (EOS) via idempotent and transactional producers
   and read-committed consumers.
 
-### One million messages per second
-
-`rust-rdkafka` is designed to be easy and safe to use thanks to the
-abstraction layer written in Rust, while at the same time being extremely
-fast thanks to the librdkafka C library.
-
-Here are some benchmark results using the [`BaseProducer`],
-sending data to a single Kafka 0.11 process running in localhost (default
-configuration, 3 partitions). Hardware: Dell laptop, with Intel Core
-i7-4712HQ @ 2.30GHz.
-
-- Scenario: produce 5 million messages, 10 bytes each, wait for all of them to be acked
-  - 1045413 messages/s, 9.970 MB/s  (average over 5 runs)
-
-- Scenario: produce 100000 messages, 10 KB each, wait for all of them to be acked
-  - 24623 messages/s, 234.826 MB/s  (average over 5 runs)
-
-For more numbers, check out the [kafka-benchmark] project.
-
 ### Client types
 
 `rust-rdkafka` provides low level and high level consumers and producers.
@@ -85,9 +63,6 @@ High level:
 
 For more information about consumers and producers, refer to their
 module-level documentation.
-
-*Warning*: the library is under active development and the APIs are likely
-to change.
 
 ### Asynchronous data processing with Tokio
 
@@ -131,25 +106,13 @@ processed exactly once.
 To learn more about using transactions in rust-rdkafka, see the
 [Transactions][producer-transactions] section of the producer documentation.
 
-### Users
-
-Here are some of the projects using rust-rdkafka:
-
-- [kafka-view]: a web interface for Kafka clusters.
-- [kafka-benchmark]: a high performance benchmarking tool for Kafka.
-- [callysto]: Stream processing framework in Rust.
-- [bytewax]: Python stream processing framework using Timely Dataflow.
-- [kafka-mock-gen] easy to use mock data producer allowing stress broker
-
-*If you are using rust-rdkafka, please let us know!*
-
 ## Installation
 
 Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.25", features = ["cmake-build"] }
+rdkafka = { version = "0.40", features = ["cmake-build"] }
 ```
 
 This crate will compile librdkafka from sources and link it statically to
@@ -158,11 +121,11 @@ your executable. To compile librdkafka you'll need:
 * the GNU toolchain
 * GNU `make`
 * `pthreads`
-* `libcurl-dev`: e.g. `libcurl4-openssl-dev` on ubuntu
 * `zlib`: optional, but included by default (feature: `libz`)
 * `cmake`: optional, *not* included by default (feature: `cmake-build`)
 * `libssl-dev`: optional, *not* included by default (feature: `ssl`)
 * `libsasl2-dev`: optional, *not* included by default (feature: `gssapi`)
+* `libcurl-dev` (e.g. `libcurl4-openssl-dev` on Ubuntu): optional, *not* included by default (feature: `curl`)
 * `libzstd-dev`: optional, *not* included by default (feature: `zstd-pkg-config`)
 
 Note that using the CMake build system, via the `cmake-build` feature, is
@@ -175,12 +138,12 @@ the system's version of librdkafka. Example:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.25", features = ["dynamic-linking"] }
+rdkafka = { version = "0.40", features = ["dynamic-linking"] }
 ```
 
-If you'd like to compile librdkafka statically yourself, then use
-that, you can use `static-linking` while supplying `DEP_LIBRDKAFKA_STATIC_ROOT`
-with path to where librdkafka was built.
+If you'd like to compile librdkafka statically yourself, you can use
+`static-linking` while supplying `DEP_LIBRDKAFKA_STATIC_ROOT` with the path
+to where librdkafka was built.
 
 For a full listing of features, consult the [rdkafka-sys crate's
 documentation][rdkafka-sys-features]. All of rdkafka-sys features are
@@ -188,7 +151,7 @@ re-exported as rdkafka features.
 
 ### Minimum supported Rust version (MSRV)
 
-The current minimum supported Rust version (MSRV) is 1.70.0. Note that
+The current minimum supported Rust version (MSRV) is 1.74. Note that
 bumping the MSRV is not considered a breaking change. Any release of
 rust-rdkafka may bump the MSRV.
 
@@ -201,7 +164,7 @@ enabled by default, but can be disabled by turning off default features:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.25", default-features = false }
+rdkafka = { version = "0.40", default-features = false }
 ```
 
 If you would like to use an asynchronous runtime besides Tokio, you can
@@ -259,34 +222,22 @@ logging framework.
 [at-least-once delivery example]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/at_least_once.rs
 [runtime-smol]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_smol.rs
 [runtime-async-std]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/runtime_async_std.rs
-[broker-compat]: https://github.com/edenhill/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility
-[bytewax]: https://github.com/bytewax/bytewax
-[callysto]: https://github.com/vertexclique/callysto
+[broker-compat]: https://github.com/confluentinc/librdkafka/blob/master/INTRODUCTION.md#broker-version-compatibility
 [`examples`]: https://github.com/fede1024/rust-rdkafka/blob/master/examples/
 [futures]: https://github.com/rust-lang/futures-rs
-[kafka-benchmark]: https://github.com/fede1024/kafka-benchmark
-[kafka-view]: https://github.com/fede1024/kafka-view
-[librdkafka]: https://github.com/edenhill/librdkafka
-[librdkafka-config]: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-[message delivery semantics]: https://kafka.apache.org/0101/documentation.html#semantics
+[librdkafka]: https://github.com/confluentinc/librdkafka
+[librdkafka-config]: https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md
+[message delivery semantics]: https://kafka.apache.org/documentation/#semantics
 [producer-transactions]: https://docs.rs/rdkafka/*/rdkafka/producer/#transactions
 [rdkafka-sys-features]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#features
-[rdkafka-sys-known-issues]: https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys/README.md#known-issues
-[smol]: https://docs.rs/smol
 [Tokio]: https://tokio.rs/
-[kafka-mock-gen]: https://github.com/tomaszkubacki/kafka-mock-gen
 
 ## rdkafka-sys
 
 See [rdkafka-sys](https://github.com/fede1024/rust-rdkafka/tree/master/rdkafka-sys).
 
-## Contributors
-
-Thanks to:
-* Thijs Cadier - [thijsc](https://github.com/thijsc)
-
 ## Alternatives
 
 * [kafka-rust]: a pure Rust implementation of the Kafka client.
 
-[kafka-rust]: https://github.com/spicavigo/kafka-rust
+[kafka-rust]: https://github.com/kafka-rust/kafka-rust

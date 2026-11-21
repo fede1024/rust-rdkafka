@@ -53,7 +53,6 @@ how to add a new test, the helper cheatsheet, and known quirks, see
 * Checkout into master and pull the latest changes.
 * Ensure `rdkafka-sys` has no unreleased changes. If it does, release `rdkafka-sys` first.
 * Ensure the changelog is up to date (i.e not Unreleased changes).
-* Run `./generate_readme.py > README.md`.
 * Bump the version in Cargo.toml and commit locally.
 * Run `cargo publish`.
 * Run `git tag -am $VERSION $VERSION`.
