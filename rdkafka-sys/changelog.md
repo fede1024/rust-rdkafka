@@ -1,7 +1,7 @@
 # Changelog
 
-## vNEXT+2.16.0 (2026-10-12)
-* Bump librdkafka to v2.16.0.
+## v4.11.0+2.16.0 (2026-11-21)
+* Bump librdkafka to v2.16.0 ([#865]).
 * Add the `RDKafkaErrorCode` variants that librdkafka added since v2.12.1:
   `InconsistentTopicId`, `MismatchedEndpointType`,
   `UnsupportedEndpointType`, `UnknownControllerId`, `InvalidRegistration`,
@@ -10,6 +10,12 @@
   `DuplicateVoter`, `VoterNotFound`, `InvalidRegularExpression`,
   `StreamsInvalidTopology`, `StreamsInvalidTopologyEpoch`,
   `StreamsTopologyFenced`, and `ShareSessionLimitReached`.
+* Build only the static C library (`librdkafka.a`) in mklove builds, skipping
+  `librdkafka.so` and `librdkafka++` to shrink `OUT_DIR` and avoid symlinks
+  ([#862]).
+
+[#862]: https://github.com/fede1024/rust-rdkafka/pull/862
+[#865]: https://github.com/fede1024/rust-rdkafka/pull/865
 
 ## v4.10.0+2.12.1 (2026-01-25)
 * Bump librdkafka to v2.12.1.
