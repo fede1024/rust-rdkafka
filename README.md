@@ -2,17 +2,15 @@
 
 [![crates.io](https://img.shields.io/crates/v/rdkafka.svg)](https://crates.io/crates/rdkafka)
 [![docs.rs](https://docs.rs/rdkafka/badge.svg)](https://docs.rs/rdkafka/)
-[![Build Status](https://travis-ci.org/fede1024/rust-rdkafka.svg?branch=master)](https://travis-ci.org/fede1024/rust-rdkafka)
-[![coverate](https://codecov.io/gh/fede1024/rust-rdkafka/graphs/badge.svg?branch=master)](https://codecov.io/gh/fede1024/rust-rdkafka/)
-[![Join the chat at https://gitter.im/rust-rdkafka/Lobby](https://badges.gitter.im/rust-rdkafka/Lobby.svg)](https://gitter.im/rust-rdkafka/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![CI](https://github.com/fede1024/rust-rdkafka/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/fede1024/rust-rdkafka/actions/workflows/ci.yml)
 
 A fully asynchronous, [futures]-enabled [Apache Kafka] client
 library for Rust based on [librdkafka].
 
 ## The library
 
-`rust-rdkafka` provides a safe Rust interface to librdkafka. This version
-is compatible with librdkafka v1.9.2+.
+`rust-rdkafka` provides a safe Rust interface to librdkafka. By default it
+bundles librdkafka v2.16.0 via `rdkafka-sys`.
 
 ### Documentation
 
@@ -149,7 +147,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.25", features = ["cmake-build"] }
+rdkafka = { version = "0.40", features = ["cmake-build"] }
 ```
 
 This crate will compile librdkafka from sources and link it statically to
@@ -158,11 +156,11 @@ your executable. To compile librdkafka you'll need:
 * the GNU toolchain
 * GNU `make`
 * `pthreads`
-* `libcurl-dev`: e.g. `libcurl4-openssl-dev` on ubuntu
 * `zlib`: optional, but included by default (feature: `libz`)
 * `cmake`: optional, *not* included by default (feature: `cmake-build`)
 * `libssl-dev`: optional, *not* included by default (feature: `ssl`)
 * `libsasl2-dev`: optional, *not* included by default (feature: `gssapi`)
+* `libcurl-dev` (e.g. `libcurl4-openssl-dev` on Ubuntu): optional, *not* included by default (feature: `curl`)
 * `libzstd-dev`: optional, *not* included by default (feature: `zstd-pkg-config`)
 
 Note that using the CMake build system, via the `cmake-build` feature, is
@@ -175,7 +173,7 @@ the system's version of librdkafka. Example:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.25", features = ["dynamic-linking"] }
+rdkafka = { version = "0.40", features = ["dynamic-linking"] }
 ```
 
 If you'd like to compile librdkafka statically yourself, then use
@@ -188,7 +186,7 @@ re-exported as rdkafka features.
 
 ### Minimum supported Rust version (MSRV)
 
-The current minimum supported Rust version (MSRV) is 1.70.0. Note that
+The current minimum supported Rust version (MSRV) is 1.74. Note that
 bumping the MSRV is not considered a breaking change. Any release of
 rust-rdkafka may bump the MSRV.
 
@@ -201,7 +199,7 @@ enabled by default, but can be disabled by turning off default features:
 
 ```toml
 [dependencies]
-rdkafka = { version = "0.25", default-features = false }
+rdkafka = { version = "0.40", default-features = false }
 ```
 
 If you would like to use an asynchronous runtime besides Tokio, you can

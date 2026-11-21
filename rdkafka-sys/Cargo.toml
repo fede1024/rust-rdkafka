@@ -5,6 +5,7 @@ authors = ["Federico Giraud <giraud.federico@gmail.com>"]
 build = "build.rs"
 links = "rdkafka"
 repository = "https://github.com/fede1024/rust-rdkafka"
+readme = "README.md"
 license = "MIT"
 description = "Native bindings to the librdkafka library"
 keywords = ["kafka", "rdkafka"]
