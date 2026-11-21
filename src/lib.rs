@@ -33,6 +33,11 @@
 //! - Access to producer and consumer metrics, errors and callbacks.
 //! - Exactly-once semantics (EOS) via idempotent and transactional producers
 //!   and read-committed consumers.
+//! - Scaffolding for the KIP-932 (Queues for Kafka) share consumer surface
+//!   behind the `kip-932` cargo feature (off by default). Runtime methods
+//!   return [`error::KafkaError::Unsupported`] until librdkafka exposes the public
+//!   share consumer C API; see
+//!   <https://github.com/confluentinc/librdkafka/issues/5441>.
 //!
 //! ### One million messages per second
 //!
