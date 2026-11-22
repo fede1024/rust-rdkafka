@@ -231,7 +231,9 @@ pub trait Message {
 ///
 /// Provides a read-only access to headers owned by a Kafka consumer or producer
 /// or by an [`OwnedHeaders`] struct.
-pub struct BorrowedHeaders;
+pub struct BorrowedHeaders {
+    _private: (),
+}
 
 impl BorrowedHeaders {
     unsafe fn from_native_ptr<T>(
