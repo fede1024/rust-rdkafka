@@ -809,7 +809,7 @@ impl ToBytes for String {
     }
 }
 
-impl<T: ToBytes> ToBytes for &T {
+impl<T: ToBytes + ?Sized> ToBytes for &T {
     fn to_bytes(&self) -> &[u8] {
         (*self).to_bytes()
     }
@@ -879,5 +879,16 @@ mod test {
                 value: Some("value2")
             })
         );
+    }
+
+    #[test]
+    fn test_headers_double_reference() {
+        let value = "value";
+        let value_ref: &&str = &value;
+
+        let _ = OwnedHeaders::new().insert(Header {
+            key: "key",
+            value: Some(value_ref),
+        });
     }
 }
