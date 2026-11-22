@@ -14,7 +14,7 @@ use rdkafka_sys::types::*;
 
 use crate::admin::NativeEvent;
 use crate::error::{IsError, KafkaError, KafkaResult};
-use crate::util::{self, millis_to_epoch, KafkaDrop, NativePtr};
+use crate::util::{self, millis_to_epoch, KafkaDrop, NativePtr, TopicPartitionOffset};
 
 /// Timestamp of a Kafka message.
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
@@ -346,7 +346,16 @@ impl<'a> BorrowedMessage<'a> {
         if ptr.err.is_error() {
             let err = match ptr.err {
                 rdsys::rd_kafka_resp_err_t::RD_KAFKA_RESP_ERR__PARTITION_EOF => {
-                    KafkaError::PartitionEOF(ptr.partition)
+                    let topic = unsafe {
+                        CStr::from_ptr(rdsys::rd_kafka_topic_name(ptr.rkt))
+                            .to_string_lossy()
+                            .into_owned()
+                    };
+                    KafkaError::PartitionEOF(TopicPartitionOffset {
+                        topic,
+                        partition: ptr.partition,
+                        offset: ptr.offset,
+                    })
                 }
                 e => KafkaError::MessageConsumption(e.into()),
             };
