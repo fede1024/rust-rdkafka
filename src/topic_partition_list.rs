@@ -623,4 +623,45 @@ mod tests {
             Offset::Stored
         );
     }
+
+    #[test]
+    fn test_empty_list_elements() {
+        let tpl = TopicPartitionList::new();
+        assert_eq!(tpl.count(), 0);
+        assert!(tpl.elements().is_empty());
+        assert!(tpl.elements_for_topic("any").is_empty());
+        assert!(tpl.to_topic_map().is_empty());
+    }
+
+    #[test]
+    fn test_duplicate_partition_insertion() {
+        let mut tpl = TopicPartitionList::new();
+        tpl.add_partition("topic", 0);
+        assert_eq!(tpl.count(), 1);
+        tpl.add_partition("topic", 0);
+        assert_eq!(tpl.count(), 2);
+        let elems = tpl.elements_for_topic("topic");
+        assert_eq!(elems.len(), 2);
+        assert_eq!(elems[0].partition(), 0);
+        assert_eq!(elems[1].partition(), 0);
+    }
+
+    #[test]
+    fn test_set_offset_missing_partition() {
+        let mut tpl = TopicPartitionList::new();
+        assert!(tpl.find_partition("topic", 0).is_none());
+        assert!(tpl
+            .set_partition_offset("topic", 0, Offset::Offset(42))
+            .is_err());
+    }
+
+    #[test]
+    fn test_find_partition_missing() {
+        let mut tpl = TopicPartitionList::new();
+        tpl.add_partition_offset("topic", 0, Offset::Offset(0))
+            .unwrap();
+        assert!(tpl.find_partition("topic", 0).is_some());
+        assert!(tpl.find_partition("topic", 1).is_none());
+        assert!(tpl.find_partition("other", 0).is_none());
+    }
 }
