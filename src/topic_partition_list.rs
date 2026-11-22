@@ -201,7 +201,16 @@ impl TopicPartitionList {
     }
 
     /// Creates a new empty list with the specified capacity.
+    /// 
+    /// # Panics
+    ///
+    /// Panics if `capacity` is greater than `i32::MAX`, since the underlying
+    /// librdkafka API accepts the capacity as a signed 32-bit integer.
     pub fn with_capacity(capacity: usize) -> TopicPartitionList {
+        assert!(
+            capacity <= i32::MAX as usize,
+            "TopicPartitionList capacity exceeds i32::MAX"
+        );
         let ptr = unsafe { rdsys::rd_kafka_topic_partition_list_new(capacity as i32) };
         unsafe { TopicPartitionList::from_ptr(ptr) }
     }
