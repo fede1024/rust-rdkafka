@@ -199,6 +199,7 @@ where
 {
     base: Arc<BaseConsumer<C>>,
     wakers: Arc<WakerSlab>,
+    poll_interval: Duration,
     _shutdown_trigger: oneshot::Sender<()>,
     _runtime: PhantomData<R>,
 }
@@ -265,6 +266,7 @@ where
         Ok(StreamConsumer {
             base,
             wakers,
+            poll_interval,
             _shutdown_trigger: shutdown_trigger,
             _runtime: PhantomData,
         })
@@ -356,12 +358,33 @@ where
         self: &Arc<Self>,
         topic: &str,
         partition: i32,
-    ) -> Option<StreamPartitionQueue<C, R>> {
+    ) -> Option<StreamPartitionQueue<C, R>>
+    where
+        R: AsyncRuntime,
+    {
         self.base
             .split_partition_queue(topic, partition)
             .map(|queue| {
                 let wakers = Arc::new(WakerSlab::new());
                 unsafe { enable_nonempty_callback(&queue.queue, &wakers) };
+
+                // Same periodic fallback wakeup as the main queue (see
+                // `from_config_and_context`): the non-empty callback is
+                // edge-triggered, so a lost wakeup would otherwise park this
+                // partition's stream forever. Holds a `Weak` so the loop ends
+                // once the queue is dropped and its `WakerSlab` is freed.
+                let poll_interval = self.poll_interval;
+                let weak_wakers = Arc::downgrade(&wakers);
+                R::spawn(async move {
+                    loop {
+                        R::delay_for(poll_interval / 2).await;
+                        match weak_wakers.upgrade() {
+                            Some(wakers) => wakers.wake_all(),
+                            None => break,
+                        }
+                    }
+                });
+
                 StreamPartitionQueue {
                     queue,
                     wakers,
