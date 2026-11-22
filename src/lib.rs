@@ -11,6 +11,7 @@ pub use rdkafka_sys::{bindings, helpers, types};
 pub mod admin;
 pub mod client;
 pub mod config;
+pub mod config_map;
 pub mod consumer;
 pub mod error;
 pub mod groups;
