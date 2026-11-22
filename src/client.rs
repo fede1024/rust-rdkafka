@@ -763,10 +763,10 @@ mod tests {
         .unwrap();
 
         // `rd_kafka_set_log_queue` concatenates buffered `rk_logq` events onto the
-        // main queue immediately, so polling `main_queue` drains them right away.
+        // main queue synchronously, so a non-blocking poll drains them immediately.
         let main_queue = client.main_queue();
         while !matches!(
-            client.poll_event(&main_queue, Duration::from_millis(100)),
+            client.poll_event(&main_queue, Duration::ZERO),
             EventPollResult::None
         ) {}
 
