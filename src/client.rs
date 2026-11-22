@@ -730,4 +730,51 @@ mod tests {
         let result = client.sasl_set_credentials("user", "pass\0word");
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_log_queue_forwards_to_main_queue() {
+        use std::sync::Mutex;
+        use std::time::Duration;
+
+        struct LogCollector(Mutex<Vec<(RDKafkaLogLevel, String, String)>>);
+
+        impl ClientContext for LogCollector {
+            fn log(&self, level: RDKafkaLogLevel, fac: &str, log_message: &str) {
+                self.0
+                    .lock()
+                    .unwrap()
+                    .push((level, fac.to_owned(), log_message.to_owned()));
+            }
+        }
+
+        let mut config = ClientConfig::new();
+        // Set `log_level=7` (Debug) in conf_map so `rd_kafka_new()` emits its
+        // `INIT` log into `rk_logq` before `rd_kafka_set_log_level()` runs.
+        config.set("debug", "generic").set("log_level", "7");
+        config.set_log_level(RDKafkaLogLevel::Debug);
+
+        let native_config = config.create_native_config().unwrap();
+        let client = Client::new(
+            &config,
+            native_config,
+            RDKafkaType::RD_KAFKA_PRODUCER,
+            LogCollector(Mutex::new(Vec::new())),
+        )
+        .unwrap();
+
+        // `rd_kafka_set_log_queue` concatenates buffered `rk_logq` events onto the
+        // main queue immediately, so polling `main_queue` drains them right away.
+        let main_queue = client.main_queue();
+        while !matches!(
+            client.poll_event(&main_queue, Duration::from_millis(100)),
+            EventPollResult::None
+        ) {}
+
+        let logs = client.context().0.lock().unwrap();
+        assert!(
+            logs.iter().any(|(_, fac, _)| fac == "INIT"),
+            "expected INIT log event from main queue, got: {:?}",
+            *logs
+        );
+    }
 }
