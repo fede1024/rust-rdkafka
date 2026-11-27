@@ -28,6 +28,8 @@ jobs:
       matrix:
         include:
           - os: macos-15
+            features: ssl
+            rdkafka-sys-features: ssl
           - os: windows-2025
             features: cmake-build,libz-static,curl-static
             rdkafka-sys-features: cmake-build,libz-static,curl-static
