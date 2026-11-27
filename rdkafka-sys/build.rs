@@ -130,13 +130,23 @@ fn build_librdkafka() {
             // openssl@3 headers while openssl-sys links openssl@4).
             cflags.push(format!("-I{}", openssl_include));
             if let Some(prefix) = Path::new(&openssl_include).parent() {
-                let lib = prefix.join("lib");
-                if lib.is_dir() {
-                    ldflags.push(format!("-L{}", lib.display()));
+                // Prefer lib64 on 64-bit targets, as multilib distros keep the
+                // 32-bit libraries in lib.
+                let mut lib_dirs = Vec::new();
+                if env::var("CARGO_CFG_TARGET_POINTER_WIDTH").as_deref() == Ok("64") {
+                    lib_dirs.push(prefix.join("lib64"));
                 }
-                let pkgconfig = lib.join("pkgconfig");
-                if pkgconfig.is_dir() {
-                    let mut paths = vec![pkgconfig];
+                lib_dirs.push(prefix.join("lib"));
+                lib_dirs.retain(|dir| dir.is_dir());
+                let mut paths: Vec<_> = lib_dirs
+                    .iter()
+                    .map(|dir| dir.join("pkgconfig"))
+                    .filter(|dir| dir.is_dir())
+                    .collect();
+                for dir in &lib_dirs {
+                    ldflags.push(format!("-L{}", dir.display()));
+                }
+                if !paths.is_empty() {
                     if let Some(existing) = env::var_os("PKG_CONFIG_PATH") {
                         paths.extend(env::split_paths(&existing));
                     }
